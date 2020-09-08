@@ -1,8 +1,10 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
@@ -24,6 +26,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         // Sets the maximum number of records to bulk read at one time
         readonly int readSize;
         public static char _SM = Convert.ToChar(DynamicArray.SM);
+        const string AllInstitutionsCache = "AllInstitutions";
+        const int AllInstitutionsCacheTimeout = 20; // Clear from cache every 20 minutes
+        RepositoryException repositoryException = null;
 
         public InstitutionRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)
@@ -35,7 +40,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
-        /// 
+        /// Get a collection of Institution domain entities
         /// </summary>
         /// <param name="offset"></param>
         /// <param name="limit"></param>
@@ -44,46 +49,85 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         public async Task<Tuple<IEnumerable<Institution>, int>> GetInstitutionAsync(int offset, int limit, InstType? instType = null)
         {
             List<Institution> institutions = new List<Institution>();
+            int totalCount = 0;
+            string[] subList = null;
             var defaultHostCorpId = string.Empty;
-            var types = GetValcode<InstitutionType>("CORE", "INST.TYPES", ii => new InstitutionType(ii.ValInternalCodeAssocMember, ii.ValExternalRepresentationAssocMember, ii.ValActionCode1AssocMember));
 
-            string criteria = "WITH INST.TYPE NE ''";
+            var institutionTypes = GetValcode<InstitutionType>("CORE", "INST.TYPES", 
+                ii => new InstitutionType(ii.ValInternalCodeAssocMember, ii.ValExternalRepresentationAssocMember, ii.ValActionCode1AssocMember));
 
-            if (instType != null)
+            if (institutionTypes == null)
             {
-                string typeCriteria = "";
-                switch (instType)
+                return new Tuple<IEnumerable<Institution>, int>(new List<Institution>(), 0);
+            }
+            
+            string institutionsCacheKey = CacheSupport.BuildCacheKey(AllInstitutionsCache, instType != null ? instType.ToString(): null);
+
+            var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                institutionsCacheKey,
+                "INSTITUTIONS",
+                offset,
+                limit,
+                AllInstitutionsCacheTimeout,
+                async () =>
                 {
-                    case InstType.College:
-                        var colleageTypes = types.Where(tx => tx.Category == "C").Select(ty => ty.Code);
-                        if (colleageTypes != null && colleageTypes.Any())
+                    string criteria = "WITH INST.TYPE NE ''";
+
+                    if (instType != null)
+                    {
+                        string typeCriteria = "";
+                        switch (instType)
                         {
-                            foreach (var type in colleageTypes)
-                            {
-                                typeCriteria = string.Concat(typeCriteria, "'", type, "' ");
-                            }
+                            case InstType.College:
+                                var colleageTypes = institutionTypes.Where(tx => tx.Category == "C").Select(ty => ty.Code);
+                                if (colleageTypes != null && colleageTypes.Any())
+                                {
+                                    foreach (var type in colleageTypes)
+                                    {
+                                        typeCriteria = string.Concat(typeCriteria, "'", type, "' ");
+                                    }
+                                }
+                                break;
+                            case InstType.HighSchool:
+                                var hsTypes = institutionTypes.Where(tx => tx.Category == "H").Select(ty => ty.Code);
+                                if (hsTypes != null && hsTypes.Any())
+                                {
+                                    foreach (var type in hsTypes)
+                                    {
+                                        typeCriteria = string.Concat(typeCriteria, "'", type, "' ");
+                                    }
+                                }
+                                break;
+                            default:
+                                {
+                                    return new CacheSupport.KeyCacheRequirements()
+                                    {
+                                        NoQualifyingRecords = true
+                                    };
+                                }
+
                         }
-                        break;
-                    case InstType.HighSchool:
-                        var hsTypes = types.Where(tx => tx.Category == "H").Select(ty => ty.Code);
-                        if (hsTypes != null && hsTypes.Any())
-                        {
-                            foreach (var type in hsTypes)
-                            {
-                                typeCriteria = string.Concat(typeCriteria, "'", type, "' ");
-                            }
-                        }
-                        break;
-                    default:
-                        break;
-                }
-                criteria += " AND WITH INST.TYPE EQ " + typeCriteria;
+                        criteria = "WITH INST.TYPE EQ " + typeCriteria;
+                    }
+
+                    return new CacheSupport.KeyCacheRequirements()
+                    {
+                        criteria = criteria.ToString()
+                    };
+                });
+
+            if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
+            {
+                return new Tuple<IEnumerable<Institution>, int>(new List<Institution>(), 0);
             }
 
-            var institutionIds = await DataReader.SelectAsync("INSTITUTIONS", criteria);
-            var totalCount = institutionIds.Count();
-            Array.Sort(institutionIds);
-            var subList = institutionIds.Skip(offset).Take(limit).ToArray();
+            subList = keyCache.Sublist.ToArray();
+            totalCount = keyCache.TotalCount.Value;
 
             var institutionData = await DataReader.BulkReadRecordAsync<Institutions>("INSTITUTIONS", subList);
 
@@ -101,7 +145,16 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var faSystemParams = GetSystemParameters();
             var bulkPersonData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", institutionData.Select(p => p.Recordkey).Distinct().ToArray());
             var bulkPersonIntgData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.PersonIntg>("PERSON.INTG", institutionData.Select(p => p.Recordkey).Distinct().ToArray());
-            var bulkAddressesData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Address>("ADDRESS", bulkPersonData.SelectMany(p => p.PersonAddresses).Distinct().ToArray());
+            ICollection<Ellucian.Colleague.Data.Base.DataContracts.Address> bulkAddressesData = null;
+            try
+            {
+
+                bulkAddressesData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Address>("ADDRESS", bulkPersonData.SelectMany(p => p.PersonAddresses).Distinct().ToArray());
+            }
+            catch (Exception)
+            {
+                //do not throw exception.
+            }
             var socialMediaKeys = await DataReader.SelectAsync("SOCIAL.MEDIA.HANDLES", "WITH SMH.PERSON.ID = '?'", institutionData.Select(p => p.Recordkey).Distinct().ToArray());
             var bulkSocialMediaData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.SocialMediaHandles>("SOCIAL.MEDIA.HANDLES", socialMediaKeys);
 
@@ -112,16 +165,34 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 List<DataContracts.Address> addressRecords = null;
                 List<DataContracts.SocialMediaHandles> socialMediaRecords = null;
 
-                if (bulkPersonData != null && bulkPersonData.Any())
+                try
                 {
-                    personRecord = bulkPersonData.FirstOrDefault(x => x.Recordkey == record.Recordkey);
-                    personIntgRecord = bulkPersonIntgData.FirstOrDefault(x => x.Recordkey == record.Recordkey);
-                    socialMediaRecords = bulkSocialMediaData.Where(sm => sm.SmhPersonId == personRecord.Recordkey).ToList();
-                    if ((bulkAddressesData != null) && (personRecord != null) && (!string.IsNullOrEmpty(personRecord.PreferredAddress)))
-                        addressRecords = bulkAddressesData.Where(y => personRecord.PreferredAddress.Contains(y.Recordkey)).ToList();
+                    if (bulkPersonData != null && bulkPersonData.Any())
+                    {
+                        personRecord = bulkPersonData.FirstOrDefault(x => x.Recordkey == record.Recordkey);
+                        personIntgRecord = bulkPersonIntgData.FirstOrDefault(x => x.Recordkey == record.Recordkey);
+                        socialMediaRecords = bulkSocialMediaData.Where(sm => sm.SmhPersonId == personRecord.Recordkey).ToList();
+                        if ((bulkAddressesData != null) && (personRecord != null) && (!string.IsNullOrEmpty(personRecord.PreferredAddress)))
+                        {
+                            addressRecords = bulkAddressesData.Where(y => personRecord.PreferredAddress.Contains(y.Recordkey)).ToList();
+                        }
+                    }
+
+                    institutions.Add(BuildInstitution(institutionTypes, defaultHostCorpId, faSystemParams, personRecord, personIntgRecord, addressRecords, socialMediaRecords, record));
                 }
-                institutions.Add(BuildInstitution(types, defaultHostCorpId, faSystemParams, personRecord, personIntgRecord, addressRecords, socialMediaRecords, record));
+                catch (Exception ex)
+                {
+                    if (repositoryException == null)
+                        repositoryException = new RepositoryException();
+                    repositoryException.AddError(new RepositoryError("Bad.Data", ex.Message));
+                }
             }
+
+            if (repositoryException != null && repositoryException.Errors != null && repositoryException.Errors.Any())
+            {
+                throw repositoryException;
+            }
+
             return new Tuple<IEnumerable<Institution>, int>(institutions, totalCount);
         }
 
@@ -130,7 +201,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// Using a list of person ids, determine which ones are associated with an institution
         /// </summary>
         /// <param name="subList">list of person ids</param>
-        /// <returns></returns>
+        /// <returns>Collection of ids</returns>
         public async Task<IEnumerable<string>> GetInstitutionIdsFromListAsync(string[] subList)
         {
             if (subList == null || !subList.Any())
@@ -141,10 +212,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
-        /// 
+        /// sing a list of person ids, determine which ones are associated with an institution
         /// </summary>
         /// <param name="subList"></param>
-        /// <returns></returns>
+        /// <returns>Collection of Institution domain entities</returns>
         public async Task<IEnumerable<Institution>> GetInstitutionsFromListAsync(string[] subList)
         {
             List<Institution> institutions = new List<Institution>();
@@ -203,7 +274,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
 
-
         /// <summary>
         /// Get a single Institution using a GUID
         /// </summary>
@@ -251,7 +321,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <summary>
         /// Get a single Institution using an ID
         /// </summary>
-        /// <param name="id">The Institution GUID</param>
+        /// <param name="id">The Institution ID</param>
         /// <returns>The Institution</returns>
         public async Task<Institution> GetInstitutionAsync(string id)
         {
@@ -388,86 +458,85 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
             );
             return institutions;
-        } 
-     
-        private Institution BuildInstitution(IEnumerable<InstitutionType> types,  string defaultHostCorpId , FaSysParams faSystemParams, DataContracts.Person person, DataContracts.PersonIntg personIntg, List<DataContracts.Address> addressDataContracts, List<DataContracts.SocialMediaHandles> socialMediaRecords, Institutions institution)
-        {
-            Institution inst = null;
+        }
 
+        private Institution BuildInstitution(IEnumerable<InstitutionType> institutionTypes, string defaultHostCorpId, FaSysParams faSystemParams, DataContracts.Person person,
+            DataContracts.PersonIntg personIntg, List<DataContracts.Address> addressDataContracts, List<DataContracts.SocialMediaHandles> socialMediaRecords, Institutions institution)
+        {
+
+            if (institutionTypes == null)
+            {
+                throw new ArgumentNullException("institutionTypes", "institutionTypes are a required parameter.");
+            }
+            
+            Institution inst = null;
+            InstType instType;
+
+            var institutionType = institutionTypes.FirstOrDefault(x => x.Code == institution.InstType);
+
+            if ((institutionType == null) || (string.IsNullOrEmpty(institutionType.Category)))
+            {
+                throw new RepositoryException(string.Concat("The educational institution ", person != null ? person.RecordGuid : "", " does not have a valid institution type."));
+            }
+
+            switch (institutionType.Category)
+            {
+                case ("C"):
+                    instType = InstType.College;
+                    break;
+                case ("H"):
+                    instType = InstType.HighSchool;
+                    break;
+                default:
+                    instType = InstType.Unknown;
+                    throw new RepositoryException(string.Concat("The educational institution ", person != null ? person.RecordGuid : "", " does not have a category that indicates secondarySchool or postSecondarySchool."));
+            }
             try
             {
-                InstType instType;
-                var codeAssoc = "";
-                foreach (var type in types)
-                {
-                    if (type.Code == institution.InstType)
-                    {
-                        codeAssoc = type.Category;
-                    }
-                }
-                if (!string.IsNullOrEmpty(codeAssoc))
-                {
-                    switch (codeAssoc)
-                    {
-                        case ("C"):
-                            instType = InstType.College;
-                            break;
-                        case ("H"):
-                            instType = InstType.HighSchool;
-                            break;
-                        default:
-                            instType = InstType.Unknown;
-                            throw new ArgumentException(string.Concat("The educational institution ", person.RecordGuid, " does not have a category that indicates secondarySchool or postSecondarySchool."));
-                    }
-                    inst = new Institution(institution.Recordkey, instType);
-                    inst.Ceeb = institution.InstCeeb;
-
-                    // Update the Preferred Name and Address Data from Preferred Address
-                    //var person = personLookup[institution.Recordkey].FirstOrDefault();
-                    if (person != null)
-                    {
-                        inst.Name = person.PreferredName;
-                        if (string.IsNullOrEmpty(inst.Name))
-                        {
-                            inst.Name = person.LastName;
-                        }
-
-                        // var addressData = addressLookup[person.PreferredAddress].FirstOrDefault();
-                        if (addressDataContracts != null)
-                        {
-                            var addressData = addressDataContracts.FirstOrDefault(ad => ad.Recordkey == person.PreferredAddress);
-                            if (addressData != null)
-                            {
-                                inst.City = addressData.City;
-                                inst.State = addressData.State;
-                            }
-                        }
-                    }
-                    inst.IsHostInstitution = (institution.Recordkey == defaultHostCorpId);
-                    if (inst.IsHostInstitution && faSystemParams != null)
-                    {
-                        inst.FinancialAidInstitutionName = faSystemParams.FspInstitutionName;
-                    }
-                    // Populate address, email, social media and phone numbers
-                    var tuplePerson = GetPersonIntegrationDataAsync(institution.Recordkey, person, personIntg, addressDataContracts, socialMediaRecords);
-                    inst.EmailAddresses = tuplePerson.Item1;
-                    inst.Phones = tuplePerson.Item2;
-                    inst.Addresses = tuplePerson.Item3;
-                    inst.SocialMedia = tuplePerson.Item4;
-                }
-                else
-                {
-                    throw new ArgumentException(string.Concat("The educational institution ", person.RecordGuid, " does not have a valid institution type."));
-                }
-            }
-            catch (ArgumentException)
-            {
-                throw;
+                inst = new Institution(institution.Recordkey, instType);
             }
             catch (Exception ex)
             {
-                LogDataError("Institutions", institution.Recordkey, institution, ex);
+                throw new RepositoryException(ex.Message);
+
             }
+            inst.Ceeb = institution.InstCeeb;
+
+            // Update the Preferred Name and Address Data from Preferred Address
+            //var person = personLookup[institution.Recordkey].FirstOrDefault();
+            if (person != null)
+            {
+                inst.Name = person.PreferredName;
+                if (string.IsNullOrEmpty(inst.Name))
+                {
+                    inst.Name = person.LastName;
+                }
+
+                // var addressData = addressLookup[person.PreferredAddress].FirstOrDefault();
+                if (addressDataContracts != null)
+                {
+                    var addressData = addressDataContracts.FirstOrDefault(ad => ad.Recordkey == person.PreferredAddress);
+                    if (addressData != null)
+                    {
+                        inst.City = addressData.City;
+                        inst.State = addressData.State;
+                    }
+                }
+            }
+            inst.IsHostInstitution = (institution.Recordkey == defaultHostCorpId);
+            if (inst.IsHostInstitution && faSystemParams != null)
+            {
+                inst.FinancialAidInstitutionName = faSystemParams.FspInstitutionName;
+            }
+
+
+            // Populate address, email, social media and phone numbers
+            var tuplePerson = GetPersonIntegrationDataAsync(institution.Recordkey, person, personIntg, addressDataContracts, socialMediaRecords);
+            inst.EmailAddresses = tuplePerson.Item1;
+            inst.Phones = tuplePerson.Item2;
+            inst.Addresses = tuplePerson.Item3;
+            inst.SocialMedia = tuplePerson.Item4;
+
             return inst;
         }
 
@@ -479,7 +548,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="phones">List of <see cref="Phone"> phones</see></param>
         /// <param name="addresses">List of <see cref="Address">addresses</see></param>
         /// <returns>Boolean where true is success and false otherwise</returns>
-        private Tuple<List<EmailAddress>, List<Phone>, List<Domain.Base.Entities.Address>, List<Domain.Base.Entities.SocialMedia>, bool> GetPersonIntegrationDataAsync(string personId, DataContracts.Person personData, PersonIntg personIntgData, List<DataContracts.Address> addressData, List<DataContracts.SocialMediaHandles> socialMediaRecords)
+        private Tuple<List<EmailAddress>, List<Phone>, List<Domain.Base.Entities.Address>, List<Domain.Base.Entities.SocialMedia>, bool> GetPersonIntegrationDataAsync(string personId, 
+            DataContracts.Person personData, PersonIntg personIntgData, List<DataContracts.Address> addressData, List<DataContracts.SocialMediaHandles> socialMediaRecords)
         {
             List<Domain.Base.Entities.Address> addresses = new List<Domain.Base.Entities.Address>();
             List<EmailAddress> emailAddresses = new List<EmailAddress>();
@@ -581,7 +651,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                 }
             }
-            if (!string.IsNullOrEmpty(personData.PersonWebsiteAddress))
+            if (personData != null && !string.IsNullOrEmpty(personData.PersonWebsiteAddress))
             {
                 socialMedias.Add(new SocialMedia("website", personData.PersonWebsiteAddress, false));
             }

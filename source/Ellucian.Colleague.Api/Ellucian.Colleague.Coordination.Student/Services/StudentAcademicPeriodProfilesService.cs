@@ -404,7 +404,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                                             // lookup the residency guid
                                             if (!string.IsNullOrEmpty(residencyCode))
                                             {
-                                                var residency = await _studentRepository.GetResidencyStatusGuidAsync(residencyCode);
+                                                var residency = await _studentReferenceDataRepository.GetAdmissionResidencyTypesGuidAsync(residencyCode);
 
                                                 if (!string.IsNullOrEmpty(residency))
                                                 {

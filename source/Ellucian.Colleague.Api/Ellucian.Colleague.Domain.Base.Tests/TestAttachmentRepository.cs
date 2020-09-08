@@ -1,6 +1,7 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -123,6 +124,25 @@ namespace Ellucian.Colleague.Domain.Base.Tests
         public Task<string> GetAttachmentContentAsync(Attachment attachment)
         {
             return Task.FromResult("C:\testpath");
+        }
+
+        public Task<IEnumerable<Attachment>> QueryAttachmentsAsync(bool includeActiveOnly, string owner, DateTime? modifiedStartDate,
+            DateTime? ModifiedEndDate, IEnumerable<string> collectionIds)
+        {
+            var attachments = AttachmentEntities.ToList();
+            if (!string.IsNullOrEmpty(owner))
+            {
+                attachments = attachments.Where(a => a.Owner == owner).ToList();
+            }
+            if (collectionIds != null && collectionIds.Any())
+            {
+                attachments = attachments.Where(a => collectionIds.Contains(a.CollectionId)).ToList();
+            }
+            if (includeActiveOnly)
+            {
+                attachments = attachments.Where(a => a.Status == AttachmentStatus.Active).ToList();
+            }
+            return Task.FromResult(attachments.AsEnumerable());
         }
 
         public Task<Attachment> PostAttachmentAsync(Attachment attachment)

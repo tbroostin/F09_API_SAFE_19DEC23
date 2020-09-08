@@ -113,7 +113,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Adapters
                     var directCost = new Dtos.FinancialAid.AwardLetterHistoryCost();
                     directCost.Description = sourceAwardLetter.AlhDirectCostDesc[i];
                     directCost.Amount = sourceAwardLetter.AlhDirectCostAmount[i];
-                    directCost.CostType = "Direct Cost";
+                    directCost.CostType = "Direct Costs";
                     awardLetterHistoryCosts.Add(directCost);
                 }
             }
@@ -124,7 +124,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Adapters
                     var indirectCost = new Dtos.FinancialAid.AwardLetterHistoryCost();
                     indirectCost.Description = sourceAwardLetter.AlhIndirectCostDesc[j];
                     indirectCost.Amount = sourceAwardLetter.AlhIndirectCostAmount[j];
-                    indirectCost.CostType = "Indirect Cost";
+                    indirectCost.CostType = "Indirect Costs";
                     awardLetterHistoryCosts.Add(indirectCost);
                 }
             }

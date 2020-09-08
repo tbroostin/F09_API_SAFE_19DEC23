@@ -409,6 +409,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns></returns>
         private LedgerActivityType ConvertEntityToCreditDebitTypeDto(decimal? credit, decimal? debit)
         {
+            if (credit.HasValue && credit.Value == 0) credit = null;
+            if (debit.HasValue && debit.Value == 0) debit = null;
             if(credit.HasValue && !debit.HasValue)
             {
                 return LedgerActivityType.Credit;
@@ -459,6 +461,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>LegerACtivityAmount DTO with amount and currency code.</returns>
         private LedgerActivityAmount ConvertEntityToAmountDto(decimal? credit, decimal? debit, string hostCountry)
         {
+            if (credit.HasValue && credit.Value == 0) credit = null;
+            if (debit.HasValue && debit.Value == 0) debit = null;
             LedgerActivityAmount laa = null;
             if (credit.HasValue)
             {

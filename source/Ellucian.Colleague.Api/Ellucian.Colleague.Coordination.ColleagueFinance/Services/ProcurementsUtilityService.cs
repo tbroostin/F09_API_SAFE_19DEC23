@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -23,7 +23,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
     {
         private IVendorsRepository vendorsRepository;
         private ICommodityCodesService commodityCodesService;
-        private IVendorCommoditiesRepository vendorCommoditiesRepository;
+        private IVendorCommodityRepository vendorCommoditiesRepository;
         private IColleagueFinanceWebConfigurationsRepository cfWebConfigurationsRepository;
 
 
@@ -35,7 +35,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             ICurrentUserFactory currentUserFactory,
             IRoleRepository roleRepository,
             ICommodityCodesService commodityCodesService,
-            IVendorCommoditiesRepository vendorCommoditiesRepository,
+            IVendorCommodityRepository vendorCommoditiesRepository,
             IColleagueFinanceWebConfigurationsRepository cfWebDefaultsRepository,
             ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, configurationRepository: configurationRepository)
@@ -82,12 +82,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             defaultLineItemAdditionalDetails.TaxCodes = taxCodes;
             if (!string.IsNullOrEmpty(vendorId))
             {
-                var vendorTaxFormInfo = await vendorsRepository.GetVendorDefaultTaxInfo(vendorId, apType);
+                var vendorTaxFormInfo = await vendorsRepository.GetVendorDefaultTaxFormInfoAsync(vendorId, apType);
                 if (vendorTaxFormInfo != null)
                 {
                     defaultLineItemAdditionalDetails.TaxForm = vendorTaxFormInfo.TaxForm;
-                    defaultLineItemAdditionalDetails.BoxNo = vendorTaxFormInfo.TaxFormCode;
-                    defaultLineItemAdditionalDetails.State = vendorTaxFormInfo.TaxFormLoc;
+                    defaultLineItemAdditionalDetails.BoxNo = vendorTaxFormInfo.TaxFormBoxCode;
+                    defaultLineItemAdditionalDetails.State = vendorTaxFormInfo.TaxFormState;
                 }
             }
             return defaultLineItemAdditionalDetails;
@@ -100,7 +100,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 if (!string.IsNullOrEmpty(vendorId) && !string.IsNullOrEmpty(commodityCodeDto.Code))
                 {
-                    defaultStdPrice = await vendorCommoditiesRepository.GetVendorCommodityPriceAsync(vendorId, commodityCodeDto.Code);                    
+                    var vendorCommoditiesEntity = await vendorCommoditiesRepository.GetVendorCommodityAsync(vendorId, commodityCodeDto.Code);
+                    if(vendorCommoditiesEntity!=null)
+                    {
+                        defaultStdPrice = vendorCommoditiesEntity.StdPrice;
+                    }                    
                 }
                 defaultStdPrice = defaultStdPrice.HasValue ? defaultStdPrice.Value : commodityCodeDto.Price;
             }

@@ -1,4 +1,4 @@
-﻿// Copyright 2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -22,6 +22,14 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="ignoreCache">Bypass cache flag</param>
         /// <returns>Collection of rooms</returns>
         Task<IEnumerable<Room>> GetRoomsAsync(bool ignoreCache = false);
+
+
+        /// <summary>
+        /// Get guid for Room code
+        /// </summary>
+        /// <param name="code">Room code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetRoomsGuidAsync(string code);
 
         /// <summary>
         /// Get a collection of rooms

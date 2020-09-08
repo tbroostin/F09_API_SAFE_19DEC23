@@ -19,7 +19,7 @@
 // </auto-generated>     
 //----------------------------------------------------------------------------- */
 
-//Copyright 2019 Ellucian Company L.P. and its affiliates.
+//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -56,14 +56,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="ProspectOpportunitiesSubmissions">The <see cref="ProspectOpportunitiesSubmissions">prospectOpportunitiesSubmissions</see> entity to update in the database.</param>
         /// <returns>The newly updated <see cref="ProspectOpportunities">ProspectOpportunities</see></returns>
-        Task<Dtos.ProspectOpportunities> UpdateProspectOpportunitiesSubmissionsAsync(Dtos.ProspectOpportunitiesSubmissions prospectOpportunitiesSubmissions);
+        Task<Dtos.ProspectOpportunities> UpdateProspectOpportunitiesSubmissionsAsync(Dtos.ProspectOpportunitiesSubmissions prospectOpportunitiesSubmissions, bool bypassCache);
 
         /// <summary>
         /// Create a ProspectOpportunitiesSubmissions.
         /// </summary>
         /// <param name="prospectOpportunitiesSubmissions">The <see cref="ProspectOpportunitiesSubmissions">prospectOpportunitiesSubmissions</see> entity to create in the database.</param>
         /// <returns>The newly created <see cref="ProspectOpportunities">ProspectOpportunities</see></returns>
-        Task<Dtos.ProspectOpportunities> CreateProspectOpportunitiesSubmissionsAsync(Dtos.ProspectOpportunitiesSubmissions prospectOpportunitiesSubmissions);
+        Task<Dtos.ProspectOpportunities> CreateProspectOpportunitiesSubmissionsAsync(Dtos.ProspectOpportunitiesSubmissions prospectOpportunitiesSubmissions, bool bypassCache);
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>

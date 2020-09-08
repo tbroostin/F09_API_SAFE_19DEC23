@@ -1,8 +1,6 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
-using System.Collections.Generic;
-using Ellucian.Colleague.Domain.Entities;
 
 namespace Ellucian.Colleague.Domain.Base.Entities
 {
@@ -22,6 +20,8 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public string RemarksText { get; set; }
         public ConfidentialityType RemarksPrivateType { get; set; }
         public string RemarksIntgEnteredBy { get; set; }
+        public bool RemarksInstIndicator { get; set; }
+        public bool RemarksPersonCorpIndicator { get; set; }
 
         public string Id
         {
@@ -56,7 +56,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
                 }
                 else
                 {
-                    throw new InvalidOperationException("Cannot change value of Guid.");
+                    throw new InvalidOperationException("Cannot change value of GUID.");
                 }
             }
         }
@@ -65,7 +65,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         {
             if (string.IsNullOrEmpty(guid))
             {
-                throw new ArgumentNullException("Remark guid can not be null or empty");
+                throw new ArgumentNullException("Remark GUID can not be null or empty");
             }
             _Guid = guid;
         }

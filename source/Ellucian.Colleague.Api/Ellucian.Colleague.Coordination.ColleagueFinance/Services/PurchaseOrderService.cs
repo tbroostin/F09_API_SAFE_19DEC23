@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -21,6 +21,8 @@ using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using System.Text.RegularExpressions;
+using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 {
@@ -40,8 +42,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private readonly IPersonRepository personRepository;
         private readonly IConfigurationRepository configurationRepository;
         private readonly IAccountFundsAvailableRepository accountFundAvailableRepository;
+        private IGeneralLedgerAccountRepository generalLedgerAccountRepository;
         IDictionary<string, string> _projectReferenceIds = null;
         private IStaffRepository staffRepository;
+        private IProcurementsUtilityService procurementsUtilityService;
 
         // Constructor to initialize the private attributes
         public PurchaseOrderService(IPurchaseOrderRepository purchaseOrderRepository,
@@ -58,6 +62,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             IPersonRepository personRepository,
             IRoleRepository roleRepository,
             IStaffRepository staffRepository,
+            IGeneralLedgerAccountRepository generalLedgerAccountRepository,
+            IProcurementsUtilityService procurementsUtilityService,
             ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, configurationRepository: configurationRepository)
         {
@@ -72,6 +78,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             this.personRepository = personRepository;
             this.configurationRepository = configurationRepository;
             this.staffRepository = staffRepository;
+            this.generalLedgerAccountRepository = generalLedgerAccountRepository;
+            this.procurementsUtilityService = procurementsUtilityService;
         }
 
 
@@ -80,7 +88,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (_commodityUnitType == null)
             {
-                _commodityUnitType = await colleagueFinanceReferenceDataRepository.GetCommodityUnitTypesAsync(false);
+                _commodityUnitType = await colleagueFinanceReferenceDataRepository.GetCommodityUnitTypesAsync(bypassCache);
             }
             return _commodityUnitType;
         }
@@ -90,7 +98,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (_vendorTerm == null)
             {
-                _vendorTerm = await colleagueFinanceReferenceDataRepository.GetVendorTermsAsync(false);
+                _vendorTerm = await colleagueFinanceReferenceDataRepository.GetVendorTermsAsync(bypassCache);
             }
             return _vendorTerm;
         }
@@ -104,8 +112,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns></returns>
         private async Task<IEnumerable<Domain.ColleagueFinance.Entities.AccountsPayableSources>> GetAllAccountsPayableSourcesAsync(bool bypassCache)
         {
-            await colleagueFinanceReferenceDataRepository.GetAccountsPayableSourcesAsync(false);
-            return _accountsPayableSources ?? (_accountsPayableSources = await colleagueFinanceReferenceDataRepository.GetAccountsPayableSourcesAsync(false));
+            //await colleagueFinanceReferenceDataRepository.GetAccountsPayableSourcesAsync(false);
+            return _accountsPayableSources ?? (_accountsPayableSources = await colleagueFinanceReferenceDataRepository.GetAccountsPayableSourcesAsync(bypassCache));
         }
 
         private IEnumerable<Domain.ColleagueFinance.Entities.FreeOnBoardType> _freeOnBoardType = null;
@@ -113,9 +121,19 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (_freeOnBoardType == null)
             {
-                _freeOnBoardType = await colleagueFinanceReferenceDataRepository.GetFreeOnBoardTypesAsync(false);
+                _freeOnBoardType = await colleagueFinanceReferenceDataRepository.GetFreeOnBoardTypesAsync(bypassCache);
             }
             return _freeOnBoardType;
+        }
+
+        private IEnumerable<Domain.ColleagueFinance.Entities.ShippingMethod> _ShippingMethods = null;
+        private async Task<IEnumerable<Domain.ColleagueFinance.Entities.ShippingMethod>> GetShippingMethodsAsync(bool bypassCache)
+        {
+            if (_ShippingMethods == null)
+            {
+                _ShippingMethods = await colleagueFinanceReferenceDataRepository.GetShippingMethodsAsync(bypassCache);
+            }
+            return _ShippingMethods;
         }
 
         private IEnumerable<Domain.ColleagueFinance.Entities.ShipToDestination> _shipToDestination = null;
@@ -123,7 +141,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (_shipToDestination == null)
             {
-                _shipToDestination = await colleagueFinanceReferenceDataRepository.GetShipToDestinationsAsync(false);
+                _shipToDestination = await colleagueFinanceReferenceDataRepository.GetShipToDestinationsAsync(bypassCache);
             }
             return _shipToDestination;
         }
@@ -133,7 +151,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (_commodityCode == null)
             {
-                _commodityCode = await colleagueFinanceReferenceDataRepository.GetCommodityCodesAsync(false);
+                _commodityCode = await colleagueFinanceReferenceDataRepository.GetCommodityCodesAsync(bypassCache);
             }
             return _commodityCode;
         }
@@ -143,7 +161,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (_commerceTaxCode == null)
             {
-                _commerceTaxCode = await referenceDataRepository.GetCommerceTaxCodesAsync(false);
+                _commerceTaxCode = await referenceDataRepository.GetCommerceTaxCodesAsync(bypassCache);
             }
             return _commerceTaxCode;
         }
@@ -153,19 +171,29 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (_countries == null)
             {
-                _countries = await referenceDataRepository.GetCountryCodesAsync(false);
+                _countries = await referenceDataRepository.GetCountryCodesAsync(bypassCache);
             }
             return _countries;
         }
-            
+
         private IEnumerable<State> _states = null;
         private async Task<IEnumerable<State>> GetAllStatesAsync(bool bypassCache)
         {
             if (_states == null)
             {
-                _states = await referenceDataRepository.GetStateCodesAsync(false);
+                _states = await referenceDataRepository.GetStateCodesAsync(bypassCache);
             }
             return _states;
+        }
+        
+        private IEnumerable<BoxCodes> _boxCodes = null;
+        private async Task<IEnumerable<BoxCodes>> GetAllBoxCodesAsync(bool bypassCache)
+        {
+            if (_boxCodes == null)
+            {
+                _boxCodes = await referenceDataRepository.GetAllBoxCodesAsync(bypassCache);
+            }
+            return _boxCodes;
         }
 
         /// <summary>
@@ -208,6 +236,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw new ArgumentNullException("purchaseOrderDomainEntity", "purchaseOrderDomainEntity cannot be null.");
             }
 
+            await AssignGlDescription(glConfiguration, purchaseOrderDomainEntity);
+
             // Convert the purchase order and all its child objects into DTOs
             var purchaseOrderDtoAdapter = new PurchaseOrderEntityToDtoAdapter(_adapterRegistry, logger);
             var purchaseOrderDto = purchaseOrderDtoAdapter.MapToType(purchaseOrderDomainEntity, glConfiguration.MajorComponentStartPositions);
@@ -218,6 +248,40 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
 
             return purchaseOrderDto;
+        }
+
+        private async Task AssignGlDescription(GeneralLedgerAccountStructure glAccountStructure, PurchaseOrder requisitionDomainEntity)
+        {
+            List<string> glAccountNumbers = new List<string>();
+            foreach (var lineItem in requisitionDomainEntity.LineItems)
+            {
+                foreach (var glDististribution in lineItem.GlDistributions)
+                {
+                    if (!glDististribution.Masked)
+                    {
+                        glAccountNumbers.Add(glDististribution.GlAccountNumber);
+                    }
+                }
+            }
+            if (glAccountNumbers.Any())
+            {
+                var glAccountDescriptionsDictionary = await generalLedgerAccountRepository.GetGlAccountDescriptionsAsync(glAccountNumbers, glAccountStructure);
+                foreach (var lineItem in requisitionDomainEntity.LineItems)
+                {
+                    foreach (var glDististribution in lineItem.GlDistributions)
+                    {
+                        if (!glDististribution.Masked)
+                        {
+                            string description = "";
+                            if (!string.IsNullOrEmpty(glDististribution.GlAccountNumber))
+                            {
+                                glAccountDescriptionsDictionary.TryGetValue(glDististribution.GlAccountNumber, out description);
+                            }
+                            glDististribution.GlAccountDescription = description;
+                        }
+                    }
+                }
+            }
         }
 
         #region EEDM Purchase orders V11
@@ -232,51 +296,89 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="limit">Paging limit</param>
         /// <param name="bypassCache">Bypass cache flag.  If set to true, will requery cached items</param>
         /// <returns>List of <see cref="Dtos.PurchaseOrders">PurchaseOrders</see></returns>
-        public async Task<Tuple<IEnumerable<PurchaseOrders2>, int>> GetPurchaseOrdersAsync2(int offset, int limit, bool bypassCache = false)
+        public async Task<Tuple<IEnumerable<PurchaseOrders2>, int>> GetPurchaseOrdersAsync(int offset, int limit, PurchaseOrders2 criteriaObject, bool bypassCache = false)
         {
             CheckViewPurchaseOrderPermission();
 
             var purchaseOrdersCollection = new List<Ellucian.Colleague.Dtos.PurchaseOrders2>();
-            var glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
-            var purchaseOrderEntities = await purchaseOrderRepository.GetPurchaseOrdersAsync(offset, limit);
+            GeneralLedgerAccountStructure glConfiguration = null;
+
+            try
+            {
+                glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+            }
+            catch (Exception e)
+            {
+                IntegrationApiExceptionAddError(e.Message, "Bad.Data");
+            }
+
+            Tuple<IEnumerable<PurchaseOrder>, int> purchaseOrderEntities = null;
+
+            try
+            {
+
+                purchaseOrderEntities = await purchaseOrderRepository.GetPurchaseOrdersAsync(offset, limit, criteriaObject.OrderNumber);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+            }
+            catch (Exception e)
+            {
+                IntegrationApiExceptionAddError(e.Message, "Bad.Data");
+            }
+
+            if ((purchaseOrderEntities == null) || (purchaseOrderEntities.Item1 != null))
+            {
+                new Tuple<IEnumerable<Dtos.PurchaseOrders2>, int>(purchaseOrdersCollection, 0);
+            }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+
             var totalRecords = purchaseOrderEntities.Item2;
-            if (purchaseOrderEntities.Item1 != null)
+
+
+            var projectIds = purchaseOrderEntities.Item1
+                         .SelectMany(t => t.LineItems)
+                         .Where(i => i.GlDistributions != null)
+                         .SelectMany(p => p.GlDistributions)
+                         .Where(p => !(string.IsNullOrEmpty(p.ProjectId)))
+                         .Select(pj => pj.ProjectId)
+                         .ToList()
+                         .Distinct();
+            if (projectIds != null && projectIds.Any())
+            {
+                _projectReferenceIds = await purchaseOrderRepository.GetProjectReferenceIds(projectIds.ToArray());
+            }
+
+            foreach (var purchaseOrderEntity in purchaseOrderEntities.Item1)
             {
                 try
                 {
-                    var projectIds = purchaseOrderEntities.Item1
-                                 .SelectMany(t => t.LineItems)
-                                 .Where(i => i.GlDistributions != null)
-                                 .SelectMany(p => p.GlDistributions)
-                                 .Where(p => !(string.IsNullOrEmpty(p.ProjectId)))
-                                 .Select(pj => pj.ProjectId)
-                                 .ToList()
-                                 .Distinct();
-                    if (projectIds != null && projectIds.Any())
+                    if (purchaseOrderEntity.Guid != null)
                     {
-                        _projectReferenceIds = await purchaseOrderRepository.GetProjectReferenceIds(projectIds.ToArray());
-                    }
-                    foreach (var purchaseOrderEntity in purchaseOrderEntities.Item1)
-                    {
-                        try
-                        {
-                            if (purchaseOrderEntity.Guid != null)
-                            {
-                                var accountsPayableInvoiceDto = await this.ConvertPurchaseOrderEntityToDtoAsync2(purchaseOrderEntity, glConfiguration, bypassCache);
-                                purchaseOrdersCollection.Add(accountsPayableInvoiceDto);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            throw new Exception(string.Concat(ex.Message, "  Purchase Order: '", purchaseOrderEntity.Number, "', Entity: 'PURCHASE.ORDERS', Record ID: '", purchaseOrderEntity.Id, "'"));
-                        }
+                        var accountsPayableInvoiceDto = await this.ConvertPurchaseOrderEntityToDtoAsync(purchaseOrderEntity, glConfiguration, bypassCache);
+                        purchaseOrdersCollection.Add(accountsPayableInvoiceDto);
                     }
                 }
                 catch (Exception ex)
                 {
-                    throw ex;
+                    IntegrationApiExceptionAddError(string.Concat(ex.Message, "  Purchase Order: '", purchaseOrderEntity.Number, "', Entity: 'PURCHASE.ORDERS'"), "Bad.Data", purchaseOrderEntity.Guid, purchaseOrderEntity.Id);
                 }
             }
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
             return new Tuple<IEnumerable<Dtos.PurchaseOrders2>, int>(purchaseOrdersCollection, totalRecords);
         }
 
@@ -286,57 +388,79 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// </summary>
         /// <param name="guid">Guid</param>
         /// <returns><see cref="Dtos.PurchaseOrders">A PurchaseOrders DTO</see></returns>
-        public async Task<PurchaseOrders2> GetPurchaseOrdersByGuidAsync2(string guid)
+        public async Task<PurchaseOrders2> GetPurchaseOrdersByGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
             {
                 throw new ArgumentNullException("guid", "A GUID is required to obtain a Purchase Order.");
             }
             CheckViewPurchaseOrderPermission();
-            var glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
+
+            //var glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
+            GeneralLedgerAccountStructure glConfiguration = null;
+
             try
             {
-                var purchaseOrder = await purchaseOrderRepository.GetPurchaseOrdersByGuidAsync(guid);
-                if (purchaseOrder == null)
-                {
-                    throw new KeyNotFoundException(string.Format("Purchase Order not found for guid: {0} ", guid));
-                }
-                if (purchaseOrder.LineItems != null && purchaseOrder.LineItems.Any())
-                {
-                    var projectIds = purchaseOrder.LineItems
-                       .Where(i => i.GlDistributions != null)
-                       .SelectMany(p => p.GlDistributions)
-                       .Where(p => !(string.IsNullOrEmpty(p.ProjectId)))
-                       .Select(pj => pj.ProjectId)
-                       .ToList()
-                       .Distinct();
-                    if (projectIds != null && projectIds.Any())
-                    {
-                        _projectReferenceIds = await purchaseOrderRepository.GetProjectReferenceIds(projectIds.ToArray());
-                    }
-                }
-                return await ConvertPurchaseOrderEntityToDtoAsync2(purchaseOrder, glConfiguration);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                throw new KeyNotFoundException(ex.Message);
-            }
-            catch (InvalidOperationException ex)
-            {
-                throw new InvalidOperationException(string.Format("No Purchase Order was found for guid '{0}'.", guid), ex);
+                glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
             }
             catch (RepositoryException ex)
             {
-                throw new RepositoryException(string.Format("No Purchase Order was found for guid '{0}'.", guid), ex);
+                IntegrationApiExceptionAddError(ex);
             }
-            catch (ArgumentException ex)
+            catch (Exception e)
             {
-                throw new ArgumentException(ex.Message, ex);
+                IntegrationApiExceptionAddError(e.Message, "Bad.Data");
             }
-            catch (Exception ex)
+
+            PurchaseOrder purchaseOrder = null;
+
+            try
             {
-                throw ex;
+                purchaseOrder = await purchaseOrderRepository.GetPurchaseOrdersByGuidAsync(guid);
             }
+            catch (KeyNotFoundException)
+            {
+                throw new KeyNotFoundException(string.Format("Purchase Order not found for GUID: {0} ", guid));
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+            }
+            catch (Exception e)
+            {
+                IntegrationApiExceptionAddError(e.Message, "Bad.Data");
+            }
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+            if (purchaseOrder == null)
+            {
+                throw new KeyNotFoundException(string.Format("Purchase Order not found for GUID: {0} ", guid));
+            }
+            if (purchaseOrder.LineItems != null && purchaseOrder.LineItems.Any())
+            {
+                var projectIds = purchaseOrder.LineItems
+                   .Where(i => i.GlDistributions != null)
+                   .SelectMany(p => p.GlDistributions)
+                   .Where(p => !(string.IsNullOrEmpty(p.ProjectId)))
+                   .Select(pj => pj.ProjectId)
+                   .ToList()
+                   .Distinct();
+                if (projectIds != null && projectIds.Any())
+                {
+                    _projectReferenceIds = await purchaseOrderRepository.GetProjectReferenceIds(projectIds.ToArray());
+                }
+            }
+            var purchaseOrderDTO = await ConvertPurchaseOrderEntityToDtoAsync(purchaseOrder, glConfiguration);
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            return purchaseOrderDTO;
         }
 
         /// <summary>
@@ -375,10 +499,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
 
             // Convert the purchase order summary and all its child objects into DTOs
-            var requisitionSummaryDtoAdapter = new PurchaseOrderSummaryEntityDtoAdapter(_adapterRegistry, logger);
+            var purchaseOrderSummaryDtoAdapter = new PurchaseOrderSummaryEntityDtoAdapter(_adapterRegistry, logger);
             foreach (var purchaseOrderDomainEntity in purchaseOrderSummaryDomainEntities)
             {
-                purchaseOrderSummaryDtos.Add(requisitionSummaryDtoAdapter.MapToType(purchaseOrderDomainEntity));
+                purchaseOrderSummaryDtos.Add(purchaseOrderSummaryDtoAdapter.MapToType(purchaseOrderDomainEntity));
             }
 
             return purchaseOrderSummaryDtos;
@@ -392,12 +516,26 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns></returns>
         private async Task CheckStaffRecordAsync(string personId)
         {
-            var staffRecord = await staffRepository.GetAsync(personId);
-            if (staffRecord == null)
+            try
+            {
+                var staffRecord = await staffRepository.GetAsync(personId);
+                if (staffRecord == null)
+                {
+                    var message = string.Format("{0} does not have staff record.", CurrentUser.PersonId);
+                    logger.Error(message);
+                    throw new PermissionsException(message);
+                }
+            }
+            catch (KeyNotFoundException)
             {
                 var message = string.Format("{0} does not have staff record.", CurrentUser.PersonId);
                 logger.Error(message);
                 throw new PermissionsException(message);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message);
+                throw;
             }
         }
 
@@ -407,12 +545,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="source">PurchaseOrder domain entity</param>
         /// <param name="bypassCache">Bypass cache flag.  If set to true, will requery cached items</param>
         /// <returns><see cref="Dtos.PurchaseOrders">PurchaseOrders</see></returns>
-        private async Task<Dtos.PurchaseOrders2> ConvertPurchaseOrderEntityToDtoAsync2(Domain.ColleagueFinance.Entities.PurchaseOrder source, 
+        private async Task<Dtos.PurchaseOrders2> ConvertPurchaseOrderEntityToDtoAsync(Domain.ColleagueFinance.Entities.PurchaseOrder source,
             GeneralLedgerAccountStructure glConfiguration, bool bypassCache = false)
         {
             if (source == null)
             {
-                throw new ArgumentNullException("source", "A source is required to obtain a Purchase Order.");
+                IntegrationApiExceptionAddError("A source is required to obtain a Purchase Order.");
+                return null;
             }
             var purchaseOrder = new Ellucian.Colleague.Dtos.PurchaseOrders2();
 
@@ -442,12 +581,24 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (!string.IsNullOrEmpty(source.SubmittedBy))
             {
-                var submittedByGuid = await personRepository.GetPersonGuidFromIdAsync(source.SubmittedBy);
+                string submittedByGuid = string.Empty;
+                try
+                {
+                    submittedByGuid = await personRepository.GetPersonGuidFromIdAsync(source.SubmittedBy);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                }
                 if (string.IsNullOrEmpty(submittedByGuid))
                 {
-                    throw new Exception(string.Concat("Missing Submitted By information for purchase order: ", source.Id, " Guid: ", source.Guid, " Submitted By: ", source.SubmittedBy));
+                    string message = string.Concat("Missing Submitted By information for purchase order: ", source.Id, " Guid: ", source.Guid, " Submitted By: ", source.SubmittedBy);
+                    IntegrationApiExceptionAddError(message, "Bad.Data", source.Guid, source.Id);
                 }
-                purchaseOrder.SubmittedBy = new GuidObject2(submittedByGuid);
+                else
+                {
+                    purchaseOrder.SubmittedBy = new GuidObject2(submittedByGuid);
+                }
             }
 
             if ((source.ReferenceNo != null) && (source.ReferenceNo.Any()))
@@ -493,24 +644,48 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (!string.IsNullOrEmpty(source.Buyer))
             {
-                var buyerGuid = await buyerRepository.GetBuyerGuidFromIdAsync(source.Buyer);
-                if (string.IsNullOrEmpty(buyerGuid))
+                try
                 {
-                    throw new Exception(string.Concat("Missing buyer information for purchase order: ", source.Id, " Guid: ", source.Guid, " Buyer: ", source.Buyer));
+                    var buyerGuid = await buyerRepository.GetBuyerGuidFromIdAsync(source.Buyer);
+                    if (string.IsNullOrEmpty(buyerGuid))
+                    {
+                        var message = string.Concat("Missing buyer information for purchase order: '", source.Id, "' Buyer: '", source.Buyer, "'");
+
+                        IntegrationApiExceptionAddError(message, "GUID.Not.Found", source.Guid, source.Id);
+                    }
+                    else
+                    {
+                        purchaseOrder.Buyer = new GuidObject2(buyerGuid);
+                    }
                 }
-                purchaseOrder.Buyer = new GuidObject2(buyerGuid);
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                }
             }
 
             var initiator = new Dtos.DtoProperties.PurchaseOrdersInitiatorDtoProperty();
             initiator.Name = source.InitiatorName;
             if (!string.IsNullOrEmpty(source.DefaultInitiator))
             {
-                var initiatorGuid = await personRepository.GetPersonGuidFromIdAsync(source.DefaultInitiator);
-                if (string.IsNullOrEmpty(initiatorGuid))
+                try
                 {
-                    throw new KeyNotFoundException(string.Concat("Missing initiator information for purchase order: ", source.Id, " Guid: ", source.Guid, " Initiator: ", source.DefaultInitiator));
+                    var initiatorGuid = await personRepository.GetPersonGuidFromIdAsync(source.DefaultInitiator);
+                    if (string.IsNullOrEmpty(initiatorGuid))
+                    {
+                        string message = string.Concat("Missing initiator information for purchase order: '", source.Id, "'  Initiator: '", source.DefaultInitiator, "'");
+                        IntegrationApiExceptionAddError(message, "GUID.Not.Found", source.Guid, source.Id);
+                    }
+                    else
+                    {
+                        initiator.Detail = new GuidObject2(initiatorGuid);
+                    }
                 }
-                initiator.Detail = new GuidObject2(initiatorGuid);
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                }
+
             }
             if ((!string.IsNullOrEmpty(initiator.Name)) || (initiator.Detail != null))
             {
@@ -520,65 +695,136 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var purchaseOrdersShipping = new Dtos.DtoProperties.PurchaseOrdersShippingDtoProperty();
             if (!string.IsNullOrEmpty(source.ShipToCode))
             {
-                var shipToDestinations = await GetShipToDestinationsAsync(bypassCache);
-                if (shipToDestinations == null)
+                try
                 {
-                    throw new Exception("Unable to retrieve ShipToDestination");
+                    var shipToDestinationGuid = await colleagueFinanceReferenceDataRepository.GetShipToDestinationGuidAsync(source.ShipToCode);
+                    if (string.IsNullOrEmpty(shipToDestinationGuid))
+                    {
+                        string message = string.Concat("Missing shipping information for purchase order: '", source.Id, "'  ShipToCode: '", source.ShipToCode, "'");
+                        IntegrationApiExceptionAddError(message, "GUID.Not.Found", source.Guid, source.Id);
+                    }
+                    else
+                    {
+                        purchaseOrdersShipping.ShipTo = new GuidObject2(shipToDestinationGuid);
+                        purchaseOrder.Shipping = purchaseOrdersShipping;
+                    }
                 }
-                var shipToDestination = shipToDestinations.FirstOrDefault(stc => stc.Code == source.ShipToCode);
-                if (shipToDestination == null)
+                catch (RepositoryException ex)
                 {
-                    throw new KeyNotFoundException(string.Concat("Unable to retrieve ShipToDestination for: ", source.ShipToCode));
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
                 }
-                purchaseOrdersShipping.ShipTo = new GuidObject2(shipToDestination.Guid);
-                purchaseOrder.Shipping = purchaseOrdersShipping;
             }
+
             if (!string.IsNullOrEmpty(source.Fob))
             {
-                var freeOnBoardTypes = await GetFreeOnBoardTypesAsync(bypassCache);
-                if (freeOnBoardTypes == null)
+                try
                 {
-                    throw new Exception("Unable to retrieve FreeOnBoardTypes");
+                    var freeOnBoardTypeGuid = await colleagueFinanceReferenceDataRepository.GetFreeOnBoardTypeGuidAsync(source.Fob);
+                    if (string.IsNullOrEmpty(freeOnBoardTypeGuid))
+                    {
+                        string message = string.Concat("Missing FreeOnBoard information for purchase order: '", source.Id, "'  FreeOnBoard: '", source.Fob, "'");
+                        IntegrationApiExceptionAddError(message, "GUID.Not.Found", source.Guid, source.Id);
+                    }
+                    else
+                    {
+                        purchaseOrdersShipping.FreeOnBoard = new GuidObject2(freeOnBoardTypeGuid);
+                        purchaseOrder.Shipping = purchaseOrdersShipping;
+                    }
                 }
-                var freeOnBoardType = freeOnBoardTypes.FirstOrDefault(fob => fob.Code == source.Fob);
-                if (freeOnBoardType == null)
+                catch (RepositoryException ex)
                 {
-                    throw new KeyNotFoundException(string.Concat("Unable to retrieve FreeOnBoardTypes for: ", source.Fob));
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
                 }
-                purchaseOrdersShipping.FreeOnBoard = new GuidObject2(freeOnBoardType.Guid);
-                purchaseOrder.Shipping = purchaseOrdersShipping;
             }
 
+            if (!string.IsNullOrEmpty(source.ShipViaCode))
+            {
+                try
+                {
+                    var shippingMethodGuid = await colleagueFinanceReferenceDataRepository.GetShippingMethodGuidAsync(source.ShipViaCode);
+                    if (string.IsNullOrEmpty(shippingMethodGuid))
+                    {
+                        string message = string.Concat("Missing Shipping Method information for purchase order: '", source.Id, "'  ShippingMethod: '", source.ShipViaCode, "'");
+                        IntegrationApiExceptionAddError(message, "GUID.Not.Found", source.Guid, source.Id);
+                    }
+                    else
+                    {
+                        purchaseOrder.ShippingMethod = new GuidObject2(shippingMethodGuid);
+                    }
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                }
+            }
 
-            purchaseOrder.OverrideShippingDestination = await BuildOverrideShippingDestinationDtoAsync(source, bypassCache);
+            try
+            {
+                purchaseOrder.OverrideShippingDestination = await BuildOverrideShippingDestinationDtoAsync(source, bypassCache);
+
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Bad.Data", source.Guid, source.Id);
+            }
 
             var purchaseOrderVendor = new PurchaseOrdersVendorDtoProperty2();
-            
+
 
             if (!string.IsNullOrEmpty(source.VendorId))
             {
                 purchaseOrderVendor.ExistingVendor = new PurchaseOrdersExistingVendorDtoProperty();
-                var vendorGuid = await vendorsRepository.GetVendorGuidFromIdAsync(source.VendorId);
-                if (string.IsNullOrEmpty(vendorGuid))
-                {
-                    throw new Exception(string.Concat("Missing vendor GUID for purchase order: ", source.Id, " Guid: ", source.Guid, " Vendor ID: ", source.VendorId));
-                }
-                
-                purchaseOrderVendor.ExistingVendor.Vendor = new GuidObject2(vendorGuid);
 
-                if (!string.IsNullOrEmpty(source.VendorAddressId) && (source.AltAddressFlag == true))
+                try
                 {
-                    var vendorAddressGuid = await purchaseOrderRepository.GetGuidFromIdAsync(source.VendorAddressId,"ADDRESS");
-                    if (string.IsNullOrEmpty(vendorAddressGuid))
+                   var vendorGuid = await vendorsRepository.GetVendorGuidFromIdAsync(source.VendorId);
+                    if (string.IsNullOrEmpty(vendorGuid))
                     {
-                        throw new Exception(string.Concat("Missing GUID for existin vendor address: ", source.Id, " Guid: ", source.Guid, " Vendor ID: ", source.VendorId));
-                    }
-                    purchaseOrderVendor.ExistingVendor.AlternativeVendorAddress = new GuidObject2(vendorAddressGuid);
-                }
-            } 
+                        var message = string.Concat("Missing vendor GUID for purchase order: ", source.Id,  " Vendor ID: ", source.VendorId);
+                        IntegrationApiExceptionAddError(message, "GUID.Not.Found", source.Guid, source.Id);
 
-            if ((purchaseOrderVendor.ExistingVendor == null) || (purchaseOrderVendor.ExistingVendor.AlternativeVendorAddress == null && source.AltAddressFlag == true) )
-                purchaseOrderVendor.ManualVendorDetails = await BuildManualVendorDetailsDtoAsync(source, bypassCache);
+                    }
+                    purchaseOrderVendor.ExistingVendor.Vendor = new GuidObject2(vendorGuid);
+
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                }
+
+                try
+                { 
+             
+                    if (!string.IsNullOrEmpty(source.VendorAddressId) && (source.AltAddressFlag == true))
+                    {
+                        var vendorAddressGuid = await purchaseOrderRepository.GetGuidFromIdAsync(source.VendorAddressId, "ADDRESS");
+                        if (string.IsNullOrEmpty(vendorAddressGuid))
+                        {
+                            var message = string.Concat("Missing GUID for existing vendor address: ", source.Id,  " Vendor ID: ", source.VendorId);
+                            IntegrationApiExceptionAddError(message, "GUID.Not.Found", source.Guid, source.Id);
+
+                        }
+                        purchaseOrderVendor.ExistingVendor.AlternativeVendorAddress = new GuidObject2(vendorAddressGuid);
+                    }
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                }
+            }
+
+            if ((purchaseOrderVendor.ExistingVendor == null) || (purchaseOrderVendor.ExistingVendor.AlternativeVendorAddress == null && source.AltAddressFlag == true))
+            {
+                try
+                {
+                    purchaseOrderVendor.ManualVendorDetails = await BuildManualVendorDetailsDtoAsync(source, bypassCache);
+                }
+               
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "Bad.Data", source.Guid, source.Id);
+                }
+            }
 
             if (purchaseOrderVendor.ExistingVendor != null || purchaseOrderVendor.ManualVendorDetails != null)
             {
@@ -586,34 +832,50 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             else
             {
-                throw new Exception(string.Concat("Vendor is required: ", source.Id, " Guid: ", source.Guid));
+                IntegrationApiExceptionAddError("Vendor is required.", "Bad.Data", source.Guid, source.Id);
             }
 
             if (!string.IsNullOrEmpty(source.VendorTerms))
             {
-                var vendorTerms = await GetVendorTermsAsync(bypassCache);
-                if (vendorTerms == null)
-                    throw new Exception("Unable to retrieve vendor terms");
-                var vendorTerm = vendorTerms.FirstOrDefault(vt => vt.Code == source.VendorTerms);
-                if (vendorTerm == null)
+                try
                 {
-                    throw new KeyNotFoundException(string.Concat("Missing vendor term information for purchase order: ", source.Id, " Guid: ", source.Guid, " Vendor Term: ", source.VendorTerms));
-                }
-                purchaseOrder.PaymentTerms = new GuidObject2(vendorTerm.Guid);
-            }
+                    var vendorTermGuid = await colleagueFinanceReferenceDataRepository.GetVendorTermGuidAsync(source.VendorTerms);
 
+                    if (string.IsNullOrEmpty(vendorTermGuid))
+                    {
+                        var message = string.Concat("Missing vendor term information.  Vendor Term: ", source.VendorTerms);
+                        IntegrationApiExceptionAddError(message, "Bad.Data", source.Guid, source.Id);
+                    }
+                    else {
+                        purchaseOrder.PaymentTerms = new GuidObject2(vendorTermGuid);
+                    }
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                }
+            }
 
             if (!string.IsNullOrEmpty(source.ApType))
             {
-                var accountsPayableSources = await colleagueFinanceReferenceDataRepository.GetAccountsPayableSourcesAsync(false);
-                if (accountsPayableSources == null)
-                    throw new Exception("Unable to retrieve accounts payable sources");
-                var accountsPayableSource = accountsPayableSources.FirstOrDefault(aps => aps.Code == source.ApType);
-                if (accountsPayableSource == null)
+                try
                 {
-                    throw new KeyNotFoundException(string.Concat("Missing accounts payable source information for purchase order: ", source.Id, " Guid: ", source.Guid, " Ap Type: ", source.ApType));
+                    var apTypeGuid = await colleagueFinanceReferenceDataRepository.GetAccountsPayableSourceGuidAsync(source.ApType);
+
+                    if (string.IsNullOrEmpty(apTypeGuid))
+                    {
+                        var message = string.Concat("Missing accounts payable source information.  Ap Type: ", source.ApType);
+                        IntegrationApiExceptionAddError(message, "GUID.Not.Found", source.Guid, source.Id);
+                    }
+                    else
+                    {
+                        purchaseOrder.PaymentSource = new GuidObject2(apTypeGuid);
+                    }
                 }
-                purchaseOrder.PaymentSource = new GuidObject2(accountsPayableSource.Guid);
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                }
             }
 
 
@@ -650,42 +912,70 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 purchaseOrder.LineItems = lineItems;
             }
+
             return purchaseOrder;
         }
 
         #endregion
 
         #region V11 PUT/POST
+
         /// <summary>
-        /// EEDM V10 Put purchase order
+        /// EEDM V11 Put purchase order
         /// </summary>
         /// <param name="guid"></param>
         /// <param name="purchaseOrder"></param>
         /// <returns></returns>
-        public async Task<PurchaseOrders2> PutPurchaseOrdersAsync2(string guid, PurchaseOrders2 purchaseOrder)
+        public async Task<PurchaseOrders2> PutPurchaseOrdersAsync(string guid, PurchaseOrders2 purchaseOrder)
         {
             if (purchaseOrder == null)
                 throw new ArgumentNullException("purchaseOrder", "Must provide a purchaseOrder for update");
             if (string.IsNullOrEmpty(purchaseOrder.Id))
                 throw new ArgumentNullException("purchaseOrder", "Must provide a guid for purchaseOrder update");
+            
+            // verify the user has the permission to create a PurchaseOrders
+            CheckUpdatePurchaseOrderPermission();
 
-            // get the person ID associated with the incoming guid
+            ValidatePurchaseOrder(purchaseOrder);
+
+            if (purchaseOrder.PaymentSource == null)
+            {
+                IntegrationApiExceptionAddError("PaymentSource cannot be unset.", "Validation.Exception");
+            }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+            // get the ID associated with the incoming guid
             var purchaseOrderId = await purchaseOrderRepository.GetPurchaseOrdersIdFromGuidAsync(purchaseOrder.Id);
-            List<Domain.ColleagueFinance.Entities.FundsAvailable> OverRideGLs = new List<Domain.ColleagueFinance.Entities.FundsAvailable>();
+
+           var overRideGLs = new List<Domain.ColleagueFinance.Entities.FundsAvailable>();
             // verify the GUID exists to perform an update.  If not, perform a create instead
             if (!string.IsNullOrEmpty(purchaseOrderId))
             {
-                // verify the user has the permission to create a PurchaseOrders
-                CheckUpdatePurchaseOrderPermission();
-                var glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
+
+                GeneralLedgerAccountStructure glConfiguration = null;
+
+                try
+                {
+                    glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "", purchaseOrder.Id);
+                    throw IntegrationApiException;
+                }
 
                 purchaseOrderRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+
+                #region  Check Funds Available
 
                 try
                 {
                     // Don't check funds availability if we are closing the purchase order
                     if (purchaseOrder.Status != PurchaseOrdersStatus.Closed && purchaseOrder.Status != PurchaseOrdersStatus.Voided)
-                        OverRideGLs = await checkFunds2(purchaseOrder, purchaseOrderId);
+                        overRideGLs = await CheckFunds(purchaseOrder, purchaseOrderId);
 
                     if ((purchaseOrder.LineItems) != null && (purchaseOrder.LineItems.Any()))
                     {
@@ -702,72 +992,119 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             _projectReferenceIds = await purchaseOrderRepository.GetProjectIdsFromReferenceNo(projectRefNos.ToArray());
                         }
                     }
-                    // map the DTO to entities
-                    var purchaseOrderEntity
-                    = await ConvertPurchaseOrdersDtoToEntityAsync2(purchaseOrder.Id, purchaseOrder, glConfiguration.MajorComponents.Count);
-
-                    // update the entity in the database
-                    var updatedPurchaseOrderEntity =
-                        await purchaseOrderRepository.UpdatePurchaseOrdersAsync(purchaseOrderEntity);
-
-
-                    var dtoPurchaseOrder = await this.ConvertPurchaseOrderEntityToDtoAsync2(updatedPurchaseOrderEntity, glConfiguration, true);
-
-
-                    if (dtoPurchaseOrder.LineItems != null && dtoPurchaseOrder.LineItems.Any() && OverRideGLs != null && OverRideGLs.Any())
-                    {
-                        int lineCount = 0;
-                        foreach (var lineItem in dtoPurchaseOrder.LineItems)
-                        {
-                            int detailCount = 0;
-                            lineCount++;
-                            foreach (var detail in lineItem.AccountDetail)
-                            {
-                                detailCount++;
-                                string PosID = lineCount.ToString() + "." + detailCount.ToString();
-                                var findOvr = OverRideGLs.FirstOrDefault(a => a.Sequence == PosID || a.Sequence == PosID + ".DS");
-                                if (findOvr != null)
-                                {
-                                    if (!string.IsNullOrEmpty(findOvr.SubmittedBy) && findOvr.Sequence == PosID + ".DS")
-                                    {
-                                        var submittedByGuid = await personRepository.GetPersonGuidFromIdAsync(findOvr.SubmittedBy);
-                                        if (string.IsNullOrEmpty(submittedByGuid))
-                                        {
-                                            throw new Exception(string.Concat("Process finished but we couldn't return a Submitted By GUID purchase order: ", dtoPurchaseOrder.Id, " Submitted By: ", findOvr.SubmittedBy));
-                                        }
-                                        detail.SubmittedBy = new GuidObject2(submittedByGuid);
-                                    }
-                                    if (findOvr.AvailableStatus == FundsAvailableStatus.Override)
-                                        detail.BudgetCheck = PurchaseOrdersAccountBudgetCheck.Override;
-                                }
-                            }
-                        }
-                    }
-
-                    // return the newly updated DTO
-                    return dtoPurchaseOrder;
-
                 }
                 catch (RepositoryException ex)
                 {
-                    throw ex;
-                }
-                catch (KeyNotFoundException ex)
-                {
-                    throw ex;
-                }
-                catch (ArgumentException ex)
-                {
-                    throw ex;
+                    IntegrationApiExceptionAddError(ex);
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception(ex.Message, ex.InnerException);
+                    IntegrationApiExceptionAddError(ex.Message);
                 }
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+                #endregion
+
+                #region create domain entity from request
+                PurchaseOrder purchaseOrderEntity = null;
+                try
+                {
+                    // map the DTO to entities
+                    purchaseOrderEntity = await ConvertPurchaseOrdersDtoToEntityAsync(purchaseOrder.Id, purchaseOrder, glConfiguration.MajorComponents.Count);
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError("Record not created.  Error extracting request." + ex.Message, "Global.Internal.Error",
+                       purchaseOrder != null && !string.IsNullOrEmpty(purchaseOrder.Id) ? purchaseOrder.Id : null
+                      );
+                }
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+                #endregion
+
+                #region Create record from domain entity
+
+                PurchaseOrder updatedPurchaseOrderEntity = null;
+
+                // update the entity in the database
+                try
+                {
+                    updatedPurchaseOrderEntity = await purchaseOrderRepository.UpdatePurchaseOrdersAsync(purchaseOrderEntity);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex);
+                    throw IntegrationApiException;
+                }
+                catch (Exception ex)  //catch InvalidOperationException thrown when record already exists.
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "Global.Internal.Error",
+                         purchaseOrder != null && !string.IsNullOrEmpty(purchaseOrder.Id) ? purchaseOrder.Id : null);
+                    throw IntegrationApiException;
+                }
+
+
+                #endregion
+
+                #region Build DTO response
+
+                PurchaseOrders2 dtoPurchaseOrder = null;
+                try
+                {
+                    dtoPurchaseOrder = await this.ConvertPurchaseOrderEntityToDtoAsync(updatedPurchaseOrderEntity, glConfiguration, true);
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError("Record created. Error building response." + ex.Message, "Global.Internal.Error",
+                         purchaseOrder != null && !string.IsNullOrEmpty(purchaseOrder.Id) ? purchaseOrder.Id : null);
+                }
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+                #endregion
+
+
+                if (dtoPurchaseOrder.LineItems != null && dtoPurchaseOrder.LineItems.Any() && overRideGLs != null && overRideGLs.Any())
+                {
+                    int lineCount = 0;
+                    foreach (var lineItem in dtoPurchaseOrder.LineItems)
+                    {
+                        int detailCount = 0;
+                        lineCount++;
+                        foreach (var detail in lineItem.AccountDetail)
+                        {
+                            detailCount++;
+                            string PosID = lineCount.ToString() + "." + detailCount.ToString();
+                            var findOvr = overRideGLs.FirstOrDefault(a => a.Sequence == PosID || a.Sequence == PosID + ".DS");
+                            if (findOvr != null)
+                            {
+                                if (!string.IsNullOrEmpty(findOvr.SubmittedBy) && findOvr.Sequence == PosID + ".DS")
+                                {
+                                    var submittedByGuid = await personRepository.GetPersonGuidFromIdAsync(findOvr.SubmittedBy);
+                                    if (string.IsNullOrEmpty(submittedByGuid))
+                                    {
+                                        throw new Exception(string.Concat("Process finished but we couldn't return a Submitted By GUID purchase order: ", dtoPurchaseOrder.Id, " Submitted By: ", findOvr.SubmittedBy));
+                                    }
+                                    detail.SubmittedBy = new GuidObject2(submittedByGuid);
+                                }
+                                if (findOvr.AvailableStatus == FundsAvailableStatus.Override)
+                                    detail.BudgetCheck = PurchaseOrdersAccountBudgetCheck.Override;
+                            }
+                        }
+                    }
+                }
+
+                // return the newly updated DTO
+                return dtoPurchaseOrder;
             }
 
             // perform a create instead
-            return await PostPurchaseOrdersAsync2(purchaseOrder);
+            return await PostPurchaseOrdersAsync(purchaseOrder);
         }
 
         /// <summary>
@@ -775,27 +1112,33 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// </summary>
         /// <param name="purchaseOrder"></param>
         /// <returns></returns>
-        public async Task<PurchaseOrders2> PostPurchaseOrdersAsync2(PurchaseOrders2 purchaseOrder)
+        public async Task<PurchaseOrders2> PostPurchaseOrdersAsync(PurchaseOrders2 purchaseOrder)
         {
             if (purchaseOrder == null)
                 throw new ArgumentNullException("purchaseOrders", "Must provide a purchaseOrders for update");
             if (string.IsNullOrEmpty(purchaseOrder.Id))
                 throw new ArgumentNullException("purchaseOrders", "Must provide a guid for purchaseOrders update");
 
-
-            Ellucian.Colleague.Domain.ColleagueFinance.Entities.PurchaseOrder createdPurchaseOrder = null;
-
-            List<Domain.ColleagueFinance.Entities.FundsAvailable> OverRideGLs = new List<Domain.ColleagueFinance.Entities.FundsAvailable>();
-
             // verify the user has the permission to create a PurchaseOrders
             CheckUpdatePurchaseOrderPermission();
+
+           
+            ValidatePurchaseOrder(purchaseOrder);
+
+
             var glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
 
             purchaseOrderRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
+            #region  Check Funds Available
+
+            var overRideGLs = new List<Domain.ColleagueFinance.Entities.FundsAvailable>();
+
             try
             {
-                OverRideGLs = await checkFunds2(purchaseOrder);
+                overRideGLs = await CheckFunds(purchaseOrder);
+
+
                 if ((purchaseOrder.LineItems) != null && (purchaseOrder.LineItems.Any()))
                 {
                     var projectRefNos = purchaseOrder.LineItems
@@ -811,26 +1154,89 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         _projectReferenceIds = await purchaseOrderRepository.GetProjectIdsFromReferenceNo(projectRefNos.ToArray());
                     }
                 }
-                var purchaseOrderEntity
-                         = await ConvertPurchaseOrdersDtoToEntityAsync2(purchaseOrder.Id, purchaseOrder, glConfiguration.MajorComponents.Count);
-
-                // create a PurchaseOrder entity in the database
-                createdPurchaseOrder =
-                    await purchaseOrderRepository.UpdatePurchaseOrdersAsync(purchaseOrderEntity);
+                
             }
             catch (RepositoryException ex)
             {
-                throw ex;
+                IntegrationApiExceptionAddError(ex);
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                IntegrationApiExceptionAddError(ex.Message);
             }
 
-            var dtoPurchaseOrder = await this.ConvertPurchaseOrderEntityToDtoAsync2(createdPurchaseOrder, glConfiguration, true);
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+            #endregion
+
+            #region Create domain entity from request
+
+            PurchaseOrder purchaseOrderEntity = null;
+            try
+            {
+                // map the DTO to entities
+                purchaseOrderEntity = await ConvertPurchaseOrdersDtoToEntityAsync(purchaseOrder.Id, purchaseOrder, glConfiguration.MajorComponents.Count);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError("Record not created.  Error extracting request." + ex.Message, "Global.Internal.Error",
+                   purchaseOrder != null && !string.IsNullOrEmpty(purchaseOrder.Id) ? purchaseOrder.Id : null
+                  );
+            }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            
+            #endregion
+
+            #region Create record from domain entity
+
+            PurchaseOrder createdPurchaseOrder = null;
+
+            // create the entity in the database
+            try
+            {
+                createdPurchaseOrder = await purchaseOrderRepository.UpdatePurchaseOrdersAsync(purchaseOrderEntity);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+            catch (Exception ex)  //catch InvalidOperationException thrown when record already exists.
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Global.Internal.Error",
+                     purchaseOrder != null && !string.IsNullOrEmpty(purchaseOrder.Id) ? purchaseOrder.Id : null);
+                throw IntegrationApiException;
+            }
 
 
-            if (dtoPurchaseOrder.LineItems != null && dtoPurchaseOrder.LineItems.Any() && OverRideGLs != null && OverRideGLs.Any())
+            #endregion
+
+            #region Build DTO response
+
+            PurchaseOrders2 dtoPurchaseOrder = null;
+            try
+            {
+                dtoPurchaseOrder = await this.ConvertPurchaseOrderEntityToDtoAsync(createdPurchaseOrder, glConfiguration, true);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError("Record created. Error building response." + ex.Message, "Global.Internal.Error",
+                     purchaseOrder != null && !string.IsNullOrEmpty(purchaseOrder.Id) ? purchaseOrder.Id : null);
+            }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            #endregion
+            
+
+            if (dtoPurchaseOrder.LineItems != null && dtoPurchaseOrder.LineItems.Any() && overRideGLs != null && overRideGLs.Any())
             {
                 int lineCount = 0;
                 foreach (var lineItem in dtoPurchaseOrder.LineItems)
@@ -841,7 +1247,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     {
                         detailCount++;
                         string PosID = lineCount.ToString() + "." + detailCount.ToString();
-                        var findOvr = OverRideGLs.FirstOrDefault(a => a.Sequence == PosID || a.Sequence == PosID + ".DS");
+                        var findOvr = overRideGLs.FirstOrDefault(a => a.Sequence == PosID || a.Sequence == PosID + ".DS");
                         if (findOvr != null)
                         {
                             if (!string.IsNullOrEmpty(findOvr.SubmittedBy) && findOvr.Sequence == PosID + ".DS")
@@ -870,7 +1276,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="purchaseOrder"></param>
         /// <param name="PoId"></param>
         /// <returns></returns>
-        private async Task<List<Domain.ColleagueFinance.Entities.FundsAvailable>> checkFunds2(PurchaseOrders2 purchaseOrder, string PoId = "")
+        private async Task<List<Domain.ColleagueFinance.Entities.FundsAvailable>> CheckFunds(PurchaseOrders2 purchaseOrder, string PoId = "")
         {
             var fundsAvailable = new List<Domain.ColleagueFinance.Entities.FundsAvailable>();
             var overrideAvailable = new List<Domain.ColleagueFinance.Entities.FundsAvailable>();
@@ -908,12 +1314,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             budgetOvrCheckTuple.Add(new Tuple<string, bool>(details.AccountingString, budgetCheckOverrideFlag));
                             // You don't need to have funds available if you are de-activating the line item or if the line item
                             // status is already paid, invoiced, or reconciled (funds already allocated).
-                            if (details.Status != PurchaseOrdersStatus.Voided 
-                                && details.Status != PurchaseOrdersStatus.Closed 
-                                && details.Status != PurchaseOrdersStatus.Notapproved
-                                && details.Status != PurchaseOrdersStatus.Invoiced
-                                && details.Status != PurchaseOrdersStatus.Paid
-                                && details.Status != PurchaseOrdersStatus.Reconciled)
+                            if (details.Status != Dtos.EnumProperties.LineItemStatus.Voided 
+                                && details.Status != Dtos.EnumProperties.LineItemStatus.Closed
+                                && details.Status != Dtos.EnumProperties.LineItemStatus.Invoiced
+                                && details.Status != Dtos.EnumProperties.LineItemStatus.Paid
+                                && details.Status != Dtos.EnumProperties.LineItemStatus.Reconciled)
                             {
                                 fundsAvailable.Add(new Domain.ColleagueFinance.Entities.FundsAvailable(details.AccountingString)
                                 {
@@ -933,7 +1338,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         }
                         else
                         {
-                            throw new Exception("A line item has two account details with the same GL number " + accountingString + " this is not allowed");
+                            IntegrationApiExceptionAddError("A line item has two account details with the same GL number " + accountingString + " this is not allowed", "Validation.Exception");
                         }
                     }
                 }
@@ -952,15 +1357,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     {
                         if (availableFund.AvailableStatus == FundsAvailableStatus.NotAvailable)
                         {
-                            throw new ArgumentException("The accounting string " + availableFund.AccountString + " does not have funds available");
+                            IntegrationApiExceptionAddError("The accounting string " + availableFund.AccountString + " does not have funds available", "Validation.Exception");
                         }
                         //if we get a override and if the budgetcheck flag is not set to override then thrown an exception
-                        if (availableFund.AvailableStatus == FundsAvailableStatus.Override )
+                        else if (availableFund.AvailableStatus == FundsAvailableStatus.Override )
                         {
                             var budOverCheck = budgetOvrCheckTuple.FirstOrDefault(acct => acct.Item1 == availableFund.AccountString);
                             if (budOverCheck != null && budOverCheck.Item2 == false)
                             {
-                                throw new ArgumentException("The accounting string " + availableFund.AccountString + " does not have funds available. BudgetCheck flag not set to override.");
+                                IntegrationApiExceptionAddError("The accounting string " + availableFund.AccountString + " does not have funds available. BudgetCheck flag not set to override.", "Validation.Exception");
                             }
                             else
                             {
@@ -980,23 +1385,42 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="purchaseOrderGuid"></param>
         /// <param name="purchaseOrder"></param>
         /// <returns></returns>
-        private async Task<Domain.ColleagueFinance.Entities.PurchaseOrder> ConvertPurchaseOrdersDtoToEntityAsync2(string purchaseOrderGuid, Dtos.PurchaseOrders2 purchaseOrder, int GLCompCount)
+        private async Task<Domain.ColleagueFinance.Entities.PurchaseOrder> ConvertPurchaseOrdersDtoToEntityAsync(string purchaseOrderGuid, Dtos.PurchaseOrders2 purchaseOrder, int GLCompCount)
         {
             if (purchaseOrder == null || string.IsNullOrEmpty(purchaseOrder.Id))
                 throw new ArgumentNullException("purchaseOrder", "Must provide guid for purchaseOrder");
 
-            if ((purchaseOrder.Vendor != null) && (purchaseOrder.Vendor.ExistingVendor != null) && 
+            if ((purchaseOrder.Vendor != null) && (purchaseOrder.Vendor.ExistingVendor != null) &&
                  (purchaseOrder.Vendor.ExistingVendor.Vendor != null) && (string.IsNullOrEmpty(purchaseOrder.Vendor.ExistingVendor.Vendor.Id)))
-                throw new ArgumentNullException("purchaseOrder", "Must provide vendor.id for purchaseOrder");
+                IntegrationApiExceptionAddError("Must provide vendor.id for purchaseOrder", "Validation.Exception", purchaseOrder.Id);
+
+
+            var guid = purchaseOrderGuid;
+            string purchaseOrderId = string.Empty;
+
+            try
+            {
+                purchaseOrderId = await purchaseOrderRepository.GetPurchaseOrdersIdFromGuidAsync(guid);
+            }
+            catch (Exception)
+            {
+                // do nothing.. if the purchase order does not exist, it will be a new record.
+            }
 
             var poStatus = PurchaseOrderStatus.InProgress;
             if (purchaseOrder.Status != PurchaseOrdersStatus.NotSet && purchaseOrder.Status != null)
             {
-                poStatus = GetPurchaseOrderStatus(purchaseOrder);
+                try
+                {
+                    poStatus = GetPurchaseOrderStatus(purchaseOrder);
+                }
+                catch (Exception)
+                {
+                    IntegrationApiExceptionAddError(string.Format("Invalid purchase order status '{0}'", purchaseOrder.Status.ToString()), "Validation.Exception",
+                           purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                }
             }
 
-            var guid = purchaseOrderGuid;
-            var purchaseOrderId = await purchaseOrderRepository.GetPurchaseOrdersIdFromGuidAsync(guid);
             var date = (purchaseOrder.StatusDate == DateTime.MinValue)
                 ? DateTime.Now.Date : purchaseOrder.StatusDate;
             string currency = null;
@@ -1008,8 +1432,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (string.IsNullOrEmpty(purchaseOrder.OrderNumber)) { purchaseOrder.OrderNumber = "new"; }
 
-             var purchaseOrderEntity = new Domain.ColleagueFinance.Entities.PurchaseOrder(
-                purchaseOrderId, guid ?? new Guid().ToString(), purchaseOrder.OrderNumber, "test name", poStatus, date, purchaseOrder.OrderedOn);
+            var purchaseOrderEntity = new Domain.ColleagueFinance.Entities.PurchaseOrder(
+               purchaseOrderId, guid ?? new Guid().ToString(), purchaseOrder.OrderNumber, "test name", poStatus, date, purchaseOrder.OrderedOn);
 
             if (purchaseOrder.Type != PurchaseOrdersTypes.NotSet)
             {
@@ -1028,16 +1452,25 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (purchaseOrder.SubmittedBy != null)
             {
-                var submittedById = await personRepository.GetPersonIdFromGuidAsync(purchaseOrder.SubmittedBy.Id);
-                if (string.IsNullOrEmpty(submittedById))
+                try
                 {
-                    throw new Exception(string.Concat("SubmittedBy GUID is not found: ", purchaseOrder.Id, " Guid: ", purchaseOrder.SubmittedBy.Id));
+                    var submittedById = await personRepository.GetPersonIdFromGuidAsync(purchaseOrder.SubmittedBy.Id);
+                    if (string.IsNullOrEmpty(submittedById))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Person record not found for SubmittedBy.Id '{0}'", purchaseOrder.SubmittedBy.Id), "Validation.Exception",
+                            purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                    }
+                    purchaseOrderEntity.SubmittedBy = submittedById;
                 }
-                purchaseOrderEntity.SubmittedBy = submittedById;
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(string.Format("Person record not found for SubmittedBy.Id '{0}'", purchaseOrder.SubmittedBy.Id), "Validation.Exception",
+                       purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                }
             }
-            // New flag to send data to the CTX to bypass the tax forms
+            // Flag to send data to the CTX to bypass the tax forms
             purchaseOrderEntity.bypassTaxForms = CheckBypassTaxformsPermission();
-            // New flag to send data to the CTX to bypass approvals
+            // Flag to send data to the CTX to bypass approvals
             purchaseOrderEntity.bypassApprovals = CheckBypassApprovalsPermission();
 
             if (purchaseOrder.TransactionDate != default(DateTime))
@@ -1048,56 +1481,144 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (purchaseOrder.Buyer != null)
             {
-                var buyerId = await buyerRepository.GetBuyerIdFromGuidAsync(purchaseOrder.Buyer.Id);
-                if (string.IsNullOrEmpty(buyerId))
+                try
                 {
-                    throw new Exception(string.Concat("Missing buyer information for purchase order: ", purchaseOrderEntity.Id, " Guid: ", guid, " Buyer: ", purchaseOrder.Buyer.Id));
+                    var buyerId = await buyerRepository.GetBuyerIdFromGuidAsync(purchaseOrder.Buyer.Id);
+                    if (string.IsNullOrEmpty(buyerId))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Buyer not found for Buyer.Id '{0}'", purchaseOrder.Buyer.Id), "Validation.Exception",
+                           purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                    }
+                    else
+                    {
+                        purchaseOrderEntity.Buyer = buyerId;
+                    }
                 }
-                purchaseOrderEntity.Buyer = buyerId;
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(string.Format("Buyer not found for Buyer.Id '{0}'", purchaseOrder.Buyer.Id), "Validation.Exception",
+                       purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                }
             }
 
             if (purchaseOrder.Initiator != null && purchaseOrder.Initiator.Detail != null)
             {
-                var initiatorId = await personRepository.GetPersonIdFromGuidAsync(purchaseOrder.Initiator.Detail.Id);
-                if (string.IsNullOrEmpty(initiatorId))
+                try
                 {
-                    throw new Exception(string.Concat("GUID for initiator detail ID could not find colleague ID: ", purchaseOrderEntity.Id, " Guid: ", guid, " Buyer: ", purchaseOrder.Initiator.Detail.Id));
+                    var initiatorId = await personRepository.GetPersonIdFromGuidAsync(purchaseOrder.Initiator.Detail.Id);
+                    if (string.IsNullOrEmpty(initiatorId))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Initiator detail record not found for Initiator.Detail.Id '{0}'.", purchaseOrder.Initiator.Detail.Id), "Validation.Exception",
+                               purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                    }
+                    else
+                    {
+                        purchaseOrderEntity.DefaultInitiator = initiatorId;
+                    }
                 }
-                purchaseOrderEntity.DefaultInitiator = initiatorId;
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(string.Format("Initiator detail record not found for Initiator.Detail.Id '{0}'.", purchaseOrder.Initiator.Detail.Id), "Validation.Exception",
+                                purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                }
             }
 
             if (purchaseOrder.Shipping != null)
             {
                 if (purchaseOrder.Shipping.ShipTo != null)
                 {
-                    var shipToDestinations = await GetShipToDestinationsAsync(true);
-                    if (shipToDestinations == null)
+                    IEnumerable<Domain.ColleagueFinance.Entities.ShipToDestination> shipToDestinations = null;
+                    try
                     {
-                        throw new Exception("Unable to retrieve ShipToDestination");
+                        shipToDestinations = await GetShipToDestinationsAsync(true);
+
+                        if (shipToDestinations == null)
+                        {
+                            IntegrationApiExceptionAddError("Unable to retrieve ShipToDestinations.", "Validation.Exception",
+                                   purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                        }
+                        else
+                        {
+                            var shipToDestination = shipToDestinations.FirstOrDefault(stc => stc.Guid == purchaseOrder.Shipping.ShipTo.Id);
+                            if ((shipToDestination == null) || (string.IsNullOrEmpty(shipToDestination.Code)))
+                            {
+                                IntegrationApiExceptionAddError(string.Format("ShipToDestination record not found for Shipping.ShipTo.Id '{0}' ", purchaseOrder.Shipping.ShipTo.Id), "Validation.Exception",
+                                   purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                            }
+                            else
+                            {
+                                purchaseOrderEntity.ShipToCode = shipToDestination.Code;
+                            }
+                        }
                     }
-                    var shipToDestination = shipToDestinations.FirstOrDefault(stc => stc.Guid == purchaseOrder.Shipping.ShipTo.Id);
-                    if (shipToDestination == null)
+                    catch (Exception ex)
                     {
-                        throw new KeyNotFoundException(string.Concat("Unable to retrieve ShipToDestination for: ", purchaseOrder.Shipping.ShipTo.Id));
+                        IntegrationApiExceptionAddError(string.Format("An error occurred retrieving the ShipToDestination record for Shipping.ShipTo.Id '{0}'. Details: {1}.", purchaseOrder.Shipping.ShipTo.Id, ex.Message), "Validation.Exception",
+                                   purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
                     }
-                    purchaseOrderEntity.ShipToCode = shipToDestination.Code;
                 }
 
                 if (purchaseOrder.Shipping.FreeOnBoard != null)
                 {
-                    var freeOnBoardTypes = await GetFreeOnBoardTypesAsync(true);
-                    if (freeOnBoardTypes == null)
+                    IEnumerable<Domain.ColleagueFinance.Entities.FreeOnBoardType> freeOnBoardTypes = null;
+                    try
                     {
-                        throw new Exception("Unable to retrieve FreeOnBoardTypes");
+                        freeOnBoardTypes = await GetFreeOnBoardTypesAsync(true);
+                        if (freeOnBoardTypes == null)
+                        {
+                            IntegrationApiExceptionAddError("Unable to retrieve FreeOnBoardTypes.", "Validation.Exception",
+                                  purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                        }
+                        else
+                        {
+                            var freeOnBoardType = freeOnBoardTypes.FirstOrDefault(fob => fob.Guid == purchaseOrder.Shipping.FreeOnBoard.Id);
+                            if ((freeOnBoardType == null) || (string.IsNullOrEmpty(freeOnBoardType.Code)))
+                            {
+                                IntegrationApiExceptionAddError(string.Format("FreeOnBoardTypes record not found for Shipping.FreeOnBoard.Id '{0}'.", purchaseOrder.Shipping.FreeOnBoard.Id), "Validation.Exception",
+                                      purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                            }
+                            else
+                            {
+                                purchaseOrderEntity.Fob = freeOnBoardType.Code;
+                            }
+                        }
                     }
-                    var freeOnBoardType = freeOnBoardTypes.FirstOrDefault(fob => fob.Guid == purchaseOrder.Shipping.FreeOnBoard.Id);
-                    if (freeOnBoardType == null)
+                    catch (Exception ex)
                     {
-                        throw new KeyNotFoundException(string.Concat("Unable to retrieve FreeOnBoardTypes for: ", purchaseOrder.Shipping.FreeOnBoard.Id));
+                        IntegrationApiExceptionAddError(string.Format("An error occurred retrieving the FreeOnBoardTypes record for Shipping.FreeOnBoard.Id '{0}'. Details: {1}.", purchaseOrder.Shipping.FreeOnBoard.Id, ex.Message), "Validation.Exception",
+                                   purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
                     }
-                    purchaseOrderEntity.Fob = freeOnBoardType.Code;
                 }
             }
+
+            // Shipping Method
+            if (purchaseOrder.ShippingMethod != null)
+            {
+                IEnumerable<Domain.ColleagueFinance.Entities.ShippingMethod> shippingMethodTypes = null;
+                try
+                {
+                    shippingMethodTypes = await GetShippingMethodsAsync(true);
+                    if (shippingMethodTypes != null && !string.IsNullOrEmpty(purchaseOrder.ShippingMethod.Id))
+                    {
+                        var shippingMethod = shippingMethodTypes.FirstOrDefault(fob => fob.Guid == purchaseOrder.ShippingMethod.Id);
+                        if ((shippingMethod == null) || (string.IsNullOrEmpty(shippingMethod.Code)))
+                        {
+                            IntegrationApiExceptionAddError(string.Format("ShippingMethods record not found for ShippingMethod.Id '{0}'.", purchaseOrder.ShippingMethod.Id), "Validation.Exception",
+                                  purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                        }
+                        else
+                        {
+                            purchaseOrderEntity.ShipViaCode = shippingMethod.Code;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(string.Format("An error occurred retrieving the ShippingMethods record for ShippingMethod.Id '{0}'. Details: {1}.", purchaseOrder.ShippingMethod.Id, ex.Message), "Validation.Exception",
+                               purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                }
+            }
+
             if (purchaseOrder.OverrideShippingDestination != null)
             {
                 var overrideShippingDestinationDto = purchaseOrder.OverrideShippingDestination;
@@ -1143,19 +1664,23 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     string vendorId = string.Empty;
                     try
                     {
-                        vendorId = await purchaseOrderRepository.GetPurchaseOrdersIdFromGuidAsync(purchaseOrder.Vendor.ExistingVendor.Vendor.Id);
+                        vendorId = await vendorsRepository.GetVendorIdFromGuidAsync(purchaseOrder.Vendor.ExistingVendor.Vendor.Id);
+                        if (!string.IsNullOrEmpty(vendorId))
+                            purchaseOrderEntity.VendorId = vendorId;
+                        else
+                        {
+                            IntegrationApiExceptionAddError
+                                (string.Format("Vendor record not found for Vendor.ExistingVendor.Vendor.Id '{0}'.", purchaseOrder.Vendor.ExistingVendor.Vendor.Id), "Validation.Exception",
+                                      purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                        }
                     }
-                    catch (ArgumentException)
+                    catch (Exception)
                     {
-                        throw new ArgumentException
-                            (string.Concat("The vendor id must correspond with a valid vendor record : ", purchaseOrder.Vendor.ExistingVendor.Vendor.Id));
+                        IntegrationApiExceptionAddError
+                             (string.Concat("The vendor id must correspond with a valid vendor record : ", purchaseOrder.Vendor.ExistingVendor.Vendor.Id), "Validation.Exception",
+                                   purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
                     }
-                    if (!string.IsNullOrEmpty(vendorId))
-                        purchaseOrderEntity.VendorId = vendorId;
-                    else
-                    {
-                        throw new ArgumentNullException("PurchaseOrder", "Must provide valid vendor.ExistingVendor.id for purchaseOrder");
-                    }
+
 
                     if (purchaseOrder.Vendor.ExistingVendor.AlternativeVendorAddress != null &&
                         !string.IsNullOrWhiteSpace(purchaseOrder.Vendor.ExistingVendor.AlternativeVendorAddress.Id))
@@ -1163,18 +1688,37 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         string vendorAddressId = string.Empty;
                         try
                         {
-                            vendorAddressId = await purchaseOrderRepository.GetPurchaseOrdersIdFromGuidAsync(purchaseOrder.Vendor.ExistingVendor.AlternativeVendorAddress.Id);
+                            var alternativeVendorAddress = await referenceDataRepository.GetGuidLookupResultFromGuidAsync(purchaseOrder.Vendor.ExistingVendor.AlternativeVendorAddress.Id);
+
+                            if (alternativeVendorAddress == null)
+                            {
+                                IntegrationApiExceptionAddError
+                               (string.Format("Address record not found for ExistingVendor.AlternativeVendorAddress '{0}'.", purchaseOrder.Vendor.ExistingVendor.AlternativeVendorAddress.Id), "Validation.Exception",
+                                 purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                            }
+                            else if ((alternativeVendorAddress != null) && (!string.Equals(alternativeVendorAddress.Entity, "ADDRESS", StringComparison.OrdinalIgnoreCase)))
+                            {
+                                IntegrationApiExceptionAddError
+                                 (string.Format("ExistingVendor.AlternativeVendorAddress GUID '{0}' has different entity '{1} than expected, ADDRESS.",
+                                 purchaseOrder.Vendor.ExistingVendor.AlternativeVendorAddress.Id, alternativeVendorAddress.Entity), "Validation.Exception",
+                                  purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                            }
+                            else if ((alternativeVendorAddress != null) && (string.IsNullOrEmpty(alternativeVendorAddress.PrimaryKey)))
+                            {
+                                IntegrationApiExceptionAddError
+                                (string.Format("Key not found on Address record for ExistingVendor.AlternativeVendorAddress '{0}'", purchaseOrder.Vendor.ExistingVendor.AlternativeVendorAddress.Id), "Validation.Exception",
+                                  purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                            }
+                            else
+                            {
+                                purchaseOrderEntity.VendorAddressId = alternativeVendorAddress.PrimaryKey;
+                            }
+
                         }
-                        catch (ArgumentException)
+                        catch (Exception ex)
                         {
-                            throw new ArgumentException
-                                (string.Concat("The vendor alternate address id must correspond with a valid address record : ", purchaseOrder.Vendor.ExistingVendor.AlternativeVendorAddress.Id));
-                        }
-                        if (!string.IsNullOrEmpty(vendorAddressId))
-                            purchaseOrderEntity.VendorAddressId = vendorAddressId;
-                        else
-                        {
-                            throw new ArgumentNullException("PurchaseOrder", "Must provide valid vendor.ExistingVendor.alternativeVendorAddress.id for purchaseOrder");
+                            IntegrationApiExceptionAddError(string.Format("An error occurred retrieving the address record for ExistingVendor.AlternativeVendorAddress  '{0}'. Details: {1}.", purchaseOrder.Vendor.ExistingVendor.AlternativeVendorAddress.Id, ex.Message), "Validation.Exception",
+                                   purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
                         }
                     }
                 }
@@ -1191,10 +1735,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     }
 
                     if ((purchaseOrder.Vendor.ExistingVendor == null ||
-                        purchaseOrder.Vendor.ExistingVendor.Vendor == null) && 
-                        !manualVendorDetailsDto.Type.HasValue)
+                        purchaseOrder.Vendor.ExistingVendor.Vendor == null || string.IsNullOrEmpty(purchaseOrder.Vendor.ExistingVendor.Vendor.Id)) &&
+                        (manualVendorDetailsDto.Type == null || !manualVendorDetailsDto.Type.HasValue))
                     {
-                        throw new ArgumentNullException("PurchaseOrder", "Must provide a valid manual vendor type when not supplying a existing vendor for a purchase order");
+                        IntegrationApiExceptionAddError("Must provide a valid manual vendor type when not supplying a existing vendor for a purchase order.", "Validation.Exception",
+                                   purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
                     }
 
                     if (manualVendorDetailsDto.Name != null && manualVendorDetailsDto.Name.Any())
@@ -1237,19 +1782,68 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 var payment = purchaseOrder.PaymentSource;
                 if ((payment.Id != null) && (!string.IsNullOrEmpty(payment.Id)))
                 {
-                    var purchaseOrderSource = (await this.GetAllAccountsPayableSourcesAsync(true)).FirstOrDefault(ap => ap.Guid == payment.Id);
-                    if (purchaseOrderSource == null)
-                        throw new KeyNotFoundException("PurchaseOrder Source not found for guid: " + payment.Id);
-                    purchaseOrderEntity.ApType = purchaseOrderSource.Code;
+                    IEnumerable<Domain.ColleagueFinance.Entities.AccountsPayableSources> allAccountsPayableSources = null;
+                    try
+                    {
+                        allAccountsPayableSources = await this.GetAllAccountsPayableSourcesAsync(true);
+                        if (allAccountsPayableSources == null)
+                        {
+                            IntegrationApiExceptionAddError("Unable to retrieve AccountsPayableSources.", "Validation.Exception",
+                                   purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                        }
+                        else
+                        {
+                            var accountsPayableSource = allAccountsPayableSources.FirstOrDefault(ap => ap.Guid == payment.Id);
+                            if ((accountsPayableSource == null) || (string.IsNullOrEmpty(accountsPayableSource.Code)))
+                            {
+                                IntegrationApiExceptionAddError(string.Format("AccountsPayableSources record not found for PaymentSource.Id '{0}'.", payment.Id), "Validation.Exception",
+                                       purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                            }
+                            else
+                            {
+                                purchaseOrderEntity.ApType = accountsPayableSource.Code;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        IntegrationApiExceptionAddError(string.Format("An error occurred retrieving the AccountsPayableSources record for PaymentSource.Id '{0}'. Details: {1}.", payment.Id, ex.Message), "Validation.Exception",
+                                   purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                    }
                 }
             }
 
             if ((purchaseOrder.PaymentTerms != null) && (!string.IsNullOrEmpty(purchaseOrder.PaymentTerms.Id)))
             {
-                var vendorTerms = (await this.GetVendorTermsAsync(true)).FirstOrDefault(ap => ap.Guid == purchaseOrder.PaymentTerms.Id);
-                if (vendorTerms == null)
-                    throw new KeyNotFoundException("PaymentTerm not found for guid: " + purchaseOrder.PaymentTerms.Id);
-                purchaseOrderEntity.VendorTerms = vendorTerms.Code;
+                IEnumerable<Domain.ColleagueFinance.Entities.VendorTerm> allVendorTerms = null;
+                try
+                {
+                    allVendorTerms = await this.GetVendorTermsAsync(true);
+                    if (allVendorTerms == null)
+                    {
+                        IntegrationApiExceptionAddError("Unable to retrieve VendorTerms.", "Validation.Exception",
+                               purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                    }
+                    else
+                    {
+                        var vendorTerm = allVendorTerms.FirstOrDefault(vnd => vnd.Guid == purchaseOrder.PaymentTerms.Id);
+                        if ((vendorTerm == null) || (string.IsNullOrEmpty(vendorTerm.Code)))
+                        {
+
+                            IntegrationApiExceptionAddError(string.Format("VendorTerm record not found for PaymentTerms.Id '{0}'.", purchaseOrder.PaymentTerms.Id), "Validation.Exception",
+                                   purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                        }
+                        else
+                        {
+                            purchaseOrderEntity.VendorTerms = vendorTerm.Code;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(string.Format("An error occurred retrieving the VendorTerm record for  PaymentTerms.Id '{0}'. Details: {1}.", purchaseOrder.PaymentTerms.Id, ex.Message), "Validation.Exception",
+                               purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                }
             }
 
             if (purchaseOrder.Comments != null && purchaseOrder.Comments.Any())
@@ -1274,17 +1868,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if ((purchaseOrder.LineItems != null) && (purchaseOrder.LineItems.Any()))
             {
-                var allCommodityCodes = (await GetCommodityCodesAsync(true));
-                if ((allCommodityCodes == null) || (!allCommodityCodes.Any()))
-                {
-                    throw new Exception("An error occurred extracting all commodity codes");
-                }
-
-                var allCommodityUnitTypes = (await this.GetCommodityUnitTypesAsync(true));
-                if ((allCommodityUnitTypes == null) || (!allCommodityUnitTypes.Any()))
-                {
-                    throw new Exception("An error occurred extracting all commodity unit types");
-                }
 
                 foreach (var lineItem in purchaseOrder.LineItems)
                 {
@@ -1306,23 +1889,66 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
                     if ((lineItem.CommodityCode != null) && (!string.IsNullOrEmpty(lineItem.CommodityCode.Id)))
                     {
-                        var commodityCode = allCommodityCodes.FirstOrDefault(c => c.Guid == lineItem.CommodityCode.Id);
-                        if (commodityCode == null)
+                        IEnumerable<Domain.ColleagueFinance.Entities.CommodityCode> allCommodityCodes = null;
+                        try
                         {
-                            throw new Exception("Unable to determine commodity code represented by guid: " + lineItem.CommodityCode.Id);
+                            allCommodityCodes = await GetCommodityCodesAsync(true);
+                            if (allCommodityCodes == null)
+                            {
+                                IntegrationApiExceptionAddError("Unable to retrieve CommodityCodes.", "Validation.Exception",
+                                       purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                            }
+                            else
+                            {
+                                var commodityCode = allCommodityCodes.FirstOrDefault(cc => cc.Guid == lineItem.CommodityCode.Id);
+                                if ((commodityCode == null) || (string.IsNullOrEmpty(commodityCode.Code)))
+                                {
+                                    IntegrationApiExceptionAddError(string.Format("CommodityCode record not found for CommodityCode.Id '{0}'.", lineItem.CommodityCode.Id), "Validation.Exception",
+                                           purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                                }
+                                else
+                                {
+                                    apLineItem.CommodityCode = commodityCode.Code;
+                                }
+                            }
                         }
-                        apLineItem.CommodityCode = commodityCode.Code;
+                        catch (Exception ex)
+                        {
+                            IntegrationApiExceptionAddError(string.Format("An error occurred retrieving the CommodityCode record for  CommodityCode.Id '{0}'. Details: {1}.", lineItem.CommodityCode.Id, ex.Message), "Validation.Exception",
+                                       purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                        }
                     }
 
                     if ((lineItem.UnitOfMeasure != null) && (!string.IsNullOrEmpty(lineItem.UnitOfMeasure.Id)))
                     {
-                        var commodityUnitType = allCommodityUnitTypes.FirstOrDefault(c => c.Guid == lineItem.UnitOfMeasure.Id);
-                        if (commodityUnitType == null)
+                        IEnumerable<Domain.ColleagueFinance.Entities.CommodityUnitType> allCommodityUnitTypes = null;
+                        try
                         {
-                            throw new Exception("Unable to determine commodity unit type represented by guid: " + lineItem.UnitOfMeasure.Id);
+                            allCommodityUnitTypes = await GetCommodityUnitTypesAsync(true);
+                            if (allCommodityUnitTypes == null)
+                            {
+                                IntegrationApiExceptionAddError("Unable to retrieve CommodityUnitTypes.", "Validation.Exception",
+                                       purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                            }
+                            else
+                            {
+                                var commodityUnitType = allCommodityUnitTypes.FirstOrDefault(cc => cc.Guid == lineItem.UnitOfMeasure.Id);
+                                if ((commodityUnitType == null) || (string.IsNullOrEmpty(commodityUnitType.Code)))
+                                {
+                                    IntegrationApiExceptionAddError(string.Format("CommodityUnitType record not found for UnitOfMeasure.Id '{0}'.", lineItem.UnitOfMeasure.Id), "Validation.Exception",
+                                           purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                                }
+                                else
+                                {
+                                    apLineItem.UnitOfIssue = commodityUnitType.Code;
+                                }
+                            }
                         }
-                        apLineItem.UnitOfIssue = commodityUnitType.Code;
-
+                        catch (Exception ex)
+                        {
+                            IntegrationApiExceptionAddError(string.Format("An error occurred retrieving the CommodityUnitType record for UnitOfMeasure.Id '{0}'. Details: {1}.", lineItem.UnitOfMeasure.Id, ex.Message), "Validation.Exception",
+                                       purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                        }
                     }
                     if (lineItem.Comments != null && lineItem.Comments.Any())
                     {
@@ -1358,50 +1984,84 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     var lineItemTaxCodes = new List<string>();
                     if ((lineItem.TaxCodes != null) && (lineItem.TaxCodes.Any()))
                     {
-                        var taxCodesEntities = await GetCommerceTaxCodesAsync(true);
 
-                        if (taxCodesEntities == null)
+                        IEnumerable<Domain.Base.Entities.CommerceTaxCode> allCommerceTaxCodes = null;
+                        try
                         {
-                            throw new Exception("An error occurred extracting all commerce tax codes");
-                        }
-                        foreach (var lineItemTax in lineItem.TaxCodes)
-                        {
-                            if (lineItemTax != null && lineItemTax.Id != null && !string.IsNullOrEmpty(lineItemTax.Id))
+                            allCommerceTaxCodes = await GetCommerceTaxCodesAsync(true);
+                            if (allCommerceTaxCodes == null)
                             {
-                                var taxCode = taxCodesEntities.FirstOrDefault(tax => tax.Guid == lineItemTax.Id);
-
-                                if (taxCode == null)
-                                {
-                                    throw new Exception(string.Concat("Tax code not found for guid:'", lineItemTax.Id, "'"));
-                                }
-                                if ((taxCode.AppurEntryFlag == false) || (taxCode.UseTaxFlag == true))
-                                {
-                                    throw new ArgumentException(string.Concat("Tax Code '", taxCode.Code, "' is not permitted for use on AP/PUR documents."));
-                                }
-
-                                lineItemTaxCodes.Add(taxCode.Code);
+                                IntegrationApiExceptionAddError("Unable to retrieve CommerceTaxCodes.", "Validation.Exception",
+                                       purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
                             }
-                        }                    
+                            else
+                            {
+
+                                foreach (var lineItemTax in lineItem.TaxCodes)
+                                {
+                                    if (lineItemTax != null && lineItemTax.Id != null && !string.IsNullOrEmpty(lineItemTax.Id))
+                                    {
+                                        var taxCode = allCommerceTaxCodes.FirstOrDefault(tax => tax.Guid == lineItemTax.Id);
+                                        if ((taxCode == null) || (string.IsNullOrEmpty(taxCode.Code)))
+                                        {
+                                            IntegrationApiExceptionAddError(string.Format("CommerceTaxCodes record not found for TaxCode.Id '{0}'.", lineItemTax.Id), "Validation.Exception",
+                                                   purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                                        }
+                                        else if ((taxCode.AppurEntryFlag == false) || (taxCode.UseTaxFlag == true))
+                                        {
+                                             IntegrationApiExceptionAddError(string.Concat("Tax Code '", taxCode.Code, "' is not permitted for use on AP/PUR documents."), "Validation.Exception",
+                                                  purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                                        }
+                                        else
+                                        {
+                                            lineItemTaxCodes.Add(taxCode.Code);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            IntegrationApiExceptionAddError(string.Format("An error occurred retrieving the CommerceTaxCodes record. Details: {0}.", ex.Message), "Validation.Exception",
+                                       purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                        }
                     }
 
                     if (lineItem.Reference != null && !string.IsNullOrEmpty(lineItem.Reference.Document.Requisition.Id))
                     {
-
-                        string reqId = string.Empty;
                         try
                         {
-                            reqId = await purchaseOrderRepository.GetPurchaseOrdersIdFromGuidAsync(lineItem.Reference.Document.Requisition.Id);
+                            var requisitionGuidLookup = await referenceDataRepository.GetGuidLookupResultFromGuidAsync(lineItem.Reference.Document.Requisition.Id);
+
+                            if (requisitionGuidLookup == null)
+                            {
+                                IntegrationApiExceptionAddError
+                               (string.Format("Requisition record not found for Reference.Document.Requisition.Id '{0}'", lineItem.Reference.Document.Requisition.Id), "Validation.Exception",
+                                 purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                            }
+                            else if ((requisitionGuidLookup != null) && (!string.Equals(requisitionGuidLookup.Entity, "REQUISITIONS", StringComparison.OrdinalIgnoreCase)))
+                            {
+                                IntegrationApiExceptionAddError
+                                 (string.Format("Reference.Document.Requisition.Id '{0}' has different entity '{1} than expected, REQUISITIONS.",
+                                 lineItem.Reference.Document.Requisition.Id, requisitionGuidLookup.Entity), "Validation.Exception",
+                                  purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                            }
+                            else if ((requisitionGuidLookup != null) && (string.IsNullOrEmpty(requisitionGuidLookup.PrimaryKey)))
+                            {
+                                IntegrationApiExceptionAddError
+                                (string.Format("ID not found on Requisition record for Reference.Document.Requisition.Id '{0}'", lineItem.Reference.Document.Requisition.Id), "Validation.Exception",
+                                  purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                            }
+                            else
+                            {
+                                apLineItem.RequisitionId = requisitionGuidLookup.PrimaryKey;
+                            }
+
                         }
-                        catch (ArgumentException)
+                        catch (Exception ex)
                         {
-                            throw new ArgumentException
-                                (string.Concat("The requisition id must correspond with a valid requisition record : ", lineItem.Reference.Document.Requisition.Id));
-                        }
-                        if (!string.IsNullOrEmpty(reqId))
-                            apLineItem.RequisitionId = reqId;
-                        else
-                        {
-                            throw new ArgumentNullException("PurchaseOrder", "A reference Document must have a valid Requisition ID");
+                            IntegrationApiExceptionAddError(string.Format("An error occurred retrieving the requisition record for lineItem.Reference.Document.Requisition.Id  '{0}'. Details: {1}.", purchaseOrder.Vendor.ExistingVendor.AlternativeVendorAddress.Id, ex.Message), "Validation.Exception",
+                                    purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
                         }
                     }
 
@@ -1416,41 +2076,41 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         foreach (var accountDetails in lineItem.AccountDetail)
                         {
 
-                            if (accountDetails.Status != PurchaseOrdersStatus.NotSet)
+                            if (accountDetails.Status != Dtos.EnumProperties.LineItemStatus.NotSet)
                             {
                                 var status = accountDetails.Status;
                                 switch (status)
                                 {
-                                    case (PurchaseOrdersStatus.Accepted):
-                                        apLineItem.Status = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.Accepted; break;
-                                    case (PurchaseOrdersStatus.Backordered):
-                                        apLineItem.Status = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.Backordered; break;
-                                    case (PurchaseOrdersStatus.Closed):
-                                        apLineItem.Status = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.Closed; break;
-                                    case (PurchaseOrdersStatus.InProgress):
-                                        apLineItem.Status = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.InProgress; break;
-                                    case (PurchaseOrdersStatus.Invoiced):
-                                        apLineItem.Status = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.Invoiced; break;
-                                    case (PurchaseOrdersStatus.Notapproved):
-                                        apLineItem.Status = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.NotApproved; break;
-                                    case (PurchaseOrdersStatus.Outstanding):
-                                        apLineItem.Status = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.Outstanding; break;
-                                    case (PurchaseOrdersStatus.Paid):
-                                        apLineItem.Status = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.Paid; break;
-                                    case (PurchaseOrdersStatus.Reconciled):
-                                        apLineItem.Status = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.Reconciled; break;
-                                    case (PurchaseOrdersStatus.Voided):
-                                        apLineItem.Status = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.Voided; break;
+                                    case (Dtos.EnumProperties.LineItemStatus.Accepted):
+                                        apLineItem.LineItemStatus = Domain.ColleagueFinance.Entities.LineItemStatus.Accepted; break;
+                                    case (Dtos.EnumProperties.LineItemStatus.Backordered):
+                                        apLineItem.LineItemStatus = Domain.ColleagueFinance.Entities.LineItemStatus.Backordered; break;
+                                    case (Dtos.EnumProperties.LineItemStatus.Closed):
+                                        apLineItem.LineItemStatus = Domain.ColleagueFinance.Entities.LineItemStatus.Closed; break;
+                                    case (Dtos.EnumProperties.LineItemStatus.Invoiced):
+                                        apLineItem.LineItemStatus = Domain.ColleagueFinance.Entities.LineItemStatus.Invoiced; break;
+                                    case (Dtos.EnumProperties.LineItemStatus.Outstanding):
+                                        apLineItem.LineItemStatus = Domain.ColleagueFinance.Entities.LineItemStatus.Outstanding; break;
+                                    case (Dtos.EnumProperties.LineItemStatus.Paid):
+                                        apLineItem.LineItemStatus = Domain.ColleagueFinance.Entities.LineItemStatus.Paid; break;
+                                    case (Dtos.EnumProperties.LineItemStatus.Reconciled):
+                                        apLineItem.LineItemStatus = Domain.ColleagueFinance.Entities.LineItemStatus.Reconciled; break;
+                                    case (Dtos.EnumProperties.LineItemStatus.Voided):
+                                        apLineItem.LineItemStatus = Domain.ColleagueFinance.Entities.LineItemStatus.Voided; break;
+                                    case (Dtos.EnumProperties.LineItemStatus.AwaitingReceipt):
+                                        apLineItem.LineItemStatus = Domain.ColleagueFinance.Entities.LineItemStatus.Hold; break;
                                     default:
-                                        break;
+                                        apLineItem.LineItemStatus = Domain.ColleagueFinance.Entities.LineItemStatus.Outstanding; break;
                                 }
                                 if (crntDetails != accountDetails.Status)
                                 {
-                                    throw new Exception("The LineItem accountDetails have conflicting status. Cannot have different status on the same LineItem");
+                                    IntegrationApiExceptionAddError("The LineItem accountDetails have conflicting status.Cannot have different status on the same LineItem.", "Validation.Exception",
+                                     purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
                                 }
                                 if (crntDetailsDate != null && crntDetailsDate.HasValue && accountDetails.StatusDate != null && accountDetails.StatusDate.HasValue && crntDetailsDate != accountDetails.StatusDate)
                                 {
-                                    throw new Exception("The LineItem accountDetails have conflicting status date. Cannot have different status date on the same LineItem");
+                                    IntegrationApiExceptionAddError("The LineItem accountDetails have conflicting status date. Cannot have different status date on the same LineItem.", "Validation.Exception",
+                                     purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
                                 }
                             }
 
@@ -1471,21 +2131,102 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                 if (allocated.Percentage.HasValue)
                                     distributionPercent = Convert.ToDecimal(allocated.Percentage);
                             }
-                            
-                            string accountingString = ConvertAccountingString(GLCompCount, accountDetails.AccountingString);
+
+                            string accountingString = string.Empty;
+                            try
+                            {
+                                accountingString = ConvertAccountingString(GLCompCount, accountDetails.AccountingString);
+                            }
+                            catch (Exception ex)
+                            {
+                                IntegrationApiExceptionAddError(string.Format("An unexpected error occurred extracting the accounting string '{0}'. Detail {1}.", accountDetails.AccountingString, ex.Message), "Validation.Exception",
+                                           purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                            }
+
+
                             var glDistribution = new LineItemGlDistribution(accountingString, distributionQuantity, distributionAmount, distributionPercent);
-                            
+
                             if (accountDetails.SubmittedBy != null && !string.IsNullOrEmpty(accountDetails.SubmittedBy.Id))
                             {
-                                var submittedById = await personRepository.GetPersonIdFromGuidAsync(accountDetails.SubmittedBy.Id);
-                                if (string.IsNullOrEmpty(submittedById))
+                                try
                                 {
-                                    throw new Exception(string.Concat("Line Items Account Details SubmittedBy GUID is not found: ", purchaseOrder.Id, " Guid: ", accountDetails.SubmittedBy.Id));
+                                    var submittedById = await personRepository.GetPersonIdFromGuidAsync(accountDetails.SubmittedBy.Id);
+                                    if (string.IsNullOrEmpty(submittedById))
+                                    {
+                                        IntegrationApiExceptionAddError(string.Format("Person record not found for Line Items Account Details SubmittedBy '{0}'.", accountDetails.SubmittedBy.Id), "Validation.Exception",
+                                            purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                                    }
+                                    else
+                                    {
+                                        glDistribution.SubmittedBy = submittedById;
+                                    }
                                 }
-                                glDistribution.SubmittedBy = submittedById;
+                                catch (Exception ex)
+                                {
+                                    IntegrationApiExceptionAddError(string.Format("Person record not found for Line Items Account Details SubmittedBy '{0}'", accountDetails.SubmittedBy.Id), "Validation.Exception",
+                                       purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                                }
                             }
 
                             apLineItem.AddGlDistribution(glDistribution);
+
+                            //validate taxForm Component
+                            if ((accountDetails.TaxFormComponent != null) && (!string.IsNullOrEmpty(accountDetails.TaxFormComponent.Id)))
+                            {
+                                var taxBoxEntities = await GetAllBoxCodesAsync(false);
+                                if (taxBoxEntities == null)
+                                {
+                                    IntegrationApiExceptionAddError("An error occurred extracting all tax - form - components", "Validation.Exception",
+                                       purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                                }
+
+                                var taxBox = taxBoxEntities.FirstOrDefault(c => c.Guid == accountDetails.TaxFormComponent.Id);
+                                if (taxBox == null)
+                                {
+                                    IntegrationApiExceptionAddError(string.Format("Unable to determine tax form components represented by guid:  '{0}'", accountDetails.TaxFormComponent.Id), "Validation.Exception",
+                                       purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                                }
+                                else
+                                {
+                                    apLineItem.TaxFormCode = taxBox.Code;
+                                    apLineItem.TaxForm = taxBox.TaxCode;
+
+                                }
+                            }
+                        }
+
+                        // LineItem.Status property new for 11.1.0
+                        if (lineItem.Status !=  null && lineItem.Status != Dtos.EnumProperties.LineItemStatus.NotSet)
+                        {
+                            var status = lineItem.Status;
+                            switch (status)
+                            {
+                                case (Dtos.EnumProperties.LineItemStatus.Accepted):
+                                    apLineItem.LineItemStatus = Domain.ColleagueFinance.Entities.LineItemStatus.Accepted; break;
+                                case (Dtos.EnumProperties.LineItemStatus.Backordered):
+                                    apLineItem.LineItemStatus = Domain.ColleagueFinance.Entities.LineItemStatus.Backordered; break;
+                                case (Dtos.EnumProperties.LineItemStatus.Closed):
+                                    apLineItem.LineItemStatus = Domain.ColleagueFinance.Entities.LineItemStatus.Closed; break;
+                                case (Dtos.EnumProperties.LineItemStatus.Invoiced):
+                                    apLineItem.LineItemStatus = Domain.ColleagueFinance.Entities.LineItemStatus.Invoiced; break;
+                                case (Dtos.EnumProperties.LineItemStatus.Outstanding):
+                                    apLineItem.LineItemStatus = Domain.ColleagueFinance.Entities.LineItemStatus.Outstanding; break;
+                                case (Dtos.EnumProperties.LineItemStatus.Paid):
+                                    apLineItem.LineItemStatus = Domain.ColleagueFinance.Entities.LineItemStatus.Paid; break;
+                                case (Dtos.EnumProperties.LineItemStatus.Reconciled):
+                                    apLineItem.LineItemStatus = Domain.ColleagueFinance.Entities.LineItemStatus.Reconciled; break;
+                                case (Dtos.EnumProperties.LineItemStatus.Voided):
+                                    apLineItem.LineItemStatus = Domain.ColleagueFinance.Entities.LineItemStatus.Voided; break;
+                                case (Dtos.EnumProperties.LineItemStatus.AwaitingReceipt):
+                                    apLineItem.LineItemStatus = Domain.ColleagueFinance.Entities.LineItemStatus.Hold; break;
+                                default:
+                                    apLineItem.LineItemStatus = Domain.ColleagueFinance.Entities.LineItemStatus.Outstanding; break;
+                            }
+                            if (crntDetails != null && crntDetails != Dtos.EnumProperties.LineItemStatus.NotSet && crntDetails != lineItem.Status)
+                            {
+                                IntegrationApiExceptionAddError("The lineItem status and accountDetails status are not the same.  Cannot have different status within the same LineItem.", "Validation.Exception",
+                                 purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                            }
                         }
 
                         if (lineItemTaxCodes != null && lineItemTaxCodes.Any())
@@ -1548,17 +2289,361 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             return poStatus;
         }
 
+        /// <summary>
+        /// Helper method to validate Purchase Order PUT/POST.
+        /// </summary>
+        /// <param name="purchaseOrdersDto">Purchase Order DTO object of type <see cref="Dtos.PurchaseOrders2"/></param>
+        private void ValidatePurchaseOrder(Dtos.PurchaseOrders2 purchaseOrdersDto)
+        {
+            var defaultCurrency = new CurrencyIsoCode?();
+            if (purchaseOrdersDto.Vendor == null)
+            {
+                IntegrationApiExceptionAddError("The Vendor is required when submitting a purchase order.", "Missing.Required.Property");
+            }
+            if (purchaseOrdersDto.Vendor != null && purchaseOrdersDto.Vendor.ExistingVendor != null
+                && purchaseOrdersDto.Vendor.ExistingVendor.Vendor != null && string.IsNullOrEmpty(purchaseOrdersDto.Vendor.ExistingVendor.Vendor.Id))
+            {
+                IntegrationApiExceptionAddError("The vendor id is required when submitting a purchase order with an existing vendor.", "Missing.Required.Property");
+            }
+            if (purchaseOrdersDto.Vendor != null 
+                && (purchaseOrdersDto.Vendor.ExistingVendor == null 
+                || purchaseOrdersDto.Vendor.ExistingVendor.Vendor == null 
+                || string.IsNullOrEmpty(purchaseOrdersDto.Vendor.ExistingVendor.Vendor.Id))
+                && (purchaseOrdersDto.Vendor.ManualVendorDetails == null
+                || string.IsNullOrEmpty(purchaseOrdersDto.Vendor.ManualVendorDetails.Name)))
+            {
+                IntegrationApiExceptionAddError("Either vendor.existingVendor.vendor.id or vendor.manualVendorDetails.name is required when submitting a purchase order.", "Missing.Required.Property");
+            }
+            if (purchaseOrdersDto.OrderedOn == default(DateTime))
+            {
+                IntegrationApiExceptionAddError("OrderedOn is a required field.", "Missing.Required.Property");
+            }
+
+            if (purchaseOrdersDto.TransactionDate == default(DateTime))
+            {
+                IntegrationApiExceptionAddError("TransactionDate is a required field", "Missing.Required.Property");
+            }
+
+            if (purchaseOrdersDto.OrderedOn > purchaseOrdersDto.TransactionDate)
+            {
+                IntegrationApiExceptionAddError("TransactionDate cannot before OrderedOn date.", "Validation.Exception");
+            }
+
+            if (purchaseOrdersDto.DeliveredBy != default(DateTime) && purchaseOrdersDto.OrderedOn > purchaseOrdersDto.DeliveredBy)
+            {
+                IntegrationApiExceptionAddError("DeliveredBy date cannot be before the OrderedOn date.", "Validation.Exception");
+            }
+            if (purchaseOrdersDto.StatusDate != default(DateTime) && purchaseOrdersDto.OrderedOn > purchaseOrdersDto.StatusDate && purchaseOrdersDto.Status == PurchaseOrdersStatus.Voided)
+            {
+                IntegrationApiExceptionAddError("StatusDate date cannot be before the OrderedOn date when Voiding the purchase order.", "Validation.Exception");
+            }
+
+            if (purchaseOrdersDto.OverrideShippingDestination != null && purchaseOrdersDto.OverrideShippingDestination.Place != null)
+            {
+                if (purchaseOrdersDto.OverrideShippingDestination.Place.Country != null && purchaseOrdersDto.OverrideShippingDestination.Place.Country.Code.Value != IsoCode.CAN && purchaseOrdersDto.OverrideShippingDestination.Place.Country.Code.Value != IsoCode.USA)
+                {
+                     IntegrationApiExceptionAddError("Country code can only be CAN or USA.", "Validation.Exception");
+                }
+                if (purchaseOrdersDto.OverrideShippingDestination.Contact != null && !string.IsNullOrEmpty(purchaseOrdersDto.OverrideShippingDestination.Contact.Extension) && purchaseOrdersDto.OverrideShippingDestination.Contact.Extension.Length > 4)
+                {
+                     IntegrationApiExceptionAddError("The Extension cannot be greater then 4 in length.", "Validation.Exception");
+                }
+            }
+            if (purchaseOrdersDto.Vendor != null && purchaseOrdersDto.Vendor.ManualVendorDetails != null && purchaseOrdersDto.Vendor.ManualVendorDetails.Place != null)
+            {
+                if (purchaseOrdersDto.Vendor.ManualVendorDetails.Place.Country != null &&
+                    purchaseOrdersDto.Vendor.ManualVendorDetails.Place.Country.Code.Value != IsoCode.CAN && purchaseOrdersDto.Vendor.ManualVendorDetails.Place.Country.Code.Value != IsoCode.USA)
+                {
+                   IntegrationApiExceptionAddError("Country code can only be CAN or USA.", "Validation.Exception");
+                }
+            }
+            if (purchaseOrdersDto.PaymentSource != null && string.IsNullOrEmpty(purchaseOrdersDto.PaymentSource.Id))
+            {
+                IntegrationApiExceptionAddError("PaymentSource id is required when submitting a PaymentSource.", "Validation.Exception");
+            }
+            if (purchaseOrdersDto.Comments != null)
+            {
+                foreach (var comments in purchaseOrdersDto.Comments)
+                {
+                    if (comments.Comment == null)
+                    {
+                         IntegrationApiExceptionAddError("Comments required a comment.", "Validation.Exception");
+                    }
+                    if ((comments.Type == CommentTypes.NotSet) || (comments.Type == null))
+                    {
+                        IntegrationApiExceptionAddError("Type is required for a comment.", "Validation.Exception");
+                    }
+                }
+            }
+            if (purchaseOrdersDto.Buyer != null && purchaseOrdersDto.Buyer.Id == null)
+            {
+                IntegrationApiExceptionAddError("Buyer Id is required for a Buyer object.", "Validation.Exception");
+            }
+            if (purchaseOrdersDto.Initiator != null && purchaseOrdersDto.Initiator.Detail != null && string.IsNullOrWhiteSpace(purchaseOrdersDto.Initiator.Detail.Id))
+            {
+                IntegrationApiExceptionAddError("The Initiator detail Id is required for an Initiator detail object.", "Validation.Exception");
+            }
+            if (purchaseOrdersDto.PaymentTerms != null && string.IsNullOrWhiteSpace(purchaseOrdersDto.PaymentTerms.Id))
+            {
+                IntegrationApiExceptionAddError("The PaymentTerms Id is required for a PaymentTerms object.", "Validation.Exception");
+            }
+            if (purchaseOrdersDto.Classification != null && string.IsNullOrWhiteSpace(purchaseOrdersDto.Classification.Id))
+            {
+                IntegrationApiExceptionAddError("The Classification Id is required for a Classification object.", "Validation.Exception");
+            }
+            if (purchaseOrdersDto.SubmittedBy != null && string.IsNullOrWhiteSpace(purchaseOrdersDto.SubmittedBy.Id))
+            {
+                IntegrationApiExceptionAddError("The SubmittedBy Id is required for a SubmittedBy object.", "Validation.Exception");
+            }
+            if (purchaseOrdersDto.ShippingMethod != null && string.IsNullOrWhiteSpace(purchaseOrdersDto.ShippingMethod.Id))
+            {
+                IntegrationApiExceptionAddError("The ShippingMethod Id is required for a ShippingMethod object.", "Validation.Exception");
+            }
+
+            if (purchaseOrdersDto.LineItems == null)
+            {
+                IntegrationApiExceptionAddError("At least one line item must be provided when submitting a purchase order.", "Missing.Required.Property");
+            }
+            if (purchaseOrdersDto.LineItems != null)
+            {
+                foreach (var lineItem in purchaseOrdersDto.LineItems)
+                {
+                    if (lineItem.CommodityCode != null && string.IsNullOrWhiteSpace(lineItem.CommodityCode.Id))
+                    {
+                        IntegrationApiExceptionAddError("The commodity code id is required when submitting a commodity code.", "Validation.Exception");
+                    }
+                    if (lineItem.UnitOfMeasure != null && string.IsNullOrWhiteSpace(lineItem.UnitOfMeasure.Id))
+                    {
+                        IntegrationApiExceptionAddError("The UnitofMeasure id is required when submitting a UnitofMeasure.", "Validation.Exception");
+                    }
+                    if (lineItem.UnitPrice != null && (!lineItem.UnitPrice.Value.HasValue || lineItem.UnitPrice.Currency == null))
+                    {
+                         IntegrationApiExceptionAddError("Both the unit price amount value and currency are required when submitting a line item unit price.", "Validation.Exception");
+                    }
+                    if (lineItem.UnitPrice != null)
+                    {
+                        defaultCurrency = CheckCurrency(defaultCurrency, lineItem.UnitPrice.Currency);
+                    }
+                    if (lineItem.AdditionalAmount != null && (!lineItem.AdditionalAmount.Value.HasValue || lineItem.AdditionalAmount.Currency == null))
+                    {
+                        IntegrationApiExceptionAddError("The additional amount value and currency are required when submitting a line item additional price.", "Validation.Exception");
+                    }
+                    if (lineItem.AdditionalAmount != null)
+                    {
+                        defaultCurrency = CheckCurrency(defaultCurrency, lineItem.AdditionalAmount.Currency);
+                    }
+                    if (lineItem.TaxCodes != null)
+                    {
+                        foreach (var lineItemTaxes in lineItem.TaxCodes)
+                        {
+                            if (lineItemTaxes.Id == null)
+                            {
+                                IntegrationApiExceptionAddError("The Taxes.TaxCode is required when submitting a line item Tax Code.", "Validation.Exception");
+                            }
+                        }
+                    }
+
+                    if (lineItem.TradeDiscount != null)
+                    {
+                        if (lineItem.TradeDiscount.Amount != null && lineItem.TradeDiscount.Percent != null)
+                        {
+                            IntegrationApiExceptionAddError("TradeDiscount cannot contain both an Amount and Percentage.", "Validation.Exception");
+                        }
+                        if (lineItem.TradeDiscount.Amount != null && (!lineItem.TradeDiscount.Amount.Value.HasValue || lineItem.TradeDiscount.Amount.Currency == null))
+                        {
+                            IntegrationApiExceptionAddError("TradeDiscount amount requires both an Amount and Currency.", "Validation.Exception");
+                        }
+                        if (lineItem.AdditionalAmount != null)
+                        {
+                            defaultCurrency = CheckCurrency(defaultCurrency, lineItem.AdditionalAmount.Currency);
+                        }
+                    }
+
+                    try
+                    {
+                        if (lineItem.Reference != null)
+                        {
+                            var referenceDoc = lineItem.Reference;
+                            // Check to see if the reference line item differ, If they do then we have to make sure that the are the same Item number
+                            if (referenceDoc.lineItemNumber != lineItem.LineItemNumber)
+                            {
+                                if (!string.IsNullOrEmpty(referenceDoc.lineItemNumber) && string.IsNullOrEmpty(lineItem.LineItemNumber))
+                                {
+                                    lineItem.LineItemNumber = referenceDoc.lineItemNumber;
+                                }
+                                else
+                                {
+                                    lineItem.Reference.lineItemNumber = lineItem.LineItemNumber;
+                                    referenceDoc.lineItemNumber = lineItem.LineItemNumber;
+                                }
+                            }
+
+                            if (referenceDoc.Document != null && referenceDoc.Document.PurchasingArrangement != null)
+                            {
+                                IntegrationApiExceptionAddError("The Document of Purchasing Arrangement is not acceptable in this system.", "Validation.Exception");
+                            }
+
+                            if (referenceDoc.Document != null && referenceDoc.Document.Requisition.Id == null)
+                            {
+                                IntegrationApiExceptionAddError("The requisition ID is a required field.", "Validation.Exception");
+                            }
+
+                            if (string.IsNullOrEmpty(referenceDoc.lineItemNumber))
+                            {
+                                IntegrationApiExceptionAddError("The Line number is a required field for a reference to requisitions.", "Validation.Exception");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        IntegrationApiExceptionAddError("An unexpected error occurred: " + ex.Message, "Validation.Exception");
+                    }
+
+                    if (lineItem != null && lineItem.AccountDetail != null)
+                    {
+                        var lineTaxForm = string.Empty;
+                        foreach (var accountDetail in lineItem.AccountDetail)
+                        {
+                            if (accountDetail.AccountingString == null)
+                            {
+                                IntegrationApiExceptionAddError("The AccountingString is required when submitting a line item account detail.", "Validation.Exception");
+                            }
+                            if (accountDetail.Allocation == null)
+                            {
+                                IntegrationApiExceptionAddError("The Allocation is required when submitting a line item account detail.", "Validation.Exception");
+                            }
+                            else
+                            {
+                                var allocation = accountDetail.Allocation;
+
+                                var allocated = allocation.Allocated;
+                                if (allocated.Amount != null && (!allocated.Amount.Value.HasValue || allocated.Amount.Currency == null))
+                                {
+                                    IntegrationApiExceptionAddError("The Allocation.Allocated value and currency are required when submitting a line item AccountDetail.Allocation.Allocated.", "Validation.Exception");
+
+                                }
+                                if (allocated.Amount != null)
+                                {
+                                    defaultCurrency = CheckCurrency(defaultCurrency, allocated.Amount.Currency);
+                                }
+
+                                if (allocation.TaxAmount != null && (!allocation.TaxAmount.Value.HasValue || allocation.TaxAmount.Currency == null))
+                                {
+                                     IntegrationApiExceptionAddError("The tax amount value and currency are required when submitting a line item account detail allocation tax amount.", "Validation.Exception");
+                                }
+                                if (allocation.TaxAmount != null)
+                                {
+                                    defaultCurrency = CheckCurrency(defaultCurrency, allocation.TaxAmount.Currency);
+                                }
+                                if (allocation.AdditionalAmount != null && (!allocation.AdditionalAmount.Value.HasValue || allocation.AdditionalAmount.Currency == null))
+                                {
+                                    IntegrationApiExceptionAddError("The additional amount value and currency are required when submitting a line item account detail allocation additional amount.", "Validation.Exception");
+                                }
+                                if (allocation.AdditionalAmount != null)
+                                {
+                                    defaultCurrency = CheckCurrency(defaultCurrency, allocation.AdditionalAmount.Currency);
+                                }
+                                if (allocation.DiscountAmount != null && (!allocation.DiscountAmount.Value.HasValue || allocation.AdditionalAmount.Currency == null))
+                                {
+                                    IntegrationApiExceptionAddError("The discount amount value and currency are required when submitting a line item account detail allocation discount amount.", "Validation.Exception");
+                                }
+                                if (allocation.DiscountAmount != null)
+                                {
+                                    defaultCurrency = CheckCurrency(defaultCurrency, allocation.DiscountAmount.Currency);
+                                }
+                            }
+                            if (accountDetail.TaxFormComponent != null && string.IsNullOrEmpty(accountDetail.TaxFormComponent.Id))
+                            {
+                                IntegrationApiExceptionAddError("The taxFormComponent id is required when submitting a line item account detail taxFormComponent.", "Validation.Exception");
+                            }
+                            else
+                            {
+                                if (accountDetail.TaxFormComponent != null && !string.IsNullOrEmpty(accountDetail.TaxFormComponent.Id))
+                                {
+                                    //check the guid in each account details to make sure they are the same.
+                                    if (string.IsNullOrEmpty(lineTaxForm)) // this is the first taxform
+                                        lineTaxForm = accountDetail.TaxFormComponent.Id;
+                                    else if (lineTaxForm != accountDetail.TaxFormComponent.Id)
+                                        IntegrationApiExceptionAddError(string.Format("The taxFormComponents must be identical for each account detail for the line item '{0}'.", lineItem.Description), "Validation.Exception");
+                                }
+                            }
+                            if (accountDetail.SubmittedBy != null && string.IsNullOrEmpty(accountDetail.SubmittedBy.Id))
+                            {
+                                IntegrationApiExceptionAddError("The SubmittedBy id is required when submitting a line item account detail SubmittedBy.", "Validation.Exception");
+                            }
+                            if (string.IsNullOrEmpty(accountDetail.AccountingString))
+                            {
+                                IntegrationApiExceptionAddError("The AccountingString id is required when submitting a line item account detail AccountingString.", "Validation.Exception");
+                            }
+                        }
+                    }
+                    if (string.IsNullOrEmpty(lineItem.Description))
+                    {
+                        IntegrationApiExceptionAddError("The Description is required when submitting a line item.", "Validation.Exception");
+                    }
+                    if (lineItem.Quantity == 0)
+                    {
+                        IntegrationApiExceptionAddError("The Quantity is required when submitting a line item.", "Validation.Exception");
+                    }
+                    if (lineItem.UnitPrice == null)
+                    {
+                        IntegrationApiExceptionAddError("The UnitPrice is required when submitting a line item.", "Validation.Exception");
+                    }
+                    else
+                    {
+                        if (lineItem.UnitPrice != null && lineItem.UnitPrice.Currency != null)
+                        {
+                            defaultCurrency = CheckCurrency(defaultCurrency, lineItem.UnitPrice.Currency);
+                        }
+                        else
+                        {
+                            // throw new ArgumentNullException("purchaseOrders.LineItems.UnitPrice", "The UnitPrice currency is a required when submitting a line item.");
+                            IntegrationApiExceptionAddError("The UnitPrice currency is a required when submitting a line item.", "Validation.Exception");
+                        }
+                        if (!lineItem.UnitPrice.Value.HasValue)
+                        {
+                            //throw new ArgumentNullException("purchaseOrders.LineItems.UnitPrice", "The UnitPrice value is required when submitting a line item.");
+                            IntegrationApiExceptionAddError("The UnitPrice value is required when submitting a line item.", "Validation.Exception");
+                        }
+                    }
+                    if (lineItem.PartNumber != null && lineItem.PartNumber.Length > 11)
+                    {
+                        // throw new ArgumentNullException("purchaseOrders.LineItems.PartNumber", "The PartNumber cannot exceed 11 characters in length.");
+                        IntegrationApiExceptionAddError("The PartNumber cannot exceed 11 characters in length.", "Validation.Exception");
+                    }
+                }
+            }
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+        }
+
+
+        private CurrencyIsoCode? CheckCurrency(CurrencyIsoCode? defaultValue, CurrencyIsoCode? newValue)
+        {
+            if (defaultValue != null && defaultValue != newValue && newValue != null)
+            {
+                IntegrationApiExceptionAddError("All currency codes in the request must be the same and cannot differ.", "Validation.Exception");
+            }
+            CurrencyIsoCode? cc = newValue == null ? defaultValue : newValue;
+            return cc;
+        }
+
         #endregion
+       
         #endregion
 
         #region shared methods
+       
         /// <summary>
         ///  Get Currency ISO Code
         /// </summary>
         /// <param name="currencyCode"></param>
         /// <param name="hostCountry"></param>
         /// <returns><see cref="CurrencyIsoCode"></returns>
-        private static CurrencyIsoCode GetCurrencyIsoCode(string currencyCode, string hostCountry = "USA")
+        private CurrencyIsoCode GetCurrencyIsoCode(string currencyCode, string hostCountry = "USA")
         {
             var currency = CurrencyIsoCode.USD;
 
@@ -1624,48 +2709,64 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (sourceLineItem == null)
             {
-                throw new ArgumentNullException(string.Concat("Unable to retrieve Purchase Order line item: ", sourceId, " Guid: ", sourceGuid));
+                IntegrationApiExceptionAddError(string.Concat("Unable to retrieve Purchase Order line item: ", sourceId, " Guid: ", sourceGuid), "Bad.Data");
+                return null;
             }
-            var lineItem = new PurchaseOrdersLineItemsDtoProperty();
-
-            lineItem.LineItemNumber = sourceLineItem.Id;
-            lineItem.Description = sourceLineItem.Description;
+            var lineItem = new PurchaseOrdersLineItemsDtoProperty
+            {
+                LineItemNumber = sourceLineItem.Id,
+                Description = sourceLineItem.Description
+            };
 
             if (!string.IsNullOrEmpty(sourceLineItem.CommodityCode))
             {
-                var commodityCodes = await GetCommodityCodesAsync(bypassCache);
-                if (commodityCodes == null)
-                    throw new Exception("Unable to retrieve commodity codes");
-                var commodityCode = commodityCodes.FirstOrDefault(cc => cc.Code == sourceLineItem.CommodityCode);
-                if (commodityCode == null)
+                try
                 {
-                    throw new KeyNotFoundException(string.Concat("Missing commodity code information for purchase order: ", sourceId, " Guid: ", sourceGuid, " Commodity Code: ", sourceLineItem.CommodityCode));
+                    var commodityCodeGuid = await colleagueFinanceReferenceDataRepository.GetCommodityCodeGuidAsync(sourceLineItem.CommodityCode);
+
+                    if (string.IsNullOrEmpty(commodityCodeGuid))
+                    {
+                        var message = string.Concat("Missing commodity code information.  CommodityCode: ", sourceLineItem.CommodityCode);
+                        IntegrationApiExceptionAddError(message, "GUID.Not.Found", sourceGuid, sourceId);
+                    }
+                    else
+                    {
+                        lineItem.CommodityCode = new GuidObject2(commodityCodeGuid);
+                    }
                 }
-                lineItem.CommodityCode = new GuidObject2(commodityCode.Guid);
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", sourceGuid, sourceId);
+                }
             }
             if (!(string.IsNullOrWhiteSpace(sourceLineItem.VendorPart)))
             {
                 lineItem.PartNumber = sourceLineItem.VendorPart;
             }
-            // Line items have expected date and desired date however, we want to use expected date only.
-            // lineItem.DesiredDate = sourceLineItem.DesiredDate;
+
             lineItem.DesiredDate = sourceLineItem.ExpectedDeliveryDate;
             lineItem.Quantity = sourceLineItem.Quantity;
 
             if (!string.IsNullOrEmpty(sourceLineItem.UnitOfIssue))
             {
-                var commodityCodeUnitTypes = await GetCommodityUnitTypesAsync(bypassCache);
-                if (commodityCodeUnitTypes == null)
+                try
                 {
-                    throw new Exception("Unable to retrieve commodity code unit types");
+                    var unitTypeGuid = await colleagueFinanceReferenceDataRepository.GetCommodityUnitTypeGuidAsync(sourceLineItem.UnitOfIssue);
+
+                    if (string.IsNullOrEmpty(unitTypeGuid))
+                    {
+                        var message = string.Concat("Missing commodity code unit type information.  UnitOfIssue: ", sourceLineItem.UnitOfIssue);
+                        IntegrationApiExceptionAddError(message, "GUID.Not.Found", sourceGuid, sourceId);
+                    }
+                    else
+                    {
+                        lineItem.UnitOfMeasure = new GuidObject2(unitTypeGuid);
+                    }
                 }
-                var commodityCodeUnitType = commodityCodeUnitTypes.FirstOrDefault(cct => cct.Code == sourceLineItem.UnitOfIssue);
-                if (commodityCodeUnitType == null)
+                catch (RepositoryException ex)
                 {
-                    throw new KeyNotFoundException(string.Concat("Missing commodity code unit types information for purchase order: ", sourceId, " Guid: ", sourceGuid,
-                        " Commodity Code Unit Type: ", sourceLineItem.UnitOfIssue));
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", sourceGuid, sourceId);
                 }
-                lineItem.UnitOfMeasure = new GuidObject2(commodityCodeUnitType.Guid);
             }
 
             lineItem.UnitPrice = new Dtos.DtoProperties.Amount2DtoProperty()
@@ -1681,21 +2782,24 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 var taxCodesEntities = await GetCommerceTaxCodesAsync(bypassCache);
                 if (taxCodesEntities == null)
                 {
-                    throw new Exception("Unable to retrieve commodity tax codes");
+                    IntegrationApiExceptionAddError("Unable to retrieve commodity tax codes", "GUID.Not.Found", sourceGuid, sourceId);
                 }
-                var lineItemTaxesTuple = sourceLineItem.LineItemTaxes
-                    .GroupBy(l => l.TaxCode)
-                    .Select(cl => new Tuple<string, decimal>(
-                           cl.First().TaxCode,
-                           cl.Sum(c => c.TaxAmount)
-                        )).ToList();
-
-                foreach (var lineItemTax in lineItemTaxesTuple)
+                else
                 {
-                    var taxCode = taxCodesEntities.FirstOrDefault(tax => tax.Code == lineItemTax.Item1);
-                    if (taxCode != null)
+                    var lineItemTaxesTuple = sourceLineItem.LineItemTaxes
+                        .GroupBy(l => l.TaxCode)
+                        .Select(cl => new Tuple<string, decimal?>(
+                               cl.First().TaxCode,
+                               cl.Sum(c => c.TaxAmount)
+                            )).ToList();
+
+                    foreach (var lineItemTax in lineItemTaxesTuple)
                     {
-                        lineItemTaxCodes.Add(new GuidObject2(taxCode.Guid));
+                        var taxCode = taxCodesEntities.FirstOrDefault(tax => tax.Code == lineItemTax.Item1);
+                        if (taxCode != null)
+                        {
+                            lineItemTaxCodes.Add(new GuidObject2(taxCode.Guid));
+                        }
                     }
                 }
             }
@@ -1713,7 +2817,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     Value = sourceLineItem.TradeDiscountAmount,
                     Currency = currency
                 };
-               
+
                 lineItem.TradeDiscount = tradeDiscountDtoProperty;
             }
             else if (sourceLineItem.TradeDiscountPercentage != null && sourceLineItem.TradeDiscountPercentage.HasValue)
@@ -1737,24 +2841,35 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 lineItem.Comments = lineItemComments;
             }
 
-            try
+            if (!string.IsNullOrEmpty(sourceLineItem.RequisitionId))
             {
-                if (!string.IsNullOrEmpty(sourceLineItem.RequisitionId))
+                lineItem.Reference = new PurchaseOrdersReferenceDtoProperty();
+                lineItem.Reference.Document = new PurchaseOrdersDocumentDtoProperty();
+                try
                 {
-                    lineItem.Reference = new PurchaseOrdersReferenceDtoProperty();
-                    lineItem.Reference.Document = new PurchaseOrdersDocumentDtoProperty();
-                    var ReqGuid = new GuidObject2(await purchaseOrderRepository.GetGuidFromIdAsync(sourceLineItem.RequisitionId, "REQUISITIONS"));
-                    lineItem.Reference.Document.Requisition = ReqGuid;
-
-                    lineItem.Reference.lineItemNumber = lineItem.LineItemNumber;
+                    var reqGuid = await purchaseOrderRepository.GetGuidFromIdAsync(sourceLineItem.RequisitionId, "REQUISITIONS");
+                    if (string.IsNullOrEmpty(reqGuid))
+                    {
+                        var message = string.Concat("Missing requisition GUID.  RequisitionId: ", sourceLineItem.RequisitionId);
+                        IntegrationApiExceptionAddError(message, "GUID.Not.Found", sourceGuid, sourceId);
+                    }
+                    else
+                    {
+                        lineItem.Reference.Document.Requisition = new GuidObject2(reqGuid);
+                    }
                 }
-            } catch (Exception ex)
-            {
-                throw new Exception(ex.Message);
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", sourceGuid, sourceId);
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "Bad.Data", sourceGuid, sourceId);
+                }
+
+                lineItem.Reference.lineItemNumber = lineItem.LineItemNumber;
             }
-            
-            
-            
+
 
             var accountDetails = new List<Dtos.DtoProperties.PurchaseOrdersAccountDetailDtoProperty>();
             int sequenceNumber = 0;
@@ -1763,18 +2878,30 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 if (!string.IsNullOrEmpty(glDistribution.GlAccountNumber))
                 {
                     var accountDetail = new Dtos.DtoProperties.PurchaseOrdersAccountDetailDtoProperty();
-                    //var acctNumber = glDistribution.GlAccountNumber.Replace("_", "-");
+
                     sequenceNumber++;
                     accountDetail.SequenceNumber = sequenceNumber;
-                    //accountDetail.AccountingString =
-                    //    string.IsNullOrEmpty(glDistribution.ProjectId) ?
-                    //        acctNumber : string.Concat(acctNumber, '*', glDistribution.ProjectId);
-                    string acctNumber = glDistribution.GetFormattedGlAccount(GlConfig.MajorComponentStartPositions);
-                    acctNumber = GetFormattedGlAccount(acctNumber, GlConfig);
-                    if (!string.IsNullOrEmpty(glDistribution.ProjectId))
+
+                    string acctNumber = string.Empty;
+                    try
                     {
-                        acctNumber = ConvertAccountingstringToIncludeProjectRefNo(glDistribution.ProjectId, acctNumber);
+                        var acctNumberInitial = glDistribution.GetFormattedGlAccount(GlConfig.MajorComponentStartPositions);
+                        acctNumber = GetFormattedGlAccount(acctNumberInitial, GlConfig);
+                        if (!string.IsNullOrEmpty(glDistribution.ProjectId))
+                        {
+                            acctNumber = ConvertAccountingstringToIncludeProjectRefNo(glDistribution.ProjectId, acctNumber);
+                        }
                     }
+
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex, "Bad.Data", sourceGuid, sourceId);
+                    }
+                    catch (Exception ex)
+                    {
+                        IntegrationApiExceptionAddError(ex.Message, "Bad.Data", sourceGuid, sourceId);
+                    }
+
                     accountDetail.AccountingString = acctNumber;
 
                     var allocation = new Dtos.DtoProperties.PurchaseOrdersAllocationDtoProperty();
@@ -1786,7 +2913,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         Value = glDistribution.Amount,
                         Currency = currency
                     };
-                  
+
                     allocated.Percentage = glDistribution.Percent;
                     allocated.Quantity = glDistribution.Quantity;
 
@@ -1808,17 +2935,32 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     }
                     accountDetail.Allocation = allocation;
 
-                    //accountDetail.BudgetCheck = PurchaseOrdersAccountBudgetCheck.NotSet;
+                    if (!(string.IsNullOrWhiteSpace(sourceLineItem.TaxFormCode)))
+                    {
+                        var taxBoxes = await GetAllBoxCodesAsync(bypassCache);
+                        if (taxBoxes != null)
+                        {
+                            var taxBox = taxBoxes.FirstOrDefault(aps => aps.Code == sourceLineItem.TaxFormCode);
+                            if (taxBox != null)
+                            {
+                                accountDetail.TaxFormComponent = new GuidObject2(taxBox.Guid);
+                            }
+                        }
+                    }
 
                     if (sourceLineItem.StatusDate != null && sourceLineItem.StatusDate.HasValue)
                     {
                         accountDetail.StatusDate = sourceLineItem.StatusDate;
                     }
 
-                    if (sourceLineItem.Status != null)
+                    if (sourceLineItem.LineItemStatus != null)
                     {
-                        accountDetail.Status = this.ConvertPurchaseOrderStatus(sourceLineItem.Status);
-
+                        var status = this.ConvertLineItemStatus(sourceLineItem.LineItemStatus);
+                        // Account Details status cannot contain awaitingReceipt enumeration
+                        if (status != Dtos.EnumProperties.LineItemStatus.AwaitingReceipt)
+                        {
+                            accountDetail.Status = status;
+                        }
                     }
                     accountDetails.Add(accountDetail);
                 }
@@ -1828,11 +2970,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 lineItem.AccountDetail = accountDetails;
             }
 
+            // New Line Item status at line item level for v11.1.0
+            if (sourceLineItem.LineItemStatus != null)
+            {
+                lineItem.Status = this.ConvertLineItemStatus(sourceLineItem.LineItemStatus);
+            }
+
             return lineItem;
         }
 
         /// <summary>
-        /// GetPurchaseOrderStatus
+        /// GetPurchaseOrderStatus enumeration from PurchaseOrderStatus domian enum
         /// </summary>
         /// <param name="sourceStatus"></param>
         /// <returns><see cref="PurchaseOrdersStatus"></returns>
@@ -1869,6 +3017,44 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     break;
             }
             return purchaseOrdersStatus;
+        }
+
+        /// <summary>
+        /// GetPurchaseOrderStatus enumeration from PurchaseOrderStatus domian enum
+        /// </summary>
+        /// <param name="sourceStatus"></param>
+        /// <returns><see cref="PurchaseOrdersStatus"></returns>
+        private Dtos.EnumProperties.LineItemStatus ConvertLineItemStatus(Domain.ColleagueFinance.Entities.LineItemStatus? sourceStatus)
+        {
+            var lineItemStatus = Dtos.EnumProperties.LineItemStatus.NotSet;
+
+            if (sourceStatus == null)
+                return lineItemStatus;
+
+            switch (sourceStatus)
+            {
+                case (Domain.ColleagueFinance.Entities.LineItemStatus.Accepted):
+                    lineItemStatus = Dtos.EnumProperties.LineItemStatus.Accepted; break;
+                case (Domain.ColleagueFinance.Entities.LineItemStatus.Backordered):
+                    lineItemStatus = Dtos.EnumProperties.LineItemStatus.Backordered; break;
+                case (Domain.ColleagueFinance.Entities.LineItemStatus.Closed):
+                    lineItemStatus = Dtos.EnumProperties.LineItemStatus.Closed; break;
+                case (Domain.ColleagueFinance.Entities.LineItemStatus.Invoiced):
+                    lineItemStatus = Dtos.EnumProperties.LineItemStatus.Invoiced; break;
+                case (Domain.ColleagueFinance.Entities.LineItemStatus.Outstanding):
+                    lineItemStatus = Dtos.EnumProperties.LineItemStatus.Outstanding; break;
+                case (Domain.ColleagueFinance.Entities.LineItemStatus.Paid):
+                    lineItemStatus = Dtos.EnumProperties.LineItemStatus.Paid; break;
+                case (Domain.ColleagueFinance.Entities.LineItemStatus.Reconciled):
+                    lineItemStatus = Dtos.EnumProperties.LineItemStatus.Reconciled; break;
+                case (Domain.ColleagueFinance.Entities.LineItemStatus.Voided):
+                    lineItemStatus = Dtos.EnumProperties.LineItemStatus.Voided; break;
+                case (Domain.ColleagueFinance.Entities.LineItemStatus.Hold):
+                    lineItemStatus = Dtos.EnumProperties.LineItemStatus.AwaitingReceipt; break;
+                default:
+                    lineItemStatus = Dtos.EnumProperties.LineItemStatus.Outstanding; break;
+            }
+            return lineItemStatus;
         }
 
         /// <summary>
@@ -1980,15 +3166,31 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     || x.IsoCode == intgAltShipCountry);
                 if (country == null)
                 {
-                    // var hostCountry = addressHostCountry;
-                    if (hostCountry == "USA" || string.IsNullOrEmpty(hostCountry))
-                        country = (await GetAllCountriesAsync(bypassCache)).FirstOrDefault(x => x.IsoAlpha3Code == "USA");
-                    else
-                        country = (await GetAllCountriesAsync(bypassCache)).FirstOrDefault(x => x.IsoAlpha3Code == "CAN");
+                    try
+                    {
+                        if (hostCountry == "USA" || string.IsNullOrEmpty(hostCountry))
+                        {
+                            country = await referenceDataRepository.GetCountryFromIsoAlpha3CodeAsync("USA");
+                        }
+                        else
+                        {
+                            country = await referenceDataRepository.GetCountryFromIsoAlpha3CodeAsync("CAN");
+                        }
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex, "Bad.Data");
+                    }
                 }
             }
-            else if(!string.IsNullOrEmpty(addressCountry))
+            else if (!string.IsNullOrEmpty(addressCountry))
+            {
                 country = (await GetAllCountriesAsync(bypassCache)).FirstOrDefault(x => x.Code == addressCountry);
+                if (country == null)
+                {
+                    IntegrationApiExceptionAddError("Unable to locate country code for " + addressCountry, "Bad.Data");
+                }
+            }
             else
             {
                 if (!string.IsNullOrEmpty(addressState))
@@ -2004,70 +3206,72 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
                 if (country == null)
                 {
-                   // var hostCountry = addressHostCountry;
-                    if (hostCountry == "USA" || string.IsNullOrEmpty(hostCountry))
-                        country = (await GetAllCountriesAsync(bypassCache)).FirstOrDefault(x => x.IsoAlpha3Code == "USA");
-                    else
-                        country = (await GetAllCountriesAsync(bypassCache)).FirstOrDefault(x => x.IsoAlpha3Code == "CAN");
+                    try
+                    {
+                        if (hostCountry == "USA" || string.IsNullOrEmpty(hostCountry))
+                        {
+                            country = await referenceDataRepository.GetCountryFromIsoAlpha3CodeAsync("USA");
+                        }
+                        else
+                        {
+                            country = await referenceDataRepository.GetCountryFromIsoAlpha3CodeAsync("CAN");
+                        }
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex, "Bad.Data");
+                    }
                 }
-            }
-            if (country == null)
-            {
-                if (!string.IsNullOrEmpty(addressCountry))
-                {
-                    throw new KeyNotFoundException("Unable to locate ISO country code for " + addressCountry);
-                }
-                throw new KeyNotFoundException("Unable to locate ISO country code for " + addressCountry);
             }
 
             //need to check to make sure ISO code is there.
             if (country != null && string.IsNullOrEmpty(country.IsoAlpha3Code))
-                throw new ArgumentException("Unable to locate ISO country code for " + country.Code);
-
-            switch (country.IsoAlpha3Code)
+                IntegrationApiExceptionAddError("ISO country code missing for country: '" + country.Code + "'", "Bad.Data");
+            else
             {
-                case "USA":
-                    addressCountryDto.Code = Dtos.EnumProperties.IsoCode.USA;
-                    addressCountryDto.PostalTitle = "UNITED STATES OF AMERICA";
-                    break;
-                case "CAN":
-                    addressCountryDto.Code = Dtos.EnumProperties.IsoCode.CAN;
-                    addressCountryDto.PostalTitle = "CANADA";
-                    break;
-                case "AUS":
-                    addressCountryDto.Code = Dtos.EnumProperties.IsoCode.AUS;
-                    addressCountryDto.PostalTitle = "AUSTRALIA";
-                    break;
-                case "BRA":
-                    addressCountryDto.Code = Dtos.EnumProperties.IsoCode.BRA;
-                    addressCountryDto.PostalTitle = "BRAZIL";
-                    break;
-                case "MEX":
-                    addressCountryDto.Code = Dtos.EnumProperties.IsoCode.MEX;
-                    addressCountryDto.PostalTitle = "MEXICO";
-                    break;
-                case "NLD":
-                    addressCountryDto.Code = Dtos.EnumProperties.IsoCode.NLD;
-                    addressCountryDto.PostalTitle = "NETHERLANDS";
-                    break;
-                case "GBR":
-                    addressCountryDto.Code = Dtos.EnumProperties.IsoCode.GBR;
-                    addressCountryDto.PostalTitle = "UNITED KINGDOM OF GREAT BRITAIN AND NORTHERN IRELAND";
-                    break;
-                default:
-                    try
-                    {
-                        addressCountryDto.Code = (Dtos.EnumProperties.IsoCode)System.Enum.Parse(typeof(Dtos.EnumProperties.IsoCode), country.IsoAlpha3Code);
-                    }
-                    catch (Exception ex)
-                    {
-                        throw new Exception(string.Concat(ex.Message, "For the Country: '", addressCountry, "' .ISOCode Not found: ", country.IsoAlpha3Code));
-                    }
-
-                    addressCountryDto.PostalTitle = country.Description.ToUpper();
-                    break;
+                switch (country.IsoAlpha3Code)
+                {
+                    case "USA":
+                        addressCountryDto.Code = Dtos.EnumProperties.IsoCode.USA;
+                        addressCountryDto.PostalTitle = "UNITED STATES OF AMERICA";
+                        break;
+                    case "CAN":
+                        addressCountryDto.Code = Dtos.EnumProperties.IsoCode.CAN;
+                        addressCountryDto.PostalTitle = "CANADA";
+                        break;
+                    case "AUS":
+                        addressCountryDto.Code = Dtos.EnumProperties.IsoCode.AUS;
+                        addressCountryDto.PostalTitle = "AUSTRALIA";
+                        break;
+                    case "BRA":
+                        addressCountryDto.Code = Dtos.EnumProperties.IsoCode.BRA;
+                        addressCountryDto.PostalTitle = "BRAZIL";
+                        break;
+                    case "MEX":
+                        addressCountryDto.Code = Dtos.EnumProperties.IsoCode.MEX;
+                        addressCountryDto.PostalTitle = "MEXICO";
+                        break;
+                    case "NLD":
+                        addressCountryDto.Code = Dtos.EnumProperties.IsoCode.NLD;
+                        addressCountryDto.PostalTitle = "NETHERLANDS";
+                        break;
+                    case "GBR":
+                        addressCountryDto.Code = Dtos.EnumProperties.IsoCode.GBR;
+                        addressCountryDto.PostalTitle = "UNITED KINGDOM OF GREAT BRITAIN AND NORTHERN IRELAND";
+                        break;
+                    default:
+                        try
+                        {
+                            addressCountryDto.Code = (Dtos.EnumProperties.IsoCode)System.Enum.Parse(typeof(Dtos.EnumProperties.IsoCode), country.IsoAlpha3Code);
+                            addressCountryDto.PostalTitle = country.Description.ToUpper();
+                        }
+                        catch (Exception ex)
+                        {
+                            IntegrationApiExceptionAddError(string.Concat(ex.Message, "For the Country: '", addressCountry, "' ISOCode not found: '", country.IsoAlpha3Code, "'"), "Bad.Data");
+                        }                       
+                        break;
+                }
             }
-
             if (!string.IsNullOrEmpty(addressState))
             {
                 var states = (await GetAllStatesAsync(bypassCache)).FirstOrDefault(x => x.Code == addressState);
@@ -2079,7 +3283,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
                 else
                 {
-                    throw new ArgumentException(string.Concat("Description not found for for the state: '", addressState, "' or an error has occurred retrieving that value. "));
+                    IntegrationApiExceptionAddError(string.Concat("Description not found for for the state: '", addressState, "' or an error has occurred retrieving that value."), "Bad.Data");
                 }
             }
             
@@ -2097,13 +3301,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             if (country != null)
                 addressCountryDto.Title = country.Description;
 
-            if (addressCountryDto != null
-                && (!string.IsNullOrEmpty(addressCountryDto.Locality)
-                || !string.IsNullOrEmpty(addressCountryDto.PostalCode)
-                || addressCountryDto.Region != null
-                ))
+            if ((addressCountryDto != null) &&
+                (!string.IsNullOrEmpty(addressCountryDto.Locality) || !string.IsNullOrEmpty(addressCountryDto.PostalCode) || addressCountryDto.Region != null))
             {
-               return new AddressPlace()
+                return new AddressPlace()
                 {
                     Country = addressCountryDto
                 };
@@ -2249,6 +3450,143 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         #endregion
 
         /// <summary>
+        /// Create/Update a purchase order.
+        /// </summary>
+        /// <param name="purchaseOrderCreateUpdateRequest">The purchase order create update request DTO.</param>        
+        /// <returns>The purchase order create update response DTO.</returns>
+        public async Task<Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderCreateUpdateResponse> CreateUpdatePurchaseOrderAsync(Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderCreateUpdateRequest purchaseOrderCreateUpdateRequest)
+        {
+            Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderCreateUpdateResponse response = new Dtos.ColleagueFinance.PurchaseOrderCreateUpdateResponse();
+            if (purchaseOrderCreateUpdateRequest == null)
+            {
+                throw new ArgumentNullException("purchaseOrderCreateRequest", "Must provide a purchaseOrderCreateRequest object");
+            }
+
+            if (string.IsNullOrEmpty(purchaseOrderCreateUpdateRequest.PersonId))
+            {
+                throw new ArgumentNullException("personId", "Person ID must be specified.");
+            }
+            if (purchaseOrderCreateUpdateRequest.PurchaseOrder == null)
+            {
+                throw new ArgumentNullException("purchasOrder", "PurchasOrder must be specified.");
+            }
+            // check if personId passed is same currentuser
+            CheckIfUserIsSelf(purchaseOrderCreateUpdateRequest.PersonId);
+
+            //check if personId has staff record
+            await CheckStaffRecordAsync(purchaseOrderCreateUpdateRequest.PersonId);
+
+            //Change to create or update permission, after creating new permission.            
+            CheckPurchaseOrderCreateUpdatePermission();
+
+            // Get the GL Configuration to get the name of the full GL account access role
+            // and also provides the information to format the GL accounts
+            var glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
+            if (glConfiguration == null)
+            {
+                throw new ArgumentNullException("glConfiguration", "glConfiguration cannot be null");
+            }
+
+            // Get the GL class configuration because it is used by the GL user repository.
+            var glClassConfiguration = await generalLedgerConfigurationRepository.GetClassConfigurationAsync();
+            if (glClassConfiguration == null)
+            {
+                throw new ArgumentNullException("glClassConfiguration", "glClassConfiguration cannot be null");
+            }
+
+            //Convert DTO to domain entity            
+            var purchaseOrderCreateUpdateRequestEntity = ConvertCreateUpdateRequestDtoToEntity(purchaseOrderCreateUpdateRequest, glConfiguration);
+            Domain.ColleagueFinance.Entities.PurchaseOrderCreateUpdateResponse responseEntity = null;
+
+            //Check if purchase order sent for modify exist in colleague for user.            
+            if (!string.IsNullOrEmpty(purchaseOrderCreateUpdateRequest.PurchaseOrder.Id))
+            {
+                // Get the ID for the person who is logged in, and use the ID to get their GL access level.
+                var generalLedgerUser = await generalLedgerUserRepository.GetGeneralLedgerUserAsync(CurrentUser.PersonId, glConfiguration.FullAccessRole, glClassConfiguration.ClassificationName, glClassConfiguration.ExpenseClassValues);
+                if (generalLedgerUser == null)
+                {
+                    throw new ArgumentNullException("generalLedgerUser", "generalLedgerUser cannot be null");
+                }
+
+                // Get the purchase order domain entity from the repository
+                var originalPurchaseOrder = await purchaseOrderRepository.GetPurchaseOrderAsync(purchaseOrderCreateUpdateRequest.PurchaseOrder.Id, CurrentUser.PersonId, generalLedgerUser.GlAccessLevel, generalLedgerUser.AllAccounts);
+                if (originalPurchaseOrder == null)
+                {
+                    var message = string.Format("{0} Purchase Order number doesn't exist for modify.", purchaseOrderCreateUpdateRequest.PurchaseOrder.Number);
+                    logger.Error(message);
+                    throw new ApplicationException(message);
+                }
+
+                responseEntity = await purchaseOrderRepository.UpdatePurchaseOrderAsync(purchaseOrderCreateUpdateRequestEntity, originalPurchaseOrder);
+            }
+            else
+            {
+                responseEntity = await purchaseOrderRepository.CreatePurchaseOrderAsync(purchaseOrderCreateUpdateRequestEntity);
+
+            }
+
+            var createResponseAdapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.PurchaseOrderCreateUpdateResponse, Dtos.ColleagueFinance.PurchaseOrderCreateUpdateResponse>();
+
+            if (responseEntity != null)
+            {
+                response = createResponseAdapter.MapToType(responseEntity);
+            }
+            return response;
+        }
+
+        /// <summary>
+        /// Void a purchase order.
+        /// </summary>
+        /// <param name="purchaseOrderVoidRequest">The purchase order void request DTO.</param>        
+        /// <returns>The purchase order void response DTO.</returns>
+        public async Task<Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderVoidResponse> VoidPurchaseOrderAsync(Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderVoidRequest purchaseOrderVoidRequest)
+        {
+            Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderVoidResponse response = new Dtos.ColleagueFinance.PurchaseOrderVoidResponse();
+            if (purchaseOrderVoidRequest == null)
+            {
+                throw new ArgumentNullException("purchaseOrderVoidRequest", "Must provide a purchaseOrderVoidRequest object");
+            }
+
+            if (string.IsNullOrEmpty(purchaseOrderVoidRequest.PersonId))
+            {
+                throw new ArgumentNullException("personId", "Person ID must be specified.");
+            }
+
+            if (string.IsNullOrEmpty(purchaseOrderVoidRequest.PurchaseOrderId))
+            {
+                throw new ArgumentNullException("PurchaseOrderId", "PurchaseOrder Id must be specified.");
+            }
+
+            if (string.IsNullOrEmpty(purchaseOrderVoidRequest.ConfirmationEmailAddresses))
+            {
+                throw new ArgumentNullException("confirmationEmailAddresses", "confirmationEmailAddresses must be specified.");
+            }
+            // check if personId passed is same currentuser
+            CheckIfUserIsSelf(purchaseOrderVoidRequest.PersonId);
+
+            //check if personId has staff record
+            await CheckStaffRecordAsync(purchaseOrderVoidRequest.PersonId);
+
+            //Change to create or update permission, after creating new permission.            
+            CheckPurchaseOrderCreateUpdatePermission();
+
+            //Convert DTO to domain entity            
+            var purchaseOrderVoidRequestEntity = ConvertVoidRequestDtoToEntity(purchaseOrderVoidRequest);
+            Domain.ColleagueFinance.Entities.PurchaseOrderVoidResponse responseEntity = null;
+
+            responseEntity = await purchaseOrderRepository.VoidPurchaseOrderAsync(purchaseOrderVoidRequestEntity);
+
+
+            var createResponseAdapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.PurchaseOrderVoidResponse, Dtos.ColleagueFinance.PurchaseOrderVoidResponse>();
+
+            if (responseEntity != null)
+            {
+                response = createResponseAdapter.MapToType(responseEntity);
+            }
+            return response;
+        }
+
+        /// <summary>
         /// Permission code that allows a READ operation on a purchase order.
         /// </summary>
         /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
@@ -2280,6 +3618,224 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private bool CheckBypassApprovalsPermission()
         {
             return HasPermission(ColleagueFinancePermissionCodes.ByPassPurchaseOrderApproval);
+        }
+
+        /// <summary>
+        /// convert create/Update PO Request to Entity
+        /// </summary>
+        /// <param name="requisitionCreateUpdateRequest"></param>
+        /// <param name="glAccountStructure"></param>
+        /// <returns>PurchaseOrderCreateUpdateRequest</returns>
+        private  Domain.ColleagueFinance.Entities.PurchaseOrderCreateUpdateRequest ConvertCreateUpdateRequestDtoToEntity(Dtos.ColleagueFinance.PurchaseOrderCreateUpdateRequest requisitionCreateUpdateRequest, GeneralLedgerAccountStructure glAccountStructure)
+        {
+            Domain.ColleagueFinance.Entities.PurchaseOrderCreateUpdateRequest createUpdateRequestEntity = new Domain.ColleagueFinance.Entities.PurchaseOrderCreateUpdateRequest();
+            createUpdateRequestEntity.PersonId = requisitionCreateUpdateRequest.PersonId;
+            createUpdateRequestEntity.ConfEmailAddresses = requisitionCreateUpdateRequest.ConfEmailAddresses;
+            createUpdateRequestEntity.InitiatorInitials = requisitionCreateUpdateRequest.InitiatorInitials;
+            createUpdateRequestEntity.IsPersonVendor = requisitionCreateUpdateRequest.IsPersonVendor;
+            createUpdateRequestEntity.PurchaseOrder = ConvertPurchaseOrderDtoToEntity(requisitionCreateUpdateRequest.PurchaseOrder, glAccountStructure);
+            return createUpdateRequestEntity;
+        }
+
+        /// <summary>
+        /// Permission code that allows a WRITE operation on a purchase Order.
+        /// </summary>
+        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
+        private void CheckPurchaseOrderCreateUpdatePermission()
+        {
+
+            var hasPermission = HasPermission(ColleagueFinancePermissionCodes.CreateUpdatePurchaseOrder);
+
+            if (!hasPermission)
+            {
+                var message = string.Format("{0} does not have permission to create or modify Purchase Orders.", CurrentUser.PersonId);
+                logger.Error(message);
+                throw new PermissionsException(message);
+            }
+        }
+
+        /// <summary>
+        /// Convert Purchase order Dto to Entity
+        /// </summary>
+        /// <param name="purchaseOrder"></param>
+        /// <param name="glAccountStructure"></param>
+        /// <returns>PurchaseOrder Entity</returns>
+        private PurchaseOrder ConvertPurchaseOrderDtoToEntity(Dtos.ColleagueFinance.PurchaseOrder purchaseOrder, GeneralLedgerAccountStructure glAccountStructure)
+        {
+
+            if (purchaseOrder == null)
+                throw new ArgumentNullException("PurchaseOrder", "Must provide PurchaseOrder object");
+
+            var poStatus = ConvertPurchaseOrderStatusDtoToEntity(purchaseOrder.Status);
+            var purchaseOrderId = !(string.IsNullOrEmpty(purchaseOrder.Id)) ? purchaseOrder.Id.Trim() : "NEW";
+            var purchaseOrderNumber = !(string.IsNullOrEmpty(purchaseOrder.Number)) ? purchaseOrder.Number : "new";
+
+            var purchaseOrderEntity = new Domain.ColleagueFinance.Entities.PurchaseOrder(
+                purchaseOrderId, "NEW", purchaseOrderNumber, purchaseOrder.VendorName, poStatus, purchaseOrder.StatusDate, purchaseOrder.Date);
+
+            if (!(string.IsNullOrWhiteSpace(purchaseOrder.ShipToCode)))
+            {
+                purchaseOrderEntity.ShipToCode = purchaseOrder.ShipToCode.ToUpper();
+            }
+            if ((purchaseOrder.Approvers != null) && (purchaseOrder.Approvers.Any()))
+            {
+                foreach (var approver in purchaseOrder.Approvers)
+                {
+                    if (approver != null && !string.IsNullOrEmpty(approver.ApproverId))
+                    {
+                        // Approver Initials needs to be uppercase
+                        var approverEntity = new Domain.ColleagueFinance.Entities.Approver(approver.ApproverId.ToUpper());
+                        purchaseOrderEntity.AddApprover(approverEntity);
+                    }
+                }
+            }
+            if ((purchaseOrder.LineItems != null) && (purchaseOrder.LineItems.Any()))
+            {
+                foreach (var lineItem in purchaseOrder.LineItems)
+                {
+                    if (lineItem != null)
+                    {
+                        var description = !(string.IsNullOrEmpty(lineItem.Description)) ? lineItem.Description.Trim() : string.Empty;
+                        //description = description.Length <= 25 ? description : description.Substring(0, 25);
+                        decimal quantity = lineItem.Quantity;
+
+                        var lineItemId = !(string.IsNullOrEmpty(lineItem.Id)) ? lineItem.Id.Trim() : "NEW";
+
+                        var apLineItem = new Domain.ColleagueFinance.Entities.LineItem(lineItemId, description, quantity, lineItem.Price, lineItem.ExtendedPrice);
+                        apLineItem.VendorPart = !(string.IsNullOrEmpty(lineItem.VendorPart)) ? lineItem.VendorPart.Trim() : string.Empty;
+                        apLineItem.UnitOfIssue = !(string.IsNullOrEmpty(lineItem.UnitOfIssue)) ? lineItem.UnitOfIssue.Trim() : string.Empty;
+                        apLineItem.Comments = !(string.IsNullOrEmpty(lineItem.Comments)) ? lineItem.Comments.Trim() : string.Empty;
+                        apLineItem.TradeDiscountPercentage = lineItem.TradeDiscountPercentage;
+                        apLineItem.TradeDiscountAmount = lineItem.TradeDiscountAmount;
+                        apLineItem.FixedAssetsFlag = !(string.IsNullOrEmpty(lineItem.FixedAssetsFlag)) ? lineItem.FixedAssetsFlag.Trim() : string.Empty;
+
+                        apLineItem.CommodityCode = lineItem.CommodityCode;
+                        apLineItem.ExpectedDeliveryDate = lineItem.ExpectedDeliveryDate;
+                        apLineItem.TaxForm = lineItem.TaxForm;
+                        apLineItem.TaxFormCode = lineItem.TaxFormCode;
+                        apLineItem.TaxFormLocation = lineItem.TaxFormLocation;
+
+                        foreach (var glAccount in lineItem.GlDistributions)
+                        {
+                            string glAccountNo = !(string.IsNullOrEmpty(glAccount.FormattedGlAccount)) ? glAccount.FormattedGlAccount : "MASKED";
+                            var internalGlAccountNo = GlAccountUtility.ConvertGlAccountToInternalFormat(glAccountNo, glAccountStructure.MajorComponentStartPositions);
+
+                            apLineItem.AddGlDistributionForSave(new Domain.ColleagueFinance.Entities.LineItemGlDistribution(internalGlAccountNo, glAccount.Quantity, glAccount.Amount)
+                            {
+                                ProjectNumber = glAccount.ProjectNumber
+                            });
+                        }
+                        if (purchaseOrderId.Equals("NEW"))
+                        {
+                            //add tax codes to the entity
+                            if (lineItem.ReqLineItemTaxCodes != null && lineItem.ReqLineItemTaxCodes.Any())
+                            {
+                                foreach (var taxcode in lineItem.ReqLineItemTaxCodes)
+                                {
+                                    if (taxcode != null && !string.IsNullOrEmpty(taxcode.TaxReqTaxCode))
+                                    {
+                                        apLineItem.AddReqTax(new Domain.ColleagueFinance.Entities.LineItemReqTax(taxcode.TaxReqTaxCode));
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            //add tax codes to the entity
+                            if (lineItem.ReqLineItemTaxCodes != null && lineItem.ReqLineItemTaxCodes.Any())
+                            {
+                                foreach (var taxcode in lineItem.ReqLineItemTaxCodes)
+                                {
+                                    if (!string.IsNullOrEmpty(taxcode.TaxReqTaxCode))
+                                    {
+                                        apLineItem.AddReqTax(new Domain.ColleagueFinance.Entities.LineItemReqTax(taxcode.TaxReqTaxCode));
+                                    }
+                                }
+                            }
+                        }
+                        purchaseOrderEntity.AddLineItem(apLineItem);
+                    }
+                }
+            }
+            purchaseOrderEntity.VendorId = purchaseOrder.VendorId;
+            if (!(string.IsNullOrWhiteSpace(purchaseOrder.ApType)))
+            {
+                purchaseOrderEntity.ApType = purchaseOrder.ApType.ToUpper();
+            }
+            if ((purchaseOrder.Approvers != null) && (purchaseOrder.Approvers.Any()))
+            {
+                foreach (var approver in purchaseOrder.Approvers)
+                {
+                    if (!string.IsNullOrEmpty(approver.ApproverId))
+                    {
+                        var approverEntity = new Domain.ColleagueFinance.Entities.Approver(approver.ApproverId);
+                        purchaseOrderEntity.AddApprover(approverEntity);
+                    }
+                }
+            }
+
+            purchaseOrderEntity.Comments = purchaseOrder.Comments;
+            purchaseOrderEntity.InternalComments = purchaseOrder.InternalComments;
+            purchaseOrderEntity.DeliveryDate = purchaseOrder.DeliveryDate;
+            purchaseOrderEntity.DefaultCommodityCode = purchaseOrder.DefaultCommodityCode;
+            purchaseOrderEntity.CommodityCode = purchaseOrder.DefaultCommodityCode;
+            return purchaseOrderEntity;
+
+        }
+
+        /// <summary>
+        /// Converts a PurchaseOrderStatus DTO enumeration to a PurchaseOrderStatus domain enum 
+        /// </summary>
+        /// <param name="sourceStatus">PurchaseOrderStatus DTO enumeration</param>
+        /// <returns><see cref="RequisitionsStatus">PurchaseOrderStatus domain enum</returns>
+        private  Domain.ColleagueFinance.Entities.PurchaseOrderStatus ConvertPurchaseOrderStatusDtoToEntity(Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderStatus sourceStatus)
+        {
+            var purchaseOrderStatus = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.InProgress;
+
+            switch (sourceStatus)
+            {
+                case (Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderStatus.InProgress):
+                    purchaseOrderStatus = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.InProgress; break;
+                case (Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderStatus.NotApproved):
+                    purchaseOrderStatus = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.NotApproved; break;
+                case (Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderStatus.Outstanding):
+                    purchaseOrderStatus = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.Outstanding; break;
+                case (Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderStatus.Accepted):
+                    purchaseOrderStatus = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.Accepted; break;
+                case (Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderStatus.Backordered):
+                    purchaseOrderStatus = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.Backordered; break;
+                case (Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderStatus.Invoiced):
+                    purchaseOrderStatus = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.Invoiced; break;
+                case (Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderStatus.Paid):
+                    purchaseOrderStatus = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.Paid; break;
+                case (Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderStatus.Reconciled):
+                    purchaseOrderStatus = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.Reconciled; break;
+                case (Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderStatus.Voided):
+                    purchaseOrderStatus = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.Voided; break;
+                case (Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderStatus.Closed):
+                    purchaseOrderStatus = Domain.ColleagueFinance.Entities.PurchaseOrderStatus.Closed; break;
+               
+                default:
+                    break;
+            }
+            return purchaseOrderStatus;
+        }
+
+        /// <summary>
+        /// convert create/Update PO Request to Entity
+        /// </summary>
+        /// <param name="requisitionCreateUpdateRequest"></param>
+        /// <param name="glAccountStructure"></param>
+        /// <returns>PurchaseOrderCreateUpdateRequest</returns>
+        private static Domain.ColleagueFinance.Entities.PurchaseOrderVoidRequest ConvertVoidRequestDtoToEntity(Dtos.ColleagueFinance.PurchaseOrderVoidRequest purchaseOrderVoidRequest)
+        {
+            Domain.ColleagueFinance.Entities.PurchaseOrderVoidRequest voidRequestEntity = new Domain.ColleagueFinance.Entities.PurchaseOrderVoidRequest();
+            voidRequestEntity.PersonId = purchaseOrderVoidRequest.PersonId;
+            voidRequestEntity.PurchaseOrderId = purchaseOrderVoidRequest.PurchaseOrderId;
+            voidRequestEntity.ConfirmationEmailAddresses = purchaseOrderVoidRequest.ConfirmationEmailAddresses;
+            voidRequestEntity.InternalComments = purchaseOrderVoidRequest.InternalComments;
+            
+            return voidRequestEntity;
         }
     }
 }

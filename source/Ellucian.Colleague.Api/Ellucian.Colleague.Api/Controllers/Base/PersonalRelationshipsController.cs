@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -460,7 +460,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <returns>A personalRelationships2 object <see cref="Dtos.PersonalRelationships2"/> in HeDM format</returns>
         [HttpPost]
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        public async Task<Dtos.PersonalRelationships2> PostPersonalRelationships2Async(Dtos.PersonalRelationships2 personalRelationships2)
+        public async Task<Dtos.PersonalRelationships2> PostPersonalRelationships2Async([ModelBinder(typeof(EedmModelBinder))] Dtos.PersonalRelationships2 personalRelationships2)
         {
             try
             {
@@ -557,7 +557,130 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
         }
 
+        #region personal-relationship-initiation-process
+
+        /// <summary>
+        /// Create (POST) a new personalRelationships2
+        /// </summary>
+        /// <param name="personalRelationships">DTO of the new personalRelationships2</param>
+        /// <returns>A personalRelationships2 object <see cref="Dtos.PersonalRelationshipInitiationProcess"/> in HeDM format</returns>
+        [HttpPost, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        public async Task<object> PostPersonalRelationshipInitiationProcessAsync([ModelBinder(typeof(EedmModelBinder))] PersonalRelationshipInitiationProcess personalRelationships)
+        {
+            try
+            {
+                var returnObject = await _personalRelationshipsService.CreatePersonalRelationshipInitiationProcessAsync(personalRelationships);
+
+                var resourceName = string.Empty;
+                var resourceGuid = string.Empty;
+                var version = string.Empty;
+
+                var type = returnObject.GetType();
+                if (type == typeof(Dtos.PersonalRelationships2))
+                {
+                    resourceName = "personal-relationships";
+                    resourceGuid = (returnObject as Dtos.PersonalRelationships2).Id;
+                    version = "16.0.0";
+                }
+                else
+                {
+                    resourceName = "person-matching-requests";
+                    resourceGuid = (returnObject as Dtos.PersonMatchingRequests).Id;
+                    version = "1.0.0";
+                }
+                string customMediaType = string.Format(IntegrationCustomMediaType, resourceName, version);
+                CustomMediaTypeAttributeFilter.SetCustomMediaType(customMediaType);
+
+                //store dataprivacy list and get the extended data to store 
+                var resource = new Web.Http.EthosExtend.EthosResourceRouteInfo()
+                {
+                    ResourceName = resourceName,
+                    ResourceVersionNumber = version,
+                    BypassCache = true
+                };
+
+                AddEthosContextProperties(await _personalRelationshipsService.GetDataPrivacyListByApi(resourceName, true),
+                   await _personalRelationshipsService.GetExtendedEthosDataByResource(resource, new List<string>() { resourceGuid }));
+                
+                return returnObject;
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ConfigurationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
+        /// <summary>
+        /// Update a Relationship Initiation PRocess in Colleague (Not Supported)
+        /// </summary>
+        /// <param name="guid">Unique ID representing the Personal Relation Type to update</param>
+        /// <param name="personalRelationshipDto"><see cref="PersonalRelationships2">RelationType</see> to update</param>
+        [HttpPut]
+        public Ellucian.Colleague.Dtos.RelationType PutPersonalRelationshipInitiationProcess([FromUri] string guid, [FromBody] PersonalRelationships2 personalRelationshipDto)
+        {
+            //Update is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+        }
+
+        /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
+        /// <summary>
+        /// Get a Relationship Initiation PRocess in Colleague (Not Supported)
+        /// </summary>
+        /// <param name="guid">Unique ID representing the Personal Relation Type to update</param>
+        [HttpGet]
+        public Ellucian.Colleague.Dtos.RelationType GetPersonalRelationshipInitiationProcess([FromUri] string guid = null)
+        {
+            //Update is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+        }
+
+        /// <summary>
+        /// Delete (DELETE) an existing PersonalRelationshipInitiationProcess
+        /// </summary>
+        /// <param name="guid">Id of the PersonalRelationshipStatus to delete</param>
+        [HttpDelete]
+        public void DeletePersonalRelationshipInitiationProcess([FromUri] string guid)
+        {
+            //Delete is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+        }
+
+        #endregion
+
     }
 
-    
+
 }

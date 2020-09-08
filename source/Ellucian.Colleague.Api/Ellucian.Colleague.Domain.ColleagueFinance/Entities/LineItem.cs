@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -141,14 +141,14 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         public string FixedAssetsFlag { get; set; }
 
         /// <summary>
-		/// Status
-		/// </summary>
-		public PurchaseOrderStatus? Status { get; set; }
-
-        /// <summary>
         /// Status Date
         /// </summary>
         public DateTime? StatusDate { get; set; }
+
+        /// <summary>
+		/// LineItemStatus
+		/// </summary>
+		public LineItemStatus? LineItemStatus { get; set; }
 
         /// <summary>
         /// Requisition ID for supporting documents.
@@ -241,6 +241,36 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
                 glDistributions.Add(lineItemGlDistribution);
             }
         }
+
+        /// <summary>
+        /// This method adds a line item GL distribution to the list
+        /// of GL distributions that belong to the line item during save from SS.
+        /// </summary>
+        /// <param name="LineItemGlDistribution">This is the line item GL distribution.</param>
+        public void AddGlDistributionForSave(LineItemGlDistribution lineItemGlDistribution)
+        {
+            if (lineItemGlDistribution == null)
+            {
+                throw new ArgumentNullException("lineItemGlDistribution", "GL distribution cannot be null");
+            }
+
+            bool isInList = false;
+            if (glDistributions != null)
+            {
+                foreach (var glDistr in glDistributions)
+                {
+                    if ((glDistr.GlAccountNumber == lineItemGlDistribution.GlAccountNumber) && (glDistr.ProjectNumber == lineItemGlDistribution.ProjectNumber))
+                    {
+                        isInList = true;
+                    }
+                }
+            }
+            if (!isInList)
+            {
+                glDistributions.Add(lineItemGlDistribution);
+            }
+        }
+
 
         /// <summary>
         /// This method adds tax information to the list of

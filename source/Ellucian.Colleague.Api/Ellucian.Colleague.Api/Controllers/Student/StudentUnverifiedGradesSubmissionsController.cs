@@ -65,6 +65,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired studentUnverifiedGradesSubmissions</param>
         /// <returns>A studentUnverifiedGradesSubmissions object <see cref="Dtos.StudentUnverifiedGradesSubmissions"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet]
         public async Task<Dtos.StudentUnverifiedGradesSubmissions> GetStudentUnverifiedGradesSubmissionsByGuidAsync(string guid)
         {
@@ -127,6 +128,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID of the studentUnverifiedGradesSubmissions to update</param>
         /// <param name="studentUnverifiedGradesSubmissions">DTO of the updated studentUnverifiedGradesSubmissions</param>
         /// <returns>A StudentUnverifiedGrades object <see cref="Dtos.StudentUnverifiedGrades"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPut, EedmResponseFilter]
         public async Task<Dtos.StudentUnverifiedGrades> PutStudentUnverifiedGradesSubmissionsAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.StudentUnverifiedGradesSubmissions studentUnverifiedGradesSubmissions)
         {
@@ -250,6 +252,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="studentUnverifiedGradesSubmissions">DTO of the new studentUnverifiedGradesSubmissions</param>
         /// <returns>A studentUnverifiedGrades object <see cref="Dtos.StudentUnverifiedGrades"/> in HeDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPost]
         public async Task<Dtos.StudentUnverifiedGrades> PostStudentUnverifiedGradesSubmissionsAsync(Dtos.StudentUnverifiedGradesSubmissions studentUnverifiedGradesSubmissions)
         {

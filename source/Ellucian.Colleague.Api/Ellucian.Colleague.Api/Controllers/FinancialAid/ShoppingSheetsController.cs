@@ -78,6 +78,42 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
             }
         }
 
+        /// <summary>
+        /// Get all shopping sheet resources for the given student
+        /// </summary>
+        /// <accessComments>
+        /// Users may request their own data. Additionally, users who have
+        /// VIEW.FINANCIAL.AID.INFORMATION permission or proxy permissions
+        /// can request other users' data
+        /// </accessComments>
+        /// <param name="studentId"></param>
+        /// <param name="getActiveYearsOnly"></param>
+        /// <returns>A list of all shopping sheets for the given student</returns>
+        [HttpGet]
+        public async Task<IEnumerable<ShoppingSheet2>> GetShoppingSheets2Async(string studentId, bool getActiveYearsOnly = false)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw CreateHttpResponseException("studentId cannot be null or empty");
+            }
+
+            try
+            {
+                return await shoppingSheetService.GetShoppingSheets2Async(studentId, getActiveYearsOnly);
+            }
+            catch (PermissionsException pe)
+            {
+                var message = string.Format("User does not have access rights to student {0}", studentId);
+                logger.Error(pe, message);
+                throw CreateHttpResponseException(message, System.Net.HttpStatusCode.Forbidden);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unknown error occurred getting shopping sheet resources");
+                throw CreateHttpResponseException("Unknown error occurred getting shopping sheet resources");
+            }
+        }
+
 
     }
 }

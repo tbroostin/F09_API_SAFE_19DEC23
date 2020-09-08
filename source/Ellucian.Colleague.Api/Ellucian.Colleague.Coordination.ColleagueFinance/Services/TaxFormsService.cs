@@ -37,6 +37,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         public async Task<IEnumerable<TaxForm>> GetTaxFormsAsync()
         {
             var taxFormEntities =  await _financeReferenceDataRepository.GetTaxFormsAsync();
+
+            //sort the entities
+            taxFormEntities = taxFormEntities.OrderBy(tf => tf.Code);
+
             // Get the right adapter for the type mapping
             var taxFormAdapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.TaxForm, TaxForm>();
             // Map the entity to the DTO

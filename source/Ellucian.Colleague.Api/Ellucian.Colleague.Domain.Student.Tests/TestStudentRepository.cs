@@ -398,14 +398,14 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             throw new NotImplementedException();
         }
 
-        public Task<IEnumerable<Student.Entities.ResidencyStatus>> GetResidencyStatusesAsync(bool ignoreCache = false)
+        public Task<IEnumerable<Student.Entities.AdmissionResidencyType>> GetResidencyStatusesAsync(bool ignoreCache = false)
         {
-            return Task.FromResult<IEnumerable<Student.Entities.ResidencyStatus>>(new List<Student.Entities.ResidencyStatus>()
+            return Task.FromResult<IEnumerable<Student.Entities.AdmissionResidencyType>>(new List<Student.Entities.AdmissionResidencyType>()
                 {
-                    new Student.Entities.ResidencyStatus("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1"),
-                    new Student.Entities.ResidencyStatus("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2"),
-                    new Student.Entities.ResidencyStatus("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3"),
-                    new Student.Entities.ResidencyStatus("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4")
+                    new Student.Entities.AdmissionResidencyType("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1"),
+                    new Student.Entities.AdmissionResidencyType("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2"),
+                    new Student.Entities.AdmissionResidencyType("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3"),
+                    new Student.Entities.AdmissionResidencyType("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4")
                 });
         }
 

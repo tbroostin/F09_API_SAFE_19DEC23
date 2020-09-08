@@ -22,6 +22,8 @@ namespace Ellucian.Colleague.Domain.Base.Entities
 
         public string Originator { get; set; }
 
+        public Dictionary<string, string> PersonDict { get; set; }
+
         public List<PersonMatchRequestOutcomes> Outcomes { get; private set; }
 
         public void AddPersonMatchRequestOutcomes(PersonMatchRequestOutcomes personMatchRequestOutcome)

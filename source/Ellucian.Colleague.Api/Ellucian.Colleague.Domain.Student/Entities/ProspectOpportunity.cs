@@ -1,6 +1,7 @@
 ﻿//Copyright 2019 Ellucian Company L.P. and its affiliates.
 
 using System;
+using System.Collections.Generic;
 
 namespace Ellucian.Colleague.Domain.Student.Entities
 {
@@ -36,5 +37,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public string AdmissionPopulation { get; set; }
         public string Site { get; set; }
         public string StudentAcadProgId { get; set; }
+        public string EducationalGoal { get; set; }
+        public List<string> CareerGoals { get; set; }
     }
 }

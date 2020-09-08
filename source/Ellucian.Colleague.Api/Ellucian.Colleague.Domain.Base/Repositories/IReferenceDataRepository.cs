@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -203,6 +203,21 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="ignoreCache">Bypass cache flag</param>
         Task<IEnumerable<Country>> GetCountryCodesAsync(bool ignoreCache);
 
+
+        /// <summary>
+        /// Get guid for Countries code
+        /// </summary>
+        /// <param name="code">Countries code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetCountryGuidAsync(string code);
+
+        /// <summary>
+        /// Get country for isoAlpha3Code code
+        /// </summary>
+        /// <param name="code">Countries code</param>
+        /// <returns>Guid</returns>
+        Task<Country> GetCountryFromIsoAlpha3CodeAsync(string isoAlpha3Code);
+
         /// <summary>
         /// Degree Types
         /// </summary>
@@ -300,6 +315,13 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="ignoreCache">Bypass cache flag</param>
         /// <returns>Collection of email types</returns>
         Task<IEnumerable<EmailType>> GetEmailTypesAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get guid for email type.
+        /// </summary>
+        /// <param name="code">EmailType code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetEmailTypesGuidAsync(string code);
 
         /// <summary>
         /// Ethnicities
@@ -633,11 +655,18 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<IEnumerable<PhoneType>> GetPhoneTypesAsync(bool ignoreCache);
 
         /// <summary>
+        /// Get guid for phone type.
+        /// </summary>
+        /// <param name="code">PhoneType code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetPhoneTypesGuidAsync(string code);
+
+        /// <summary>
         /// Get a non-guid collection of phone types
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
         /// <returns>Collection of phone types</returns>
-        Task<IEnumerable<PhoneType>> GetPhoneTypesBaseAsync(bool ignoreCache);
+        //Task<IEnumerable<PhoneType>> GetPhoneTypesBaseAsync(bool ignoreCache);
 
         /// <summary>
         /// Get project types.
@@ -744,11 +773,26 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<IEnumerable<RemarkCode>> GetRemarkCodesAsync(bool ignoreCache);
 
         /// <summary>
+        /// Get guid for REMARK.CODES code
+        /// </summary>
+        /// <param name="code">REMARK.CODES code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetRemarkCodesGuidAsync(string code);
+
+
+        /// <summary>
         /// Get a collection of remark types
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
         /// <returns>Collection of RemarkTypes</returns>
         Task<IEnumerable<RemarkType>> GetRemarkTypesAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get guid for REMARK.TYPES code
+        /// </summary>
+        /// <param name="code">REMARK.TYPES code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetRemarkTypesGuidAsync(string code);
 
         /// <summary>
         /// Restrictions
@@ -857,6 +901,13 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="ignoreCache"></param>
         /// <returns></returns>
         Task<IEnumerable<VisaTypeGuidItem>> GetVisaTypesAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get guid for VISA.TYPES code
+        /// </summary>
+        /// <param name="code">VISA.TYPE code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetVisaTypesGuidAsync(string code);
 
         /// <summary>
         /// Get a collection of zipcode xlat
@@ -974,6 +1025,51 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <returns>Collection of AltIdTypes</returns>
         Task<IEnumerable<AltIdTypes>> GetAlternateIdTypesAsync(bool ignoreCache);
 
-        Task<IEnumerable<Domain.Base.Entities.BoxCodes>> GetAllBoxCodesAsync();
+        /// <summary>
+        /// Get a collection of TaxForms
+        /// </summary>
+        /// <param name="ignoreCache">Bypass cache flag</param>
+        /// <returns>Collection of TaxForms</returns>
+        Task<IEnumerable<TaxForms2>> GetTaxFormsBaseAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Gets GUID for Tax Form Code.
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
+        Task<string> GetTaxFormsGuidAsync(string code);
+
+        /// <summary>
+        /// Get a collection of BoxCodes
+        /// </summary>
+        /// <param name="ignoreCache">Bypass cache flag</param>
+        /// <returns>Collection of BoxCodes</returns>
+        Task<IEnumerable<BoxCodes>> GetAllBoxCodesAsync(bool ignoreCache = false);
+
+        /// <summary>
+        /// Gets GUID for BoxCode Code.
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
+        Task<string> GetBoxCodesGuidAsync(string code);
+        /// <summary>
+        /// To get the list of Case Types
+        /// </summary>
+        Task<IEnumerable<CaseType>> GetCaseTypesAsync();
+
+        /// <summary>
+        /// To get the list of Case categories
+        /// </summary>
+        Task<IEnumerable<CaseCategory>> GetCaseCategoriesAsync();
+
+        /// <summary>
+        /// To get the list of Case closure Reasons
+        /// </summary>
+        Task<IEnumerable<CaseClosureReason>> GetCaseClosureReasonsAsync();
+
+        /// <summary>
+        /// To get a collection of case priorities
+        /// </summary>
+        Task<IEnumerable<CasePriority>> GetCasePrioritiesAsync();
     }
 }

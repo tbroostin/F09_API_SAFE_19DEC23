@@ -1,14 +1,14 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Base.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
-using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
-using Ellucian.Web.Http.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
@@ -16,6 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Base.Tests.Repositories
@@ -143,11 +144,21 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             public async Task PersonVisaRepo_UpdatePersonVisaAsync()
             {
                 iColleagueTransactionInvokerMock.Setup(i => i.ExecuteAsync<UpdatePersonVisaRequest, UpdatePersonVisaResponse>(It.IsAny<UpdatePersonVisaRequest>())).ReturnsAsync(updateResponse);
+
+                //var foreignPersonContract = await DataReader.ReadRecordAsync<ForeignPerson>(updateResponse.PersonId, false);
+                dataReaderMock.Setup(i => i.ReadRecordAsync<ForeignPerson>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(foreignPersonContract);
+
+                //var personContract = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>(updateResponse.PersonId, false);
+                dataReaderMock.Setup(i => i.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>(It.IsAny<string>(), It.IsAny<bool>()))
+                    .ReturnsAsync(personContract);
+
+
                 var result = await personVisaRepository.UpdatePersonVisaAsync(personVisaRequest);
 
                 Assert.AreEqual(personVisaRequest.PersonId, result.PersonId);
-                Assert.AreEqual(personVisaRequest.StrGuid, result.StrGuid);
+                Assert.AreEqual(personVisaRequest.StrGuid, result.Guid);
             }
+           
 
             [TestMethod]
             public async Task PersonVisaRepo_DeletePersonVisaAsync()
@@ -157,8 +168,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
-            public async Task PersonVisasRepo_UpdatePersonVisaAsync_InvalidOperationException()
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task PersonVisasRepo_UpdatePersonVisaAsync_RepositoryException()
             {
                 updateResponse.VisaErrorMessages = new List<VisaErrorMessages>() {new VisaErrorMessages(){ ErrorCode = "123", ErrorMsg = "Error occured"} };
                 iColleagueTransactionInvokerMock.Setup(i => i.ExecuteAsync<UpdatePersonVisaRequest, UpdatePersonVisaResponse>(It.IsAny<UpdatePersonVisaRequest>())).ReturnsAsync(updateResponse);
@@ -268,7 +279,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(RepositoryException))]
             public async Task PersonVisaRepository_GetById_Null_ForeignPerson_KeyNotFoundException()
             {
                 var foreignPerson = foreignPersonDataContracts.First();
@@ -279,7 +290,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(RepositoryException))]
             public async Task PersonVisaRepository_GetById_Null_Person_KeyNotFoundException()
             {
                 var foreignPerson = foreignPersonDataContracts.First();
@@ -357,6 +368,42 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
                 // Build  repository
                 personVisaRepository = new PersonVisaRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+              x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+              .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+                Mock<IColleagueTransactionInvoker> mockManager = new Mock<IColleagueTransactionInvoker>();
+
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(mockManager.Object);
+                var resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 2,
+                    CacheName = "AllPersonVisas",
+                    Entity = "FOREIGN.PERSON",
+                    Sublist = new List<string>() { "1", "2", "3" },
+                    TotalCount = 3,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+                };
+                mockManager.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
 
                 return personVisaRepository;
             }

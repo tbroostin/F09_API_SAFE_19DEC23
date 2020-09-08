@@ -113,7 +113,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             IEnumerable<Domain.Student.Entities.StudentLoad> allStudentLoadEntities;
             IEnumerable<Domain.Student.Entities.StudentProgramStatus> studentProgramStatusEntities;
             IEnumerable<Domain.Student.Entities.EnrollmentStatus> enrollmentStatusEntities;
-            IEnumerable<Domain.Student.Entities.ResidencyStatus> residencyStatusEntities;
+            IEnumerable<Domain.Student.Entities.AdmissionResidencyType> residencyStatusEntities;
 
             IEnumerable<Domain.Student.Entities.Term> termEntities;
 
@@ -262,10 +262,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     new Domain.Student.Entities.StudentStatus("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "Code4", "title4")
                 };
 
-                residencyStatusEntities = new List<Domain.Student.Entities.ResidencyStatus>()
+                residencyStatusEntities = new List<Domain.Student.Entities.AdmissionResidencyType>()
                 {
-                    new Domain.Student.Entities.ResidencyStatus("b28138bd-d0ba-4c83-bab9-ba321835ece1", "INST", "In State"),
-                    new Domain.Student.Entities.ResidencyStatus("fe75893d-2c35-41b0-8e78-3c8c35b7122d", "OUTST", "Out of State")
+                    new Domain.Student.Entities.AdmissionResidencyType("b28138bd-d0ba-4c83-bab9-ba321835ece1", "INST", "In State"),
+                    new Domain.Student.Entities.AdmissionResidencyType("fe75893d-2c35-41b0-8e78-3c8c35b7122d", "OUTST", "Out of State")
                 };
 
                 studentTermStatuseEntities = new List<Domain.Student.Entities.StudentTermStatus>() 
@@ -402,7 +402,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 }
                 studentReferenceDataRepositoryMock.Setup(i => i.GetEnrollmentStatusesAsync(It.IsAny<bool>())).ReturnsAsync(enrollmentStatusEntities);
 
-                studentRepositoryMock.Setup(i => i.GetResidencyStatusesAsync(It.IsAny<bool>())).ReturnsAsync(residencyStatusEntities);
+                studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionResidencyTypesAsync(It.IsAny<bool>())).ReturnsAsync(residencyStatusEntities);
                 foreach (var entity in residencyStatusEntities)
                 {
                     studentRepositoryMock.Setup(i => i.GetResidencyStatusGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);

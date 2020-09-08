@@ -817,7 +817,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         [TestMethod]
         public async Task AddressReposoitory_GetZipCodeGuidsCollection()
         {
-            IEnumerable<string> sublist = new List<string>() { "1", "2" };
+            IEnumerable<string> sublist = new List<string>() { "12345", "223456" };
             Dictionary<string, RecordKeyLookupResult> recordKeyLookupResults = new Dictionary<string, RecordKeyLookupResult>();
             recordKeyLookupResults.Add("ZIPCODE+12345", new RecordKeyLookupResult() { Guid = "854da721-4191-4875-bf58-7d6c00ffea8f" });
             recordKeyLookupResults.Add("ZIPCODE+23456", new RecordKeyLookupResult() { Guid = "71e1a806-24a8-4d93-91a2-02d86056b63c" });

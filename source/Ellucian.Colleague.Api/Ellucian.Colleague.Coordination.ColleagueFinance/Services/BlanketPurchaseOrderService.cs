@@ -401,6 +401,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     var blanketPurchaseOrderEntity
                     = await ConvertBlanketPurchaseOrdersDtoToEntityAsync(blanketPurchaseOrder.Id, blanketPurchaseOrder, glConfiguration.MajorComponents.Count);
 
+                    if (blanketPurchaseOrder.PaymentSource == null)
+                    {
+                        IntegrationApiExceptionAddError("PaymentSource cannot be unset.", "Validation.Exception", blanketPurchaseOrderEntity.Guid, blanketPurchaseOrderEntity.Id);
+                    }
+                    if (IntegrationApiException != null)
+                    {
+                        throw IntegrationApiException;
+                    }
+
                     // update the entity in the database
                     var updatedPurchaseOrderEntity =
                         await blanketPurchaseOrderRepository.UpdateBlanketPurchaseOrdersAsync(blanketPurchaseOrderEntity);
@@ -726,6 +735,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (blanketPurchaseOrder.TransactionDate != default(DateTime))
                 blanketPurchaseOrderEntity.MaintenanceDate = blanketPurchaseOrder.TransactionDate;
+            
+            blanketPurchaseOrderEntity.ExpirationDate = blanketPurchaseOrder.ExpireDate;
 
             if (blanketPurchaseOrder.Buyer != null)
             {
@@ -944,6 +955,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             if (blanketPurchaseOrder.PaymentSource != null)
             {
                 var payment = blanketPurchaseOrder.PaymentSource;
+                if (string.IsNullOrEmpty(payment.Id))
+                {
+                    IntegrationApiExceptionAddError("PaymentSource id is required when submitting a PaymentSource.", "Validation.Exception", guid, blanketPurchaseOrderEntity.Id);
+                }
                 if ((payment.Id != null) && (!string.IsNullOrEmpty(payment.Id)))
                 {
                     var blanketPurchaseOrderSource = (await this.GetAllAccountsPayableSourcesAsync(true)).FirstOrDefault(ap => ap.Guid == payment.Id);
@@ -995,13 +1010,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if ((blanketPurchaseOrder.OrderDetails != null) && (blanketPurchaseOrder.OrderDetails.Any()))
             {
-                var allCommodityCodes = (await GetCommodityCodesAsync(true));
-                if ((allCommodityCodes == null) || (!allCommodityCodes.Any()))
-                {
-                    IntegrationApiExceptionAddError(string.Format("An error occurred extracting all commodity codes for blanket purchase order '{0}'", blanketPurchaseOrder.OrderNumber),
-                        "blanketPurchaseOrder.orderDetails.commodityCode.id", guid, blanketPurchaseOrderEntity.Id);
-                }
-
                 decimal totalAmount = 0;
                 foreach (var orderDetail in blanketPurchaseOrder.OrderDetails)
                 {
@@ -1022,7 +1030,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
                     if ((orderDetail.CommodityCode != null) && (!string.IsNullOrEmpty(orderDetail.CommodityCode.Id)))
                     {
-                        if (allCommodityCodes != null && allCommodityCodes.Any())
+                        var allCommodityCodes = (await GetCommodityCodesAsync(true));
+                        if ((allCommodityCodes == null) || (!allCommodityCodes.Any()))
+                        {
+                            IntegrationApiExceptionAddError(string.Format("An error occurred extracting all commodity codes for blanket purchase order '{0}'", blanketPurchaseOrder.OrderNumber),
+                                "blanketPurchaseOrder.orderDetails.commodityCode.id", guid, blanketPurchaseOrderEntity.Id);
+                        }
+                        else
                         {
                             var commodityCode = allCommodityCodes.FirstOrDefault(c => c.Guid == orderDetail.CommodityCode.Id);
                             if (commodityCode == null)
@@ -1177,6 +1191,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             blanketPurchaseOrder.OrderedOn = source.Date;
             blanketPurchaseOrder.TransactionDate = (source.MaintenanceDate != null && source.MaintenanceDate.HasValue)
                 ? Convert.ToDateTime(source.MaintenanceDate) : source.Date;
+
+            blanketPurchaseOrder.ExpireDate = source.ExpirationDate;
 
             switch (source.Status)
             {
@@ -1707,11 +1723,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (!string.IsNullOrEmpty(source.AltShippingPhone))
             {
-                overrideShippingDestinationDto.Contact = new PhoneDtoProperty()
-                {
-                    Number = source.AltShippingPhone,
-                    Extension = source.AltShippingPhoneExt
-                };
+                var contact = new PhoneDtoProperty();
+                if (!string.IsNullOrEmpty(source.AltShippingPhone))
+                    contact.Number = source.AltShippingPhone;
+                if (!string.IsNullOrEmpty(source.AltShippingPhoneExt))
+                    contact.Extension = source.AltShippingPhoneExt;
+                overrideShippingDestinationDto.Contact = contact;
             }
 
             if (overrideShippingDestinationDto != null &&

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -79,7 +79,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Return all advisorTypes
         /// </summary>
         /// <returns>List of AdvisorTypes <see cref="Dtos.AdvisorTypes"/> objects representing matching advisorTypes</returns>
-        [HttpGet]
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.AdvisorTypes>> GetAdvisorTypesAsync()
         {
@@ -93,7 +93,16 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
-                return await _advisorTypesService.GetAdvisorTypesAsync(bypassCache);
+                var advisorTypes = await _advisorTypesService.GetAdvisorTypesAsync(bypassCache);
+
+                if (advisorTypes != null && advisorTypes.Any())
+                {
+                    AddEthosContextProperties(await _advisorTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _advisorTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              advisorTypes.Select(a => a.Id).ToList()));
+                }
+
+                return advisorTypes;                
             }
             catch (KeyNotFoundException e)
             {
@@ -132,7 +141,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="guid">GUID to desired advisorTypes</param>
         /// <returns>A advisorTypes object <see cref="Dtos.AdvisorTypes"/> in EEDM format</returns>
-        [HttpGet]
+        [HttpGet, EedmResponseFilter]
         public async Task<Dtos.AdvisorTypes> GetAdvisorTypesByGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -142,6 +151,10 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
+                AddEthosContextProperties(
+                    await _advisorTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _advisorTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { guid }));
                 return await _advisorTypesService.GetAdvisorTypesByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)

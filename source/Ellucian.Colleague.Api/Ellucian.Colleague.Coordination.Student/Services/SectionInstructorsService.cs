@@ -1,4 +1,4 @@
-//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -159,6 +159,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     throw IntegrationApiException;
                 }
             }
+            catch(RepositoryException e)
+            {
+                IntegrationApiExceptionAddError(e.Message, guid: guid);
+                throw IntegrationApiException;
+            }
             catch (KeyNotFoundException ex)
             {
                 IntegrationApiExceptionAddError(ex.Message, guid: guid);
@@ -258,7 +263,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     throw new KeyNotFoundException();
                 }
 
-                await _sectionRepository.DeleteSectionFacultyAsync(sectionInstructors, sectionInstructors.Id);
+                await _sectionRepository.DeleteSectionFacultyAsync(sectionInstructors, guid);
+            }
+            catch (RepositoryException)
+            {
+                throw;
             }
             catch (Exception)
             {

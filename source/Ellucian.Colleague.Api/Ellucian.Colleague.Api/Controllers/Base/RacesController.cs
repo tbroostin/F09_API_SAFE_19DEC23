@@ -1,4 +1,4 @@
-﻿// Copyright 2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -87,7 +87,9 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves all races.
         /// </summary>
         /// <returns>All Race objects.</returns>
-        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        /// 
+        [HttpGet]
+        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true), EedmResponseFilter]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Race2>> GetRaces2Async()
         {
             try
@@ -100,7 +102,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                         bypassCache = true;
                     }
                 }
-                return await _demographicService.GetRaces2Async(bypassCache);
+
+                var races = await _demographicService.GetRaces2Async(bypassCache);
+
+                if (races != null && races.Any())
+                {
+                    AddEthosContextProperties(await _demographicService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _demographicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              races.Select(a => a.Id).ToList()));
+                }
+                return races;                
             }
             catch (Exception ex)
             {
@@ -114,11 +125,18 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves a race by ID.
         /// </summary>
         /// <returns>A <see cref="Ellucian.Colleague.Dtos.Race2">Race.</see></returns>
+        /// 
+        [HttpGet]
+        [EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.Race2> GetRaceById2Async(string id)
         {
             try
             {
-                return await _demographicService.GetRaceById2Async(id);
+                AddEthosContextProperties(
+                   await _demographicService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                   await _demographicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { id }));
+                return await _demographicService.GetRaceById2Async(id);                
             }
             catch (Exception ex)
             {

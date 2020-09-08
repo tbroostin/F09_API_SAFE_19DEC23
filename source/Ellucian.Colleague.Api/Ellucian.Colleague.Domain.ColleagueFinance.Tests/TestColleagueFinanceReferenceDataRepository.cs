@@ -16,8 +16,8 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         #region AP Taxes
         public Collection<ApTaxes> ApTaxesDataContracts = new Collection<ApTaxes>()
         {
-            new ApTaxes() { Recordkey = "VA", ApTaxDesc = "Virginia Tax" },
-            new ApTaxes() { Recordkey = "GE", ApTaxDesc = "Goods and Services Exempt 70 %" }
+            new ApTaxes() { Recordkey = "VA", ApTaxDesc = "Virginia Tax", ApTaxAppurEntryFlag = "Y", ApUseTaxFlag = "N", ApTaxCategory = "ABC"},
+            new ApTaxes() { Recordkey = "GE", ApTaxDesc = "Goods and Services Exempt 70 %", ApTaxAppurEntryFlag = "Y", ApUseTaxFlag = "N", ApTaxCategory = "ABC" }
         };
 
         public async Task<IEnumerable<AccountsPayableTax>> GetAccountsPayableTaxCodesAsync()
@@ -25,7 +25,12 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             var accountsPayableTaxes = new List<AccountsPayableTax>();
             foreach (var apTax in this.ApTaxesDataContracts)
             {
-                accountsPayableTaxes.Add(new AccountsPayableTax(apTax.Recordkey, apTax.ApTaxDesc));
+                accountsPayableTaxes.Add(new AccountsPayableTax(apTax.Recordkey, apTax.ApTaxDesc)
+                {
+                    AllowAccountsPayablePurchaseEntry = !string.IsNullOrEmpty(apTax.ApTaxAppurEntryFlag) ? (apTax.ApTaxAppurEntryFlag.ToLowerInvariant() == "y" ? true : false) : false,
+                    IsUseTaxCategory = !string.IsNullOrEmpty(apTax.ApUseTaxFlag) ? (apTax.ApUseTaxFlag.ToLowerInvariant() == "y" ? true : false) : false,
+                    TaxCategory = apTax.ApTaxCategory
+                });
             }
 
             return await Task.Run(() => accountsPayableTaxes);
@@ -71,6 +76,21 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                     new Domain.ColleagueFinance.Entities.ProcurementCommodityCode( "C3", "Desc3")
                 });
         }
+
+        public Task<CommodityCodes> GetCommodityCodesDataByCodeAsync(string code)
+        {
+            return Task.FromResult<CommodityCodes>(new CommodityCodes()
+            {
+                Recordkey = code,
+                CmdtyDesc = "Desc1",
+                CmdtyDefaultDescFlag = "Y",
+                CmdtyFixedAssetsFlag ="S",
+                CmdtyPrice = 1M,
+                CmdtyTaxCodes = new List<string> { "T1", "T2"}
+            });
+        }
+
+
 
         public Task<string> GetCommodityCodeGuidAsync(string code)
         {
@@ -229,6 +249,25 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 
         }
 
+        /// <summary>
+        /// Get guid for VendorTypes code
+        /// </summary>
+        /// <param name="code">VendorTypes code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetVendorTypesGuidAsync(string code)
+        {
+            var records = new List<ColleagueFinance.Entities.VendorType>()
+                {
+                    new ColleagueFinance.Entities.VendorType("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1"),
+                    new ColleagueFinance.Entities.VendorType("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2"),
+                    new ColleagueFinance.Entities.VendorType("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3"),
+                    new ColleagueFinance.Entities.VendorType("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4")
+                };
+            return await Task.FromResult(records.FirstOrDefault(c => c.Code == code).Guid);
+
+        }
+
+
         public Task<IEnumerable<ColleagueFinance.Entities.VendorHoldReasons>> GetVendorHoldReasonsAsync(bool ignoreCache)
         {
             return Task.FromResult<IEnumerable<ColleagueFinance.Entities.VendorHoldReasons>>(new List<ColleagueFinance.Entities.VendorHoldReasons>()
@@ -241,7 +280,19 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 
         }
 
+        public async Task<string> GetVendorHoldReasonsGuidAsync(string code)
+        {
+           var records = new List<ColleagueFinance.Entities.VendorHoldReasons>()
+                {
+                    new ColleagueFinance.Entities.VendorHoldReasons("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1"),
+                    new ColleagueFinance.Entities.VendorHoldReasons("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2"),
+                    new ColleagueFinance.Entities.VendorHoldReasons("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3"),
+                    new ColleagueFinance.Entities.VendorHoldReasons("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4")
+                };
+            return await Task.FromResult(records.FirstOrDefault(c => c.Code == code).Guid);
 
+        }
+        
         public Task<IEnumerable<GlSourceCodes>> GetGlSourceCodesValcodeAsync(bool ignoreCache)
         {
             throw new NotImplementedException();
@@ -297,7 +348,25 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 
         public Task<IEnumerable<ShippingMethod>> GetShippingMethodsAsync(bool ignoreCache)
         {
-            throw new NotImplementedException();
+            return Task.FromResult<IEnumerable<ColleagueFinance.Entities.ShippingMethod>>(new List<ColleagueFinance.Entities.ShippingMethod>()
+                {
+                    new ColleagueFinance.Entities.ShippingMethod("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1"),
+                    new ColleagueFinance.Entities.ShippingMethod("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2"),
+                    new ColleagueFinance.Entities.ShippingMethod("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3"),
+                    new ColleagueFinance.Entities.ShippingMethod("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4")
+                });
+        }
+
+        public Task<string> GetShippingMethodGuidAsync(string code)
+        {
+            var records = (new List<ColleagueFinance.Entities.ShippingMethod>()
+                {
+                    new ColleagueFinance.Entities.ShippingMethod("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1"),
+                    new ColleagueFinance.Entities.ShippingMethod("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2"),
+                    new ColleagueFinance.Entities.ShippingMethod("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3"),
+                    new ColleagueFinance.Entities.ShippingMethod("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4")
+                });
+            return Task.FromResult(records.FirstOrDefault(c => c.Code == code).Guid);
         }
 
         public Task<IEnumerable<ColleagueFinance.Entities.FiscalPeriodsIntg>> GetFiscalPeriodsIntgAsync(bool ignoreCache)
@@ -470,17 +539,60 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 
         public Task<IEnumerable<FixedAssetsFlag>> GetFixedAssetTransferFlagsAsync()
         {
-            throw new NotImplementedException();
+            return Task.FromResult<IEnumerable<ColleagueFinance.Entities.FixedAssetsFlag>>(new List<ColleagueFinance.Entities.FixedAssetsFlag>()
+                {
+                    new ColleagueFinance.Entities.FixedAssetsFlag("S", "Single"),
+                    new ColleagueFinance.Entities.FixedAssetsFlag("M", "Multi-Valued")
+                    });
         }
 
         public Task<ProcurementCommodityCode> GetCommodityCodeByCodeAsync(string recordKey)
         {
-            throw new NotImplementedException();
+            var procurementCommodityCode = new ColleagueFinance.Entities.ProcurementCommodityCode("10900", "Robotics Kit");
+            procurementCommodityCode.DefaultDescFlag = true;
+            procurementCommodityCode.FixedAssetsFlag = "S";
+            procurementCommodityCode.Price = 10;
+            procurementCommodityCode.TaxCodes = new List<string>() { "taxCode1" };
+            return Task.FromResult(procurementCommodityCode);
         }
 
         public Task<IEnumerable<TaxForm>> GetTaxFormsAsync()
         {
-            throw new NotImplementedException();
+            return Task.FromResult<IEnumerable<ColleagueFinance.Entities.TaxForm>>(new List<ColleagueFinance.Entities.TaxForm>()
+                {
+                    new ColleagueFinance.Entities.TaxForm("1098T", "1098-T Taxform"),
+                    new ColleagueFinance.Entities.TaxForm("1098E", "1098-E Taxform"),
+                    new ColleagueFinance.Entities.TaxForm("T4", "T4 Taxform")
+                    });
+        }
+
+        public Task<IEnumerable<ShipViaCode>> GetShipViaCodesAsync()
+        {
+            return Task.FromResult<IEnumerable<ColleagueFinance.Entities.ShipViaCode>>(new List<ColleagueFinance.Entities.ShipViaCode>()
+                {
+                    new ColleagueFinance.Entities.ShipViaCode("CD","Datatel - Central Dist. Office"),
+                    new ColleagueFinance.Entities.ShipViaCode("DT","Datatel - Downtown"),
+                    new ColleagueFinance.Entities.ShipViaCode("EC","Datatel - Extension Center"),
+                    new ColleagueFinance.Entities.ShipViaCode("MC","Datatel - Main Campus")
+                });
+        }
+
+        public Task<IEnumerable<IntgVendorAddressUsages>> GetIntgVendorAddressUsagesAsync(bool ignoreCache)
+        {
+            return Task.FromResult<IEnumerable<ColleagueFinance.Entities.IntgVendorAddressUsages>>(new List<ColleagueFinance.Entities.IntgVendorAddressUsages>()
+                {
+                    new ColleagueFinance.Entities.IntgVendorAddressUsages("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "AU","Address Usage 1")
+                });
+        }
+
+        public async Task<string> GetIntgVendorAddressUsagesGuidAsync(string code)
+        {
+            var records = new List<ColleagueFinance.Entities.IntgVendorAddressUsages>()
+                {
+                    new ColleagueFinance.Entities.IntgVendorAddressUsages("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "AU","Address Usage 1")
+                };
+            return await Task.FromResult(records.FirstOrDefault(c => c.Code == code).Guid);
+            
         }
     }
 }

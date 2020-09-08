@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Dtos.Base;
 using System;
 using System.Collections.Generic;
@@ -33,6 +33,13 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="attachmentId">Id of the attachment's content to get</param>
         /// <returns>Tuple of the attachment, its temp file location, and encryption metadata</returns>
         Task<Tuple<Attachment, string, AttachmentEncryption>> GetAttachmentContentAsync(string attachmentId);
+
+        /// <summary>
+        /// Query attachments
+        /// </summary>
+        /// <param name="criteria">Criteria to query attachments by</param>
+        /// <returns>List of <see cref="Attachment">Attachments matching the query criteria</see></returns>
+        Task<IEnumerable<Attachment>> QueryAttachmentsAsync(AttachmentSearchCriteria criteria);
 
         /// <summary>
         /// Create the new attachment

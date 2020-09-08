@@ -771,6 +771,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         private Dictionary<string, string> personGuidCollection;
         private List<Domain.HumanResources.Entities.PayClass> payClasses;
         private List<Domain.HumanResources.Entities.PayCycle2> payCycles;
+        private List<Domain.HumanResources.Entities.TimeUnits> timeUnits;
 
         private string guid = "1a59eed8-5fe7-4120-b1cf-f23266b9e874";
 
@@ -876,6 +877,15 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 new Domain.HumanResources.Entities.JobChangeReason("1a59eed8-5fe7-4120-b1cf-f23266b9e875", "2", "desc")
             };
 
+            timeUnits = new List<Domain.HumanResources.Entities.TimeUnits>()
+            {
+                new Domain.HumanResources.Entities.TimeUnits("1a59eed8-5fe7-4120-b1cf-f23266b9e876", "HRS", "Hours", ""),
+                new Domain.HumanResources.Entities.TimeUnits("1a59eed8-5fe7-4120-b1cf-f23266b9e877", "DAY", "Days", "1"),
+                new Domain.HumanResources.Entities.TimeUnits("1a59eed8-5fe7-4120-b1cf-f23266b9e877", "WKS", "Weeks", "2"),
+                new Domain.HumanResources.Entities.TimeUnits("1a59eed8-5fe7-4120-b1cf-f23266b9e877", "MOS", "Months", "3"),
+                new Domain.HumanResources.Entities.TimeUnits("1a59eed8-5fe7-4120-b1cf-f23266b9e877", "YRS", "Years", "4")
+            };
+
             position = new Domain.HumanResources.Entities.Position("1", "title", "sTitle", "1", DateTime.Today, true)
             {
                 PositionDept = "1",
@@ -971,6 +981,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             hrReferenceDataRepositoryMock.Setup(h => h.GetEmploymentDepartmentsAsync(It.IsAny<bool>())).ReturnsAsync(departments);
             hrReferenceDataRepositoryMock.Setup(h => h.GetPayClassesAsync(bypassCache)).ReturnsAsync(payClasses);
             hrReferenceDataRepositoryMock.Setup(h => h.GetPayCyclesAsync(bypassCache)).ReturnsAsync(payCycles);
+            hrReferenceDataRepositoryMock.Setup(h => h.GetTimeUnitsAsync(bypassCache)).ReturnsAsync(timeUnits);
         }
 
         #endregion

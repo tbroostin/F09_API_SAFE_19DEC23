@@ -1,5 +1,6 @@
 ﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
 
+using System.Collections.Generic;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
 
@@ -22,5 +23,11 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         /// </summary>
         [JsonProperty("vendorAmount")]
         public Amount2DtoProperty VendorAmount{ get; set; }
+
+        /// <summary>
+        /// The tax code rate(s) that apply to the line item.
+        /// </summary>
+        [DataMember(Name = "taxCodeRates", EmitDefaultValue = false)]
+        public List<LineItemTaxCodeRateDtoProperty> TaxCodeRates { get; set; }
     }
 }

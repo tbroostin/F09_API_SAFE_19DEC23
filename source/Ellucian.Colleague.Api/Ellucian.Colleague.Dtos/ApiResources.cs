@@ -50,6 +50,12 @@ namespace Ellucian.Colleague.Dtos
         public List<string> Filters { get; set; }
 
         /// <summary>
+        /// Array of any supported get all patterns, paging and batch.
+        /// </summary>
+        [JsonProperty("getAllPatterns ", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public List<GetAllPattern> GetAllPatterns { get; set; }
+
+        /// <summary>
         /// Array of any supported named queries by the API in json dot notation. This is not included if no named queries are supported.
         /// </summary>
         [JsonProperty("namedQueries", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
@@ -63,9 +69,33 @@ namespace Ellucian.Colleague.Dtos
     }
 
     /// <summary>
-    /// NamedQuery
+    /// Patterns for GetAll support, Paging or Batch.
     /// </summary>
-    public class NamedQuery
+    public class GetAllPattern
+    {
+        /// <summary>
+        /// paging or batch
+        /// </summary>
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        /// <summary>
+        /// get or post
+        /// </summary>
+        [JsonProperty("method")]
+        public string Method { get; set; }
+
+        /// <summary>
+        /// the custom media type supported
+        /// </summary>
+        [JsonProperty("X-Media-Type", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public string XMediaType { get; set; }
+    }
+
+/// <summary>
+/// NamedQuery
+/// </summary>
+public class NamedQuery
     {
         /// <summary>
         /// Name

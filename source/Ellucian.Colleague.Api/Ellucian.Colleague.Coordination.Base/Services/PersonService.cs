@@ -3656,7 +3656,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private void CheckUserPersonViewPermissions()
         {
             // access is ok if the current user has the view any person permission
-            if (!HasPermission(BasePermissionCodes.ViewAnyPerson))
+            if (!HasPermission(BasePermissionCodes.ViewAnyPerson) && !HasPermission(BasePermissionCodes.CreatePerson) && !HasPermission(BasePermissionCodes.UpdatePerson))
             {
                 logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view any person.");
                 throw new PermissionsException("User is not authorized to view any person.");
@@ -3698,8 +3698,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             // access is ok if the current user has the update organization permission
             if (!HasPermission(BasePermissionCodes.UpdateOrganization))
             {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to update a organization.");
-                throw new PermissionsException("User is not authorized to update a organization.");
+                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to update an organization.");
+                throw new PermissionsException("User is not authorized to update an organization.");
             }
         }
 
@@ -3709,10 +3709,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private void CheckUserOrganizationViewPermissions()
         {
             // access is ok if the current user has the view organization permission
-            if (!HasPermission(BasePermissionCodes.ViewOrganization))
+            if (!HasPermission(BasePermissionCodes.ViewOrganization) && !HasPermission(BasePermissionCodes.CreateOrganization) && !HasPermission(BasePermissionCodes.UpdateOrganization))
             {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view a organization.");
-                throw new PermissionsException("User is not authorized to view a organization.");
+                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view an organization.");
+                throw new PermissionsException("User is not authorized to view an organization.");
             }
         }
 
@@ -5643,8 +5643,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             //marital status
             if (personDto.MaritalStatus != null)
-            {
-                personEntity.MaritalStatus = await ConvertPerson2MaritalStatusDtoToEntityAsync(personDto.MaritalStatus);
+            {                
+                personEntity = await ConvertPerson2MaritalStatusDtoToEntityAsync(personEntity, personDto.MaritalStatus);
             }
 
             //citizenshipStatus
@@ -5807,7 +5807,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             //marital status
             if (personDto.MaritalStatus != null)
             {
-                personEntity.MaritalStatus = await ConvertPerson2MaritalStatusDtoToEntityAsync(personDto.MaritalStatus);
+                personEntity = await ConvertPerson2MaritalStatusDtoToEntityAsync(personEntity, personDto.MaritalStatus);
             }
 
             //citizenshipStatus
@@ -5994,7 +5994,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             //marital status
             if (personDto.MaritalStatus != null)
             {
-                personEntity.MaritalStatus = await ConvertPerson2MaritalStatusDtoToEntityAsync(personDto.MaritalStatus);
+                personEntity = await ConvertPerson2MaritalStatusDtoToEntityAsync(personEntity, personDto.MaritalStatus);
             }
 
             //citizenshipStatus
@@ -6292,9 +6292,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 try
                 {
-                    var maritalStatus = await ConvertPerson2MaritalStatusDtoToEntityAsync(personDto.MaritalStatus);
-                    if (personEntity != null)
-                        personEntity.MaritalStatus = maritalStatus;
+                    personEntity = await ConvertPerson2MaritalStatusDtoToEntityAsync(personEntity, personDto.MaritalStatus);                
                 }
                 catch (Exception ex)
                 {
@@ -7957,11 +7955,12 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         }
 
         /// <summary>
-        /// Converts Marital Status
-        /// </summary>
+        /// Converts Marital Status in personEntity
+        /// </summary>        
+        /// <param name="personEntity"><</param>
         /// <param name="personMaritalStatusDtoProperty"></param>
-        /// <returns>Domain.Base.Entities.MaritalState?</returns>
-        private async Task<Domain.Base.Entities.MaritalState?> ConvertPerson2MaritalStatusDtoToEntityAsync(Dtos.DtoProperties.PersonMaritalStatusDtoProperty personMaritalStatusDtoProperty)
+        /// <returns>Domain.Base.Entities.PersonIntegration</returns>
+        private async Task<Domain.Base.Entities.PersonIntegration> ConvertPerson2MaritalStatusDtoToEntityAsync(PersonIntegration personEntity, Dtos.DtoProperties.PersonMaritalStatusDtoProperty personMaritalStatusDtoProperty)
         {
             try
             {
@@ -7996,11 +7995,26 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                     if (!maritalStatusEntityById.Type.Equals(maritalStatusCategory))
                     {
-                        throw new InvalidOperationException("maritalStatus.maritalCategory does not match the entity marital category by id: " + personMaritalStatusDtoProperty.Detail.Id);
+                        //
+                        // Allow for the possibility of a dto marital status GUID with a null type when dto marital category is "single"
+                        //  because Ethos integration intentionally treats a marital statuses with no special processing as single.
+                        //
+                        if (!(maritalStatusEntityById.Type == null && maritalStatusCategory == Domain.Base.Entities.MaritalStatusType.Single))
+                        {
+                            throw new InvalidOperationException("maritalStatus.maritalCategory does not match the entity marital category by id: " + personMaritalStatusDtoProperty.Detail.Id);
+                        }
+                        else
+                        {
+                            // Save the marital status code of the GUID from the DTO that is unknown so that is written and/or preserved on the person
+                            // despite the "single" category.  
+                            personEntity.MaritalStatusCode = maritalStatusEntityById.Code;
+                            return personEntity;
+                        }
                     }
 
                     maritalState = (Domain.Base.Entities.MaritalState?)maritalStatusEntityById.Type;
-                    return maritalState;
+                    personEntity.MaritalStatus = maritalState;
+                    return personEntity;
                 }
                 catch (ArgumentException)
                 {
@@ -8026,7 +8040,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     throw new ArgumentException("Could not find marital status type with marital category: " + personMaritalStatusDtoProperty.MaritalCategory.ToString());
                 }
             }
-            return maritalState;
+            personEntity.MaritalStatus = maritalState;
+            return personEntity;
         }
 
         /// <summary>

@@ -19,6 +19,12 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// The direct deposit status for the account payable source
         /// </summary>
         public string directDeposit { get; set; }
+
+        /// <summary>
+        /// The  Source of the account payable source
+        /// </summary>
+        public string Source { get; set; }
+
         /// <summary>
         /// AP Accounts Payable Sources
         /// </summary>

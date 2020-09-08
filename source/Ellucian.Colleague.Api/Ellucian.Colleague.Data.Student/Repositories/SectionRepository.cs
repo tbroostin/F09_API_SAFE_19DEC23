@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
@@ -344,15 +344,15 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     /* Waitlist status val codes
                      * 1. Active
                      * 4. Permission to register
-                     */                    
+                     */
                     if (!string.IsNullOrEmpty(waitListStatusValcode) && (waitListStatusValcode == "1" || waitListStatusValcode == "4"))
                     {
                         rank++;
                         SectionWaitlistStudent sectionWaitlist = new SectionWaitlistStudent(item.WaitCourseSection, item.WaitStudent, rank, item.WaitRating, waitListStatusValcode, item.WaitStatusDate, item.WaitTime);
                         WaitlistDetails.Add(sectionWaitlist);
                     }
-                   else if(nonActiveStudentsStatuses.Count() > 0 && nonActiveStudentsStatuses.Contains(item.WaitStatus))
-                    {                        
+                    else if(nonActiveStudentsStatuses.Count() > 0 && nonActiveStudentsStatuses.Contains(item.WaitStatus))
+                    {
                         SectionWaitlistStudent sectionWaitlist = new SectionWaitlistStudent(item.WaitCourseSection, item.WaitStudent, 0, 0, waitListStatusValcode, item.WaitStatusDate, item.WaitTime);
                         WaitlistDetails.Add(sectionWaitlist);
                     }
@@ -726,6 +726,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
         }
 
+
         /// <summary>
         /// Using a collection of section ids, get a dictionary collection of associated guids
         /// </summary>
@@ -969,7 +970,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             IEnumerable<Section> sections = new List<Section>();
             int totalCount = 0;
             string[] subList = null;
-           
+
             string sectionsCacheKey = CacheSupport.BuildCacheKey(AllSectionsCache, title, startDate, endDate, code, number, learningProvider, termId,
                 reportingTermId, academicLevels, course, location, status, departments, subject, instructors, scheduleTermId);
 
@@ -986,11 +987,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                    SectionMeetingCacheTimeout,
                    async () =>
                    {
-                       var keys = new List<string>();        
-                       var sectionTuple = await GetSectionsForFiltersAsync(title, startDate, endDate, code, number, learningProvider, termId, reportingTermId, 
+                       var keys = new List<string>();
+                       var sectionTuple = await GetSectionsForFiltersAsync(title, startDate, endDate, code, number, learningProvider, termId, reportingTermId,
                                                                     academicLevels, course, location, status, departments, subject, instructors, scheduleTermId);
                        if (sectionTuple != null)
-                       {                          
+                       {
                            return sectionTuple;
                        }
                        return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
@@ -1047,7 +1048,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         var sectionTuple = await GetSectionsForFiltersAsync(title, startDate, endDate, code, number, learningProvider, termId, reportingTermId,
                                                                         academicLevels, course, location, status, departments, subject, instructors, scheduleTermId);
                         if (sectionTuple != null)
-                        {                            
+                        {
                             return sectionTuple;
                         }
                         return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
@@ -1075,10 +1076,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             string code = "", string number = "", string learningProvider = "", string termId = "", string reportingTermId = "",
             List<string> academicLevels = null, string course = "", string location = "", string status = "", List<string> departments = null,
             string subject = "", List<string> instructors = null, string scheduleTermId = "")
-        { 
+        {
             string[] limitingKeys = null;
             string criteria = "";
-          
+
             // If we have a course, then select the limited list from the COURSES record first
             if (!string.IsNullOrEmpty(course))
             {
@@ -1416,8 +1417,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
 
             //get all course types to view special processing
-            var courseTypes = await GetGuidValcodeAsync<CourseType>("ST", "COURSE.TYPES",
-                    (courseType, g) => new CourseType(g, courseType.ValInternalCodeAssocMember, courseType.ValExternalRepresentationAssocMember, courseType.ValActionCode2AssocMember == "N" ? false : true) { Categorization = courseType.ValActionCode1AssocMember });
+            var courseTypes = await GetCourseTypesAsync();
 
             switch (searchable.ToLower())
             {
@@ -1665,7 +1665,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <param name="caseSensitive"></param>
         /// <param name="addToCollection"></param>
         /// <returns></returns>
-        public async Task<Tuple<IEnumerable<Section>, int>> GetSectionsKeyword1Async(int offset, int limit, string keyword, bool bypassCache = false, bool caseSensitive = false, 
+        public async Task<Tuple<IEnumerable<Section>, int>> GetSectionsKeyword1Async(int offset, int limit, string keyword, bool bypassCache = false, bool caseSensitive = false,
             bool addToCollection = false)
         {
             this.addToErrorCollection = addToCollection;
@@ -2528,13 +2528,18 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                 }
                 bool displayRank = false;
-                bool displayRating = false;               
+                bool displayRating = false;
                 var stwebSettings = await GetStwebDefaultsAsync();
                 var query = "WITH COURSE.SECTIONS.ID EQ " + sectionId;
                 Collection<CourseSections> courseSection = await DataReader.BulkReadRecordAsync<CourseSections>("COURSE.SECTIONS", query);
                 int? noOfDaysToEnroll= null;
                 if (stwebSettings != null)
                 {
+                    var courseSec = courseSection.FirstOrDefault();
+                    if (courseSec != null)
+                    {
+                        noOfDaysToEnroll = courseSec.SecWaitlistNoDays;
+                    }
                     if (!string.IsNullOrEmpty(stwebSettings.StwebShowWaitlistRank))
                     {
                         if (stwebSettings.StwebShowWaitlistRank.ToUpper() == "Y")
@@ -2544,19 +2549,17 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                     if (courseSection != null && courseSection.FirstOrDefault() != null && !string.IsNullOrEmpty(stwebSettings.StwebShowWaitlistRating))
                     {
-                        var courseSec = courseSection.FirstOrDefault();
-                        noOfDaysToEnroll = courseSec.SecWaitlistNoDays;
                         if (!string.IsNullOrEmpty(courseSec.SecWaitlistRating) && stwebSettings.StwebShowWaitlistRating.ToUpper() == "Y")
                         {
                             displayRating = true;
                         }
                     }
-                }           
+                }
                 studentSectionWaitlistInfo.SectionWaitlistConfig = new SectionWaitlistConfig(sectionId, displayRank, displayRating, noOfDaysToEnroll);
                 return studentSectionWaitlistInfo;
             }
             catch (Exception)
-            {               
+            {
                 throw;
             }
         }
@@ -3173,7 +3176,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 SectionWaitlistConfig sectionWaitlistSetting = new SectionWaitlistConfig(sectionId, displayRank, displayRating,null);
                 return sectionWaitlistSetting;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return null;
             }
@@ -3240,14 +3243,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     foreach (var sectionId in sectionIds)
                     {
-                            if (regSectionsDict.ContainsKey(sectionId))
-                            {
-                                sectionsRequested.Add(regSectionsDict[sectionId]);
-                            }
-                            else
-                            {
-                                sectionsNotFound.Add(sectionId);
-                            }                       
+                        if (regSectionsDict.ContainsKey(sectionId))
+                        {
+                            sectionsRequested.Add(regSectionsDict[sectionId]);
+                        }
+                        else
+                        {
+                            sectionsNotFound.Add(sectionId);
+                        }
                     }
                 }
                 else
@@ -3410,8 +3413,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var groupedRosters = rosterData != null ? rosterData.GroupBy(r => r.CourseSectionIds).ToDictionary(g => g.Key, g => g.ToList()) : new Dictionary<string, List<StudentCourseSectionStudents>>();
             var groupedWaitlists = waitlistData != null ? waitlistData.GroupBy(w => w.WaitCourseSection).ToDictionary(g => g.Key, g => g.ToList()) : new Dictionary<string, List<WaitList>>();
 
+            // Here we are retrieving the items needed to process sections before we enter the section loop.
             var bookOptions = (await GetBookOptionsAsync()).ToList();
             string sectionBookstoreUrlTemplate = await GetBookstoreUrlTemplateAsync();
+            var specialCourseTypes = await GetSpecialIconCourseTypesAsync();
             foreach (var sec in sectionData)
             {
                 try
@@ -3797,6 +3802,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     // Add financial charges for section
                     AddChargesToSection(section, sec, regBillingRateData);
 
+                    // If any of the section's course types exist in the list of special Course types then set ShowSpecialIcon for the section to true
+                    // Note: Special course types are those with an I in special processing 1
+                    if ((specialCourseTypes != null) && (section.CourseTypeCodes != null))
+                    {
+                        section.ShowSpecialIcon = specialCourseTypes.Intersect(section.CourseTypeCodes).Any();
+                    }
+
                     sections[section.Id] = section;
                 }
                 catch (RepositoryException rex)
@@ -3980,7 +3992,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             catch (Exception e)
             {
-                logger.Error(e, e.Message); 
+                logger.Error(e, e.Message);
                 LogRepoError(e.Message, string.IsNullOrWhiteSpace(sec.RecordGuid)? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
                 throw new RepositoryException(e.Message);
             }
@@ -4433,6 +4445,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             List<SectionMeeting> meetings = new List<SectionMeeting>();
             var selectStatement = new StringBuilder();
             string[] limitingKeys = null;
+            
+            exception = null;
 
             int totalCount = 0;
             string[] subList = null;
@@ -4587,7 +4601,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
 
                     string criteria = selectStatement.ToString();
-                   
+
                     CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
                     {
                         limitingKeys = limitingKeys != null && limitingKeys.Any() ? limitingKeys.Distinct().ToList() : null, // secMeetingIds.Distinct().ToList(),
@@ -4602,12 +4616,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 return new Tuple<IEnumerable<SectionMeeting>, int>(meetings, 0);
             }
 
-           subList = keyCache.Sublist.ToArray();
+            subList = keyCache.Sublist.ToArray();
 
-           totalCount = keyCache.TotalCount.Value;
-                // Now we have criteria, so we can select and read the records
+            totalCount = keyCache.TotalCount.Value;
+            // Now we have criteria, so we can select and read the records
             var sectionMeetings = await DataReader.BulkReadRecordAsync<CourseSecMeeting>("COURSE.SEC.MEETING", subList);
-            
+
             if (sectionMeetings != null || sectionMeetings.Any())
             {
                 var meetingIds = sectionMeetings.Where(cs => cs.CsmCourseSection != null).Select(sm => sm.CsmCourseSection).Distinct().ToArray();
@@ -4629,10 +4643,25 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                 foreach (var meeting in sectionMeetings)
                 {
-                    var secFaculty = courseSecFacultyData.Where(x => !string.IsNullOrEmpty(x.CsfCourseSection) && x.CsfCourseSection == meeting.CsmCourseSection).ToList();
-                    var sectionMeeting = await BuildSectionMeetingAsync(meeting, secFaculty);
-                    meetings.Add(sectionMeeting);
+                    try
+                    {
+                        var secFaculty = courseSecFacultyData.Where(x => !string.IsNullOrEmpty(x.CsfCourseSection) && x.CsfCourseSection == meeting.CsmCourseSection).ToList();
+                        var sectionMeeting = await BuildSectionMeetingAsync(meeting, secFaculty);
+                        meetings.Add(sectionMeeting);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (exception == null)
+                            exception = new RepositoryException();
+
+                        exception.AddError(new RepositoryError("Global.Internal.Error", ex.Message));
+                    }
                 }
+            }
+
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
             }
 
             return new Tuple<IEnumerable<SectionMeeting>, int>(meetings, totalCount);
@@ -4727,9 +4756,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         selectStatement.Append(" AND ");
                     }
-                    selectStatement.Append("WITH CSF.START.DATE NE '' AND WITH CSF.END.DATE NE ''");
+                    selectStatement.Append("WITH CSF.START.DATE NE '' AND WITH CSF.END.DATE NE '' AND WITH CSF.SECTION.NAME NE ''");
 
-                    
+
                     string criteria = selectStatement.ToString();
 
                     // Now we have criteria, so we can select and read the records
@@ -4899,25 +4928,37 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 throw new KeyNotFoundException("Record not found, invalid GUID provided: " + guid);
             }
 
-            // Read in course sections records to get Primary indicator and meeting pointers
-            var courseSectionId = faculty.CsfCourseSection;
-            var courseSection = await DataReader.ReadRecordAsync<CourseSections>("COURSE.SECTIONS", courseSectionId);
-            if (courseSection != null)
+            CourseSections courseSection = new CourseSections();
+            string errorMsg = string.Concat("Course section '" + faculty.CsfCourseSection + "' does not exist.");
+            RepositoryException exc = new RepositoryException(errorMsg);
+            try
             {
-                var courseSecMeetingIds = courseSection.SecMeeting.ToArray();
-                var courseSecMeetings = await DataReader.BulkReadRecordAsync<CourseSecMeeting>("COURSE.SEC.MEETING", courseSecMeetingIds);
+                courseSection = await DataReader.ReadRecordAsync<CourseSections>(faculty.CsfCourseSection);
+                if (courseSection == null)
+                {
+                    exc.AddError(new RepositoryError(faculty.Recordkey, "Bad.Data"));
+                    throw exc;
+                }
+            }
+            catch(RepositoryException)
+            {
+                throw;
+            }
+            catch(Exception e)
+            {
+                exc.AddError(new RepositoryError(faculty.Recordkey, "Bad.Data", e.Message));
+                throw exc;
+            }
 
-                var sectionFacultyEntity = BuildSectionFaculty(faculty);
-                // Update from Section
-                var courseMeetings = courseSecMeetings.Where(csm => csm.CsmInstrMethod == sectionFacultyEntity.InstructionalMethodCode);
-                var sectionFaculty = BuildEthosSectionFaculty(sectionFacultyEntity, courseSection, courseMeetings);
-                return sectionFaculty;
-            }
-            else
-            {
-                var exception = new RepositoryException(string.Concat("Course section '" + faculty.CsfCourseSection + "' does not exist"));
-                throw exception;
-            }
+            // Read in course sections records to get Primary indicator and meeting pointers
+            var courseSecMeetingIds = courseSection.SecMeeting.ToArray();
+            var courseSecMeetings = await DataReader.BulkReadRecordAsync<CourseSecMeeting>("COURSE.SEC.MEETING", courseSecMeetingIds);
+
+            var sectionFacultyEntity = BuildSectionFaculty(faculty);
+            // Update from Section
+            var courseMeetings = courseSecMeetings.Where(csm => csm.CsmInstrMethod == sectionFacultyEntity.InstructionalMethodCode);
+            var sectionFaculty = BuildEthosSectionFaculty(sectionFacultyEntity, courseSection, courseMeetings);
+            return sectionFaculty;
         }
 
         /// <summary>
@@ -5500,7 +5541,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 var exception = new RepositoryException("Errors encountered while deleting section instructors " + guid);
                 foreach (var error in response.DeleteSectionInstructorsErrors)
                 {
-                    exception.AddError(new RepositoryError(string.IsNullOrEmpty(error.ErrorCodes) ? "" : error.ErrorCodes, error.ErrorMessages));
+                    exception.AddError(new RepositoryError("Create.Update.Exception", string.Concat(error.ErrorCodes, " - ", error.ErrorMessages))
+                    {
+                        SourceId = faculty.Id,
+                        Id = guid
+                    });
                 }
                 throw exception;
             }
@@ -5974,16 +6019,16 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             if (section == null)
             {
-                throw new ArgumentNullException("section");
+                throw new RepositoryException("section is a required argument.");
             }
             if (meetingGuid == null)
             {
-                throw new ArgumentNullException("meetingGuid");
+                throw new RepositoryException("section meeting id is a required argument.");
             }
             var meeting = (section.Meetings != null) ? section.Meetings.FirstOrDefault(x => x.Guid == meetingGuid) : null;
             if (meeting == null)
             {
-                throw new KeyNotFoundException("Section meeting not found with GUID " + meetingGuid);
+                throw new RepositoryException("Section meeting not found with GUID " + meetingGuid);
             }
 
             var extendedDataTuple = GetEthosExtendedDataLists();
@@ -6080,8 +6125,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         private async Task<IEnumerable<Domain.Base.Entities.ScheduleRepeat>> GetScheduleRepeatsAsync()
         {
             return await GetValcodeAsync<Domain.Base.Entities.ScheduleRepeat>("CORE", "SCHED.REPEATS", r =>
-                (new Domain.Base.Entities.ScheduleRepeat(r.ValInternalCodeAssocMember, r.ValExternalRepresentationAssocMember, r.ValActionCode1AssocMember,
-                    ConvertFrequencyCodeToFrequencyType(r.ValActionCode2AssocMember))), Level1CacheTimeoutValue);
+    (new Domain.Base.Entities.ScheduleRepeat(r.ValInternalCodeAssocMember, r.ValExternalRepresentationAssocMember, r.ValActionCode1AssocMember,
+        ConvertFrequencyCodeToFrequencyType(r.ValActionCode2AssocMember))), Level1CacheTimeoutValue);
         }
 
         private Domain.Base.Entities.FrequencyType? ConvertFrequencyCodeToFrequencyType(string code)
@@ -6347,19 +6392,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             return calendarScheduleData.CalsDate.Value;
         }
-
-        private IEnumerable<ScheduleRepeat> _scheduleRepeat = null;
-        private async Task<IEnumerable<ScheduleRepeat>> GetScheduleRepeatAsync()
-        {
-            if (_scheduleRepeat == null)
-            {
-                _scheduleRepeat = await GetValcodeAsync<ScheduleRepeat>("CORE", "SCHED.REPEATS",
-                s => new ScheduleRepeat(s.ValInternalCodeAssocMember, s.ValExternalRepresentationAssocMember, s.ValActionCode1AssocMember,
-                    ConvertCodeToFrequencyType(s.ValActionCode2AssocMember)));
-            }
-            return _scheduleRepeat;
-        }
-
+        
         private FrequencyType? ConvertCodeToFrequencyType(string code)
         {
             if (string.IsNullOrEmpty(code))
@@ -6783,6 +6816,35 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return waitlistStatuses;
         }
 
+        /// <summary>
+        /// Used to retrieve CourseType table information with Guid
+        /// </summary>
+        /// <returns>List of Course Type entities</returns>
+        private async Task<IEnumerable<CourseType>> GetCourseTypesAsync()
+        {
+            return await GetGuidValcodeAsync<CourseType>("ST", "COURSE.TYPES",
+                    (courseType, g) => new CourseType(g, courseType.ValInternalCodeAssocMember, courseType.ValExternalRepresentationAssocMember, courseType.ValActionCode2AssocMember == "N" ? false : true) { Categorization = courseType.ValActionCode1AssocMember }, Level1CacheTimeoutValue);
+        }
+
+
+        /// <summary>
+        /// Used to identify which course types have special processing 1 set to I
+        /// </summary>
+        /// <returns>List of the course type codes that have special processing 1 set to I</returns>
+        private async Task<List<string>> GetSpecialIconCourseTypesAsync()
+        {
+            var courseTypeValcodes = await GetCourseTypesAsync();
+            if (courseTypeValcodes != null)
+            {
+                var specialCodes = courseTypeValcodes.Where(v => v.Categorization == "I");
+                return specialCodes.Select(y => y.Code).ToList();
+            }
+            else
+            {
+                return new List<string>();
+            }
+        }
+
         private async Task<string> GetWaitlistStatusActionCodeAsync(string waitlistStatusCode)
         {
             if (!String.IsNullOrEmpty(waitlistStatusCode))
@@ -6802,9 +6864,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// </summary>
         /// <returns></returns>
         public async Task<IEnumerable<StudentWaitlistStatus>> GetStudentWaitlistStatusesAsync()
-        {           
-            List<StudentWaitlistStatus> studentWaitlistStatuses = (await GetWaitlistStatusesAsync()).ValsEntityAssociation.Select(y => new StudentWaitlistStatus(statuscode: y.ValActionCode1AssocMember, status: y.ValInternalCodeAssocMember, statusdescription: y.ValExternalRepresentationAssocMember)).ToList();                                                                                 
-            return studentWaitlistStatuses; 
+        {
+            List<StudentWaitlistStatus> studentWaitlistStatuses = (await GetWaitlistStatusesAsync()).ValsEntityAssociation.Select(y => new StudentWaitlistStatus(statuscode: y.ValActionCode1AssocMember, status: y.ValInternalCodeAssocMember, statusdescription: y.ValExternalRepresentationAssocMember)).ToList();
+            return studentWaitlistStatuses;
         }
 
         /// <summary>

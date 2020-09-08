@@ -1,4 +1,4 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -52,7 +52,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.EmploymentFrequencies>> GetEmploymentFrequenciesAsync()
-                {
+        {
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
             {
@@ -62,9 +62,19 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 }
             }
             try
-            {                   AddDataPrivacyContextProperty((await _employmentFrequenciesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());               
-                return await _employmentFrequenciesService.GetEmploymentFrequenciesAsync(bypassCache);
-                            }
+            {                   
+                AddDataPrivacyContextProperty((await _employmentFrequenciesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
+                var employmentFrequencies = await _employmentFrequenciesService.GetEmploymentFrequenciesAsync(bypassCache);
+
+                if (employmentFrequencies != null && employmentFrequencies.Any())
+                {
+                    AddEthosContextProperties(await _employmentFrequenciesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _employmentFrequenciesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              employmentFrequencies.Select(a => a.Id).ToList()));
+                }
+
+                return employmentFrequencies;                
+            }
             catch (KeyNotFoundException e)
             {
                 _logger.Error(e.ToString());
@@ -121,7 +131,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             try
             {
                AddDataPrivacyContextProperty((await _employmentFrequenciesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
-               return await _employmentFrequenciesService.GetEmploymentFrequenciesByGuidAsync(guid);
+                AddEthosContextProperties(
+                   await _employmentFrequenciesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                   await _employmentFrequenciesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { guid }));
+                return await _employmentFrequenciesService.GetEmploymentFrequenciesByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)
             {

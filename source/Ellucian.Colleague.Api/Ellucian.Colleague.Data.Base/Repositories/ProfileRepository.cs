@@ -207,7 +207,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     catch (Exception ex)
                     {
                         // Just log there was a problem and skip this address
-                        logger.Info(ex, "Error occurred processing address " + addressId + " for person " + personId + ". Skipping address.");
+                        logger.Info("Error occurred processing address for person.");
+                        logger.Error(ex.Message);
                     }
                 }
             }
@@ -232,7 +233,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             catch (Exception ex)
             {
-                logger.Info(ex, "Error building phone data for person " + personId + ".");
+                logger.Info("Error building phone data for person");
+                logger.Error("Error building phone data for person: " + personId + Environment.NewLine + ex.Message);
             }
 
             return phoneNumber;
@@ -324,7 +326,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             if (profileUpdateResponse.AErrorOccurred == "3")
             {
-                logger.Info("No changes detected, no update made to person profile for " + profile.Id);
+                logger.Info("No changes detected, no update made to person profile for " + profile.Id); //is profile.Id PII?
             }
             else if (!string.IsNullOrEmpty(profileUpdateResponse.AErrorOccurred) && profileUpdateResponse.AErrorOccurred != "0")
             {
@@ -470,9 +472,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             var country = countries.Where(v => v.Code == addressData.Country).FirstOrDefault();
                             countryDesc = country != null ? country.Description : addressData.Country;
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            logger.Info("Unable to find country entry for country " + addressData.Country);
+                            logger.Info("Unable to find country entry for country.");
+                            logger.Error(ex.Message);
                         }
                     }
                     address.AddressLabel = AddressProcessor.BuildAddressLabel(address.AddressModifier, addressData.AddressLines, addressData.City, addressData.State, addressData.Zip, addressData.Country, countryDesc);
@@ -493,7 +496,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             catch (Exception ex)
             {
-                logger.Error("Error occurred while processing address: " + addressData.Recordkey + " for person " + person.Recordkey + ". Address skipped. Message: " + ex.Message);
+                logger.Error(ex.Message);
                 return null;
             }
         }

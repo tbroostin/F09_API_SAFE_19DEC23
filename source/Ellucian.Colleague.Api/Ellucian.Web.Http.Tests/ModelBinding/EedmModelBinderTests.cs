@@ -1,5 +1,6 @@
 ﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
 
+using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.ModelBinding;
 using Ellucian.Web.Infrastructure.TestUtil;
@@ -8,6 +9,7 @@ using Moq;
 using Newtonsoft.Json;
 using slf4net;
 using System;
+using System.Collections.ObjectModel;
 using System.Net.Http;
 using System.Text;
 using System.Web.Http;
@@ -67,6 +69,7 @@ namespace Ellucian.Web.Http.Tests.ModelBinding
         }
 
         [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
         public void BindModel_Test_Empty_BodyString_False_Result()
         {
             //Arrange
@@ -141,8 +144,10 @@ namespace Ellucian.Web.Http.Tests.ModelBinding
         public void BindModel_Test_True_Result()
         {
             //Arrange
-            string urlGuid = string.Empty;
-            string bodyGuid = Guid.NewGuid().ToString();
+            string guid = Guid.NewGuid().ToString();
+
+            string urlGuid = guid;
+            string bodyGuid = guid;
             string bodyString = string.Concat(@"{", "\"id\":\"", string.Format("{0}\"", bodyGuid), "}");
             string requestURI = "http://localhost/Ellucian.Colleague.Api/MockPersons/{0}";
             string jsonQueryString = String.Format(requestURI, urlGuid);
@@ -179,7 +184,7 @@ namespace Ellucian.Web.Http.Tests.ModelBinding
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public void BindModel_Test_POST_CannotDefineGuidException()
+        public void BindModel_Test_POST_CannotDefineGuidException_Legacy()
         {
             //Arrange
             string urlGuid = string.Empty;
@@ -202,6 +207,11 @@ namespace Ellucian.Web.Http.Tests.ModelBinding
             actionContext.Request.SetConfiguration(config);
             actionContext.Request.SetRouteData(data);
 
+            Mock<HttpActionDescriptor> _actionDescriptorMock = new Mock<HttpActionDescriptor>() { CallBase = true };
+            _actionDescriptorMock.Setup(ad => ad.GetCustomAttributes<CustomMediaTypeAttributeFilter>())
+                .Returns(new Collection<CustomMediaTypeAttributeFilter>() {
+                        new CustomMediaTypeAttributeFilter() { ErrorContentType = "" } });
+
             var metadataProvider = _modelMetadataProviderMock.Object;
             var metaData = new System.Web.Http.Metadata.ModelMetadata(metadataProvider, controller.GetType(), null, _testData.GetType(), "id");
 
@@ -214,6 +224,51 @@ namespace Ellucian.Web.Http.Tests.ModelBinding
 
             eedmModelBinder = new EedmModelBinder();
             var result = eedmModelBinder.BindModel(actionContext, bindingContext);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public void BindModel_Test_POST_CannotDefineGuidException()
+        {
+            //Arrange
+            string urlGuid = string.Empty;
+            string bodyGuid = Guid.NewGuid().ToString();
+            string bodyString = string.Concat(@"{", "\"id\":\"", string.Format("{0}\"", bodyGuid), "}");
+            string requestURI = "http://localhost/Ellucian.Colleague.Api/MockPersons/{0}";
+            string jsonQueryString = String.Format(requestURI, urlGuid);
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary();
+            routeValueDict.Add("MockPersons/", "PostHousingAssignmentAsync");
+            HttpRoute route = new HttpRoute("MockPersons/", routeValueDict);
+
+            HttpConfiguration config = new HttpConfiguration();
+            config.Routes.Add("MockPersons/", route);
+            HttpRouteData data = new HttpRouteData(route);
+
+            _testData = ModelBinderTestData.CreateClass(bodyGuid);
+            HttpActionContext actionContext = CreateHttpActionContext(jsonQueryString, HttpMethod.Post, _testData);
+            actionContext.Request.Content = new StringContent(bodyString, Encoding.UTF8, "application/json");
+            actionContext.Request.SetConfiguration(config);
+            actionContext.Request.SetRouteData(data);
+
+            Mock<HttpActionDescriptor> _actionDescriptorMock = new Mock<HttpActionDescriptor>() { CallBase = true };
+            _actionDescriptorMock.Setup(ad => ad.GetCustomAttributes<CustomMediaTypeAttributeFilter>())
+                .Returns(new Collection<CustomMediaTypeAttributeFilter>() {
+                        new CustomMediaTypeAttributeFilter() { ErrorContentType = BaseCompressedApiController.IntegrationErrors2 } });
+
+            var metadataProvider = _modelMetadataProviderMock.Object;
+            var metaData = new System.Web.Http.Metadata.ModelMetadata(metadataProvider, controller.GetType(), null, _testData.GetType(), "id");
+
+            var bindingContext = new System.Web.Http.ModelBinding.ModelBindingContext()
+            {
+                ModelMetadata = metaData,
+                ModelState = controller.ModelState
+            };
+            bindingContext.ModelName = "ModelBinderTestData";
+
+            eedmModelBinder = new EedmModelBinder();
+            var result = eedmModelBinder.BindModel(actionContext, bindingContext);
+            Assert.IsFalse(result);
         }
 
         [TestMethod]
@@ -241,6 +296,11 @@ namespace Ellucian.Web.Http.Tests.ModelBinding
             actionContext.Request.Content = new StringContent(bodyString, Encoding.UTF8, "application/json");
             actionContext.Request.SetConfiguration(config);
             actionContext.Request.SetRouteData(data);
+
+            Mock<HttpActionDescriptor> _actionDescriptorMock = new Mock<HttpActionDescriptor>() { CallBase = true };
+            _actionDescriptorMock.Setup(ad => ad.GetCustomAttributes<CustomMediaTypeAttributeFilter>())
+                .Returns(new Collection<CustomMediaTypeAttributeFilter>() {
+                        new CustomMediaTypeAttributeFilter() { ErrorContentType = "" } });
 
             var metadataProvider = _modelMetadataProviderMock.Object;
             var metaData = new System.Web.Http.Metadata.ModelMetadata(metadataProvider, controller.GetType(), null, _testData.GetType(), "id");
@@ -282,6 +342,11 @@ namespace Ellucian.Web.Http.Tests.ModelBinding
             actionContext.Request.SetConfiguration(config);
             actionContext.Request.SetRouteData(data);
 
+            Mock<HttpActionDescriptor> _actionDescriptorMock = new Mock<HttpActionDescriptor>() { CallBase = true };
+            _actionDescriptorMock.Setup(ad => ad.GetCustomAttributes<CustomMediaTypeAttributeFilter>())
+                .Returns(new Collection<CustomMediaTypeAttributeFilter>() {
+                        new CustomMediaTypeAttributeFilter() { ErrorContentType = "" } });
+
             var metadataProvider = _modelMetadataProviderMock.Object;
             var metaData = new System.Web.Http.Metadata.ModelMetadata(metadataProvider, controller.GetType(), null, _testData.GetType(), "id");
 
@@ -298,6 +363,54 @@ namespace Ellucian.Web.Http.Tests.ModelBinding
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
+        public void BindModel_Test_PUT_UrlAndBodyGuidDifferent_Legacy()
+        {
+            //Arrange
+            string urlGuid = Guid.NewGuid().ToString();
+            string bodyGuid = Guid.NewGuid().ToString();
+            string requestURI = "http://localhost/Ellucian.Colleague.Api/MockPersons/{0}";
+            string jsonQueryString = String.Format(requestURI, urlGuid);
+            string bodyString = string.Concat(@"{", "\"id\":\"", string.Format("{0}\"", bodyGuid), "}");
+
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary();
+            routeValueDict.Add("MockPersons/{guid}", "PutHousingAssignmentAsync");
+
+            HttpRoute route = new HttpRoute("MockPersons/{guid}", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+
+            HttpConfiguration config = new HttpConfiguration();
+            config.Routes.Add("MockPersons/{guid}", route);
+
+            _testData = ModelBinderTestData.CreateClass(bodyGuid);
+            HttpActionContext actionContext = CreateHttpActionContext(jsonQueryString, HttpMethod.Put, _testData);
+            actionContext.ActionArguments.Add("guid", urlGuid);
+            actionContext.Request.Content = new StringContent(bodyString, Encoding.UTF8, "application/json");
+            actionContext.Request.SetConfiguration(config);
+            actionContext.Request.SetRouteData(data);
+
+            Mock<HttpActionDescriptor> _actionDescriptorMock = new Mock<HttpActionDescriptor>() { CallBase = true };
+            _actionDescriptorMock.Setup(ad => ad.GetCustomAttributes<CustomMediaTypeAttributeFilter>())
+                .Returns(new Collection<CustomMediaTypeAttributeFilter>() {
+                        new CustomMediaTypeAttributeFilter() { ErrorContentType = "" } });
+
+            actionContext.ActionDescriptor = _actionDescriptorMock.Object;
+
+            var metadataProvider = _modelMetadataProviderMock.Object;
+            var metaData = new System.Web.Http.Metadata.ModelMetadata(metadataProvider, controller.GetType(), null, _testData.GetType(), "id");
+
+            var bindingContext = new System.Web.Http.ModelBinding.ModelBindingContext()
+            {
+                ModelMetadata = metaData,
+                ModelState = controller.ModelState
+            };
+            bindingContext.ModelName = "ModelBinderTestData";
+
+            eedmModelBinder = new EedmModelBinder();
+            var result = eedmModelBinder.BindModel(actionContext, bindingContext);
+        }
+
+        [TestMethod]
         public void BindModel_Test_PUT_UrlAndBodyGuidDifferent()
         {
             //Arrange
@@ -324,6 +437,15 @@ namespace Ellucian.Web.Http.Tests.ModelBinding
             actionContext.Request.SetConfiguration(config);
             actionContext.Request.SetRouteData(data);
 
+
+            Mock<HttpActionDescriptor> _actionDescriptorMock = new Mock<HttpActionDescriptor>() { CallBase = true };
+            _actionDescriptorMock.Setup(ad => ad.GetCustomAttributes<CustomMediaTypeAttributeFilter>())
+                .Returns(new Collection<CustomMediaTypeAttributeFilter>() {
+                        new CustomMediaTypeAttributeFilter() { ErrorContentType = BaseCompressedApiController.IntegrationErrors2 } });
+
+            actionContext.ActionDescriptor = _actionDescriptorMock.Object;
+
+
             var metadataProvider = _modelMetadataProviderMock.Object;
             var metaData = new System.Web.Http.Metadata.ModelMetadata(metadataProvider, controller.GetType(), null, _testData.GetType(), "id");
 
@@ -336,6 +458,7 @@ namespace Ellucian.Web.Http.Tests.ModelBinding
 
             eedmModelBinder = new EedmModelBinder();
             var result = eedmModelBinder.BindModel(actionContext, bindingContext);
+
         }
 
         [TestMethod]

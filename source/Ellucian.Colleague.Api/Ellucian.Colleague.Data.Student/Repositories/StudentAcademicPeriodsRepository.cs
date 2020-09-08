@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Base.Services;
@@ -69,58 +69,73 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     offset,
                     limit,
                     AllStudentAcademicPeriodsCacheTimeout,
-                    async () => {
-                        #region person filter
-                        var keys = new List<string>();
+                    async () =>
+                    {
+                        #region extract students
+                        var validStudents = new List<Students>();
 
-                        if (filterPersonIds != null && filterPersonIds.ToList().Any())
+                       
+                        if (!string.IsNullOrEmpty(person))
                         {
-                            // Set limiting keys to previously retrieved personIds from SAVE.LIST.PARMS
-                            string[] limitingKeys = filterPersonIds;
-                            for (int i = 0; i < limitingKeys.Count(); i += bulkReadSize)
-                            {
-                                var personSubList = limitingKeys.Skip(i).Take(bulkReadSize);
-                                var records = await DataReader.BulkReadRecordAsync<Students>(personSubList.ToArray());
-
-                                if (records != null && records.Any())
-                                {
-                                    keys.AddRange(ExtractStudentTermKeys(records));
-                                }
-                            }
+                            int newSize = filterPersonIds.Count() + 1;
+                            Array.Resize(ref filterPersonIds, newSize);
+                            filterPersonIds[newSize - 1] = person;
                         }
+
+                        StringBuilder studentCriteria = new StringBuilder();
+                        studentCriteria.Append("WITH STU.ACAD.LEVELS");
+                        if (!string.IsNullOrEmpty(academicPeriod))
+                        {
+
+
+                            studentCriteria.Append(" AND WITH STU.TERMS EQ '" + academicPeriod + "'");
+                        }
+                        else
+                        {
+                            studentCriteria.Append(" AND WITH STU.TERMS");
+                        }
+
+                        //NEED TO select from STUDENTS to avoid invalid pointer errors if selecting directly from STUDENT.TERMS
+                        filterPersonIds = await DataReader.SelectAsync("STUDENTS", filterPersonIds, studentCriteria.ToString());
+                        
+                        for (int i = 0; i < filterPersonIds.Count(); i += bulkReadSize)
+                        {
+                            var subListStudents = filterPersonIds.Skip(i).Take(bulkReadSize).ToArray();
+                            var records = await DataReader.BulkReadRecordAsync<Students>(subListStudents);
+
+                            validStudents.AddRange(records);
+                        }
+
+                        var studentTermKeys = ExtractStudentTermKeys(validStudents);
+
+                        // }
                         #endregion
 
                         #region additional filters
-                        var criteria = new StringBuilder();
-                        if (!string.IsNullOrEmpty(person))
-                        {
-                            criteria.Append("WITH STTR.STUDENT EQ '" + person + "'");
-                        }
+                        var additionalCriteria = new StringBuilder();
 
                         if (!string.IsNullOrEmpty(academicPeriod))
                         {
-                            if (criteria.Length > 0)
-                            {
-                                criteria.Append(" AND ");
-                            }
-
-                            criteria.Append("WITH STTR.TERM EQ '" + academicPeriod + "'");
+                            additionalCriteria.Append("WITH STTR.TERM EQ '" + academicPeriod + "'");
                         }
-
                         if (newStudentStatuses != null && newStudentStatuses.Any())
                         {
-                            if (criteria.Length > 0)
+                            if (additionalCriteria.Length > 0)
                             {
-                                criteria.Append(" AND ");
+                                additionalCriteria.Append(" AND ");
                             }
 
-                            criteria.Append("WITH STTR.CURRENT.STATUS EQ '" + (string.Join(" ", newStudentStatuses.Distinct())).Replace(" ", "' '") + "'");
+                            additionalCriteria.Append("WITH STTR.CURRENT.STATUS EQ '" + (string.Join(" ", newStudentStatuses.Distinct())).Replace(" ", "' '") + "'");
                         }
 
-                        var studentAcademicPeriodIds = await DataReader.SelectAsync("STUDENT.TERMS", keys.Distinct().ToArray(), criteria.ToString());
+                        #endregion
+
+                        #region get student terms
+                       
+                        var studentTermdIds = await DataReader.SelectAsync("STUDENT.TERMS", studentTermKeys.Distinct().ToArray(), additionalCriteria.ToString());
 
                         // Group by combinations of students and terms
-                        var groupedResults = studentAcademicPeriodIds
+                        var groupedResults = studentTermdIds
                             .Select(s => new
                             {
                                 person = s.Split(new[] { '*' })[0],
@@ -129,10 +144,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             })
                             .GroupBy(x => new { x.person, x.term }, (key, group) => new
                             {
-                                 Person = key.person,
-                                 Term = key.term,
-                                 Result = group.ToList()
-                             }
+                                Person = key.person,
+                                Term = key.term,
+                                Result = group.ToList()
+                            }
                          ).ToList();
 
                         //Each record in the groupedResults consists of a: 
@@ -144,17 +159,17 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         {
                             if (sub.Result != null && sub.Result.Any())
                             {
-                                var studentTermKeys = sub.Result.Select(s => s.recordKey).ToList();
-                                //limitingKeysList.Add(string.Concat(sub.Person, "|", sub.Term, "|", string.Join("|", studentTermKey)));
-                                limitingKeysList.Add(string.Join("|", studentTermKeys));
+                                var studentTermKeysFromGroup = sub.Result.Select(s => s.recordKey).ToList();
+                                limitingKeysList.Add(string.Join("|", studentTermKeysFromGroup));
                             }
                         }
 
                         #endregion
+
                         CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
                         {
-                            limitingKeys = limitingKeysList,
-                            criteria = criteria.ToString(),
+                            limitingKeys = limitingKeysList.Distinct().ToList(),
+                            criteria = ""
                         };
                         return requirements;
                     });
@@ -173,9 +188,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     var studentTerms = sub.Split('|');
                     var splitKey = studentTerms[0].Split('*');
-                    idKeys.Add(splitKey[0] + "|" + splitKey[1]);  
-                    keysSubList.AddRange(studentTerms);
-                    
+                    if (splitKey.Length > 1)
+                    {
+                        idKeys.Add(splitKey[0] + "|" + splitKey[1]);
+                        keysSubList.AddRange(studentTerms);
+                    }
                 }
                 var studentAcademicPeriodRecords = await DataReader.BulkReadRecordAsync<StudentTerms>("STUDENT.TERMS", keysSubList.ToArray());
                 
@@ -205,8 +222,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     else
                     {
                         var studentAcademicPeriods = studentAcademicPeriodRecords
-                           .Where(a => a.Recordkey.Split('*')[0] == resultKey[0]
-                              && a.Recordkey.Split('*')[1] == resultKey[1]);
+                           .Where(a => a.Recordkey != null 
+                                && a.Recordkey.Split('*').Length > 1
+                                && a.Recordkey.Split('*')[0] == resultKey[0]
+                                && a.Recordkey.Split('*')[1] == resultKey[1]);
 
                         if (studentAcademicPeriods == null || !studentAcademicPeriods.Any())
                         {
@@ -248,7 +267,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// </summary>
         /// <param name="records"></param>
         /// <returns></returns>
-        private List<string> ExtractStudentTermKeys(System.Collections.ObjectModel.Collection<Students> records)
+        //private List<string> ExtractStudentTermKeys(System.Collections.ObjectModel.Collection<Students> records)
+        private List<string> ExtractStudentTermKeys(List<Students> records)
         {
             var keys = new List<string>();
 
@@ -367,6 +387,22 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     studentAcademicPeriodIds.Add(string.Concat(splitKey[0], '*', splitKey[1], '*', acadLevel));
                 }
+
+                if (student.StuTerms == null || student.StuTerms.Count == 0)
+                {
+                    exception.AddError(new RepositoryError("Bad.Data",
+                       "Unable to build student academic periods. Terms record not found for: '" + splitKey[1] + "'")
+                    { Id = guid });
+                    throw exception;
+                }
+                if (!student.StuTerms.Contains(splitKey[1]))
+                {
+                    exception.AddError(new RepositoryError("Bad.Data",
+                       "Student Terms record not found for: '" + splitKey[1] + "'")
+                    { Id = guid });
+                    throw exception;
+                }
+
 
                 var studentAcademicPeriodRecords = await DataReader.BulkReadRecordAsync<StudentTerms>("STUDENT.TERMS", studentAcademicPeriodIds.ToArray());
                 if (studentAcademicPeriodRecords == null)

@@ -1,11 +1,11 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
+using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Dtos;
@@ -14,7 +14,7 @@ using Moq;
 using slf4net;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
-{    
+{
     [TestClass]
     public class EmploymentPerformanceReviewRatingsServiceTests : HumanResourcesServiceTestsSetup
     {
@@ -24,6 +24,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         private EmploymentPerformanceReviewRatingsService _employmentPerformanceReviewRatingsService;
         private Mock<ILogger> _loggerMock;
         private Mock<IHumanResourcesReferenceDataRepository> _referenceRepositoryMock;
+        private IConfigurationRepository _configurationRepository;
+        private Mock<IConfigurationRepository> _configurationRepositoryMock;
 
         [TestInitialize]
         public async void Initialize()
@@ -31,6 +33,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             MockInitialize();
             _referenceRepositoryMock = new Mock<IHumanResourcesReferenceDataRepository>();
             _loggerMock = new Mock<ILogger>();
+            _configurationRepositoryMock = new Mock<IConfigurationRepository>();
+            _configurationRepository = _configurationRepositoryMock.Object;
 
             _employmentPerformanceReviewRatingsCollection = new List<EmploymentPerformanceReviewRating>()
                 {
@@ -43,12 +47,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             _referenceRepositoryMock.Setup(repo => repo.GetEmploymentPerformanceReviewRatingsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_employmentPerformanceReviewRatingsCollection);
 
-            _employmentPerformanceReviewRatingsService = new EmploymentPerformanceReviewRatingsService(_referenceRepositoryMock.Object, adapterRegistryMock.Object, employeeCurrentUserFactory, roleRepositoryMock.Object, _loggerMock.Object);
+            _employmentPerformanceReviewRatingsService = new EmploymentPerformanceReviewRatingsService(_referenceRepositoryMock.Object, adapterRegistryMock.Object, employeeCurrentUserFactory, _configurationRepository, roleRepositoryMock.Object, _loggerMock.Object);
         }
 
         [TestCleanup]
         public void Cleanup()
         {
+            _configurationRepository = null;
+            _configurationRepositoryMock = null;
             _employmentPerformanceReviewRatingsService = null;
             _employmentPerformanceReviewRatingsCollection = null;
             _referenceRepositoryMock = null;

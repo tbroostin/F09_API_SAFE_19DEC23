@@ -756,7 +756,7 @@ namespace Ellucian.Colleague.Dtos.Converters
                                 type = Nullable.GetUnderlyingType(type);
                         }
                     }
-                    if (type != null)
+                    if ((type != null) && (type.BaseType != typeof(System.Enum)))
                     {
                         var obj = jToken.ToObject(type);
                         if (obj == null)

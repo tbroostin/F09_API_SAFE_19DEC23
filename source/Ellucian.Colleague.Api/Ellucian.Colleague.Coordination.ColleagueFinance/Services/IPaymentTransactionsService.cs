@@ -20,10 +20,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="limit">Limit for paging results</param>
         /// <param name="documentGuid">guid for accounts-payable-invoices</param>
         /// <param name="documentTypeValue">invoice or refund</param>
+        /// <param name="criteriaFilter">criteria filter</param>
         /// <param name="bypassCache">Flag to bypass cache</param>
         /// <returns>Collection of <see cref="PaymentTransactions">paymentTransactions</see> objects</returns>          
         Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.PaymentTransactions>, int>> GetPaymentTransactionsAsync(int offset, int limit, string documentId,
-            InvoiceTypes documentTypeValue, bool bypassCache = false);
+            InvoiceTypes documentTypeValue, Dtos.PaymentTransactions criteriaFilter, bool bypassCache = false);
 
         /// <summary>
         /// Get a paymentTransactions by guid.

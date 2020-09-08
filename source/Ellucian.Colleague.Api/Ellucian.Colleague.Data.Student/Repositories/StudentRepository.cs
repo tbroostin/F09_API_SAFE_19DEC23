@@ -135,7 +135,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// Get Residency Status for translate of code to description
         /// </summary>
         /// <returns>Residency Statuses Validation table</returns>
-        public async Task<IEnumerable<ResidencyStatus>> GetResidencyStatusesAsync(bool ignoreCache = false)
+        private async Task<IEnumerable<ResidencyStatus>> GetResidencyStatusesAsync(bool ignoreCache = false)
         {
             if (ResidencyStatuses != null)
             {

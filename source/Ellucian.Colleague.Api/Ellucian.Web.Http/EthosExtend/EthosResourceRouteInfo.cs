@@ -31,5 +31,10 @@ namespace Ellucian.Web.Http.EthosExtend
         /// Extended Schema Identifier
         /// </summary>
         public string ExtendedSchemaResourceId { get; set; }
+
+        /// <summary>
+        /// System setting for Bypassing Cache for configuration data
+        /// </summary>
+        public bool BypassCache { get; set; }
     }
 }

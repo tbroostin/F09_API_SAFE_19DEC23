@@ -736,7 +736,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID of the admissionApplications to update</param>
         /// <param name="admissionApplicationsSubmissions">DTO of the updated admissionApplications</param>
-        /// <returns>A AdmissionApplications object <see cref="Dtos.AdmissionApplication2"/> in EEDM format</returns>
+        /// <returns>A AdmissionApplications object <see cref="Dtos.AdmissionApplication3"/> in EEDM format</returns>
         [HttpPut, EedmResponseFilter]
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.AdmissionApplication3> PutAdmissionApplicationsSubmissionsAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.AdmissionApplicationSubmission admissionApplicationsSubmissions)
@@ -773,10 +773,29 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
                 //call import extend method that needs the extracted extension data and the config
                 await _admissionApplicationsService.ImportExtendedEthosData(await ExtractExtendedData(await _admissionApplicationsService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
+                
+                var admissionApplicationSubmissionsOrig = await _admissionApplicationsService.GetAdmissionApplicationsSubmissionsByGuidAsync(guid, true);
+
+                var mergedAdmissionApplicationSubmissions = await PerformPartialPayloadMerge(admissionApplicationsSubmissions, admissionApplicationSubmissionsOrig, dpList, _logger);
+
+                // Error if attempt is made to unset an existing educational goal.
+                if (admissionApplicationSubmissionsOrig != null)
+                {
+                    if (admissionApplicationSubmissionsOrig.EducationalGoal != null && !string.IsNullOrEmpty(admissionApplicationSubmissionsOrig.EducationalGoal.Id))
+                    {
+                        if (mergedAdmissionApplicationSubmissions != null)
+                        {
+                            if (mergedAdmissionApplicationSubmissions.EducationalGoal == null || string.IsNullOrEmpty(mergedAdmissionApplicationSubmissions.EducationalGoal.Id))
+                            {
+                                throw new IntegrationApiException("Missing educationalGoal",
+                                    IntegrationApiUtility.GetDefaultApiError("The educationalGoal is stored to APP.ORIG.EDUC.GOAL and may not be unset."));
+                            }
+                        }
+                    }
+                }
 
                 var admissionApplicationReturn = await _admissionApplicationsService.UpdateAdmissionApplicationsSubmissionAsync(guid,
-                  await PerformPartialPayloadMerge(admissionApplicationsSubmissions, async () => await _admissionApplicationsService.GetAdmissionApplicationsSubmissionsByGuidAsync(guid, true),
-                  dpList, _logger), bypassCache);
+                    mergedAdmissionApplicationSubmissions, bypassCache);
 
                 AddEthosContextProperties(dpList,
                     await _admissionApplicationsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { guid }));

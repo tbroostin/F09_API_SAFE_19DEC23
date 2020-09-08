@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -203,7 +203,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
             return null;
         }
 
-        public async Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId)
+        public async Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, bool bypassCache = false)
         {
             return null;
         }
@@ -215,7 +215,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
 
         public async Task<RequiredDocumentConfiguration> GetRequiredDocumentConfigurationAsync()
         {
-            var rdc = new RequiredDocumentConfiguration(true, WebSortField.Status, WebSortField.OfficeDescription, "Blank status text", "Blank due date text");
+            var rdc = new RequiredDocumentConfiguration() { SuppressInstance = true, PrimarySortField = WebSortField.Status, SecondarySortField = WebSortField.OfficeDescription, TextForBlankStatus = "Blank status text", TextForBlankDueDate = "Blank due date text" };
             return rdc;
         }
 

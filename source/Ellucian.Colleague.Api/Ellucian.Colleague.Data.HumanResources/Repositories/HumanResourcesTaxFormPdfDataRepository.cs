@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -45,7 +45,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         public async Task<bool> GetW2GuamFlag()
         {
             var qtdYtdParameter = await DataReader.ReadRecordAsync<QtdYtdParameterW2Pdf>("HR.PARMS", "QTD.YTD.PARAMETER");
-            if( qtdYtdParameter != null && !string.IsNullOrWhiteSpace(qtdYtdParameter.QypW2UseGuamTemplate))
+            if (qtdYtdParameter != null && !string.IsNullOrWhiteSpace(qtdYtdParameter.QypW2UseGuamTemplate))
             {
                 return qtdYtdParameter.QypW2UseGuamTemplate.ToUpper() == "Y";
             }
@@ -345,7 +345,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
 
             // Call the PDF accessed CTX to send an email notification
-            TxNotifyHrPdfAccessRequest pdfRequest = new TxNotifyHrPdfAccessRequest();            
+            TxNotifyHrPdfAccessRequest pdfRequest = new TxNotifyHrPdfAccessRequest();
             pdfRequest.AFormType = "W2";
             pdfRequest.APersonId = dataContractW2.Ww2oEmployeeId;
             pdfRequest.ARecordId = dataContractW2.Recordkey;
@@ -438,7 +438,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             domainEntityW2c.EmployeeId = dataContractW2c.Ww2coEmployeeId;
             domainEntityW2c.EmployeeFirstName = dataContractW2c.Ww2coFirstName;
             domainEntityW2c.EmployeeLastName = dataContractW2c.Ww2coLastName;
-            domainEntityW2c.EmployeeMiddleName = !string.IsNullOrEmpty(dataContractW2c.Ww2coMiddleName) ? dataContractW2c.Ww2coMiddleName.Substring(0,1) : string.Empty;
+            domainEntityW2c.EmployeeMiddleName = !string.IsNullOrEmpty(dataContractW2c.Ww2coMiddleName) ? dataContractW2c.Ww2coMiddleName.Substring(0, 1) : string.Empty;
             domainEntityW2c.EmployeeSuffix = dataContractW2c.Ww2coSuffix;
             domainEntityW2c.EmployeeAddressLine1 = dataContractW2c.Ww2coEmplyeAddrLine1;
             domainEntityW2c.EmployeeAddressLine2 = dataContractW2c.Ww2coEmplyeAddrLine2;
@@ -495,11 +495,13 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 domainEntityW2c.Box13CheckBox1 = "x";
                 domainEntityW2c.Box13CheckBox1Prev = null;
 
-            } else if (dataContractW2c.Ww2coCheckBox1 == "R")
+            }
+            else if (dataContractW2c.Ww2coCheckBox1 == "R")
             {
                 domainEntityW2c.Box13CheckBox1 = null;
                 domainEntityW2c.Box13CheckBox1Prev = "x";
-            } else
+            }
+            else
             {
                 domainEntityW2c.Box13CheckBox1 = null;
                 domainEntityW2c.Box13CheckBox1Prev = null;
@@ -805,7 +807,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 domainEntityW2c.Box15Line2Section1Prev = dataContractW2c.Ww2coStateCodeBPrev;
             }
-            
+
             if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateIdCPrev))
             {
                 domainEntityW2c.Box15Line1Section2Prev = dataContractW2c.Ww2coStateIdCPrev;
@@ -1459,18 +1461,24 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             t4DomainEntity.EmployeeLastName = dataContractT4.Wt4oSurname.ToUpper();
 
             t4DomainEntity.SocialInsuranceNumber = dataContractT4.Wt4oSin;
-            if(!string.IsNullOrEmpty(t4DomainEntity.SocialInsuranceNumber) && t4DomainEntity.SocialInsuranceNumber.Length > 8)
+            if (!string.IsNullOrEmpty(t4DomainEntity.SocialInsuranceNumber) && t4DomainEntity.SocialInsuranceNumber.Length > 8)
             {
                 t4DomainEntity.SocialInsuranceNumber = t4DomainEntity.SocialInsuranceNumber.Substring(0, 3) + " " + t4DomainEntity.SocialInsuranceNumber.Substring(3, 3) + " " + t4DomainEntity.SocialInsuranceNumber.Substring(6);
             }
 
-            if(dataContractT4.Wt4oPensionRgstNo != null)
+            if (dataContractT4.Wt4oPensionRgstNo != null)
             {
                 t4DomainEntity.RPPorDPSPRegistrationNumber = dataContractT4.Wt4oPensionRgstNo.FirstOrDefault();
             }
 
+            // get AMENDED flag
+            if (dataContractT4.Wt4oFormText != null)
+            {
+                t4DomainEntity.Amended = dataContractT4.Wt4oFormText.FirstOrDefault();
+            }
+
             t4DomainEntity.EmployeeAddressLine1 = dataContractT4.Wt4oAddr1;
-            if(string.IsNullOrWhiteSpace(dataContractT4.Wt4oAddr2))
+            if (string.IsNullOrWhiteSpace(dataContractT4.Wt4oAddr2))
             {
                 t4DomainEntity.EmployeeAddressLine2 = (dataContractT4.Wt4oCity ?? string.Empty) + ", " + (dataContractT4.Wt4oProvinceCode ?? string.Empty) + " " + (dataContractT4.Wt4oPostalCode ?? string.Empty);
                 t4DomainEntity.EmployeeAddressLine3 = countryDesc;
@@ -1489,9 +1497,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             // Employer info
             t4DomainEntity.EmployerAddressLine1 = dataContractT4.Wt4oPayerName1;
-            if(string.IsNullOrWhiteSpace(dataContractT4.Wt4oPayerName2))
+            if (string.IsNullOrWhiteSpace(dataContractT4.Wt4oPayerName2))
             {
-                if(dataContractT4.Wt4oYear != "2010")
+                if (dataContractT4.Wt4oYear != "2010")
                 {
                     t4DomainEntity.EmployerAddressLine2 = dataContractT4.Wt4oPayerAddr1;
                     if (string.IsNullOrWhiteSpace(dataContractT4.Wt4oPayerAddr2))

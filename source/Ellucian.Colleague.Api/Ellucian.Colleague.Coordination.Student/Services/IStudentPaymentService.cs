@@ -27,6 +27,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         
         Task<Dtos.StudentPayment2> CreateAsync2(Dtos.StudentPayment2 generalLedgerDto);
 
+        Task<Dtos.StudentPayment3> GetByIdAsync3(string id);
+
+        Task<Tuple<IEnumerable<Dtos.StudentPayment3>, int>> GetAsync3(int offset, int limit, bool bypassCache, string personId = "", string academicPeriod = "", string fundSource = "", string chargeType = "", string fundDestination = "", string usage = "");
+
+        Task<Dtos.StudentPayment3> CreateAsync3(Dtos.StudentPayment3 generalLedgerDto);
+
         Task DeleteAsync(string id);
     }
 }

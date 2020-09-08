@@ -114,6 +114,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="id">The requested student financial aid award GUID</param>
         /// <returns>A StudentFinancialAidAward DTO</returns>
         [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.StudentFinancialAidAward2> GetById2Async([FromUri] string id)
         {
             bool bypassCache = false;
@@ -136,7 +137,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                     await studentFinancialAidAwardService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                         new List<string>() { id }));
 
-                return await studentFinancialAidAwardService.GetById2Async(id, false);
+                return await studentFinancialAidAwardService.GetById2Async(id, false, bypassCache);
             }
             catch (KeyNotFoundException e)
             {
@@ -154,6 +155,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
@@ -255,7 +261,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 if (CheckForEmptyFilterParameters())
                     return new PagedHttpActionResult<IEnumerable<Dtos.StudentFinancialAidAward2>>(new List<Dtos.StudentFinancialAidAward2>(), page, 0, this.Request);
 
-                var pageOfItems = await studentFinancialAidAwardService.Get2Async(page.Offset, page.Limit, criteriaObj, bypassCache, false);
+                var pageOfItems = await studentFinancialAidAwardService.Get2Async(page.Offset, page.Limit, criteriaObj, string.Empty, bypassCache, false);
 
                 AddEthosContextProperties(
                     await studentFinancialAidAwardService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -284,7 +290,89 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 _logger.Error(e, "Unknown error getting student financial aid award");
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
             }
-        }        
+        }
+
+        /// <summary>
+        /// Retrieves all student financial aid awards for the data model version 11.
+        /// There is a restricted and a non-restricted view of financial aid awards.  This
+        /// is the non-restricted version using student-financial-aid-awards.
+        /// </summary>
+        /// <returns>A Collection of StudentFinancialAidAwards</returns>
+        [HttpGet]
+        [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.StudentFinancialAidAward2))]
+        [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter2))]
+        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        public async Task<IHttpActionResult> Get3Async(Paging page, QueryStringFilter criteria, QueryStringFilter personFilter)
+        {
+            try
+            {
+                bool bypassCache = false;
+                if (Request.Headers.CacheControl != null)
+                {
+                    if (Request.Headers.CacheControl.NoCache)
+                    {
+                        bypassCache = true;
+                    }
+                }
+                if (page == null)
+                {
+                    page = new Paging(200, 0);
+                }
+
+                if (CheckForEmptyFilterParameters())
+                    return new PagedHttpActionResult<IEnumerable<Dtos.StudentFinancialAidAward2>>(new List<Dtos.StudentFinancialAidAward2>(), page, 0, this.Request);
+
+                //Criteria
+                var criteriaObj = GetFilterObject<Dtos.StudentFinancialAidAward2>(_logger, "criteria");
+
+                string personFilterValue = string.Empty;
+                var personFilterObj = GetFilterObject<Dtos.Filters.PersonFilterFilter2>(_logger, "personFilter");
+                if (personFilterObj != null)
+                {
+                    if (personFilterObj.personFilter != null)
+                    {
+                        personFilterValue = personFilterObj.personFilter.Id;
+                    }
+                }
+
+
+                var pageOfItems = await studentFinancialAidAwardService.Get2Async(page.Offset, page.Limit, criteriaObj, personFilterValue, bypassCache, false);
+
+                AddEthosContextProperties(
+                    await studentFinancialAidAwardService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                    await studentFinancialAidAwardService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                    pageOfItems.Item1.Select(i => i.Id).ToList()));
+
+                return new PagedHttpActionResult<IEnumerable<Dtos.StudentFinancialAidAward2>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e, "Unknown error getting student financial aid award");
+                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+            }
+        }
 
         /// <summary>
         /// Retrieves a specified student financial aid award for the data model version 7
@@ -353,6 +441,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="id">The requested student financial aid award GUID</param>
         /// <returns>A StudentFinancialAidAward DTO</returns>
         [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.StudentFinancialAidAward2> GetRestrictedById2Async([FromUri] string id)
         {
             bool bypassCache = false;
@@ -375,7 +464,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                     await studentFinancialAidAwardService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                     new List<string>() { id }));
 
-                return await studentFinancialAidAwardService.GetById2Async(id, true);
+                return await studentFinancialAidAwardService.GetById2Async(id, true, bypassCache);
             }
             catch (KeyNotFoundException e)
             {
@@ -393,6 +482,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
@@ -470,6 +564,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [QueryStringFilterFilter("criteria", typeof(Dtos.StudentFinancialAidAward2))]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<IHttpActionResult> GetRestricted2Async(Paging page, QueryStringFilter criteria)
         {
             try
@@ -493,7 +588,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 if (CheckForEmptyFilterParameters())
                     return new PagedHttpActionResult<IEnumerable<Dtos.StudentFinancialAidAward2>>(new List<Dtos.StudentFinancialAidAward2>(), page, 0, this.Request);
 
-                var pageOfItems = await studentFinancialAidAwardService.Get2Async(page.Offset, page.Limit, criteriaObj, bypassCache, true);
+                var pageOfItems = await studentFinancialAidAwardService.Get2Async(page.Offset, page.Limit, criteriaObj, string.Empty, bypassCache, true);
 
                 AddEthosContextProperties(
                     await studentFinancialAidAwardService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -513,6 +608,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));

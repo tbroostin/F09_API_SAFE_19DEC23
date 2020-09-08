@@ -83,6 +83,12 @@ namespace Ellucian.Colleague.Dtos
         public string DiscountAmount { get; set; }
 
         /// <summary>
+        /// The status of the line item.
+        /// </summary>
+        [JsonProperty("status", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public EnumProperties.LineItemStatus? Status { get; set; }
+
+        /// <summary>
         /// A discount applied to the line item in addition to the overall vendor discount, e.g. discount based on quantity purchased.
         /// </summary>
         [JsonProperty("tradeDiscount", DefaultValueHandling = DefaultValueHandling.Ignore)]

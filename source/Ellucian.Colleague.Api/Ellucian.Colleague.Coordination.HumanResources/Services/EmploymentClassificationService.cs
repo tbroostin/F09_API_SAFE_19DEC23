@@ -1,4 +1,4 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
+using Ellucian.Colleague.Domain.Base.Repositories;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Services
 {
@@ -26,15 +27,16 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             IHumanResourcesReferenceDataRepository hrReferenceDataRepository,
             IAdapterRegistry adapterRegistry,
             ICurrentUserFactory currentUserFactory,
+            IConfigurationRepository configurationRepository,
             IRoleRepository roleRepository,
             ILogger logger)
-            : base(adapterRegistry, currentUserFactory, roleRepository, logger)
+            : base(adapterRegistry, currentUserFactory, roleRepository, logger, null, configurationRepository)
         {
 
             _hrReferenceDataRepository = hrReferenceDataRepository;
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN EEDM VERSION 7</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN HEDM VERSION 7</remarks>
         /// <summary>
         /// Gets all employee classifications
         /// </summary>
@@ -54,7 +56,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             return employeeClassificationCollection;
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN EEDM VERSION 7</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN HEDM VERSION 7</remarks>
         /// <summary>
         /// Get a employee classification from its GUID
         /// </summary>
@@ -72,7 +74,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         }
 
 
-        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN HEDM</remarks>
         /// <summary>
         /// Converts a EmployeeClassification domain entity to its corresponding EmployeeClassification DTO
         /// </summary>
@@ -91,7 +93,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             return employeeClassification;
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN HEDM</remarks>
         /// <summary>
         /// Converts a EmployeeClassificationType domain enumeration value to its corresponding EmployeeClassificationType DTO enumeration value
         /// </summary>

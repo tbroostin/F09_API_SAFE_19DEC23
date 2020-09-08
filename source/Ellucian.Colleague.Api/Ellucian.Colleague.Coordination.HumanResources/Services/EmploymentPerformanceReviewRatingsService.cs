@@ -1,10 +1,8 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Ellucian.Colleague.Coordination.HumanResources.Adapters;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -13,9 +11,8 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Dtos;
-using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Base.Repositories;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Services
 {
@@ -30,15 +27,16 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             IHumanResourcesReferenceDataRepository referenceDataRepository,
             IAdapterRegistry adapterRegistry,
             ICurrentUserFactory currentUserFactory,
+            IConfigurationRepository configurationRepository,
             IRoleRepository roleRepository,
             ILogger logger)
-            : base(adapterRegistry, currentUserFactory, roleRepository, logger)
+            : base(adapterRegistry, currentUserFactory, roleRepository, logger, null, configurationRepository)
         {
 
             _referenceDataRepository = referenceDataRepository;
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN HEDM</remarks>
         /// <summary>
         /// Gets all employment-performance-review-ratings
         /// </summary>
@@ -58,7 +56,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             return employmentPerformanceReviewRatingsCollection;
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN HEDM</remarks>
         /// <summary>
         /// Get a EmploymentPerformanceReviewRatings from its GUID
         /// </summary>
@@ -80,7 +78,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         }
 
 
-        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN HEDM</remarks>
         /// <summary>
         /// Converts a EmploymentPerformanceReviewRatings domain entity to its corresponding EmploymentPerformanceReviewRatings DTO
         /// </summary>

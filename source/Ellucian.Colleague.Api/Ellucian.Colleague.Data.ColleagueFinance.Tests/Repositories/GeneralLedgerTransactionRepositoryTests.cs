@@ -697,15 +697,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task GeneralLedgerTransactionRepository_Get2Async_KeyNotFoundException()
-            {
-                dataReaderMock.Setup(x => x.BulkReadRecordAsync<IntgGlPostings>(It.IsAny<string>(), true)).ReturnsAsync(null);
-                await generalLedgerTransactionRepository.Get2Async("0002024", GlAccessLevel.Full_Access);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(RepositoryException))]
             public async Task GeneralLedgerTransactionRepository_Get2Async_GlDetail_KeyNotFoundException()
             {
                 dataReaderMock.Setup(x => x.BulkReadRecordAsync<IntgGlPostingsDetail>(It.IsAny<string[]>(), true)).ReturnsAsync(null);
@@ -789,7 +781,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(RepositoryException))]
             public async Task GeneralLedgerTransactionRepository_Create2Async_MajorComponentsInvalid()
             {
                 generalLedgerAccountStructure = new GeneralLedgerAccountStructure()

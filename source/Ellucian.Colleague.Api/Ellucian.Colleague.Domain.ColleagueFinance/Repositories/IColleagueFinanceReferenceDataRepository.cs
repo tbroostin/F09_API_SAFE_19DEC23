@@ -165,6 +165,13 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         Task<IEnumerable<ShippingMethod>> GetShippingMethodsAsync(bool ignoreCache);
 
         /// <summary>
+        /// Get guid for ShippingMethods code
+        /// </summary>
+        /// <param name="code">ShippingMethods code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetShippingMethodGuidAsync(string code);
+
+        /// <summary>
         /// Get a collection of ShipToDestinations
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
@@ -195,10 +202,39 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         /// </summary>
         Task<IEnumerable<VendorType>> GetVendorTypesAsync(bool ignoreCache);
 
+        /// <summary>
+        /// Get guid for VendorTypes code
+        /// </summary>
+        /// <param name="code">VendorTypes code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetVendorTypesGuidAsync(string code);
+
+        /// <summary>
+        /// Get a collection of IntgVendorAddressUsages
+        /// </summary>
+        /// <param name="ignoreCache">Bypass cache flag</param>
+        /// <returns>Collection of IntgVendorAddressUsages</returns>
+        Task<IEnumerable<IntgVendorAddressUsages>> GetIntgVendorAddressUsagesAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get a guid of IntgVendorAddressUsages
+        /// </summary>
+        /// <param name="code">IntgVendorAddressUsages code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetIntgVendorAddressUsagesGuidAsync(string code);
+
         // <summary>
         /// Returns domain entities for VendorHoldReasons.
         /// </summary>
         Task<IEnumerable<VendorHoldReasons>> GetVendorHoldReasonsAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get guid for VendorHoldReasons code
+        /// </summary>
+        /// <param name="code">VendorHoldReasons code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetVendorHoldReasonsGuidAsync(string code);
+
         Task<IDictionary<string, string>> GetGuidsForPooleeGLAcctsInFiscalYearsAsync(IEnumerable<string> glAccts);
 
         /// <summary>
@@ -306,6 +342,12 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         /// </summary>
         /// <returns>Collection of ShipToCodes</returns>
         Task<IEnumerable<ShipToCode>> GetShipToCodesAsync();
+
+        /// <summary>
+        /// Get a collection of ShipViaCodes
+        /// </summary>
+        /// <returns>Collection of ShipViaCodes</returns>
+        Task<IEnumerable<ShipViaCode>> GetShipViaCodesAsync();
 
         /// <summary>
         /// Get fixed asset transfer flags

@@ -21,6 +21,8 @@ using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
 using System.Linq;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using System.Web.Http.ModelBinding;
+using Ellucian.Web.Http.ModelBinding;
 
 namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 {
@@ -186,8 +188,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="procurementReceipts">DTO of the new procurementReceipts</param>
         /// <returns>A procurementReceipts object <see cref="Dtos.ProcurementReceipts"/> in EEDM format</returns>
-        [HttpPost]
-        public async Task<Dtos.ProcurementReceipts> PostProcurementReceiptsAsync(Dtos.ProcurementReceipts procurementReceipts)
+        [HttpPost, EedmResponseFilter]
+        public async Task<Dtos.ProcurementReceipts> PostProcurementReceiptsAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.ProcurementReceipts procurementReceipts)
         {
             if (procurementReceipts == null)
             {
@@ -205,7 +207,16 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
             try
             {
-                return await _procurementReceiptsService.CreateProcurementReceiptsAsync(procurementReceipts);
+                //call import extend method that needs the extracted extension data and the config
+                await _procurementReceiptsService.ImportExtendedEthosData(await ExtractExtendedData(await _procurementReceiptsService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
+
+                var procurementReceipt=  await _procurementReceiptsService.CreateProcurementReceiptsAsync(procurementReceipts);
+
+                //store dataprivacy list and get the extended data to store 
+                AddEthosContextProperties(await _procurementReceiptsService.GetDataPrivacyListByApi(GetRouteResourceName(), true),
+                   await _procurementReceiptsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { procurementReceipt.Id }));
+
+                return procurementReceipt;
             }
             catch (KeyNotFoundException e)
             {

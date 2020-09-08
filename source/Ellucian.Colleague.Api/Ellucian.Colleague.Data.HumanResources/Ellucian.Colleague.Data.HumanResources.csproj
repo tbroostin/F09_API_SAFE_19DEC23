@@ -9,8 +9,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Ellucian.Colleague.Data.HumanResources</RootNamespace>
     <AssemblyName>Ellucian.Colleague.Data.HumanResources</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -33,26 +34,26 @@
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Ellucian.Colleague.Configuration, Version=1.21.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\Ellucian.Colleague.Configuration.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Configuration, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Colleague.Configuration.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Domain, Version=1.21.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\Ellucian.Colleague.Domain.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Domain, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Colleague.Domain.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Legacy, Version=1.21.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\Ellucian.Colleague.Legacy.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Legacy, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Colleague.Legacy.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Property, Version=1.21.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\Ellucian.Colleague.Property.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Property, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Colleague.Property.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Data.Colleague, Version=1.21.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\Ellucian.Data.Colleague.dll</HintPath>
+    <Reference Include="Ellucian.Data.Colleague, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Data.Colleague.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Dmi.Client, Version=1.21.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\Ellucian.Dmi.Client.dll</HintPath>
+    <Reference Include="Ellucian.Dmi.Client, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Dmi.Client.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Dmi.Runtime, Version=1.21.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\Ellucian.Dmi.Runtime.dll</HintPath>
+    <Reference Include="Ellucian.Dmi.Runtime, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Dmi.Runtime.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Logging, Version=1.0.0.1, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
       <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.248\lib\net451\Ellucian.Logging.dll</HintPath>
@@ -72,8 +73,8 @@
     <Reference Include="Ellucian.Web.Utility, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
       <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.184\lib\net451\Ellucian.Web.Utility.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.21.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\Ellucian.WebServices.Core.Config.dll</HintPath>
+    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.WebServices.Core.Config.dll</HintPath>
     </Reference>
     <Reference Include="KellermanSoftware.Compare-NET-Objects, Version=2.1.0.0, Culture=neutral, PublicKeyToken=d970ace04cc85217, processorArchitecture=MSIL">
       <HintPath>..\packages\CompareNETObjects.2.01.0.0\lib\net451\KellermanSoftware.Compare-NET-Objects.dll</HintPath>
@@ -115,10 +116,10 @@
       <HintPath>..\packages\slf4net.0.1.32.1\lib\net35\slf4net.dll</HintPath>
     </Reference>
     <Reference Include="System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\System.dll</HintPath>
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\System.dll</HintPath>
     </Reference>
     <Reference Include="System.ComponentModel.DataAnnotations, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\System.ComponentModel.DataAnnotations.dll</HintPath>
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\System.ComponentModel.DataAnnotations.dll</HintPath>
     </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.IdentityModel" />
@@ -127,7 +128,7 @@
       <HintPath>..\packages\System.IdentityModel.Tokens.Jwt.4.0.1\lib\net45\System.IdentityModel.Tokens.Jwt.dll</HintPath>
     </Reference>
     <Reference Include="System.Runtime.Serialization, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\System.Runtime.Serialization.dll</HintPath>
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\System.Runtime.Serialization.dll</HintPath>
     </Reference>
     <Reference Include="System.Threading.Tasks.Dataflow, Version=4.5.24.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -157,6 +158,10 @@
     <Compile Include="DataContracts\HrwebDefaults.cs" />
     <Compile Include="DataContracts\Jobapps.cs" />
     <Compile Include="DataContracts\Jobskills.cs" />
+    <Compile Include="DataContracts\LeaveReqComments.cs" />
+    <Compile Include="DataContracts\LeaveRequest.cs" />
+    <Compile Include="DataContracts\LeaveRequestDetail.cs" />
+    <Compile Include="DataContracts\LeaveRequestStatus.cs" />
     <Compile Include="DataContracts\Leavplan.cs" />
     <Compile Include="DataContracts\LoadPeriods.cs" />
     <Compile Include="DataContracts\PacLoadPeriods.cs" />
@@ -171,6 +176,7 @@
     <Compile Include="DataContracts\Perben.cs" />
     <Compile Include="DataContracts\Perbencs.cs" />
     <Compile Include="DataContracts\Perleave.cs" />
+    <Compile Include="DataContracts\Perlvacc.cs" />
     <Compile Include="DataContracts\Perlvdtl.cs" />
     <Compile Include="DataContracts\Perpos.cs" />
     <Compile Include="DataContracts\Perposwg.cs" />
@@ -190,9 +196,12 @@
     <Compile Include="DataContracts\WebW2cOnline.cs" />
     <Compile Include="DataContracts\WebW2Online.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Repositories\BenefitsEnrollmentConfigurationRepository.cs" />
     <Compile Include="Repositories\ContributionPayrollDeductionsRepository.cs" />
     <Compile Include="Repositories\CurrentBenefitsRepository.cs" />
+    <Compile Include="Repositories\BenefitsEnrollmentRepository.cs" />
     <Compile Include="Repositories\EmployeeCompensationRepository.cs" />
+    <Compile Include="Repositories\EmployeeLeaveRequestRepository.cs" />
     <Compile Include="Repositories\LeaveBalanceConfigurationRepository.cs" />
     <Compile Include="Repositories\PayPeriodsRepository.cs" />
     <Compile Include="Repositories\PersonBeneficiariesRepository.cs" />
@@ -227,8 +236,12 @@
     <Compile Include="Repositories\HumanResourcesTaxFormPdfDataRepository.cs" />
     <Compile Include="Repositories\HumanResourcesTaxFormStatementRepository.cs" />
     <Compile Include="Repositories\TaxFormStatementRepository.cs" />
+    <Compile Include="Transactions\AddBenefitEnrollmentPool.cs" />
     <Compile Include="Transactions\AuthenticatePayrollDepositDirective.cs" />
     <Compile Include="Transactions\CalcTotalCompensation.cs" />
+    <Compile Include="Transactions\CreateLeaveRequest.cs" />
+    <Compile Include="Transactions\CreateLeaveRequestComments.cs" />
+    <Compile Include="Transactions\CreateLeaveRequestStatus.cs" />
     <Compile Include="Transactions\CreatePayrollDeposit.cs" />
     <Compile Include="Transactions\CreatePerposReview.cs" />
     <Compile Include="Transactions\CreatePrDepositCode.cs" />
@@ -237,11 +250,21 @@
     <Compile Include="Transactions\CurrentBenefits.cs" />
     <Compile Include="Transactions\DeletePayrollDeposits.cs" />
     <Compile Include="Transactions\DeletePerposReview.cs" />
+    <Compile Include="Transactions\GetBenefitEnrollmentEligibility.cs" />
+    <Compile Include="Transactions\GetBenefitEnrollmentPackage.cs" />
+    <Compile Include="Transactions\GetBenefitEnrollmentPool.cs" />
+    <Compile Include="Transactions\GetBenefitTypeBenefits.cs" />
+    <Compile Include="Transactions\GetEmployeeBenefitsEnrollmentInfo.cs" />
+    <Compile Include="Transactions\ReopenBenefitSelection.cs" />
     <Compile Include="Transactions\TxNotifyHrPdfAccess.cs" />
     <Compile Include="Transactions\GetFacultyAsgmtAmts.cs" />
+    <Compile Include="Transactions\TxSubmitBenefitElection.cs" />
     <Compile Include="Transactions\TxUpdt1095cAccessTrigger.cs" />
     <Compile Include="Transactions\TxUpdtW2AccessTrigger.cs" />
+    <Compile Include="Transactions\UpdateBenefitSelection.cs" />
+    <Compile Include="Transactions\UpdateBenEnrPool.cs" />
     <Compile Include="Transactions\UpdateEmployee.cs" />
+    <Compile Include="Transactions\UpdateLeaveRequest.cs" />
     <Compile Include="Transactions\UpdatePayrollDeposits.cs" />
   </ItemGroup>
   <ItemGroup>

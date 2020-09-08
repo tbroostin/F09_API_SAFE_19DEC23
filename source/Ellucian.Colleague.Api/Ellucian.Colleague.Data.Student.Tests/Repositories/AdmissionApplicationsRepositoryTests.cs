@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
@@ -18,6 +18,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Domain.Base.Transactions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -28,6 +29,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         public class GetAdmissionApplicationsTests
         {
             Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<IColleagueTransactionInvoker> transManagerMock;
             Mock<ICacheProvider> cacheProviderMock;
             Mock<IColleagueDataReader> dataReaderMock;
             Mock<ILogger> loggerMock;
@@ -40,6 +42,10 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             //Data contract objects returned as responses for student programs
             private StudentPrograms studentProgramsResponseData;
             private Collection<StudentPrograms> studentProgramsResponseCollection;
+
+            //Data contract objects returned as responses for applicants
+            private Applicants applicantsResponseData;
+            private Collection<Applicants> applicantsResponseCollection;
 
             //TestRepositories
             private TestAdmissionApplicationsRepository expectedRepository;
@@ -55,6 +61,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             private string applicationId;
             private string[] applicationIds;
             private string applicationGuid;
+            private string[] applicantIds;
             int offset = 0;
             int limit = 200;
 
@@ -82,6 +89,13 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 IEnumerable<StudentProgram> studentPrograms = await new TestStudentProgramRepository().GetAsync("0000894");
                 studentProgramsResponseCollection = BuildStudentProgramsResponse(studentPrograms);
                 studentProgramsResponseData = studentProgramsResponseCollection.First();
+
+                // build applicants
+                // Set up response for applicants
+                applicantIds = expectedApplications.Where(ap => (!string.IsNullOrWhiteSpace(ap.ApplicantPersonId)))
+                          .Select(ap => ap.ApplicantPersonId).Distinct().ToArray();
+                applicantsResponseCollection = BuildApplicantsResponse(expectedApplications);
+                applicantsResponseData = applicantsResponseCollection.First();
 
                 //build the repository
                 actualRepository = BuildRepository();
@@ -113,6 +127,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 // transaction factory mock
                 transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                transManagerMock = new Mock<IColleagueTransactionInvoker>();
                 // Cache Provider Mock
                 cacheProviderMock = new Mock<ICacheProvider>();
                 // Logger Mock
@@ -125,6 +140,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 // Set up data accessor for mocking 
                 dataReaderMock = new Mock<IColleagueDataReader>();
                 apiSettingsMock = new ApiSettings("TEST");
+
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
 
                 // Set up dataAccessorMock as the object for the DataAccessor
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataReaderMock.Object);
@@ -144,11 +161,44 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(dr => dr.ReadRecordAsync<Applications>("APPLICATIONS", It.IsAny<GuidLookup>(), true)).ReturnsAsync(applicationResponseData);
                 dataReaderMock.Setup(dr => dr.ReadRecordAsync<StudentPrograms>("STUDENT.PROGRAMS", It.IsAny<string>(), true)).ReturnsAsync(studentProgramsResponseData);
                 dataReaderMock.Setup<Task<Collection<StudentPrograms>>>(dr => dr.BulkReadRecordAsync<StudentPrograms>(It.IsAny<string[]>(), true)).ReturnsAsync(studentProgramsResponseCollection);
+                dataReaderMock.Setup(dr => dr.ReadRecordAsync<Applicants>("APPLICANTS", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(applicantsResponseData);
 
                 // Multiple Applications
                 dataReaderMock.Setup(dr => dr.SelectAsync("APPLICATIONS", It.IsAny<string>())).ReturnsAsync(applicationIds);
                 dataReaderMock.Setup(dr => dr.SelectAsync("APPLICATIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(applicationIds);
                 dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<Applications>("APPLICATIONS", It.IsAny<string[]>(), true)).ReturnsAsync(applicationResponseCollection);
+                dataReaderMock.Setup(dr => dr.SelectAsync("APPLICANTS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(applicantIds);
+                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<Applicants>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(applicantsResponseCollection);
+
+                var response = new Ellucian.Colleague.Domain.Base.Transactions.GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "allAdmissionApplicationsCacheKey:",
+                    Entity = "APPLICATIONS",
+                    Sublist = new List<string>() { "1", "2"},
+                    TotalCount = 20,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+                };
+                transManagerMock.Setup(acc => acc.ExecuteAsync<GetCacheApiKeysRequest,
+                    GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>())).ReturnsAsync(response);
+
                 return new AdmissionApplicationsRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
             }
 
@@ -182,7 +232,10 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                         ApplDecisionBy = new List<string>(),
                         ApplLocationDates = new List<DateTime?>(),
                         ApplLocationChangeReasons = new List<string>(),
-                        ApplLocationInfoEntityAssociation = new List<ApplicationsApplLocationInfo>()
+                        ApplLocationInfoEntityAssociation = new List<ApplicationsApplLocationInfo>(),
+                       
+                        ApplIntgCareerGoals = appl.CareerGoals,
+                        ApplInfluencedToApply = appl.Influences
                     };
                     foreach (var status in appl.AdmissionApplicationStatuses)
                     {
@@ -307,6 +360,20 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 return repoStudentPrograms;
             }
 
+            private Collection<Applicants> BuildApplicantsResponse(List<AdmissionApplication> applData)
+            {
+                var responseCollection = new Collection<Applicants>();
+                foreach (var appl in applData)
+                {
+                    var applicantRecord = new Applicants()
+                    {
+                        AppOrigEducGoal = "PHD",
+                        Recordkey = appl.ApplicantPersonId
+                    };
+                    responseCollection.Add(applicantRecord);
+                }
+                return responseCollection;
+            }
             [TestMethod]
             public async Task ApplicationRecord_GetById_Test()
             {
@@ -361,6 +428,9 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(expectedApplication.AppliedOn, actualApplication.AppliedOn, "AppliedOn");
                 Assert.AreEqual(expectedApplication.MatriculatedOn, actualApplication.MatriculatedOn, "MatriculatedOn");
                 Assert.AreEqual(expectedApplication.WithdrawnOn, actualApplication.WithdrawnOn, "WithdrawnOn");
+                Assert.AreEqual(expectedApplication.EducationalGoal, actualApplication.EducationalGoal, "EducationalGoal");
+                Assert.AreEqual(expectedApplication.CareerGoals, actualApplication.CareerGoals, "CareerGoals");
+                Assert.AreEqual(expectedApplication.Influences, actualApplication.Influences, "Influences");
             }
 
             [TestMethod]
@@ -431,6 +501,9 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     Assert.AreEqual(expectedApplication.AppliedOn, actualApplication.AppliedOn, "AppliedOn");
                     Assert.AreEqual(expectedApplication.MatriculatedOn, actualApplication.MatriculatedOn, "MatriculatedOn");
                     Assert.AreEqual(expectedApplication.WithdrawnOn, actualApplication.WithdrawnOn, "WithdrawnOn");
+                    Assert.AreEqual(expectedApplication.EducationalGoal, actualApplication.EducationalGoal, "EducationalGoal");
+                    Assert.AreEqual(expectedApplication.CareerGoals, actualApplication.CareerGoals, "CareerGoals");
+                    Assert.AreEqual(expectedApplication.Influences, actualApplication.Influences, "Influences");
                 }
             }
 
@@ -715,7 +788,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 Dictionary<string, GuidLookupResult> firstResult = new Dictionary<string, GuidLookupResult>()
                 {
-                    { "KEY", new GuidLookupResult() { Entity = "APPLICATIONS", PrimaryKey = null } }
+                    { "KEY", new GuidLookupResult() { Entity = "APPLICATIONS", PrimaryKey = "1" } }
                 };
 
                 dataReaderMock.SetupSequence(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).Returns(Task.FromResult(firstResult)).Returns(Task.FromResult(dicResult));
@@ -743,6 +816,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         private Applications application;
 
+        private Applicants applicant; 
+        
         private Collection<ApplicationStatuses> applicationStatuses;
 
         private Collection<StudentPrograms> studentPrograms;
@@ -774,6 +849,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             dicResult = null;
             entity = null;
             application = null;
+            applicant = null;
             applicationStatuses = null;
             studentPrograms = null;
         }
@@ -800,7 +876,10 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 ApplicationSource = "1",
                 ApplicationAttendedInstead = "1",
                 ApplicationWithdrawReason = "1",
-                WithdrawnOn = DateTime.Now.AddDays(-10)
+                WithdrawnOn = DateTime.Now.AddDays(-10),
+                EducationalGoal = "1",
+                CareerGoals = new List<string>() { "1", "2" },
+                Influences = new List<string>() { "1", "2" }
             };
 
             entity.ApplicationDisciplines = new List<ApplicationDiscipline>()
@@ -849,7 +928,15 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 ApplStatusesEntityAssociation = new List<ApplicationsApplStatuses>()
                     {
                         new ApplicationsApplStatuses(){ ApplStatusAssocMember = "1" }
-                    }
+                    },
+                ApplIntgCareerGoals = new List<string>() { "1", "2" },
+                ApplInfluencedToApply = new List<string>() { "1", "2" }
+            };
+
+            applicant = new Applicants()
+            {
+                Recordkey = "1",
+                AppOrigEducGoal = "1"
             };
 
             studentPrograms = new Collection<StudentPrograms>()
@@ -870,6 +957,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             dataReaderMock.Setup(d => d.BulkReadRecordAsync<StudentPrograms>(It.IsAny<string[]>(), true)).ReturnsAsync(studentPrograms);
             dataReaderMock.Setup(d => d.ReadRecordAsync<Applications>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(application);
             dataReaderMock.Setup(d => d.ReadRecordAsync<Applications>(It.IsAny<string>(), It.IsAny<GuidLookup>(), true)).ReturnsAsync(application);
+            dataReaderMock.Setup(d => d.ReadRecordAsync<Applicants>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(applicant);
         }
 
         [TestMethod]

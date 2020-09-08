@@ -1,4 +1,4 @@
-﻿//Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -11,6 +11,7 @@ using slf4net;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -43,6 +44,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Returns all payroll deduction arrangement change reasons.
         /// </summary>
         /// <returns></returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Dtos.PayrollDeductionArrangementChangeReason>> GetAllPayrollDeductionArrangementChangeReasonsAsync()
         {
@@ -56,7 +58,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                         bypassCache = true;
                     }
                 }
-                return await _payrollDeductionArrangementChangeReasonsService.GetPayrollDeductionArrangementChangeReasonsAsync(bypassCache);
+                var payrollDeductionArrangementChangeReasons = await _payrollDeductionArrangementChangeReasonsService.GetPayrollDeductionArrangementChangeReasonsAsync(bypassCache);
+
+                if (payrollDeductionArrangementChangeReasons != null && payrollDeductionArrangementChangeReasons.Any())
+                {
+                    AddEthosContextProperties(await _payrollDeductionArrangementChangeReasonsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _payrollDeductionArrangementChangeReasonsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              payrollDeductionArrangementChangeReasons.Select(a => a.Id).ToList()));
+                }
+                return payrollDeductionArrangementChangeReasons;
             }
             catch (Exception e)
             {
@@ -70,10 +80,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Dtos.PayrollDeductionArrangementChangeReason> GetPayrollDeductionArrangementChangeReasonByIdAsync([FromUri] string id)
         {
             try
             {
+                AddEthosContextProperties(
+                   await _payrollDeductionArrangementChangeReasonsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                   await _payrollDeductionArrangementChangeReasonsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { id }));
                 return await _payrollDeductionArrangementChangeReasonsService.GetPayrollDeductionArrangementChangeReasonByIdAsync(id);
             }
             catch (KeyNotFoundException e)

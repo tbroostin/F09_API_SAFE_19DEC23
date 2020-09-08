@@ -119,15 +119,32 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             var studentUnverifiedGradesDtos = new List<Dtos.StudentUnverifiedGrades>();
             Tuple<IEnumerable<Domain.Student.Entities.StudentUnverifiedGrades>, int> studentUnverifiedGradesEntities = null;
-            studentUnverifiedGradesEntities = await _studentUnverifiedGradesRepository.GetStudentUnverifiedGradesAsync(offset, limit, bypassCache, newStudent, newSectionRegistration, newSection);
-
-            if (studentUnverifiedGradesEntities != null && studentUnverifiedGradesEntities.Item1.Any())
+            try
             {
-                studentUnverifiedGradesDtos = (await ConvertStudentUnverifiedGradesEntityToDto(studentUnverifiedGradesEntities.Item1, bypassCache)).ToList();
-                if (IntegrationApiException != null)
+                studentUnverifiedGradesEntities = await _studentUnverifiedGradesRepository.GetStudentUnverifiedGradesAsync(offset, limit, bypassCache, newStudent, newSectionRegistration, newSection);
+
+                if (studentUnverifiedGradesEntities != null && studentUnverifiedGradesEntities.Item1 != null && studentUnverifiedGradesEntities.Item1.Any())
                 {
-                    throw IntegrationApiException;
+                    studentUnverifiedGradesDtos = (await ConvertStudentUnverifiedGradesEntityToDto(studentUnverifiedGradesEntities.Item1, bypassCache)).ToList();
+                    if (IntegrationApiException != null)
+                    {
+                        throw IntegrationApiException;
+                    }
                 }
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+            catch (IntegrationApiException)
+            {
+                throw IntegrationApiException;
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Bad.Data");
+                throw IntegrationApiException;
             }
 
             return new Tuple<IEnumerable<Dtos.StudentUnverifiedGrades>, int>(studentUnverifiedGradesDtos, studentUnverifiedGradesEntities.Item2);            
@@ -141,8 +158,27 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         public async Task<Ellucian.Colleague.Dtos.StudentUnverifiedGrades> GetStudentUnverifiedGradesByGuidAsync(string guid, bool bypassCache = true)
         {
             CheckViewStudentUnverifiedGradesPermission();
-                        
-            var studentUnverifiedGradesEntity = await _studentUnverifiedGradesRepository.GetStudentUnverifiedGradeByGuidAsync(guid);
+
+            Domain.Student.Entities.StudentUnverifiedGrades studentUnverifiedGradesEntity = null;
+
+            try
+            {
+                studentUnverifiedGradesEntity = await _studentUnverifiedGradesRepository.GetStudentUnverifiedGradeByGuidAsync(guid);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+            catch (KeyNotFoundException ex)
+            {
+                throw ex;
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Bad.Data", guid);
+                throw IntegrationApiException;
+            }
 
             //HED-23209/24644
             var allGrades = string.Concat(studentUnverifiedGradesEntity.FinalGrade, studentUnverifiedGradesEntity.MidtermGrade1, studentUnverifiedGradesEntity.MidtermGrade2,
@@ -237,19 +273,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 catch (RepositoryException ex)
                 {
-                    throw ex;
+                    IntegrationApiExceptionAddError(ex);
+                    throw IntegrationApiException;
+                }
+                catch (IntegrationApiException)
+                {
+                    throw IntegrationApiException;
                 }
                 catch (KeyNotFoundException ex)
                 {
                     throw ex;
                 }
-                catch (ArgumentException ex)
-                {
-                    throw ex;
-                }
                 catch (Exception ex)
                 {
-                    throw new Exception(ex.Message, ex.InnerException);
+                    IntegrationApiExceptionAddError(ex.Message, "Create.Update.Exception", studentUnverifiedGradesSubmissions.Id, studentUnverifiedGradesSubmissionsEntityId);
+                    throw IntegrationApiException;
                 }
             }
             // perform a create instead
@@ -288,11 +326,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (RepositoryException ex)
             {
-                throw ex;
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+            catch (IntegrationApiException)
+            {
+                throw IntegrationApiException;
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                IntegrationApiExceptionAddError(ex.Message, "Create.Update.Exception", studentUnverifiedGradesSubmissions.Id);
+                throw IntegrationApiException;
             }
         }
 
@@ -321,7 +365,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 studentAcadCredId = await _studentUnverifiedGradesRepository.GetStudentAcademicCredIdFromGuidAsync(source.SectionRegistration.Id);
                 if (string.IsNullOrEmpty(studentAcadCredId))
                 {
-                    throw new IntegrationApiException(string.Concat("Unable to obtain id for SectionRegistration:  ", source.SectionRegistration.Id));
+                    IntegrationApiExceptionAddError(string.Concat("Unable to obtain id for SectionRegistration:  ", source.SectionRegistration.Id), "Validation.Exception", source.Id);
+                    throw IntegrationApiException;
                 }
                 var studentAcadCredData = await _studentUnverifiedGradesRepository.GetStudentAcadCredDataFromIdAsync(studentAcadCredId);
                 studentId = studentAcadCredData.Item1;
@@ -341,7 +386,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if ((source.LastAttendance.Status == StudentUnverifiedGradesStatus.Neverattended)
                     && (source.LastAttendance.Date != null))
                 {
-                    throw new IntegrationApiException("Never attended status and last attendance date may not both be set.");
+                    IntegrationApiExceptionAddError("Never attended status and last attendance date may not both be set.", "Validation.Exception", source.Id, studentCourseSecId);
                 }
 
                 if (source.LastAttendance.Status == StudentUnverifiedGradesStatus.Neverattended)
@@ -364,16 +409,22 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var gradeEntity = (await GetGradesAsync(bypassCache)).FirstOrDefault(g => g.Guid == grade.Grade.Id);
                 if (gradeEntity == null)
                 {
-                    throw new IntegrationApiException(string.Format("Unable to retrieve grade definition for id: '{0}'.", grade.Grade.Id));
+                    IntegrationApiExceptionAddError(string.Format("Unable to retrieve grade definition for id: '{0}'.", grade.Grade.Id), "Validation.Exception", source.Id, studentCourseSecId);
                 }
-                if ((!string.IsNullOrEmpty(sectionGradeScheme)) && (sectionGradeScheme != gradeEntity.GradeSchemeCode))
+                else
                 {
-                    throw new IntegrationApiException(string.Concat("Section grade-scheme code '", sectionGradeScheme, "' does not match grade grade-scheme '", gradeEntity.GradeSchemeCode, "'"));
+                    if ((!string.IsNullOrEmpty(sectionGradeScheme)) && (sectionGradeScheme != gradeEntity.GradeSchemeCode))
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("Section grade-scheme code '", sectionGradeScheme, "' does not match grade grade-scheme '", gradeEntity.GradeSchemeCode, "'"), "Validation.Exception", source.Id, studentCourseSecId);
+                    }
+                    else
+                    {
+                        gradeId = gradeEntity.Id;
+                        incompleteGrade = gradeEntity.IncompleteGrade;
+                        studentUnverifiedGradesSubmission.GradeScheme = gradeEntity.GradeSchemeCode;
+                        studentUnverifiedGradesSubmission.GradeId = gradeId;
+                    }
                 }
-                gradeId = gradeEntity.Id;
-                incompleteGrade = gradeEntity.IncompleteGrade;
-                studentUnverifiedGradesSubmission.GradeScheme = gradeEntity.GradeSchemeCode;
-                studentUnverifiedGradesSubmission.GradeId = gradeId;
             }
 
             if ((grade.Type != null) && (!string.IsNullOrEmpty(grade.Type.Id)))
@@ -381,33 +432,36 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var gradeType = (await GetGradeTypesAsync(bypassCache)).FirstOrDefault(t => t.Guid == grade.Type.Id);
                 if ((gradeType == null) || (string.IsNullOrEmpty(gradeType.Code)))
                 {
-                    throw new IntegrationApiException(string.Format("Unable to retrieve grade types for id: '{0}'.", grade.Type.Id));
+                    IntegrationApiExceptionAddError(string.Format("Unable to retrieve grade types for id: '{0}'.", grade.Type.Id), "Validation.Exception", source.Id, studentCourseSecId);
                 }
-                studentUnverifiedGradesSubmission.GradeType = gradeType.Code;
-                switch (gradeType.Code)
+                else
                 {
-                    case "FINAL":
-                        studentUnverifiedGradesSubmission.FinalGrade = gradeId;
-                        break;
-                    case "MID1":
-                        studentUnverifiedGradesSubmission.MidtermGrade1 = gradeId;
-                        break;
-                    case "MID2":
-                        studentUnverifiedGradesSubmission.MidtermGrade2 = gradeId;
-                        break;
-                    case "MID3":
-                        studentUnverifiedGradesSubmission.MidtermGrade3 = gradeId;
-                        break;
-                    case "MID4":
-                        studentUnverifiedGradesSubmission.MidtermGrade4 = gradeId;
-                        break;
-                    case "MID5":
-                        studentUnverifiedGradesSubmission.MidtermGrade5 = gradeId;
-                        break;
-                    case "MID6":
-                        studentUnverifiedGradesSubmission.MidtermGrade6 = gradeId;
-                        break;
-                    default: break;
+                    studentUnverifiedGradesSubmission.GradeType = gradeType.Code;
+                    switch (gradeType.Code)
+                    {
+                        case "FINAL":
+                            studentUnverifiedGradesSubmission.FinalGrade = gradeId;
+                            break;
+                        case "MID1":
+                            studentUnverifiedGradesSubmission.MidtermGrade1 = gradeId;
+                            break;
+                        case "MID2":
+                            studentUnverifiedGradesSubmission.MidtermGrade2 = gradeId;
+                            break;
+                        case "MID3":
+                            studentUnverifiedGradesSubmission.MidtermGrade3 = gradeId;
+                            break;
+                        case "MID4":
+                            studentUnverifiedGradesSubmission.MidtermGrade4 = gradeId;
+                            break;
+                        case "MID5":
+                            studentUnverifiedGradesSubmission.MidtermGrade5 = gradeId;
+                            break;
+                        case "MID6":
+                            studentUnverifiedGradesSubmission.MidtermGrade6 = gradeId;
+                            break;
+                        default: break;
+                    }
                 }
 
                 //The final grade is not defined as an incomplete grade (GRD.INCOMPLETE.GRADE is not null) 
@@ -415,59 +469,83 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if ((string.IsNullOrEmpty(incompleteGrade)) && (grade.IncompleteGrade != null)
                     && (grade.IncompleteGrade.ExtensionDate != null) && (grade.IncompleteGrade.ExtensionDate.HasValue))
                 {
-                    throw new IntegrationApiException(string.Format("Final grade does not allow an expiration date."));
+                    if (gradeType.Code == "FINAL")
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Final grade does not allow an expiration date."), "Validation.Exception", source.Id, studentCourseSecId);
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Incomplete grade details only apply to final grades."), "Validation.Exception", source.Id, studentCourseSecId);
+                    }
                 }
-
-                if (grade.IncompleteGrade != null)
+                else
                 {
-                    //If the object is included in the payload and the grade type is not "FINAL" issue an error that incomplete grade details only apply to final grades 
-                    if (gradeType.Code != "FINAL")
+                    if (grade.IncompleteGrade != null)
                     {
-                        throw new IntegrationApiException("Incomplete grade details only apply to final grades.");
-                    }
-                    if (((grade.IncompleteGrade.FinalGrade != null) || (grade.IncompleteGrade.ExtensionDate.HasValue))
-                        && (string.IsNullOrEmpty(incompleteGrade)))
-                    {
-                        throw new IntegrationApiException("Grade does not have an associated incomplete grade.");
-                    }
-                    if ((grade.IncompleteGrade.ExtensionDate != null) && (grade.IncompleteGrade.ExtensionDate.HasValue))
-                    {
-                        studentUnverifiedGradesSubmission.FinalGradeDate = grade.IncompleteGrade.ExtensionDate;
-                    }
-                    if ((grade.IncompleteGrade.FinalGrade != null) && (!string.IsNullOrEmpty(grade.IncompleteGrade.FinalGrade.Id)))
-                    {
-                       
-                        var incompleteGradeEntity = (await GetGradesAsync(bypassCache)).FirstOrDefault(g => g.Guid == grade.IncompleteGrade.FinalGrade.Id);
-                        if (incompleteGradeEntity == null)
+                        //If the object is included in the payload and the grade type is not "FINAL" issue an error that incomplete grade details only apply to final grades 
+                        if (gradeType.Code != "FINAL")
                         {
-                            throw new IntegrationApiException(string.Format("Unable to retrieve grade definition for grade.IncompleteGrade.FinalGrade.Id: '{0}'.", grade.IncompleteGrade.FinalGrade.Id));
+                            IntegrationApiExceptionAddError("Incomplete grade details only apply to final grades.", "Validation.Exception", source.Id, studentCourseSecId);
                         }
-                        //If GRD.INCOMPLETE.GRADE is blank then issue an error
-                        if (incompleteGradeEntity.IncompleteGrade == null)
+                        else
                         {
-                            throw new IntegrationApiException("Grade submitted is not an incomplete grade.");
-                        }
-                        //The grade.incompleteGradeDetails.defaultFinalGrade does not match the GRD.INCOMPLETE.GRADE
-                        if (incompleteGradeEntity.Id != incompleteGrade)
-                        {
-                            throw new IntegrationApiException(string.Format("Incomplete final grade is not valid for grade '{0}'.", incompleteGradeEntity.Id));
-                        }
+                            if (((grade.IncompleteGrade.FinalGrade != null) || (grade.IncompleteGrade.ExtensionDate.HasValue))
+                                && (string.IsNullOrEmpty(incompleteGrade)))
+                            {
+                                IntegrationApiExceptionAddError("Grade does not have an associated incomplete grade.", "Validation.Exception", source.Id, studentCourseSecId);
+                            }
+                            else
+                            {
+                                if ((grade.IncompleteGrade.ExtensionDate != null) && (grade.IncompleteGrade.ExtensionDate.HasValue))
+                                {
+                                    studentUnverifiedGradesSubmission.FinalGradeDate = grade.IncompleteGrade.ExtensionDate;
+                                }
+                                if ((grade.IncompleteGrade.FinalGrade != null) && (!string.IsNullOrEmpty(grade.IncompleteGrade.FinalGrade.Id)))
+                                {
 
-                        //if ((grade.IncompleteGrade.ExtensionDate != null) && (grade.IncompleteGrade.ExtensionDate.HasValue))
-                        //{
-                        //    studentUnverifiedGradesSubmission.FinalGradeDate = grade.IncompleteGrade.ExtensionDate;
-                        //}
-                        studentUnverifiedGradesSubmission.FinalGrade = gradeId; 
+                                    var incompleteGradeEntity = (await GetGradesAsync(bypassCache)).FirstOrDefault(g => g.Guid == grade.IncompleteGrade.FinalGrade.Id);
+                                    if (incompleteGradeEntity == null)
+                                    {
+                                        IntegrationApiExceptionAddError(string.Format("Unable to retrieve grade definition for grade.IncompleteGrade.FinalGrade.Id: '{0}'.", grade.IncompleteGrade.FinalGrade.Id), "Validation.Exception", source.Id, studentCourseSecId);
+                                    }
+                                    else
+                                    {
+                                        //If GRD.INCOMPLETE.GRADE is blank then issue an error
+                                        if (incompleteGradeEntity.IncompleteGrade == null)
+                                        {
+                                            IntegrationApiExceptionAddError("Grade submitted is not an incomplete grade.", "Validation.Exception", source.Id, studentCourseSecId);
+                                        }
+                                        //The grade.incompleteGradeDetails.defaultFinalGrade does not match the GRD.INCOMPLETE.GRADE
+                                        if (incompleteGradeEntity.Id != incompleteGrade)
+                                        {
+                                            IntegrationApiExceptionAddError(string.Format("Incomplete final grade is not valid for grade '{0}'.", incompleteGradeEntity.Id), "Validation.Exception", source.Id, studentCourseSecId);
+                                        }
+
+                                        //if ((grade.IncompleteGrade.ExtensionDate != null) && (grade.IncompleteGrade.ExtensionDate.HasValue))
+                                        //{
+                                        //    studentUnverifiedGradesSubmission.FinalGradeDate = grade.IncompleteGrade.ExtensionDate;
+                                        //}
+                                        studentUnverifiedGradesSubmission.FinalGrade = gradeId;
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+
             return studentUnverifiedGradesSubmission;
         }
 
         /// <summary>
         /// Helper method to determine if the user has permission to create/update StudentUnverifiedGradesSubmissions.
         /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
+        /// <exception><see cref="IntegrationApiException">IntegrationApiException</see></exception>
         private void CheckCreateStudentUnverifiedGradesSubmissionsPermission()
         {
             bool hasPermission = HasPermission(StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions);
@@ -475,7 +553,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             // User is not allowed to view student unverified grades without the appropriate permissions
             if (!hasPermission)
             {
-                throw new PermissionsException(string.Format("User {0} does not have permission to create Student Unverified Grades.", CurrentUser.UserId));
+                IntegrationApiExceptionAddError("User '" + CurrentUser.UserId + "' is not authorized to create student-unverified-grades-submissions.", "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
+                throw IntegrationApiException;
             }
         }
 
@@ -523,8 +602,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             }
 
-            if (IntegrationApiException != null)
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
                 throw IntegrationApiException;
+            }
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -833,7 +914,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         if (gradeSchemes != null)
                         {
                             var gradeScheme = gradeSchemes.FirstOrDefault(t => t.Code == source.GradeScheme);
-                            if (gradeScheme != null)
+                            if (gradeScheme == null || string.IsNullOrEmpty(gradeScheme.Guid))
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Invalid grade scheme or missing GUID for grade scheme code'{0}'.", source.GradeScheme), guid: source.Guid, id: source.StudentCourseSecId);
+                            }
+                            else
                             {
                                 studentUnverifiedGrade.AwardGradeScheme = new GuidObject2(gradeScheme.Guid);
                             }
@@ -1067,7 +1152,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             // User is not allowed to view student unverified grades without the appropriate permissions
             if (!hasPermission)
             {
-                IntegrationApiExceptionAddError("User '" + CurrentUser.UserId + "' is not authorized to view student unverified grades.", "Authentication.Required");
+                IntegrationApiExceptionAddError("User '" + CurrentUser.UserId + "' is not authorized to view student-unverified-grades.", "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
                 throw IntegrationApiException;
             }
         }

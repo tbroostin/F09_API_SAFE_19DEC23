@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
@@ -2084,38 +2084,45 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
         }
 
+    
+    
         [TestClass]
         public class ApplicationInfluences
         {
             Mock<IColleagueTransactionFactory> transFactoryMock;
-            //Mock<ObjectCache> localCacheMock;
             Mock<ICacheProvider> cacheProviderMock;
             Mock<IColleagueDataReader> dataAccessorMock;
             Mock<ILogger> loggerMock;
-            IEnumerable<Ellucian.Colleague.Domain.Student.Entities.ApplicationInfluence> allApplicationInfluences;
-            ApplValcodes ApplicationInfluencesValcodeResponse;
-            string valcodeName;
+            IEnumerable<ApplicationInfluence> allApplicationInfluences;
+            ApplValcodes applicationInfluencesValcodeResponse;
+            string domainEntityNameName;
             ApiSettings apiSettings;
+
+            Mock<IStudentReferenceDataRepository> referenceDataRepositoryMock;
+            IStudentReferenceDataRepository referenceDataRepository;
             StudentReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
             public void Initialize()
             {
                 loggerMock = new Mock<ILogger>();
+                apiSettings = new ApiSettings("TEST");
 
-                // Build responses used for mocking
+                //allChargeAssessmentMethods = new TestStudentReferenceDataRepository().GetChargeAssessmentMethodsAsync(false).Result;
                 allApplicationInfluences = new TestStudentReferenceDataRepository().GetApplicationInfluencesAsync().Result;
+                applicationInfluencesValcodeResponse = BuildValcodeResponse(allApplicationInfluences);
+                //var chargeAssessmentMethodsValResponse = new List<string>() { "2" };
+                //applicationInfluencesValcodeResponse.ValActionCode1 = chargeAssessmentMethodsValResponse;
 
-                ApplicationInfluencesValcodeResponse = BuildValcodeResponse(allApplicationInfluences);
+                referenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
+                referenceDataRepository = referenceDataRepositoryMock.Object;
 
-                // Build application influences repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
-                valcodeName = referenceDataRepo.BuildFullCacheKey("ST_APPL.INFLUENCES");
+                domainEntityNameName = referenceDataRepo.BuildFullCacheKey("ST_APPL.INFLUENCES_GUID");
 
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                    x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
                    .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
-
             }
 
             [TestCleanup]
@@ -2124,74 +2131,82 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 transFactoryMock = null;
                 dataAccessorMock = null;
                 cacheProviderMock = null;
-                ApplicationInfluencesValcodeResponse = null;
+                applicationInfluencesValcodeResponse = null;
                 allApplicationInfluences = null;
                 referenceDataRepo = null;
             }
 
+
             [TestMethod]
-            public async Task StudentReferenceDataRepo_GetsApplicationInfluences()
+            public async Task StudentReferenceDataRepo_GetApplicationInfluencesCacheAsync()
             {
-                var repo = await referenceDataRepo.GetApplicationInfluencesAsync();
+                var chargeAssessmentMethods = await referenceDataRepo.GetApplicationInfluencesAsync(false);
 
                 for (int i = 0; i < allApplicationInfluences.Count(); i++)
                 {
-                    Assert.AreEqual(allApplicationInfluences.ElementAt(i).Code, repo.ElementAt(i).Code);
-                    Assert.AreEqual(allApplicationInfluences.ElementAt(i).Description, repo.ElementAt(i).Description);
+                    Assert.AreEqual(allApplicationInfluences.ElementAt(i).Code, chargeAssessmentMethods.ElementAt(i).Code);
+                    Assert.AreEqual(allApplicationInfluences.ElementAt(i).Description, chargeAssessmentMethods.ElementAt(i).Description);
                 }
             }
 
             [TestMethod]
-            public async Task StudentReferenceDataRepo_GetApplicationInfluences_WritesToCache()
+            public async Task StudentReferenceDataRepo_GetApplicationInfluencesNonCacheAsync()
             {
-                // Set up local cache mock to respond to cache request:
-                //  -to "Contains" request, return "false" to indicate item is not in cache
-                //  -to cache "Get" request, return null so we know it's reading from the "repository"
-                cacheProviderMock.Setup(x => x.Contains(valcodeName, null)).Returns(false);
-                cacheProviderMock.Setup(x => x.Get(valcodeName, null)).Returns(null);
+                var statuses = await referenceDataRepo.GetApplicationInfluencesAsync(true);
 
-                // return a valid response to the data accessor request
-                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(ApplicationInfluencesValcodeResponse);
-
-                // But after data accessor read, set up mocking so we can verify the list of application influences was written to the cache
-                cacheProviderMock.Setup(x => x.AddAndUnlockSemaphore(valcodeName, It.IsAny<Object>(), It.IsAny<SemaphoreSlim>(), It.IsAny<CacheItemPolicy>(), null)).Verifiable();
-
-                // Verify that application influences were returned, which means they came from the "repository".
-                Assert.IsTrue((await referenceDataRepo.GetApplicationInfluencesAsync()).Count() == allApplicationInfluences.Count());
-
-                // Verify that the application influences item was added to the cache after it was read from the repository
-                cacheProviderMock.Verify(m => m.AddAndUnlockSemaphore(valcodeName, It.IsAny<Object>(), It.IsAny<SemaphoreSlim>(), It.IsAny<CacheItemPolicy>(), null));
+                for (int i = 0; i < allApplicationInfluences.Count(); i++)
+                {
+                    Assert.AreEqual(allApplicationInfluences.ElementAt(i).Code, statuses.ElementAt(i).Code);
+                    Assert.AreEqual(allApplicationInfluences.ElementAt(i).Description, statuses.ElementAt(i).Description);
+                }
             }
 
             [TestMethod]
-            public async Task StudentReferenceDataRepo_GetApplicationInfluences_Cached()
+            public async Task StudentReferenceDataRepo_GetApplicationInfluences_WritesToCacheAsync()
             {
-                object lockHandle = null;
+
                 // Set up local cache mock to respond to cache request:
                 //  -to "Contains" request, return "false" to indicate item is not in cache
-                //  -to cache "Get" request, return null so we know it's getting data from "repository"
-                cacheProviderMock.Setup(x => x.Contains(valcodeName, null)).Returns(false);
-                cacheProviderMock.Setup(x => x.GetAndLock(valcodeName, out lockHandle, null)).Returns(null);
+                //  -to cache "Get" request, return null so we know it's reading from the "repository"
+                cacheProviderMock.Setup(x => x.Contains(domainEntityNameName, null)).Returns(false);
+                cacheProviderMock.Setup(x => x.Get(domainEntityNameName, null)).Returns(null);
 
-                // Get these codes to populate the cache
-                var applicationInfluences = (await referenceDataRepo.GetApplicationInfluencesAsync());
-                // Assert the types are returned
-                Assert.IsTrue((await referenceDataRepo.GetApplicationInfluencesAsync()).Count() == allApplicationInfluences.Count());
-                // Make sure we can verify that it's in the cache
-                cacheProviderMock.Setup(x => x.Contains(valcodeName, null)).Returns(true);
-                var applicationInfluencesTuple = new Tuple<object, SemaphoreSlim>(applicationInfluences, new SemaphoreSlim(1, 1));
-                cacheProviderMock.Setup(x => x.GetAndLockSemaphoreAsync(valcodeName, null)).ReturnsAsync(applicationInfluencesTuple).Verifiable();
+                // return a valid response to the data accessor request
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "APPL.INFLUENCES", It.IsAny<bool>())).ReturnsAsync(applicationInfluencesValcodeResponse);
 
-                // Verify that the applicationInfluences are now retrieved from cache
-                applicationInfluences = (await referenceDataRepo.GetApplicationInfluencesAsync());
-                cacheProviderMock.Verify(m => m.GetAndLockSemaphoreAsync(valcodeName, null));
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                 x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                 .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                // But after data accessor read, set up mocking so we can verify the list of chargeAssessmentMethods was written to the cache
+                cacheProviderMock.Setup(x => x.Add(It.IsAny<string>(), It.IsAny<Task<List<ChargeAssessmentMethod>>>(), It.IsAny<CacheItemPolicy>(), null)).Verifiable();
+
+                cacheProviderMock.Setup(x => x.Contains(referenceDataRepo.BuildFullCacheKey("ST_APPL.INFLUENCES"), null)).Returns(true);
+                var appInfluenceMethods = await referenceDataRepo.GetApplicationInfluencesAsync(false);
+                cacheProviderMock.Setup(x => x.Get(referenceDataRepo.BuildFullCacheKey("ST_APPL.INFLUENCES"), null)).Returns(appInfluenceMethods);
+                // Verify that chargeAssessmentMethods were returned, which means they came from the "repository".
+                Assert.IsTrue(appInfluenceMethods.Count() == 3);
+
+                cacheProviderMock.Verify(m => m.Add(It.IsAny<string>(), It.IsAny<Task<List<ChargeAssessmentMethod>>>(), It.IsAny<CacheItemPolicy>(), null), Times.Never);
+
             }
 
-            private T GetCache<T>(ICacheProvider cacheProvider, string key)
-                where T : class
+            [TestMethod]
+            public async Task StudentReferenceDataRepo_GetApplicationInfluences_GetsCachedChargeAssessmentMethodsAsync()
             {
-                object cache = cacheProvider.Get(key, null);
-                return cache as T;
+                // Set up local cache mock to respond to cache request:
+                //  -to "Contains" request, return "true" to indicate item is in cache
+                //  -to "Get" request, return the cache item (in this case the "BILLING.METHODS" cache item)
+                cacheProviderMock.Setup(x => x.Contains(domainEntityNameName, null)).Returns(true);
+                cacheProviderMock.Setup(x => x.Get(domainEntityNameName, null)).Returns(allApplicationInfluences).Verifiable();
+
+                // return null for request, so that if we have a result, it wasn't the data accessor that returned it.
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "APPL.INFLUENCES", true)).ReturnsAsync(new ApplValcodes());
+
+                // Assert the chargeAssessmentMethods are returned
+                Assert.IsTrue((await referenceDataRepo.GetApplicationInfluencesAsync(false)).Count() == 3);
+                // Verify that the schargeAssessmentMethods were retrieved from cache
+                cacheProviderMock.Verify(m => m.Get(domainEntityNameName, null));
             }
 
             private StudentReferenceDataRepository BuildValidReferenceDataRepository()
@@ -2202,13 +2217,26 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 cacheProviderMock = new Mock<ICacheProvider>();
                 // Set up data accessor for mocking 
                 dataAccessorMock = new Mock<IColleagueDataReader>();
-                apiSettings = new ApiSettings("TEST");
 
                 // Set up dataAccessorMock as the object for the DataAccessor
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
 
-                // Setup response to application influences valcode read
-                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "APPL.INFLUENCES", true)).ReturnsAsync(ApplicationInfluencesValcodeResponse);
+                // Setup response to chargeAssessmentMethods domainEntityName read
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "APPL.INFLUENCES", It.IsAny<bool>())).ReturnsAsync(applicationInfluencesValcodeResponse);
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
+                {
+                    var result = new Dictionary<string, RecordKeyLookupResult>();
+                    foreach (var recordKeyLookup in recordKeyLookups)
+                    {
+                        var appInfluenceMethods = allApplicationInfluences.Where(e => e.Code == recordKeyLookup.SecondaryKey).FirstOrDefault();
+                        result.Add(string.Join("+", new string[] { "ST.VALCODES", "APPL.INFLUENCES", appInfluenceMethods.Code }),
+                            new RecordKeyLookupResult() { Guid = appInfluenceMethods.Guid });
+                    }
+                    return Task.FromResult(result);
+                });
 
                 // Construct repository
                 referenceDataRepo = new StudentReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
@@ -2216,15 +2244,15 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 return referenceDataRepo;
             }
 
-            private ApplValcodes BuildValcodeResponse(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.ApplicationInfluence> applicationInfluence)
+            private ApplValcodes BuildValcodeResponse(IEnumerable<ApplicationInfluence> chargeAssessmentMethods)
             {
-                ApplValcodes applValcodeResponse = new ApplValcodes();
-                applValcodeResponse.ValsEntityAssociation = new List<ApplValcodesVals>();
-                foreach (var item in applicationInfluence)
+                ApplValcodes chargeAssessmentMethodsResponse = new ApplValcodes();
+                chargeAssessmentMethodsResponse.ValsEntityAssociation = new List<ApplValcodesVals>();
+                foreach (var item in chargeAssessmentMethods)
                 {
-                    applValcodeResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, "", item.Code, "", "", ""));
+                    chargeAssessmentMethodsResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, "", item.Code, "", "", ""));
                 }
-                return applValcodeResponse;
+                return chargeAssessmentMethodsResponse;
             }
         }
 
@@ -3119,38 +3147,42 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
         }
 
+
         [TestClass]
         public class CareerGoals
         {
             Mock<IColleagueTransactionFactory> transFactoryMock;
-            //Mock<ObjectCache> localCacheMock;
             Mock<ICacheProvider> cacheProviderMock;
             Mock<IColleagueDataReader> dataAccessorMock;
             Mock<ILogger> loggerMock;
-            IEnumerable<Ellucian.Colleague.Domain.Student.Entities.CareerGoal> allCareerGoals;
+            IEnumerable<CareerGoal> allCareerGoals;
             ApplValcodes careerGoalsValcodeResponse;
-            string valcodeName;
+            string domainEntityNameName;
             ApiSettings apiSettings;
+
+            Mock<IStudentReferenceDataRepository> referenceDataRepositoryMock;
+            IStudentReferenceDataRepository referenceDataRepository;
             StudentReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
             public void Initialize()
             {
                 loggerMock = new Mock<ILogger>();
+                apiSettings = new ApiSettings("TEST");
 
-                // Build responses used for mocking
                 allCareerGoals = new TestStudentReferenceDataRepository().GetCareerGoalsAsync().Result;
-
                 careerGoalsValcodeResponse = BuildValcodeResponse(allCareerGoals);
 
-                // Build repository
+
+                referenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
+                referenceDataRepository = referenceDataRepositoryMock.Object;
+
                 referenceDataRepo = BuildValidReferenceDataRepository();
-                valcodeName = referenceDataRepo.BuildFullCacheKey("ST_CAREER.GOALS");
+                domainEntityNameName = referenceDataRepo.BuildFullCacheKey("ST_CAREER.GOALS_GUID");
 
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                    x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
                    .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
-
             }
 
             [TestCleanup]
@@ -3164,88 +3196,105 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 referenceDataRepo = null;
             }
 
+
             [TestMethod]
-            public async Task StudentReferenceDataRepo_GetsCareerGoals()
+            public async Task StudentReferenceDataRepo_GetCareerGoalsAsyncCacheAsync()
             {
-                var repoCareerGoals = await referenceDataRepo.GetCareerGoalsAsync(); ;
+                var chargeAssessmentMethods = await referenceDataRepo.GetCareerGoalsAsync(false);
 
                 for (int i = 0; i < allCareerGoals.Count(); i++)
                 {
-                    Assert.AreEqual(allCareerGoals.ElementAt(i).Code, repoCareerGoals.ElementAt(i).Code);
-                    Assert.AreEqual(allCareerGoals.ElementAt(i).Description, repoCareerGoals.ElementAt(i).Description);
+                    Assert.AreEqual(allCareerGoals.ElementAt(i).Code, chargeAssessmentMethods.ElementAt(i).Code);
+                    Assert.AreEqual(allCareerGoals.ElementAt(i).Description, chargeAssessmentMethods.ElementAt(i).Description);
                 }
             }
 
             [TestMethod]
-            public async Task StudentReferenceDataRepo_GetCareerGoals_WritesToCache()
+            public async Task StudentReferenceDataRepo_GetCareerGoalsAsyncNonCacheAsync()
             {
-                // Set up local cache mock to respond to cache request:
-                //  -to "Contains" request, return "false" to indicate item is not in cache
-                //  -to cache "Get" request, return null so we know it's reading from the "repository"
-                cacheProviderMock.Setup(x => x.Contains(valcodeName, null)).Returns(false);
-                cacheProviderMock.Setup(x => x.Get(valcodeName, null)).Returns(null);
+                var statuses = await referenceDataRepo.GetCareerGoalsAsync(true);
 
-                // return a valid response to the data accessor request
-                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(careerGoalsValcodeResponse);
-
-                // But after data accessor read, set up mocking so we can verify the list of career goals was written to the cache
-                cacheProviderMock.Setup(x => x.AddAndUnlockSemaphore(valcodeName, It.IsAny<Object>(), It.IsAny<SemaphoreSlim>(), It.IsAny<CacheItemPolicy>(), null)).Verifiable();
-
-                // Verify that career goals were returned, which means they came from the "repository".
-                Assert.IsTrue((await referenceDataRepo.GetCareerGoalsAsync()).Count() == allCareerGoals.Count());
-
-                // Verify that the career goals was added to the cache after it was read from the repository
-                cacheProviderMock.Verify(m => m.AddAndUnlockSemaphore(valcodeName, It.IsAny<Object>(), It.IsAny<SemaphoreSlim>(), It.IsAny<CacheItemPolicy>(), null));
+                for (int i = 0; i < allCareerGoals.Count(); i++)
+                {
+                    Assert.AreEqual(allCareerGoals.ElementAt(i).Code, statuses.ElementAt(i).Code);
+                    Assert.AreEqual(allCareerGoals.ElementAt(i).Description, statuses.ElementAt(i).Description);
+                }
             }
 
             [TestMethod]
-            public async Task StudentReferenceDataRepo_GetCareerGoals_Cached()
+            public async Task StudentReferenceDataRepo_GetCareerGoalsAsync_WritesToCacheAsync()
             {
-                object lockHandle = null;
+
                 // Set up local cache mock to respond to cache request:
                 //  -to "Contains" request, return "false" to indicate item is not in cache
-                //  -to cache "Get" request, return null so we know it's getting data from "repository"
-                cacheProviderMock.Setup(x => x.Contains(valcodeName, null)).Returns(false);
-                cacheProviderMock.Setup(x => x.GetAndLock(valcodeName, out lockHandle, null)).Returns(null);
+                //  -to cache "Get" request, return null so we know it's reading from the "repository"
+                cacheProviderMock.Setup(x => x.Contains(domainEntityNameName, null)).Returns(false);
+                cacheProviderMock.Setup(x => x.Get(domainEntityNameName, null)).Returns(null);
 
-                // Get these codes to populate the cache
-                var careerGoals = (await referenceDataRepo.GetCareerGoalsAsync());
-                // Assert the types are returned
-                Assert.IsTrue((await referenceDataRepo.GetCareerGoalsAsync()).Count() == allCareerGoals.Count());
-                // Make sure we can verify that it's in the cache
-                cacheProviderMock.Setup(x => x.Contains(valcodeName, null)).Returns(true);
-                var careerGoalsTuple = new Tuple<object, SemaphoreSlim>(careerGoals, new SemaphoreSlim(1, 1));
-                cacheProviderMock.Setup(x => x.GetAndLockSemaphoreAsync(valcodeName, null)).ReturnsAsync(careerGoalsTuple).Verifiable();
+                // return a valid response to the data accessor request
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "CAREER.GOALS", It.IsAny<bool>())).ReturnsAsync(careerGoalsValcodeResponse);
 
-                // Verify that the types are now retrieved from cache
-                careerGoals = (await referenceDataRepo.GetCareerGoalsAsync());
-                cacheProviderMock.Verify(m => m.GetAndLockSemaphoreAsync(valcodeName, null));
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                 x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                 .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                cacheProviderMock.Setup(x => x.Add(It.IsAny<string>(), It.IsAny<Task<List<CareerGoal>>>(), It.IsAny<CacheItemPolicy>(), null)).Verifiable();
+
+                cacheProviderMock.Setup(x => x.Contains(referenceDataRepo.BuildFullCacheKey("ST_CAREER.GOALS"), null)).Returns(true);
+                var appInfluenceMethods = await referenceDataRepo.GetCareerGoalsAsync(false);
+                cacheProviderMock.Setup(x => x.Get(referenceDataRepo.BuildFullCacheKey("ST_CAREER.GOALS"), null)).Returns(appInfluenceMethods);
+                Assert.IsTrue(appInfluenceMethods.Count() == 5);
+
+                cacheProviderMock.Verify(m => m.Add(It.IsAny<string>(), It.IsAny<Task<List<ChargeAssessmentMethod>>>(), It.IsAny<CacheItemPolicy>(), null), Times.Never);
+
             }
 
-            private T GetCache<T>(ICacheProvider cacheProvider, string key)
-                where T : class
+            [TestMethod]
+            public async Task StudentReferenceDataRepo_GetCareerGoalsAsync_GetsCachedChargeAssessmentMethodsAsync()
             {
-                object cache = cacheProvider.Get(key, null);
-                return cache as T;
+                // Set up local cache mock to respond to cache request:
+                //  -to "Contains" request, return "true" to indicate item is in cache
+                //  -to "Get" request, return the cache item (in this case the "BILLING.METHODS" cache item)
+                cacheProviderMock.Setup(x => x.Contains(domainEntityNameName, null)).Returns(true);
+                cacheProviderMock.Setup(x => x.Get(domainEntityNameName, null)).Returns(allCareerGoals).Verifiable();
+
+                // return null for request, so that if we have a result, it wasn't the data accessor that returned it.
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "CAREER.GOALS", true)).ReturnsAsync(new ApplValcodes());
+
+                // Assert the chargeAssessmentMethods are returned
+                Assert.IsTrue((await referenceDataRepo.GetCareerGoalsAsync(false)).Count() == 5);
+                // Verify that the schargeAssessmentMethods were retrieved from cache
+                cacheProviderMock.Verify(m => m.Get(domainEntityNameName, null));
             }
 
             private StudentReferenceDataRepository BuildValidReferenceDataRepository()
             {
                 // transaction factory mock
                 transFactoryMock = new Mock<IColleagueTransactionFactory>();
-                // Cache Mock
-                //localCacheMock = new Mock<ObjectCache>();
                 // Cache Provider Mock
                 cacheProviderMock = new Mock<ICacheProvider>();
                 // Set up data accessor for mocking 
                 dataAccessorMock = new Mock<IColleagueDataReader>();
-                apiSettings = new ApiSettings("TEST");
 
                 // Set up dataAccessorMock as the object for the DataAccessor
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
 
-                // Setup response to career goals valcode read
-                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "CAREER.GOALS", true)).ReturnsAsync(careerGoalsValcodeResponse);
+                // Setup response to chargeAssessmentMethods domainEntityName read
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "CAREER.GOALS", It.IsAny<bool>())).ReturnsAsync(careerGoalsValcodeResponse);
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
+                {
+                    var result = new Dictionary<string, RecordKeyLookupResult>();
+                    foreach (var recordKeyLookup in recordKeyLookups)
+                    {
+                        var careerGoalsMethods = allCareerGoals.Where(e => e.Code == recordKeyLookup.SecondaryKey).FirstOrDefault();
+                        result.Add(string.Join("+", new string[] { "ST.VALCODES", "CAREER.GOALS", careerGoalsMethods.Code }),
+                            new RecordKeyLookupResult() { Guid = careerGoalsMethods.Guid });
+                    }
+                    return Task.FromResult(result);
+                });
 
                 // Construct repository
                 referenceDataRepo = new StudentReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
@@ -3253,15 +3302,15 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 return referenceDataRepo;
             }
 
-            private ApplValcodes BuildValcodeResponse(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.CareerGoal> careerGoal)
+            private ApplValcodes BuildValcodeResponse(IEnumerable<CareerGoal> careerGoalMethods)
             {
-                ApplValcodes applValcodeResponse = new ApplValcodes();
-                applValcodeResponse.ValsEntityAssociation = new List<ApplValcodesVals>();
-                foreach (var item in careerGoal)
+                ApplValcodes careerGoalResponse = new ApplValcodes();
+                careerGoalResponse.ValsEntityAssociation = new List<ApplValcodesVals>();
+                foreach (var item in careerGoalMethods)
                 {
-                    applValcodeResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, "", item.Code, "", "", ""));
+                    careerGoalResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, "", item.Code, "", "", ""));
                 }
-                return applValcodeResponse;
+                return careerGoalResponse;
             }
         }
 
@@ -5004,7 +5053,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Mock<IColleagueDataReader> _dataAccessorMock;
             Mock<ILogger> _loggerMock;
             IEnumerable<GradeScheme> _allGradeScheme;
-   
+            Collection<DataContracts.GradeSchemes> records = new Collection<DataContracts.GradeSchemes>();
             ApiSettings _apiSettings;
             StudentReferenceDataRepository _referenceDataRepo;
 
@@ -5021,7 +5070,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 _allGradeScheme.Last().AddGradeCode("C");
 
                 // Build Grade Scheme repository
-                _referenceDataRepo = BuildValidReferenceDataRepository();             
+                _referenceDataRepo = BuildValidReferenceDataRepository();
             }
 
             [TestCleanup]
@@ -5049,20 +5098,22 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 }
             }
 
-            [TestMethod]
-            public async Task StudentReferenceDataRepo_GradeSchemes_GetGradeSchemesAsync_NoCache()
-            {
-                var repoGetGradeSchemes = (await _referenceDataRepo.GetGradeSchemesAsync(true)).ToList();
-                for (var i = 0; i < _allGradeScheme.Count(); i++)
-                {
-                    Assert.AreEqual(_allGradeScheme.ElementAt(i).Code, repoGetGradeSchemes.ElementAt(i).Code);
-                    Assert.AreEqual(_allGradeScheme.ElementAt(i).Description, repoGetGradeSchemes.ElementAt(i).Description);
-                    Assert.AreEqual(_allGradeScheme.ElementAt(i).Guid, repoGetGradeSchemes.ElementAt(i).Guid);
-                    Assert.AreEqual(_allGradeScheme.ElementAt(i).EffectiveStartDate, repoGetGradeSchemes.ElementAt(i).EffectiveStartDate);
-                    Assert.AreEqual(_allGradeScheme.ElementAt(i).EffectiveEndDate, repoGetGradeSchemes.ElementAt(i).EffectiveEndDate);
-                    CollectionAssert.AreEqual(_allGradeScheme.ElementAt(i).GradeCodes, repoGetGradeSchemes.ElementAt(i).GradeCodes);
-                }
-            }
+            //[TestMethod]
+            //public async Task StudentReferenceDataRepo_GradeSchemes_GetGradeSchemesAsync_NoCache()
+            //{
+            //    var repoGetGradeSchemes = await _referenceDataRepo.GetGradeSchemesAsync( true );
+            //    _cacheProviderMock.Verify( m => m.AddAndUnlockSemaphore( It.IsAny<string>(), It.IsAny<object>(), It.IsAny<SemaphoreSlim>(), It.IsAny<CacheItemPolicy>(), It.IsAny<string>() ) );
+
+            //    for( var i = 0; i < _allGradeScheme.Count(); i++ )
+            //    {
+            //        Assert.AreEqual( _allGradeScheme.ElementAt( i ).Code, repoGetGradeSchemes.ElementAt( i ).Code );
+            //        Assert.AreEqual( _allGradeScheme.ElementAt( i ).Description, repoGetGradeSchemes.ElementAt( i ).Description );
+            //        Assert.AreEqual( _allGradeScheme.ElementAt( i ).Guid, repoGetGradeSchemes.ElementAt( i ).Guid );
+            //        Assert.AreEqual( _allGradeScheme.ElementAt( i ).EffectiveStartDate, repoGetGradeSchemes.ElementAt( i ).EffectiveStartDate );
+            //        Assert.AreEqual( _allGradeScheme.ElementAt( i ).EffectiveEndDate, repoGetGradeSchemes.ElementAt( i ).EffectiveEndDate );
+            //        CollectionAssert.AreEqual( _allGradeScheme.ElementAt( i ).GradeCodes, repoGetGradeSchemes.ElementAt( i ).GradeCodes );
+            //    }
+            //}
 
             private StudentReferenceDataRepository BuildValidReferenceDataRepository()
             {
@@ -5076,8 +5127,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // Set up dataAccessorMock as the object for the DataAccessor
                 _transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(_dataAccessorMock.Object);
-
-                var records = new Collection<DataContracts.GradeSchemes>();
+                
                 foreach (var item in _allGradeScheme)
                 {
                     var record = new DataContracts.GradeSchemes
@@ -5091,23 +5141,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     };
                     records.Add(record);
                 }
-                _dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.GradeSchemes>("", It.IsAny<bool>())).ReturnsAsync(records);
+                _dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.GradeSchemes>( "", It.IsAny<bool>())).ReturnsAsync(records);
 
                 _cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                  x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
-                 .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
-
-                //_dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
-                //{
-                //    var result = new Dictionary<string, RecordKeyLookupResult>();
-                //    foreach (var recordKeyLookup in recordKeyLookups)
-                //    {
-                //        var record = _allGradeScheme.FirstOrDefault(e => e.Code == recordKeyLookup.PrimaryKey);
-                //        result.Add(string.Join("+", new string[] { "GRADE.SCHEMES", record.Code }),
-                //            new RecordKeyLookupResult() { Guid = record.Guid });
-                //    }
-                //    return Task.FromResult(result);
-                //});
+                 .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));               
 
                 // Construct repository
                 _referenceDataRepo = new StudentReferenceDataRepository(_cacheProviderMock.Object, _transFactoryMock.Object, _loggerMock.Object, _apiSettings);
@@ -10692,6 +10730,176 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 referenceDataRepo = new StudentReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
+            }
+        }
+
+        [TestClass]
+        public class EducationGoalsRepositoryTests
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ILogger> loggerMock;
+            IEnumerable<EducationGoals> allEducationGoals;
+            ApplValcodes educationalGoalsValcodeResponse;
+            string domainEntityNameName;
+            ApiSettings apiSettings;
+
+            Mock<IStudentReferenceDataRepository> referenceDataRepositoryMock;
+            IStudentReferenceDataRepository referenceDataRepository;
+            StudentReferenceDataRepository referenceDataRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+                apiSettings = new ApiSettings("TEST");
+
+                allEducationGoals = new TestStudentReferenceDataRepository().GetEducationGoalsAsync(false).Result;
+                educationalGoalsValcodeResponse = BuildValcodeResponse(allEducationGoals);
+                var educationalGoalsValResponse = new List<string>() { "2" };
+                educationalGoalsValcodeResponse.ValActionCode1 = educationalGoalsValResponse;
+
+                referenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
+                referenceDataRepository = referenceDataRepositoryMock.Object;
+
+                referenceDataRepo = BuildValidReferenceDataRepository();
+                domainEntityNameName = referenceDataRepo.BuildFullCacheKey("ST_EDUCATION.GOALS_GUID");
+
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                   x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                   .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                educationalGoalsValcodeResponse = null;
+                allEducationGoals = null;
+                referenceDataRepo = null;
+            }
+
+
+            [TestMethod]
+            public async Task StudentReferenceDataRepo_GetsEducationGoalsCacheAsync()
+            {
+                var educationalGoals = await referenceDataRepo.GetEducationGoalsAsync(false);
+
+                for (int i = 0; i < allEducationGoals.Count(); i++)
+                {
+                    Assert.AreEqual(allEducationGoals.ElementAt(i).Code, educationalGoals.ElementAt(i).Code);
+                    Assert.AreEqual(allEducationGoals.ElementAt(i).Description, educationalGoals.ElementAt(i).Description);
+                }
+            }
+
+            [TestMethod]
+            public async Task StudentReferenceDataRepo_GetsEducationGoalsNonCacheAsync()
+            {
+                var statuses = await referenceDataRepo.GetEducationGoalsAsync(true);
+
+                for (int i = 0; i < allEducationGoals.Count(); i++)
+                {
+                    Assert.AreEqual(allEducationGoals.ElementAt(i).Code, statuses.ElementAt(i).Code);
+                    Assert.AreEqual(allEducationGoals.ElementAt(i).Description, statuses.ElementAt(i).Description);
+                }
+            }
+
+            [TestMethod]
+            public async Task StudentReferenceDataRepo_GetEducationGoals_WritesToCacheAsync()
+            {
+
+                // Set up local cache mock to respond to cache request:
+                //  -to "Contains" request, return "false" to indicate item is not in cache
+                //  -to cache "Get" request, return null so we know it's reading from the "repository"
+                cacheProviderMock.Setup(x => x.Contains(domainEntityNameName, null)).Returns(false);
+                cacheProviderMock.Setup(x => x.Get(domainEntityNameName, null)).Returns(null);
+
+                // return a valid response to the data accessor request
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "EDUCATION.GOALS", It.IsAny<bool>())).ReturnsAsync(educationalGoalsValcodeResponse);
+
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                 x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                 .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                // But after data accessor read, set up mocking so we can verify the list of educationalGoals was written to the cache
+                cacheProviderMock.Setup(x => x.Add(It.IsAny<string>(), It.IsAny<Task<List<EducationGoals>>>(), It.IsAny<CacheItemPolicy>(), null)).Verifiable();
+
+                cacheProviderMock.Setup(x => x.Contains(referenceDataRepo.BuildFullCacheKey("ST_EDUCATION.GOALS"), null)).Returns(true);
+                var educationalGoals = await referenceDataRepo.GetEducationGoalsAsync(false);
+                cacheProviderMock.Setup(x => x.Get(referenceDataRepo.BuildFullCacheKey("ST_EDUCATION.GOALS"), null)).Returns(educationalGoals);
+                // Verify that educationalGoals were returned, which means they came from the "repository".
+                Assert.IsTrue(educationalGoals.Count() == 3);
+
+                // Verify that the educationalGoals item was added to the cache after it was read from the repository
+                cacheProviderMock.Verify(m => m.Add(It.IsAny<string>(), It.IsAny<Task<List<EducationGoals>>>(), It.IsAny<CacheItemPolicy>(), null), Times.Never);
+
+            }
+
+            [TestMethod]
+            public async Task StudentReferenceDataRepo_GetEducationGoals_GetsCachedEducationGoalsAsync()
+            {
+                // Set up local cache mock to respond to cache request:
+                //  -to "Contains" request, return "true" to indicate item is in cache
+                //  -to "Get" request, return the cache item (in this case the "EDUCATION.GOALS" cache item)
+                cacheProviderMock.Setup(x => x.Contains(domainEntityNameName, null)).Returns(true);
+                cacheProviderMock.Setup(x => x.Get(domainEntityNameName, null)).Returns(allEducationGoals).Verifiable();
+
+                // return null for request, so that if we have a result, it wasn't the data accessor that returned it.
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "EDUCATION.GOALS", true)).ReturnsAsync(new ApplValcodes());
+
+                // Assert the educationalGoals are returned
+                Assert.IsTrue((await referenceDataRepo.GetEducationGoalsAsync(false)).Count() == 3);
+                // Verify that the seducationalGoals were retrieved from cache
+                cacheProviderMock.Verify(m => m.Get(domainEntityNameName, null));
+            }
+
+            private StudentReferenceDataRepository BuildValidReferenceDataRepository()
+            {
+                // transaction factory mock
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                // Cache Provider Mock
+                cacheProviderMock = new Mock<ICacheProvider>();
+                // Set up data accessor for mocking 
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+
+                // Set up dataAccessorMock as the object for the DataAccessor
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                // Setup response to educationalGoals domainEntityName read
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "EDUCATION.GOALS", It.IsAny<bool>())).ReturnsAsync(educationalGoalsValcodeResponse);
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
+                {
+                    var result = new Dictionary<string, RecordKeyLookupResult>();
+                    foreach (var recordKeyLookup in recordKeyLookups)
+                    {
+                        var educationalGoals = allEducationGoals.Where(e => e.Code == recordKeyLookup.SecondaryKey).FirstOrDefault();
+                        result.Add(string.Join("+", new string[] { "ST.VALCODES", "EDUCATION.GOALS", educationalGoals.Code }),
+                            new RecordKeyLookupResult() { Guid = educationalGoals.Guid });
+                    }
+                    return Task.FromResult(result);
+                });
+
+                // Construct repository
+                referenceDataRepo = new StudentReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+                return referenceDataRepo;
+            }
+
+            private ApplValcodes BuildValcodeResponse(IEnumerable<EducationGoals> educationalGoals)
+            {
+                ApplValcodes educationalGoalsResponse = new ApplValcodes();
+                educationalGoalsResponse.ValsEntityAssociation = new List<ApplValcodesVals>();
+                foreach (var item in educationalGoals)
+                {
+                    educationalGoalsResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, "2", item.Code, "3", "", ""));
+                }
+                return educationalGoalsResponse;
             }
         }
 

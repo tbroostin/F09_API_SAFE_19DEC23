@@ -1,4 +1,4 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -16,9 +16,7 @@ using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
-using Ellucian.Web.Http;
 using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
@@ -62,8 +60,16 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 }
             }
             try
-            {                   AddDataPrivacyContextProperty((await _deductionCategoriesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());               
-                return await _deductionCategoriesService.GetDeductionCategoriesAsync(bypassCache);
+            {
+                var deductionCategories = await _deductionCategoriesService.GetDeductionCategoriesAsync(bypassCache);
+
+                if (deductionCategories != null && deductionCategories.Any())
+                {
+                    AddEthosContextProperties(await _deductionCategoriesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _deductionCategoriesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              deductionCategories.Select(a => a.Id).ToList()));
+                }
+                return deductionCategories;
                             }
             catch (KeyNotFoundException e)
             {
@@ -120,8 +126,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
-               AddDataPrivacyContextProperty((await _deductionCategoriesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
-               return await _deductionCategoriesService.GetDeductionCategoriesByGuidAsync(guid);
+                AddEthosContextProperties(
+                    await _deductionCategoriesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(),bypassCache),
+                    await _deductionCategoriesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { guid }));
+                return await _deductionCategoriesService.GetDeductionCategoriesByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)
             {

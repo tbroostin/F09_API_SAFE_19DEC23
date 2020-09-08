@@ -306,7 +306,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             acadedmicCatalog.EndDate = source.EndDate;
             acadedmicCatalog.Code = source.Code;
             acadedmicCatalog.Title = source.Description;
-            acadedmicCatalog.status = source.IsActive ? LifeCycleStatus.Active : LifeCycleStatus.Inactive;
+            acadedmicCatalog.Status = source.IsActive ? LifeCycleStatus.Active : LifeCycleStatus.Inactive;
             return acadedmicCatalog;
         }
     }

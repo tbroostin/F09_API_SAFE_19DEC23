@@ -1,18 +1,12 @@
-﻿/*Copyright 2015 Ellucian Company L.P. and its affiliates.*/
-using Ellucian.Colleague.Domain.HumanResources;
+﻿/*Copyright 2015-2019 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Web.Security;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 {
     public abstract class CurrentUserSetup
     {
         protected Domain.Entities.Role personRole = new Domain.Entities.Role(105, "Faculty");
-
 
         public class EmployeeUserFactory : ICurrentUserFactory
         {
@@ -63,6 +57,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 }
             }
         }
+
         public class PersonUserFactory : ICurrentUserFactory
         {
             public ICurrentUser CurrentUser
@@ -83,6 +78,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 }
             }
         }
+
         public class PersonDecuctionArrangementsUserFactory : ICurrentUserFactory
         {
             public ICurrentUser CurrentUser
@@ -103,6 +99,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 }
             }
         }
+
         public class PersonEmployeeLeaveTransactionUserFactory : ICurrentUserFactory
         {
             public ICurrentUser CurrentUser
@@ -187,12 +184,53 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 }
             }
 
-            public SupervisorUserFactory() {  }
+            public SupervisorUserFactory() { }
             public ProxySubjectClaims ProxyClaim { get; set; }
             public SupervisorUserFactory(ProxySubjectClaims proxyClaim)
             {
                 ProxyClaim = proxyClaim;
             }
+        }
+
+        public class BenefitsEnrollmentUserFactory : ICurrentUserFactory
+        {
+            public ICurrentUser CurrentUser
+            {
+                get
+                {
+                    return new CurrentUser(new Claims()
+                    {
+                        ControlId = "123",
+                        Name = "Natalie",
+                        PersonId = "0014697",
+                        SecurityToken = "321",
+                        SessionTimeout = 30,
+                        UserName = "Nataliegillon",
+                        Roles = new List<string>() { "EMPLOYEE" },
+                        SessionFixationId = "abc123"
+                    });
+                }
+            }
+        }
+        public class BenefitsEnrollmentDifferentUserFactory : ICurrentUserFactory
+        {
+            public ICurrentUser CurrentUser
+            {
+                get
+                {
+                    return new CurrentUser(new Claims()
+                    {
+                        ControlId = "124",
+                        Name = "John",
+                        PersonId = "0014698",
+                        SecurityToken = "322",
+                        SessionTimeout = 30,
+                        UserName = "JohnDoe",
+                        Roles = new List<string>() { "EMPLOYEE" },
+                        SessionFixationId = "abc1234"
+                    });
+                }
+            }        
         }
     }
 }

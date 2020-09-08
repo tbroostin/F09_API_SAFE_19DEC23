@@ -3458,7 +3458,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
             private void InitializeTestData()
             {
-                lineItem = new LineItem("1", "desc", 10, 100, 110) { Status = PurchaseOrderStatus.InProgress };
+                lineItem = new LineItem("1", "desc", 10, 100, 110) { LineItemStatus = LineItemStatus.Outstanding };
 
                 lineItem.AddTax(new LineItemTax("1", 100));
                 lineItem.AddGlDistribution(new LineItemGlDistribution("a", 10, 100) { });

@@ -1216,7 +1216,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(this.requisitionDomainEntity.LineItems.Count(), requisition.LineItems.Count(), "The requisition should have all of it's line items.");
 
             decimal glDistributionTotal = 0.00m;
-            decimal taxDistributionTotal = 0.00m;
+            decimal? taxDistributionTotal = 0.00m;
             foreach (var lineItem in requisition.LineItems)
             {
                 glDistributionTotal += lineItem.GlDistributions.Sum(x => x.Amount);
@@ -2296,6 +2296,66 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
             var result = await requisitionRepository.DeleteRequisitionAsync(guid);
         }
+        #endregion
+
+        #region Delete Requisition SS
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task RequisitionRepository_DeleteRequisitionAsync_ArgumentNullException_Requisition_Null()
+        {
+            await requisitionRepository.DeleteRequisitionsAsync(null);
+        }
+
+        [TestMethod]
+        public async Task RequisitionRepository_DeleteRequisitionAsync_Transaction_Error()
+        {
+            // Mock Execute within the transaction invoker to return a TxDeleteRequisitionResponse object
+
+            TxDeleteRequisitionResponse deleteRequisitionResponse = new TxDeleteRequisitionResponse();
+
+            deleteRequisitionResponse.ARequisitionId = "123";
+            deleteRequisitionResponse.ARequisitionNumber = "REQ0000123";
+            deleteRequisitionResponse.AErrorOccurred = true;
+            deleteRequisitionResponse.AlErrorMessages = new List<string>() { "Requisition locked" };
+
+            transactionInvoker.Setup(tio => tio.ExecuteAsync<TxDeleteRequisitionRequest, TxDeleteRequisitionResponse>(It.IsAny<TxDeleteRequisitionRequest>())).ReturnsAsync(deleteRequisitionResponse);
+
+            RequisitionDeleteRequest deleteRequest = new RequisitionDeleteRequest();
+            deleteRequest.PersonId = "0001234";
+            deleteRequest.RequisitionId = "123";
+            var result = await requisitionRepository.DeleteRequisitionsAsync(deleteRequest);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(result.RequisitionId, deleteRequest.RequisitionId);
+            Assert.IsTrue(result.ErrorOccured);
+        }
+
+        [TestMethod]
+        public async Task RequisitionRepository_DeleteRequisitionAsync()
+        {
+            // Mock Execute within the transaction invoker to return a TxDeleteRequisitionResponse object
+            TxDeleteRequisitionResponse deleteRequisitionResponse = new TxDeleteRequisitionResponse();
+
+            deleteRequisitionResponse.ARequisitionId = "123";
+            deleteRequisitionResponse.ARequisitionNumber = "REQ0000123";
+            deleteRequisitionResponse.AErrorOccurred = false;
+            deleteRequisitionResponse.AlErrorMessages = null;
+            deleteRequisitionResponse.AWarningOccurred = true;
+            deleteRequisitionResponse.AlWarningMessages = new List<string>() { "Warning Occurred" };
+
+            transactionInvoker.Setup(tio => tio.ExecuteAsync<TxDeleteRequisitionRequest, TxDeleteRequisitionResponse>(It.IsAny<TxDeleteRequisitionRequest>())).ReturnsAsync(deleteRequisitionResponse);
+
+            RequisitionDeleteRequest deleteRequest = new RequisitionDeleteRequest();
+            deleteRequest.PersonId = "0001234";
+            deleteRequest.RequisitionId = "123";
+            var result = await requisitionRepository.DeleteRequisitionsAsync(deleteRequest);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(result.RequisitionId, deleteRequest.RequisitionId);
+            Assert.IsFalse(result.ErrorOccured);
+        }
+
         #endregion
     }
 

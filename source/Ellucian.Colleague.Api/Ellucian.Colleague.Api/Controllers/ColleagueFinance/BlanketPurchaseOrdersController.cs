@@ -132,7 +132,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 var criteriaObj = GetFilterObject<Dtos.BlanketPurchaseOrders>(logger, "criteria");
 
                 if (CheckForEmptyFilterParameters())
-                    return new PagedHttpActionResult<IEnumerable<Dtos.BlanketPurchaseOrders>>(new List<Dtos.BlanketPurchaseOrders>(), page, this.Request);
+                    return new PagedHttpActionResult<IEnumerable<Dtos.BlanketPurchaseOrders>>(new List<Dtos.BlanketPurchaseOrders>(), page, 0, this.Request);
 
                 var pageOfItems = await blanketPurchaseOrderService.GetBlanketPurchaseOrdersAsync(page.Offset, page.Limit, criteriaObj, bypassCache);
                 AddEthosContextProperties(
@@ -418,7 +418,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         {
             var integrationApiException = new IntegrationApiException();
             var sourceGuid = !string.Equals(bpo.Id, Guid.Empty.ToString()) ? bpo.Id : string.Empty;
-            var sourceId = (bpo.OrderDetails != null && bpo.OrderDetails[0] != null && !string.IsNullOrEmpty(bpo.OrderDetails[0].OrderDetailNumber)) ? bpo.OrderDetails[0].OrderDetailNumber : string.Empty;
+            var sourceId = (bpo.OrderDetails != null && bpo.OrderDetails.Any() && bpo.OrderDetails[0] != null && !string.IsNullOrEmpty(bpo.OrderDetails[0].OrderDetailNumber)) ? bpo.OrderDetails[0].OrderDetailNumber : string.Empty;
             var defaultCurrency = new CurrencyIsoCode?();
 
             if (bpo.Vendor == null || bpo.Vendor.ExistingVendor == null
@@ -471,7 +471,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                         "blanket-purchase-orders request validation failed", guid: sourceGuid, id: sourceId,
                         message: "The override shipping destination country can only be 'CAN' or 'USA' when submitting a blanket purchase order."));
                 }
-                if (bpo.OverrideShippingDestination.Contact != null && bpo.OverrideShippingDestination.Contact.Extension.Length > 4)
+                if (bpo.OverrideShippingDestination.Contact != null && !string.IsNullOrEmpty(bpo.OverrideShippingDestination.Contact.Extension) && bpo.OverrideShippingDestination.Contact.Extension.Length > 4)
                 {
                     // throw new ArgumentNullException("blanketPurchaseOrders.OverrideShippingDestination.Contact.Extension", "The Extension cannot be greater then 4 in length.");
                     integrationApiException.AddError(new IntegrationApiError("blanketPurchaseOrders.overrideShippingDestination.contact.extension",
@@ -490,14 +490,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                         message: "The vendor country can only be 'CAN' or 'USA' when submitting a blanket purchase order."));
                 }
             }
-
-            if (bpo.PaymentSource == null)
-            {
-                // throw new ArgumentNullException("blanketPurchaseOrders.PaymentSource.", "PaymentSource is a required field for Colleague");
-                integrationApiException.AddError(new IntegrationApiError("blanketPurchaseOrders.paymentSource",
-                    "blanket-purchase-orders request validation failed", guid: sourceGuid, id: sourceId,
-                    message: "The paymentSource is a required property when submitting a blanket purchase order."));
-            }
+            
             if (bpo.Comments != null)
             {
                 foreach (var comments in bpo.Comments)
@@ -555,14 +548,14 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
 
 
-            if (bpo.OrderDetails == null)
+            if (bpo.OrderDetails == null || !bpo.OrderDetails.Any())
             {
                 // throw new ArgumentNullException("blanketPurchaseOrders.LineItems.", "At least one line item must be provided when submitting an accounts-payable-invoice. ");
                 integrationApiException.AddError(new IntegrationApiError("blanketPurchaseOrders.orderDetails",
                     "blanket-purchase-orders request validation failed", guid: sourceGuid, id: sourceId,
                     message: "The orderDetails is a required property when submitting a blanket purchase order."));
             }
-            if (bpo.OrderDetails != null)
+            if (bpo.OrderDetails != null && bpo.OrderDetails.Any())
             {
                 foreach (var detail in bpo.OrderDetails)
                 {
@@ -622,7 +615,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                         }
                     }
 
-                    if (detail.AccountDetails != null)
+                    if (detail.AccountDetails != null && detail.AccountDetails.Any())
                     {
                         foreach (var accountDetail in detail.AccountDetails)
                         {

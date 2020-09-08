@@ -1,9 +1,8 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Dtos.Base;
-using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Extensions;
@@ -38,7 +37,6 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         private const string encrTypeHeader = "X-Encr-Type";
         private const string encrKeyIdHeader = "X-Encr-Key-Id";
 
-        private readonly IAdapterRegistry _adapterRegistry;
         private readonly IAttachmentService _attachmentService;
         private readonly ILogger _logger;
         private readonly ApiSettings _apiSettings;
@@ -46,13 +44,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <summary>
         /// Initializes a new instance of the AttachmentsController class.
         /// </summary>
-        /// <param name="adapterRegistry">Adapter registry of type <see cref="IAdapterRegistry">IAdapterRegistry</see></param>
         /// <param name="attachmentService">Service of type <see cref="IAttachmentService">IAttachmentService</see></param>
         /// <param name="logger">Logger of type <see cref="ILogger">ILogger</see></param>
         /// <param name="apiSettings">API settings</param>
-        public AttachmentsController(IAdapterRegistry adapterRegistry, IAttachmentService attachmentService, ILogger logger, ApiSettings apiSettings)
+        public AttachmentsController(IAttachmentService attachmentService, ILogger logger, ApiSettings apiSettings)
         {
-            _adapterRegistry = adapterRegistry;
             _attachmentService = attachmentService;
             _logger = logger;
             _apiSettings = apiSettings;
@@ -120,6 +116,29 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (KeyNotFoundException knfe)
             {
                 throw CreateHttpResponseException(knfe.Message, HttpStatusCode.NotFound);
+            }
+            catch (Exception e)
+            {
+                throw CreateHttpResponseException(e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Query attachments
+        /// </summary>
+        /// <param name="criteria"></param>
+        /// <returns>List of <see cref="Attachment">Attachments</see></returns>
+        [HttpPost]
+        public async Task<IEnumerable<Attachment>> QueryAttachmentsByPostAsync([FromBody]AttachmentSearchCriteria criteria)
+        {
+            try
+            {
+                // get attachments by query criteria
+                return await _attachmentService.QueryAttachmentsAsync(criteria);
+            }
+            catch (PermissionsException pex)
+            {
+                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
@@ -224,7 +243,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             AttachmentEncryption attachmentEncryption = null;
 
             // get the key ID
-            string encrKeyId = null;
+            string encrKeyId;
             IEnumerable<string> headerValues;
             if (Request.Headers.TryGetValues(encrKeyIdHeader, out headerValues))
             {

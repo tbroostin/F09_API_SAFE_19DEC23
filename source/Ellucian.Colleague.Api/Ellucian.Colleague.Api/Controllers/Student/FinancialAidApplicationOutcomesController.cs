@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -40,9 +40,6 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="financialAidApplicationOutcomeService">FinancialAidApplicationOutcomeService</param>
         /// <param name="logger">Interface to logger</param>
-        //public FinancialAidApplicationOutcomesController(IAdapterRegistry adapterRegistry,
-        //    IFinancialAidApplicationOutcomeService financialAidApplicationOutcomeService,
-        //    ILogger logger)
         public FinancialAidApplicationOutcomesController(IFinancialAidApplicationOutcomeService financialAidApplicationOutcomeService,
             ILogger logger)
         {
@@ -55,6 +52,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Return all financialAidApplicationOutcomes
         /// </summary>
         /// <returns>List of FinancialAidApplicationOutcomes</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         [ValidateQueryStringFilter()]
@@ -75,8 +73,6 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
-                //var pageOfItems = await financialAidApplicationOutcomeService.GetAsync(page.Offset, page.Limit, bypassCache);
-
                 var criteriaObject = GetFilterObject<Dtos.FinancialAidApplicationOutcome>(logger, "criteria");
                 if (CheckForEmptyFilterParameters())
                     return new PagedHttpActionResult<IEnumerable<Dtos.FinancialAidApplication>>(new List<Dtos.FinancialAidApplication>(), page, 0, this.Request);
@@ -127,6 +123,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="id">GUID to desired financialAidApplicationOutcomes</param>
         /// <returns>A single financialAidApplicationOutcomes object</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         public async Task<Dtos.FinancialAidApplicationOutcome> GetFinancialAidApplicationOutcomesByGuidAsync(string id)
         {

@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -10,10 +10,10 @@ using slf4net;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Net;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Ellucian.Web.Http.Filters;
+using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -44,6 +44,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves all room characteristics.
         /// </summary>
         /// <returns>All RoomCharacteristics objects.</returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Dtos.RoomCharacteristic>> GetRoomCharacteristicsAsync()
         {
@@ -57,7 +58,15 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                         bypassCache = true;
                     }
                 }
-                return await _roomCharacteristicService.GetRoomCharacteristicsAsync(bypassCache);
+                var roomCharacteristic = await _roomCharacteristicService.GetRoomCharacteristicsAsync(bypassCache);
+
+                if (roomCharacteristic != null && roomCharacteristic.Any())
+                {
+                    AddEthosContextProperties(await _roomCharacteristicService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _roomCharacteristicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              roomCharacteristic.Select(a => a.Id).ToList()));
+                }
+                return roomCharacteristic;
             }
             catch (Exception e)
             {
@@ -71,6 +80,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves a room characteristic by ID.
         /// </summary>
         /// <returns>A <see cref="Dtos.RoomCharacteristic">RoomCharacteristic.</see></returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Dtos.RoomCharacteristic> GetRoomCharacteristicByIdAsync(string id)
         {
             try
@@ -79,6 +89,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 {
                     throw new ArgumentNullException("Must provide a room characteristic id.");
                 }
+
+                AddEthosContextProperties(
+                    await _roomCharacteristicService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _roomCharacteristicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { id }));
                 return await _roomCharacteristicService.GetRoomCharacteristicByGuidAsync(id);
             }
             catch (ArgumentNullException e)
@@ -101,8 +116,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <summary>
         /// Updates a RoomCharacteristic.
         /// </summary>
-        /// <param name="roomCharacteristic"><see cref="RoomCharacteristic">RoomCharacteristic</see> to update</param>
-        /// <returns>Newly updated <see cref="RoomCharacteristic">RoomCharacteristic</see></returns>
+        /// <param name="roomCharacteristic">RoomCharacteristic to update</param>
+        /// <returns>Newly updated RoomCharacteristic</returns>
         [HttpPut]
         public async Task<Dtos.RoomCharacteristic> PutRoomCharacteristicAsync([FromBody] Dtos.RoomCharacteristic roomCharacteristic)
         {
@@ -114,8 +129,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <summary>
         /// Creates a RoomCharacteristic.
         /// </summary>
-        /// <param name="roomCharacteristic"><see cref="RoomCharacteristic">RoomCharacteristic</see> to create</param>
-        /// <returns>Newly created <see cref="RoomCharacteristic">RoomCharacteristic</see></returns>
+        /// <param name="roomCharacteristic">RoomCharacteristic to create</param>
+        /// <returns>Newly created RoomCharacteristic</returns>
         [HttpPost]
         public async Task<Dtos.RoomCharacteristic> PostRoomCharacteristicAsync([FromBody] Dtos.RoomCharacteristic roomCharacteristic)
         {

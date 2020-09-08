@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -496,6 +496,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// Retrieves all general ledger transactions for the data model version 12
         /// </summary>
         /// <returns>A Collection of GeneralLedgerTransactions</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet]
         [EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
@@ -768,6 +769,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="id">The requested general ledger transaction GUID</param>
         /// <param name="generalLedgerDto">General Ledger DTO from Body of request</param>
         /// <returns>A single GeneralLedgerTransaction</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPut]
         [EedmResponseFilter]
         public async Task<Dtos.GeneralLedgerTransaction3> Update3Async([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.GeneralLedgerTransaction3 generalLedgerDto)
@@ -1027,6 +1029,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="generalLedgerDto">General Ledger DTO from Body of request</param>
         /// <returns>A single GeneralLedgerTransaction</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPost, EedmResponseFilter]
         public async Task<Dtos.GeneralLedgerTransaction3> Create3Async([ModelBinder(typeof(EedmModelBinder))] Dtos.GeneralLedgerTransaction3 generalLedgerDto)
         {

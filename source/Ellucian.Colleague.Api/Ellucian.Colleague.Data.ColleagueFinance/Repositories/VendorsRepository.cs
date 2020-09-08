@@ -1,4 +1,4 @@
-﻿/*Copyright 2016-2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2016-2020 Ellucian Company L.P. and its affiliates.*/
 
 using System;
 using System.Collections.Generic;
@@ -18,13 +18,19 @@ using System.Text;
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Dmi.Runtime;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class VendorsRepository : BaseColleagueRepository, IVendorsRepository
     {
+        public static char _SM = Convert.ToChar(DynamicArray.SM);
+
         private readonly int readSize;
+        protected const int AllVendorsCacheTimeout = 20; // Clear from cache every 20 minutes
+        protected const string AllVendorFilterCache = "AllVendorsFilter";
 
         public VendorsRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)
@@ -53,6 +59,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 throw ex;
             }
         }
+
 
         /// <summary>
         /// Get a list of vendors using criteria
@@ -196,8 +203,249 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             return new Tuple<IEnumerable<Vendors>, int>(vendors, totalCount);
         }
+        /// <summary>
+        /// Get a list of vendors using criteria
+        /// </summary>
+        /// <returns></returns>
+        public async Task<Tuple<IEnumerable<Vendors>, int>> GetVendors2Async(int offset, int limit, string vendorDetail = "", List<string> classifications = null,
+            List<string> statuses = null, List<string> relatedReference = null, List<string> types = null, string taxId = null)
+        {
+            try
+            {
+                int totalCount = 0;
+                string[] subList = null;
+                var repositoryException = new RepositoryException();
+                string vendorCacheKey = CacheSupport.BuildCacheKey(AllVendorFilterCache, vendorDetail, classifications, statuses, relatedReference, types, taxId);
+                var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+                       this,
+                       ContainsKey,
+                       GetOrAddToCacheAsync,
+                       AddOrUpdateCacheAsync,
+                       transactionInvoker,
+                       vendorCacheKey,
+                       "VENDORS",
+                       offset,
+                       limit,
+                       AllVendorsCacheTimeout,
+                       async () =>
+                       {
+                           return await GetVendorsFilterCriteriaAsync(vendorDetail, classifications, statuses, types, relatedReference, taxId);
+                       }
+                   );
+
+                if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
+                {
+                    return new Tuple<IEnumerable<Vendors>, int>(new List<Vendors>(), 0);
+                }
+
+                subList = keyCache.Sublist.ToArray();
+                totalCount = keyCache.TotalCount.Value;
+                var vendorsData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.ColleagueFinance.DataContracts.Vendors>("VENDORS", subList);
+                if (vendorsData != null  && vendorsData.Any())
+                {
+                    var personsData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", subList);
+                    var corpContract = await DataReader.BulkReadRecordAsync<Corp>("PERSON", subList);
+                    var corpFoundData = await DataReader.BulkReadRecordAsync<CorpFounds>(subList);
+                    var vendors = BuildVendors2(vendorsData, personsData, corpContract, corpFoundData);
+                    return new Tuple<IEnumerable<Vendors>, int>(vendors, totalCount);
+                    
+                }
+                else
+                {
+                    return new Tuple<IEnumerable<Vendors>, int>(new List<Vendors>(), 0);
+                }
+            }
+            catch (ArgumentException e)
+            {
+                throw e;
+            }
+            catch (RepositoryException e)
+            {
+                throw e;
+            }
+
+        }
 
         /// <summary>
+        /// Get vendor criteria and limiting list.
+        /// </summary>
+        /// <returns></returns>
+        private async Task<CacheSupport.KeyCacheRequirements> GetVendorsFilterCriteriaAsync(string vendorDetail, List<string> classifications, List<string> statuses, List<string> types, List<string> relatedReference, string taxId)
+        {
+            string criteria = "";
+            var criteriaBuilder = new StringBuilder();
+            List<string> vendorsLimitingKeys = new List<string>();
+            if (!string.IsNullOrEmpty(vendorDetail))
+            {
+                criteriaBuilder.AppendFormat("WITH VENDORS.ID = '{0}'", vendorDetail);
+            }
+            if (classifications != null && classifications.Any())
+            {
+                if (criteriaBuilder.Length > 0)
+                {
+                    criteriaBuilder.Append(" AND ");
+                }
+                int i = 0;
+                foreach (var classification in classifications)
+                {
+                    if (i == 0)
+                        criteriaBuilder.Append("WITH ");
+                    else
+                        criteriaBuilder.Append(" AND ");
+                    criteriaBuilder.AppendFormat("VEN.TYPES = '{0}'", classification);
+                    i++;
+                }
+            }
+            if ((statuses != null) && (statuses.Any()))
+            {
+                foreach (var status in statuses)
+                {
+                    switch (status.ToLower())
+                    {
+                        case "active":
+                            if (criteriaBuilder.Length > 0) criteriaBuilder.Append(" AND ");
+                            criteriaBuilder.Append("WITH VEN.ACTIVE.FLAG = 'Y'");
+                            break;
+                        case "holdpayment":
+                            if (criteriaBuilder.Length > 0) criteriaBuilder.Append(" AND ");
+                            criteriaBuilder.Append("WITH VEN.STOP.PAYMENT.FLAG = 'Y'");
+                            break;
+                        case "approved":
+                            if (criteriaBuilder.Length > 0) criteriaBuilder.Append(" AND ");
+                            criteriaBuilder.Append("WITH VEN.APPROVAL.FLAG = 'Y'");
+                            break;
+                    }
+                }
+            }
+
+            string typesCriteria = string.Empty;
+            if (types != null && types.Any())
+            {
+                foreach (var type in types.Distinct())
+                {
+                    if (!string.IsNullOrEmpty(type))
+                    {
+                        switch (type.ToLower())
+                        {
+                            case "eprocurement":
+                                if (criteriaBuilder.Length > 0)
+                                {
+                                    typesCriteria = " AND WITH VEN.CATEGORIES = 'EP'";
+                                }
+                                else
+                                {
+                                    typesCriteria = "WITH VEN.CATEGORIES = 'EP'";
+                                }
+                                criteriaBuilder.Append(typesCriteria);
+                                continue;
+                            case "travel":
+                                if (criteriaBuilder.Length > 0)
+                                {
+                                    typesCriteria = " AND WITH VEN.CATEGORIES = 'TR'";
+                                }
+                                else
+                                {
+                                    typesCriteria = "WITH VEN.CATEGORIES = 'TR'";
+                                }
+                                criteriaBuilder.Append(typesCriteria);
+                                continue;
+                            case "procurement":
+                                if (criteriaBuilder.Length > 0)
+                                {
+                                    typesCriteria = " AND WITH VEN.CATEGORIES = 'PR'";
+                                }
+                                else
+                                {
+                                    typesCriteria = "WITH VEN.CATEGORIES = 'PR'";
+                                }
+                                criteriaBuilder.Append(typesCriteria);
+                                continue;
+                        }
+                    }
+                }
+            }
+
+            if ((relatedReference != null) && (relatedReference.Any()))
+            {
+                //we will first select all the parents record for the corps.
+
+                string parentCriteria = "WITH PERSON.CORP.INDICATOR = 'Y' AND WITH PARENTS NE '' BY.EXP PARENTS SAVING PARENTS";
+                var parentCorpIds = await DataReader.SelectAsync("PERSON", parentCriteria);
+                if (parentCorpIds != null && parentCorpIds.Any())
+                {
+                    var parentVendors = await DataReader.SelectAsync("VENDORS", parentCorpIds, criteria);
+                    // if we have parent vendors then we need to select the child vendors. 
+                    if (parentVendors != null && parentVendors.Any())
+                    {
+                        var children = await DataReader.SelectAsync("PERSON", "WITH PERSON.CORP.INDICATOR EQ 'Y' AND WITH PARENTS EQ '?'", parentVendors);
+                        if (children != null && children.Any())
+                        {
+                            vendorsLimitingKeys = (await DataReader.SelectAsync("VENDORS", children, criteria)).ToList();
+                            // if there is corp.founds but no vendor record.
+                            if (vendorsLimitingKeys == null || !vendorsLimitingKeys.Any())
+                            {
+                                return new CacheSupport.KeyCacheRequirements() { criteria = string.Empty, limitingKeys = new List<string>(), NoQualifyingRecords = true };
+                            }
+                        }
+                        else
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { criteria = string.Empty, limitingKeys = new List<string>(), NoQualifyingRecords = true };
+                        }
+
+                    }
+                    else
+                    {
+                        return new CacheSupport.KeyCacheRequirements() { criteria = string.Empty, limitingKeys = new List<string>(), NoQualifyingRecords = true };
+                    }
+                }
+                //if no parent corp is selected then we need to return null
+                else
+                {
+                    return new CacheSupport.KeyCacheRequirements() { criteria = string.Empty, limitingKeys = new List<string>(), NoQualifyingRecords = true };
+                }
+            }
+
+            if (!string.IsNullOrEmpty(taxId))
+            {
+
+                //if the input is 9 characters then we know there is no - so send it with dash between 2 and 3 characters for US
+                var intlParams = await GetInternationalParametersAsync();
+                if (taxId.Length == 9 && intlParams.HostCountry == "USA")
+                {
+                    var forTaxId = string.Concat(taxId.Substring(0, 2), "-", taxId.Substring(2, 7));
+                    taxId = forTaxId;
+                }
+                string taxCriteria = string.Format("WITH CORP.TAX.ID EQ '{0}'", taxId);
+
+                var corpIds = await DataReader.SelectAsync("CORP.FOUNDS", vendorsLimitingKeys.ToArray(), taxCriteria);
+                if (corpIds != null && corpIds.Any())
+                {
+                    vendorsLimitingKeys = (await DataReader.SelectAsync("VENDORS", corpIds, criteria)).ToList();
+                    // if there is corp.founds but no vendor record.
+                    if (vendorsLimitingKeys == null || !vendorsLimitingKeys.Any())
+                    {
+                        return new CacheSupport.KeyCacheRequirements() { criteria = string.Empty, limitingKeys = new List<string>(), NoQualifyingRecords = true };
+                    }
+                }
+                else
+                {
+                    // if there is no CORP.FOUNDS with no EIN
+                    return new CacheSupport.KeyCacheRequirements() { criteria = string.Empty, limitingKeys = new List<string>(), NoQualifyingRecords = true };
+                }
+            }
+
+            if (criteriaBuilder.Length > 0)
+            {
+                criteria = criteriaBuilder.ToString();
+            }
+            return new CacheSupport.KeyCacheRequirements()
+            {
+                limitingKeys = vendorsLimitingKeys,
+                criteria = criteria
+            };
+
+        }
+
         /// Get a single vendor using a GUID
         /// </summary>
         /// <param name="guid">The Vendor guid</param>
@@ -220,11 +468,46 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         }
 
         /// <summary>
+        /// Get a single vendor using a GUID
+        /// </summary>
+        /// <param name="guid">The Vendor guid</param>
+        /// <returns>The vendor domain entity</returns>
+        public async Task<Vendors> GetVendorsByGuid2Async(string guid)
+        {
+            string id = string.Empty;
+            try
+            {
+                id = await GetVendorIdFromGuidAsync(guid);
+                if (string.IsNullOrEmpty(id))
+                {
+                    throw new KeyNotFoundException(string.Concat("Id not found for vendor guid:", guid));
+                }
+                return await GetVendors2Async(id);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                throw ex;
+            }
+            catch(Exception ex)
+            {
+                var exception = new RepositoryException();
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message)
+                {
+                    Id = guid,
+                    SourceId = id
+                });
+                throw exception;
+            }
+        }
+
+
+
+        /// <summary>
         /// Get the list of vendors based on keyword search.
         /// </summary>
         /// <param name="searchCriteria"> The search criteria containing keyword for vendor search.</param>
         /// <returns> The vendor search results</returns> 
-        public async Task<IEnumerable<VendorSearchResult>> SearchByKeywordAsync(string searchCriteria)
+        public async Task<IEnumerable<VendorSearchResult>> SearchByKeywordAsync(string searchCriteria, string apType)
         {
             List<VendorSearchResult> vendorSearchResults = new List<VendorSearchResult>();
             if (string.IsNullOrEmpty(searchCriteria))
@@ -232,6 +515,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             var searchRequest = new GetActiveVendorResultsRequest();
             searchRequest.ASearchCriteria = searchCriteria;
+            searchRequest.AApType = apType;
 
             var searchResponse = await transactionInvoker.ExecuteAsync<GetActiveVendorResultsRequest, GetActiveVendorResultsResponse>(searchRequest);
             if (searchResponse == null)
@@ -248,10 +532,71 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             if (searchResponse.VendorSearchResults != null && searchResponse.VendorSearchResults.Any())
             {
-                vendorSearchResults = searchResponse.VendorSearchResults.Select(x => new VendorSearchResult(x.AlVendorIds) { VendorName = x.AlVendorNames, VendorAddress = x.AlVendorAddresses }).ToList();
+                vendorSearchResults = searchResponse.VendorSearchResults.Where(x => x != null && x.AlVendorIds != null).Select(x => new VendorSearchResult(x.AlVendorIds)
+                {
+                    VendorName = x.AlVendorNames,
+                    VendorAddress = x.AlVendorAddresses,
+                    TaxForm = x.AlVendorTaxForm,
+                    TaxFormCode = x.AlVendorTaxFormCode,
+                    TaxFormLocation = x.AlVendorTaxFormLoc
+                }).ToList();
             }
 
             return vendorSearchResults.AsEnumerable();
+        }
+
+        /// <summary>
+        /// Get the list of vendors for vouchers based on keyword search.
+        /// </summary>
+        /// <param name="searchCriteria"> The search criteria containing keyword for vendor search.</param>
+        /// <returns> The vendor search results for the vouchers</returns> 
+        public async Task<IEnumerable<Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult>> VendorSearchForVoucherAsync(string searchCriteria)
+        {
+            List<Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult> voucherVendorSearchResults = new List<Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult>();
+            if (string.IsNullOrEmpty(searchCriteria))
+                throw new ArgumentNullException("searchCriteria", "search criteria required to query");
+
+            var searchRequest = new TxGetVoucherVendorResultsRequest();
+            searchRequest.ASearchCriteria = searchCriteria;
+
+            var searchResponse = await transactionInvoker.ExecuteAsync<TxGetVoucherVendorResultsRequest, TxGetVoucherVendorResultsResponse>(searchRequest);
+            if (searchResponse == null)
+            {
+                throw new InvalidOperationException("An error occurred during person matching");
+            }
+            if (searchResponse.AlErrorMessages.Count() > 0 && searchResponse.AError )
+            {
+                var errorMessage = "Error(s) occurred during vendor search:";
+                errorMessage += string.Join(Environment.NewLine, searchResponse.AlErrorMessages);
+                logger.Error(errorMessage);
+                throw new InvalidOperationException("An error occurred during vendor search");
+            }
+
+            if (searchResponse.VoucherVendorSearchResults != null && searchResponse.VoucherVendorSearchResults.Any())
+            {
+
+                foreach (var x in searchResponse.VoucherVendorSearchResults)
+                {
+                    var resultEntity = new Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult();
+                    resultEntity.VendorId = x.AlVendorIds;
+
+                    // there may be multiple (sub-valued) messages for each vendor names.
+                    resultEntity.VendorNameLines = !string.IsNullOrEmpty(x.AlVendorNames) ? x.AlVendorNames.Split(_SM).ToList() : new List<string>();
+                    resultEntity.AddressId = x.AlVendorAddrIds;
+                    resultEntity.FormattedAddress = x.AlVendorFormattedAddresses;
+                    // there may be multiple (sub-valued) messages for each vendor address.
+                    resultEntity.AddressLines = !string.IsNullOrEmpty(x.AlVendorAddress) ? x.AlVendorAddress.Split(_SM).ToList() : new List<string>();
+                    resultEntity.City = x.AlVendorCity;
+                    resultEntity.Country = x.AlVendorCountry;
+                    resultEntity.State = x.AlVendorState;
+                    resultEntity.Zip = x.AlVendorZip;
+
+                    voucherVendorSearchResults.Add(resultEntity);
+                }
+
+            }
+
+            return voucherVendorSearchResults.AsEnumerable();
         }
 
         /// <summary>
@@ -301,6 +646,84 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
         }
 
+
+        /// <summary>
+        /// Update an existing Vendors domain entity
+        /// </summary>
+        /// <param name="vendorsEntity">Vendors domain entity</param>
+        /// <returns>Vendors domain entity</returns>
+        public async Task<Vendors> UpdateVendors2Async(Vendors vendorsEntity)
+        {
+            if (vendorsEntity == null)
+                throw new ArgumentNullException("vendorsEntity", "Must provide a vendorsEntity to update.");
+            if (string.IsNullOrWhiteSpace(vendorsEntity.Guid))
+                throw new ArgumentNullException("vendorsEntity", "Must provide the guid of the vendorsEntity to update.");
+            var repositoryException = new RepositoryException();
+            CreateUpdateVendorRequest updateRequest = null;
+            Vendors updatedEntity = null;
+                try
+                {
+                    updateRequest = await BuildVendorsUpdateRequestAsync(vendorsEntity);
+                    updateRequest.Version = "11";
+                }
+                catch (Exception ex)
+                {
+                    repositoryException.AddError(
+                        new RepositoryError("Bad.Data", ex.Message)
+                        {
+                            Id = vendorsEntity.Guid,
+                            SourceId = vendorsEntity.Id
+                        });
+                    throw repositoryException;
+                }
+            if (updateRequest != null)
+            {
+                var extendedDataTuple = GetEthosExtendedDataLists();
+                if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null)
+                {
+                    updateRequest.ExtendedNames = extendedDataTuple.Item1;
+                    updateRequest.ExtendedValues = extendedDataTuple.Item2;
+                }
+
+                // write the  data
+                var updateResponse = await transactionInvoker.ExecuteAsync<CreateUpdateVendorRequest, CreateUpdateVendorResponse>(updateRequest);
+
+                if (updateResponse != null && updateResponse.Errors.Any())
+                {
+                    foreach (var error in updateResponse.Errors)
+                    {
+
+                        repositoryException.AddError(new RepositoryError("Create.Update.Exception", string.Concat(error.ErrorCodes, " - ", error.ErrorMessages))
+                        {
+                            SourceId = updateResponse.VendorId,
+                            Id = updateResponse.VendorGuid
+
+                        });
+                    }
+                    throw repositoryException;
+                }
+                else
+                {
+                    try
+                    {
+                        updatedEntity = await GetVendorsByGuid2Async(updateResponse.VendorGuid);
+                    }
+                    catch(Exception ex)
+                    {
+                        repositoryException.AddError(
+                       new RepositoryError("Bad.Data", ex.Message)
+                       {
+                           Id = vendorsEntity.Guid,
+                           SourceId = vendorsEntity.Id
+                       });
+                        throw repositoryException;
+                    }
+                }
+            }
+            // get the updated entity from the database
+            return updatedEntity;
+        }
+
         /// <summary>
         /// Create a new Vendors domain entity
         /// </summary>
@@ -335,6 +758,84 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             // get the newly created record from the database
             return await GetVendorsByGuidAsync(createResponse.VendorGuid);
         }
+
+        /// <summary>
+        /// Create a new Vendors domain entity
+        /// </summary>
+        /// <param name="vendorsEntity">Vendors domain entity</param>
+        /// <returns>Vendors domain entity</returns>
+        public async Task<Vendors> CreateVendors2Async(Vendors vendorsEntity)
+        {
+            if (vendorsEntity == null)
+                throw new ArgumentNullException("vendorsEntity", "Must provide a vendorsEntity to create.");
+            CreateUpdateVendorRequest createRequest = null;
+            var repositoryException = new RepositoryException();
+            Vendors createdEntity = null;
+            try
+            {
+                createRequest = await BuildVendorsUpdateRequestAsync(vendorsEntity);
+                createRequest.Version = "11";
+            }
+            catch (Exception ex)
+            {
+                repositoryException.AddError(
+                    new RepositoryError("Bad.Data", ex.Message)
+                    {
+                        Id = vendorsEntity.Guid,
+                        SourceId = vendorsEntity.Id
+                    });
+                throw repositoryException;
+            }
+            if (createRequest != null)
+            {
+                createRequest.VendorId = string.Empty;
+
+                var extendedDataTuple = GetEthosExtendedDataLists();
+                if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null)
+                {
+                    createRequest.ExtendedNames = extendedDataTuple.Item1;
+                    createRequest.ExtendedValues = extendedDataTuple.Item2;
+                }
+
+                var createResponse = await transactionInvoker.ExecuteAsync<CreateUpdateVendorRequest, CreateUpdateVendorResponse>(createRequest);
+
+                if (createResponse != null && createResponse.Errors.Any())
+                {
+                    foreach (var error in createResponse.Errors)
+                    {
+
+                        repositoryException.AddError(new RepositoryError("Create.Update.Exception", string.Concat(error.ErrorCodes, " - ", error.ErrorMessages))
+                        {
+                            SourceId = createResponse.VendorId,
+                            Id = createResponse.VendorGuid
+
+                        });
+                    }
+                    throw repositoryException;
+                }
+                else
+                {
+                    try
+                    {
+                        createdEntity = await GetVendorsByGuid2Async(createResponse.VendorGuid);
+                    }
+                    catch (Exception ex)
+                    {
+                        repositoryException.AddError(
+                       new RepositoryError("Bad.Data", ex.Message)
+                       {
+                           Id = vendorsEntity.Guid,
+                           SourceId = vendorsEntity.Id
+                       });
+                        throw repositoryException;
+                    }
+                }
+            }
+
+            // get the newly created record from the database
+            return createdEntity;
+        }
+
 
         /// <summary>
         /// Get the record key from a GUID
@@ -386,19 +887,55 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var record = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.ColleagueFinance.DataContracts.Vendors>(id);
             if (record == null)
             {
-                throw new KeyNotFoundException(string.Concat("Record not found for vendor with ID ", id, "invalid."));
+                throw new KeyNotFoundException(string.Concat("Record not found for vendor with ID ", id));
             }
 
             var personRecord = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>(id);
             if (personRecord == null)
             {
-                throw new KeyNotFoundException(string.Concat("Record not found for person with ID ", id, "invalid."));
+                throw new ArgumentNullException(string.Concat("Record not found for person with ID ", id));
             }
 
             var corpRecord = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Corp>("PERSON", id);
 
             // Build the vendor data
-            vendor = BuildVendors(record, personRecord, corpRecord);
+            vendor = BuildVendor(record, personRecord, corpRecord);
+
+            return vendor;
+        }
+
+        /// <summary>
+        /// Get a single vendor using an ID
+        /// </summary>
+        /// <param name="id">The vendor GUID</param>
+        /// <returns>The vendor</returns>
+        public async Task<Vendors> GetVendors2Async(string id)
+        {
+            Vendors vendor = null;
+
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "ID is required to get a vendor.");
+            }
+
+            // Now we have an ID, so we can read the record
+            var record = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.ColleagueFinance.DataContracts.Vendors>(id);
+            if (record == null)
+            {
+                throw new KeyNotFoundException(string.Concat("Record not found for vendor with ID ", id));
+            }
+
+            var personRecord = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>(id);
+            if (personRecord == null)
+            {
+                throw new ArgumentNullException(string.Concat("Record not found for person with ID ", id));
+            }
+
+            var corpRecord = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Corp>("PERSON", id);
+            var corpFoundRecord = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.CorpFounds>(id);
+
+            // Build the vendor data
+            vendor = BuildVendor2(record, personRecord, corpRecord, corpFoundRecord);
 
             return vendor;
         }
@@ -409,9 +946,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <param name="vendorId">vendor id</param>
         /// <param name="apType">ap type</param>
         /// <returns>vendor default tax info entity</returns>
-        public async Task<VendorDefaultTaxFormInfo> GetVendorDefaultTaxInfo(string vendorId, string apType)
+        public async Task<VendorDefaultTaxFormInfo> GetVendorDefaultTaxFormInfoAsync(string vendorId, string apType)
         {
-            
+                       
             if (string.IsNullOrEmpty(vendorId))
                 throw new ArgumentNullException("vendorId", "vendorId is required");
 
@@ -426,8 +963,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 throw new InvalidOperationException("An error occurred while getting vendor tax form");
             }
             taxFormInfo.TaxForm = response.ATaxForm;
-            taxFormInfo.TaxFormCode = response.ATaxFormCode;
-            taxFormInfo.TaxFormLoc = response.ATaxFormLoc;
+            taxFormInfo.TaxFormBoxCode = response.ATaxFormCode;
+            taxFormInfo.TaxFormState = response.ATaxFormLoc;
             return taxFormInfo;
         }
 
@@ -449,9 +986,78 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 var person = persons.FirstOrDefault(p => p.Recordkey == source.Recordkey);
                 if (corp != null)
                     cor = corp.FirstOrDefault(p => p.Recordkey == source.Recordkey);
-                vendorCollection.Add(BuildVendors(source, person, cor));
+                vendorCollection.Add(BuildVendor(source, person, cor));
             }
 
+            return vendorCollection.AsEnumerable();
+        }
+
+        /// <summary>
+        /// Build a collection of vendor domain entities from data contracts
+        /// </summary>
+        /// <param name="sources">Vendors data contracts</param>
+        /// <param name="persons">Persons data contracst</param>
+        /// <param name="corp"></param>
+        /// <returns>collection of vendor domain entities</returns>
+        private IEnumerable<Vendors> BuildVendors2(IEnumerable<Ellucian.Colleague.Data.ColleagueFinance.DataContracts.Vendors> sources,
+            IEnumerable<Ellucian.Colleague.Data.Base.DataContracts.Person> persons,
+            IEnumerable<Ellucian.Colleague.Data.Base.DataContracts.Corp> corp, IEnumerable<Ellucian.Colleague.Data.Base.DataContracts.CorpFounds> corpFounds)
+        {
+            var repositoryException = new RepositoryException();
+            var vendorCollection = new List<Vendors>();
+            var cor = new Corp();
+            CorpFounds corpFound = null;
+            foreach (var source in sources)
+            {
+                if (persons != null && persons.Any())
+                {
+                    var person = persons.FirstOrDefault(p => p.Recordkey == source.Recordkey);
+                    if (person == null)
+                    {
+                        repositoryException.AddError(
+                      new RepositoryError("Bad.Data", "Person record cannot be found.")
+                      {
+                          Id = source.RecordGuid,
+                          SourceId = source.Recordkey
+                      });
+                    }
+                    else
+                    {
+                        if (corp != null && corp.Any())
+                            cor = corp.FirstOrDefault(p => p.Recordkey == source.Recordkey);
+                        if (corpFounds != null && corpFounds.Any())
+                            corpFound = corpFounds.FirstOrDefault(p => p.Recordkey == source.Recordkey);
+
+                        try
+                        {
+                            vendorCollection.Add(BuildVendor2(source, person, cor, corpFound));
+                        }
+                        catch (Exception ex)
+                        {
+                            repositoryException.AddError(
+                          new RepositoryError("Bad.Data", ex.Message)
+                          {
+                              Id = source.RecordGuid,
+                              SourceId = source.Recordkey
+                          });
+                        }
+                    }
+
+                }
+                else
+                {
+                    repositoryException.AddError(
+                       new RepositoryError("Bad.Data", "Person record not found.")
+                       {
+                           Id = source.RecordGuid,
+                           SourceId = source.Recordkey
+                       });
+                }
+            }
+            if (repositoryException.Errors.Any())
+            {
+                throw repositoryException;
+            }
             return vendorCollection.AsEnumerable();
         }
 
@@ -462,7 +1068,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <param name="person">Persons data contract</param>
         /// <param name="corp">Corp data contract</param>
         /// <returns>Vendors domain entity</returns>
-        private Vendors BuildVendors(Ellucian.Colleague.Data.ColleagueFinance.DataContracts.Vendors source,
+        private Vendors BuildVendor(Ellucian.Colleague.Data.ColleagueFinance.DataContracts.Vendors source,
             Ellucian.Colleague.Data.Base.DataContracts.Person person,
             Ellucian.Colleague.Data.Base.DataContracts.Corp corp)
         {
@@ -497,6 +1103,67 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if ((corp != null) && (corp.CorpParents != null && corp.CorpParents.Any()))
             {
                 vendor.CorpParent = corp.CorpParents;
+            }
+
+            if (person != null)
+            {
+                vendor.IsOrganization = (person.PersonCorpIndicator == "Y");
+            }
+
+            if (source.VenIntgHoldReasons != null && source.VenIntgHoldReasons.Any())
+            {
+                vendor.IntgHoldReasons = source.VenIntgHoldReasons;
+            }
+            return vendor;
+        }
+
+        /// <summary>
+        /// Build a vendor domain entity from data contracts
+        /// </summary>
+        /// <param name="source">Vendors data contract</param>
+        /// <param name="person">Persons data contract</param>
+        /// <param name="corp">Corp data contract</param>
+        /// <returns>Vendors domain entity</returns>
+        private Vendors BuildVendor2(Ellucian.Colleague.Data.ColleagueFinance.DataContracts.Vendors source,
+            Ellucian.Colleague.Data.Base.DataContracts.Person person,
+            Ellucian.Colleague.Data.Base.DataContracts.Corp corp, Ellucian.Colleague.Data.Base.DataContracts.CorpFounds corpFound)
+        {
+            Vendors vendor = null;
+
+            if (source == null)
+            {
+                throw new ArgumentNullException("source", "source required to build vendor.");
+            }
+
+            vendor = new Vendors(source.RecordGuid);
+            vendor.Id = source.Recordkey;
+            vendor.ActiveFlag = source.VenActiveFlag;
+            if (source.VendorsAddDate.HasValue)
+            {
+                vendor.AddDate = source.VendorsAddDate;
+            }
+            vendor.ApTypes = source.VenApTypes;
+            vendor.ApprovalFlag = source.VenApprovalFlag;
+            vendor.CurrencyCode = source.VenCurrencyCode;
+            vendor.Misc = source.VenMisc;
+            vendor.StopPaymentFlag = source.VenStopPaymentFlag;
+            vendor.Terms = source.VenTerms;
+            vendor.Types = source.VenTypes;
+            vendor.Categories = source.VenCategories;
+            vendor.TaxForm = source.VenTaxForm;
+            if (!string.IsNullOrWhiteSpace(source.VenComments))
+            {
+                vendor.Comments = source.VenComments;
+            }
+
+            if ((corp != null) && (corp.CorpParents != null && corp.CorpParents.Any()))
+            {
+                vendor.CorpParent = corp.CorpParents;
+            }
+
+            if (corpFound != null)
+            {
+                vendor.TaxId = corpFound.CorpTaxId;
             }
 
             if (person != null)
@@ -563,9 +1230,47 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 request.VendorHoldReasonsId = vendorEntity.IntgHoldReasons;
 
             request.VendorTypes = vendorEntity.Categories;
+            request.TaxForm = vendorEntity.TaxForm;
+            request.TaxId = vendorEntity.TaxId;
 
-            request.VendorId = vendorEntity.Id;
+            //request.VendorId = vendorEntity.Id;
             return request;
+        }
+
+        /// <summary>
+        /// Using a collection of endor ids, get a dictionary collection of associated guids
+        /// </summary>
+        /// <param name="vendorIds">collection of vendor ids</param>
+        /// <returns>Dictionary consisting of a vendor (key) and guid (value)</returns>
+        public async Task<Dictionary<string, string>> GetVendorGuidsCollectionAsync(IEnumerable<string> vendorIds)
+        {
+            if ((vendorIds == null) || (vendorIds != null && !vendorIds.Any()))
+            {
+                return new Dictionary<string, string>();
+            }
+            var vendorGuidCollection = new Dictionary<string, string>();
+
+            var vendorGuidLookup = vendorIds
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct().ToList()
+                .ConvertAll(p => new RecordKeyLookup("VENDORS", p, false)).ToArray();
+            var recordKeyLookupResults = await DataReader.SelectAsync(vendorGuidLookup);
+            foreach (var recordKeyLookupResult in recordKeyLookupResults)
+            {
+                try
+                {
+                    var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                    if (!vendorGuidCollection.ContainsKey(splitKeys[1]))
+                    {
+                        vendorGuidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
+                    }
+                }
+                catch (Exception) // Do not throw error.
+                {
+                }
+            }
+
+            return vendorGuidCollection;
         }
 
     }

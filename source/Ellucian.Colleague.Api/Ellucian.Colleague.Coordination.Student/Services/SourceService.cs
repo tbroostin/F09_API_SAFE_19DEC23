@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -8,32 +8,42 @@ using Ellucian.Web.Dependency;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Security;
+using Ellucian.Colleague.Domain.Repositories;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
     [RegisterType]
-    public class SourceService : ISourceService
+    public class SourceService : BaseCoordinationService, ISourceService
     {
         private readonly IStudentReferenceDataRepository _studentReferenceDataRepository;
         private readonly IReferenceDataRepository _referenceDataRepository;
         private readonly ILogger _logger;
         private const string _dataOrigin = "Colleague";
 
-        public SourceService(IStudentReferenceDataRepository studentReferenceDataRepository,
-            IReferenceDataRepository referenceDataRepository, 
+        public SourceService(
+            IAdapterRegistry adapterRegistry,
+            IStudentReferenceDataRepository studentReferenceDataRepository,
+            IReferenceDataRepository referenceDataRepository,
+            ICurrentUserFactory currentUserFactory,
+            IConfigurationRepository configurationRepository,
+            IRoleRepository roleRepository,
             ILogger logger)
+            : base(adapterRegistry, currentUserFactory, roleRepository, logger, null, configurationRepository)
         {
-            _studentReferenceDataRepository = studentReferenceDataRepository;
             _referenceDataRepository = referenceDataRepository;
+            _studentReferenceDataRepository = studentReferenceDataRepository;
             _logger = logger;
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN DATA MODEL</remarks>
-        /// <summary>
-        /// Gets all sources
-        /// </summary>
-        /// <returns>Collection of Source DTO objects</returns>
-        public async Task<IEnumerable<Ellucian.Colleague.Dtos.Source>> GetSourcesAsync(bool bypassCache)
+    /// <remarks>FOR USE WITH ELLUCIAN DATA MODEL</remarks>
+    /// <summary>
+    /// Gets all sources
+    /// </summary>
+    /// <returns>Collection of Source DTO objects</returns>
+    public async Task<IEnumerable<Ellucian.Colleague.Dtos.Source>> GetSourcesAsync(bool bypassCache)
         {
             var sourceCollection = new List<Ellucian.Colleague.Dtos.Source>();
 

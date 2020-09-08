@@ -18,6 +18,7 @@ using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Exceptions;
 using System.Net.Http;
 using Ellucian.Web.Http.Filters;
+using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -48,7 +49,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <returns>List of AptitudeAssessmentTypes <see cref="Dtos.AptitudeAssessmentTypes"/> objects representing matching aptitudeAssessmentTypes</returns>
         [HttpGet]
-        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true), EedmResponseFilter]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.AptitudeAssessmentTypes>> GetAptitudeAssessmentTypesAsync()
         {
             var bypassCache = false;
@@ -61,7 +62,15 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
-                return await _aptitudeAssessmentTypesService.GetAptitudeAssessmentTypesAsync(bypassCache);
+                var aptitudeAssessmentTypes = await _aptitudeAssessmentTypesService.GetAptitudeAssessmentTypesAsync(bypassCache);
+
+                if (aptitudeAssessmentTypes != null && aptitudeAssessmentTypes.Any())
+                {
+                    AddEthosContextProperties(await _aptitudeAssessmentTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _aptitudeAssessmentTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              aptitudeAssessmentTypes.Select(a => a.Id).ToList()));
+                }
+                return aptitudeAssessmentTypes;
             }
             catch (KeyNotFoundException e)
             {
@@ -101,6 +110,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID to desired aptitudeAssessmentTypes</param>
         /// <returns>A aptitudeAssessmentTypes object <see cref="Dtos.AptitudeAssessmentTypes"/> in EEDM format</returns>
         [HttpGet]
+        [EedmResponseFilter]
         public async Task<HttpResponseMessage> GetAptitudeAssessmentTypesByGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -116,6 +126,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                     //return Request.CreateResponse<Dtos.AptitudeAssessmentTypes>(HttpStatusCode.NoContent, new Dtos.AptitudeAssessmentTypes());
                     return Request.CreateResponse(HttpStatusCode.NoContent);
                 }
+                AddEthosContextProperties(
+                   await _aptitudeAssessmentTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                   await _aptitudeAssessmentTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { guid }));
                 return Request.CreateResponse<Dtos.AptitudeAssessmentTypes>(HttpStatusCode.OK, aptitudeAssessemetTypeDto);
             }
             catch (KeyNotFoundException e)

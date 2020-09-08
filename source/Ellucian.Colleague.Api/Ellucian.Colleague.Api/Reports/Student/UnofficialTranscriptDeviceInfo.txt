@@ -1,6 +1,5 @@
 ﻿<DeviceInfo>
 <OutputFormat>PDF</OutputFormat>
-<HumanReadablePDF>True</HumanReadablePDF>
 <PageWidth>8.5in</PageWidth>
 <PageHeight>11in</PageHeight>
 <MarginTop>0.5in</MarginTop>

@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -56,6 +56,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <param name="criteria">mealplan  search criteria in JSON format</param>
         /// <returns>List of HousingAssignments <see cref="Dtos.HousingAssignment2"/> objects representing matching housingAssignments</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         [QueryStringFilterFilter("criteria", typeof(Dtos.HousingAssignment2))]
@@ -127,6 +128,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired housingAssignment</param>
         /// <returns>A housingAssignment object <see cref="Dtos.HousingAssignment2"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         public async Task<Dtos.HousingAssignment2> GetHousingAssignmentByGuid2Async(string guid)
         {
@@ -197,6 +199,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID of the housingAssignments to update</param>
         /// <param name="housingAssignment">DTO of the updated housingAssignments</param>
         /// <returns>A housingAssignments object <see cref="Dtos.HousingAssignment"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPut, EedmResponseFilter]
         public async Task<Dtos.HousingAssignment2> PutHousingAssignment2Async([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.HousingAssignment2 housingAssignment)
         {
@@ -277,6 +280,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (Exception e)
             {
                 _logger.Error(e.ToString());
@@ -289,6 +297,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="housingAssignment">DTO of the new housingAssignments</param>
         /// <returns>A housingAssignments object <see cref="Dtos.HousingAssignment"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPost, EedmResponseFilter]
         public async Task<Dtos.HousingAssignment2> PostHousingAssignment2Async([ModelBinder(typeof(EedmModelBinder))] Dtos.HousingAssignment2 housingAssignment)
         {
@@ -351,6 +360,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (Exception e)
             {

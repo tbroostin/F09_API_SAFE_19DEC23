@@ -1,4 +1,6 @@
-﻿using Ellucian.Colleague.Domain.HumanResources.Entities;
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+
+using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System;
@@ -29,6 +31,9 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         public int planYearStartMonth;
         public int planYearStartDay;
         public IEnumerable<string> earningTypeIDList;
+        public Decimal? accrualRate;
+        public Decimal? accrualLimit;
+        public Decimal? accrualMaxCarryOver;
 
         public List<EmployeeLeaveTransaction> employeeLeaveTransactions;
 
@@ -52,6 +57,9 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                     planYearStartMonth,
                     planYearStartDay,
                     earningTypeIDList,
+                    accrualRate,
+                    accrualLimit,
+                    accrualMaxCarryOver,
                     allowNegativeBalance);
 
 
@@ -79,6 +87,9 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             planYearStartDay = 1;
 
             earningTypeIDList = new List<string> { "VAC", "CMTH" };
+            accrualRate = 50;
+            accrualLimit = 50;
+            accrualMaxCarryOver = 80;
        
             var lastYear = DateTime.Today.AddYears(-1).Year;
             employeeLeaveTransactions = new List<EmployeeLeaveTransaction>()
@@ -340,6 +351,24 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 string earningTypeID = "CMTH";
                 var actual = employeeLeavePlan.EarningTypeIDList.Where(t => t.Equals(earningTypeID)).ToList()[0];
                 Assert.AreEqual(earningTypeID, actual);
+            }
+
+            [TestMethod]
+            public void AccrualRateTest()
+            {
+                Assert.AreEqual(accrualRate, employeeLeavePlan.AccrualRate);
+            }
+
+            [TestMethod]
+            public void AccrualLimitTest()
+            {
+                Assert.AreEqual(accrualLimit, employeeLeavePlan.AccrualLimit);
+            }
+
+            [TestMethod]
+            public void AccrualMaxCarryOverTest()
+            {
+                Assert.AreEqual(accrualMaxCarryOver, employeeLeavePlan.AccrualMaxCarryOver);
             }
 
         }

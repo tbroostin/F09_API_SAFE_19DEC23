@@ -236,9 +236,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             accountsPayableInvoicesController.Request.Headers.CacheControl =
                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
             accountsPayableInvoicesServiceMock.Setup(
-                x => x.GetAccountsPayableInvoices2Async(offset, limit, It.IsAny<bool>()))
+                x => x.GetAccountsPayableInvoices2Async(offset, limit, It.IsAny<AccountsPayableInvoices2>(), It.IsAny<bool>()))
                 .ReturnsAsync(accountsPayableInvoicesTuple);
-            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page);
+            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page, It.IsAny<QueryStringFilter>());
             var cancelToken = new System.Threading.CancellationToken(false);
             System.Net.Http.HttpResponseMessage httpResponseMessage = await actuals.ExecuteAsync(cancelToken);
             List<AccountsPayableInvoices2> ActualsAPI =
@@ -333,9 +333,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             accountsPayableInvoicesController.Request.Headers.CacheControl =
                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
             accountsPayableInvoicesServiceMock.Setup(
-                x => x.GetAccountsPayableInvoices2Async(offset, limit, It.IsAny<bool>()))
+                x => x.GetAccountsPayableInvoices2Async(offset, limit, It.IsAny<AccountsPayableInvoices2>(), It.IsAny<bool>()))
                 .ReturnsAsync(accountsPayableInvoicesTuple);
-            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page);
+            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page, It.IsAny<QueryStringFilter>());
             var cancelToken = new System.Threading.CancellationToken(false);
             System.Net.Http.HttpResponseMessage httpResponseMessage = await actuals.ExecuteAsync(cancelToken);
             List<AccountsPayableInvoices2> ActualsAPI =
@@ -431,9 +431,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             accountsPayableInvoicesController.Request.Headers.CacheControl =
                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
             accountsPayableInvoicesServiceMock.Setup(
-                x => x.GetAccountsPayableInvoices2Async(offset, limit, It.IsAny<bool>()))
+                x => x.GetAccountsPayableInvoices2Async(offset, limit, It.IsAny<AccountsPayableInvoices2>(), It.IsAny<bool>()))
                 .ReturnsAsync(accountsPayableInvoicesTuple);
-            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page);
+            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page, It.IsAny<QueryStringFilter>());
             var cancelToken = new System.Threading.CancellationToken(false);
             System.Net.Http.HttpResponseMessage httpResponseMessage = await actuals.ExecuteAsync(cancelToken);
             List<AccountsPayableInvoices2> ActualsAPI =
@@ -526,9 +526,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             };
             accountsPayableInvoicesController.Request.Headers.CacheControl =
                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
-            accountsPayableInvoicesServiceMock.Setup(x => x.GetAccountsPayableInvoices2Async(1, 1, It.IsAny<bool>()))
+            accountsPayableInvoicesServiceMock.Setup(x => x.GetAccountsPayableInvoices2Async(1, 1, It.IsAny<AccountsPayableInvoices2>(), It.IsAny<bool>()))
                 .ReturnsAsync(accountsPayableInvoicesTuple);
-            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page);
+            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page, It.IsAny<QueryStringFilter>());
             var cancelToken = new System.Threading.CancellationToken(false);
             System.Net.Http.HttpResponseMessage httpResponseMessage = await actuals.ExecuteAsync(cancelToken);
             List<AccountsPayableInvoices2> ActualsAPI =
@@ -622,9 +622,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             };
             accountsPayableInvoicesController.Request.Headers.CacheControl =
                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
-            accountsPayableInvoicesServiceMock.Setup(x => x.GetAccountsPayableInvoices2Async(0, 100, It.IsAny<bool>()))
+            accountsPayableInvoicesServiceMock.Setup(x => x.GetAccountsPayableInvoices2Async(0, 100, It.IsAny<AccountsPayableInvoices2>(), It.IsAny<bool>()))
                 .ReturnsAsync(accountsPayableInvoicesTuple);
-            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(null);
+            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(null, It.IsAny<QueryStringFilter>());
             var cancelToken = new System.Threading.CancellationToken(false);
             System.Net.Http.HttpResponseMessage httpResponseMessage = await actuals.ExecuteAsync(cancelToken);
             List<AccountsPayableInvoices2> ActualsAPI =
@@ -791,9 +791,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             accountsPayableInvoicesController.Request.Headers.CacheControl =
                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
             accountsPayableInvoicesServiceMock.Setup(
-                x => x.GetAccountsPayableInvoices2Async(offset, limit, It.IsAny<bool>()))
+                x => x.GetAccountsPayableInvoices2Async(offset, limit, It.IsAny<AccountsPayableInvoices2>(), It.IsAny<bool>()))
                 .ThrowsAsync(new KeyNotFoundException());
-            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page);
+            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page, It.IsAny<QueryStringFilter>());
         }
 
         [TestMethod]
@@ -807,9 +807,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             accountsPayableInvoicesController.Request.Headers.CacheControl =
                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
             accountsPayableInvoicesServiceMock.Setup(
-                x => x.GetAccountsPayableInvoices2Async(offset, limit, It.IsAny<bool>()))
+                x => x.GetAccountsPayableInvoices2Async(offset, limit, It.IsAny<AccountsPayableInvoices2>(), It.IsAny<bool>()))
                 .ThrowsAsync(new PermissionsException());
-            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page);
+            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page, It.IsAny<QueryStringFilter>());
         }
 
         [TestMethod]
@@ -823,9 +823,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             accountsPayableInvoicesController.Request.Headers.CacheControl =
                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
             accountsPayableInvoicesServiceMock.Setup(
-                x => x.GetAccountsPayableInvoices2Async(offset, limit, It.IsAny<bool>()))
+                x => x.GetAccountsPayableInvoices2Async(offset, limit, It.IsAny<AccountsPayableInvoices2>(), It.IsAny<bool>()))
                 .ThrowsAsync(new ArgumentException());
-            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page);
+            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page, It.IsAny<QueryStringFilter>());
         }
 
         [TestMethod]
@@ -839,9 +839,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             accountsPayableInvoicesController.Request.Headers.CacheControl =
                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
             accountsPayableInvoicesServiceMock.Setup(
-                x => x.GetAccountsPayableInvoices2Async(offset, limit, It.IsAny<bool>()))
+                x => x.GetAccountsPayableInvoices2Async(offset, limit, It.IsAny<AccountsPayableInvoices2>(), It.IsAny<bool>()))
                 .ThrowsAsync(new RepositoryException());
-            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page);
+            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page, It.IsAny<QueryStringFilter>());
         }
 
         [TestMethod]
@@ -856,9 +856,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             accountsPayableInvoicesController.Request.Headers.CacheControl =
                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
             accountsPayableInvoicesServiceMock.Setup(
-                x => x.GetAccountsPayableInvoices2Async(offset, limit, It.IsAny<bool>()))
+                x => x.GetAccountsPayableInvoices2Async(offset, limit, It.IsAny<AccountsPayableInvoices2>(), It.IsAny<bool>()))
                 .ThrowsAsync(new IntegrationApiException());
-            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page);
+            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page, It.IsAny<QueryStringFilter>());
         }
 
         [TestMethod]
@@ -872,8 +872,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             accountsPayableInvoicesController.Request.Headers.CacheControl =
                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
             accountsPayableInvoicesServiceMock.Setup(
-                x => x.GetAccountsPayableInvoices2Async(offset, limit, It.IsAny<bool>())).ThrowsAsync(new Exception());
-            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page);
+                x => x.GetAccountsPayableInvoices2Async(offset, limit, It.IsAny<AccountsPayableInvoices2>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
+            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page, It.IsAny<QueryStringFilter>());
         }
 
 
@@ -1080,30 +1080,11 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(null);
         }
 
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task AccountsPayableInvoicesController_POST_ArgumentNullException_Dto_TransactionDate_As_Min_DataValue()
-        {
-            accountsPayableInvoicesPOST.TransactionDate = DateTime.MinValue;
-
-            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoicesPOST);
-        }
-
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task AccountsPayableInvoicesController_POST_ArgumentNullException_Dto_NotNullGUID()
         {
             accountsPayableInvoicesPOST.Id = "1234";
-
-            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoicesPOST);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task AccountsPayableInvoicesController_POST_ArgumentNullException_Dto_VoidDate_NotNull()
-        {
-            accountsPayableInvoicesPOST.VoidDate = DateTime.Now;
 
             var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoicesPOST);
         }

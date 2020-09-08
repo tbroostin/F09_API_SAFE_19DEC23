@@ -15,5 +15,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<Remark> GetRemarkByGuidAsync(string guid);
         Task<Remark> UpdateRemarkAsync(Remark remark);
         Task DeleteRemarkAsync(string guid);
+
+        Task<Dictionary<string, Dictionary<string, string>>> GetPersonDictionaryCollectionAsync(IEnumerable<string> personIds);
     }
 }

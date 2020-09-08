@@ -113,7 +113,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="resourceVersionNumber">version number of ther resource</param>
         /// <param name="extendedSchemaResourceId">extended schema identifier</param>
         /// <returns> extended configuration if available. Returns null if none available or none configured</returns>
-        Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId);
+        Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, bool bypassCache = false);
 
         /// <summary>
         /// Checks if the user making the API call is the EMA user based on the user settings on the EMA configuration

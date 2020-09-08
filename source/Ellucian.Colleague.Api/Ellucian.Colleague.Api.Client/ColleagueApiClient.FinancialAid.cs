@@ -2226,6 +2226,38 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
+        /// Get all student shopping sheets for award years on student's file
+        /// </summary>
+        /// <param name="studentId">student id</param>
+        /// <returns>A list of Shopping sheets for the specified studentId</returns>
+        public async Task<IEnumerable<ShoppingSheet2>> GetStudentShoppingSheets2Async(string studentId, bool getActiveYearsOnly = false)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Student ID cannot be null or empty");
+            }
+
+            try
+            {
+                string queryString = UrlUtility.BuildEncodedQueryString("getActiveYearsOnly", getActiveYearsOnly.ToString());
+                string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _studentShoppingSheetsPath);
+                var combinedUrl = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<ShoppingSheet2>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get student shopping sheets");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Gets all of a student's awards across all active years for which the student has award data.
         /// </summary>
         /// <param name="studentId">The Colleague studentId for which to get awards</param>

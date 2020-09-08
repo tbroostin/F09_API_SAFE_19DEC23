@@ -636,10 +636,8 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                     awardLetter3Entity.AlhIndirectCostComp = awardLetterHistoryRecord.AlhIndirectCostComp;
 
                     //Assignment of Enrollment Status & Housing Status information to AwardLetter3 Entity.
-                    var enrollmentStatuses = awardLetterHistoryRecord.AlhEnrollmentStatus;
-                    awardLetter3Entity.AlhEnrollmentStatus = awardLetterHistoryRecord.AlhEnrlDesc;
                     awardLetter3Entity.AlhHousingInd = awardLetterHistoryRecord.AlhHousingInd;
-                    awardLetter3Entity.AlhHousingDesc = awardLetterHistoryRecord.AlhHousingDesc;
+                    
 
                     //Assignment of Pell Entitlement Information
                     awardLetter3Entity.AlhPellEntitlementList = awardLetterHistoryRecord.AlhPellEntitlements;
@@ -652,7 +650,14 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 awardLetter3Entity.ClosingParagraph = FormatParagraph(awardLetterHistoryRecord.AlhClosingParagraph, paragraphSpacing);
 
                 //Set housing info if inidicated
-                awardLetter3Entity.HousingCode = TranslateHousingCode(awardLetterHistoryRecord.AlhHousingCode);
+                if (!string.IsNullOrEmpty(awardLetterHistoryRecord.AlhHousingCode))
+                {
+                    awardLetter3Entity.HousingCode = TranslateHousingCode(awardLetterHistoryRecord.AlhHousingCode);
+                }
+                else
+                {
+                    awardLetter3Entity.HousingCode = null;
+                }
 
                 var awardLetterGroups = new List<AwardLetterGroup2>();
                 var origGroupInfo = awardLetterHistoryRecord.AlhGroupsEntityAssociation;
@@ -668,7 +673,54 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 awardLetter3Entity.AwardLetterGroups = awardLetterGroups;
 
                 //Get award letter annual awards
-                awardLetter3Entity.AwardLetterAnnualAwards = GetAwardLetterAnnualAwards(allAwards, awardLetterHistoryRecord, awardLetterGroups); 
+                var awardLetterAnnualAwards  = GetAwardLetterAnnualAwards(allAwards, awardLetterHistoryRecord, awardLetterGroups);
+                awardLetter3Entity.AwardLetterAnnualAwards = awardLetterAnnualAwards;
+                var awardPeriodAssociationTable = awardLetterHistoryRecord.AlhAwardPeriodTableEntityAssociation;
+
+                var alhHousingDesc = new List<string>();
+                var alhEnrollmentDesc = new List<string>();
+
+                var awardPeriodsForYear = awardLetterAnnualAwards.Any() ? awardLetterAnnualAwards.SelectMany(a => a.AwardLetterAwardPeriods).ToList() : new List<Domain.FinancialAid.Entities.AwardLetterAwardPeriod>();
+                if (awardPeriodsForYear != null && awardPeriodsForYear.Any())
+                {
+                    var distinctAwardPeriodColumnsForYear = awardPeriodsForYear.Any() ? awardPeriodsForYear.Select(ap => ap.ColumnNumber).Distinct().OrderBy(cn => cn).ToList() : new List<int>();
+
+                    var distinctAwardPeriods = new List<AwardLetterHistoryAlhAwardPeriodTable>();
+
+                    foreach (var columnNumber in distinctAwardPeriodColumnsForYear)
+                    {
+
+                        var distinctAwardPeriod = awardPeriodAssociationTable.Where(ap => ap.AlhColumnGroupNumberAssocMember == columnNumber.ToString()).FirstOrDefault();
+                        distinctAwardPeriods.Add(distinctAwardPeriod);
+                    }
+
+                    if (distinctAwardPeriods.Any())
+                    {
+                        foreach (var awardPeriod in distinctAwardPeriods)
+                        {
+                            if (awardPeriod.AlhHousingDescAssocMember != null || awardPeriod.AlhHousingDescAssocMember != "")
+                            {
+                                alhHousingDesc.Add(awardPeriod.AlhHousingDescAssocMember);
+                            }
+                            if (awardPeriod.AlhEnrlDescAssocMember != null || awardPeriod.AlhEnrlDescAssocMember != "")
+                            {
+                                alhEnrollmentDesc.Add(awardPeriod.AlhEnrlDescAssocMember);
+                            }
+                        }
+                    }
+                }
+
+
+                if (alhLetterType == "OLTR")
+                {
+                    awardLetter3Entity.AlhEnrollmentStatus = alhEnrollmentDesc;
+                    awardLetter3Entity.AlhHousingDesc = alhHousingDesc;
+                }
+                else
+                {
+                    awardLetter3Entity.AlhEnrollmentStatus = awardLetterHistoryRecord.AlhEnrlDesc;
+                    awardLetter3Entity.AlhHousingDesc = awardLetterHistoryRecord.AlhHousingDesc;
+                }
 
                 //Student name and address
                 awardLetter3Entity.StudentName = awardLetterHistoryRecord.AlhStudentName;

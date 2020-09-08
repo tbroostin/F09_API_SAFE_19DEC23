@@ -45,6 +45,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
 
         [TestMethod]
+        [Ignore]
         public async Task Get_VerifyCount()
         {
             try

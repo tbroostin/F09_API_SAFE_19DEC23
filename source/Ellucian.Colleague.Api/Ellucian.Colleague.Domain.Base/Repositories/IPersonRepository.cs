@@ -342,7 +342,16 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        Task<List<string>> Get1098HierarchyAddressAsync(string id);        
+        Task<List<string>> Get1098HierarchyAddressAsync(string id);
+
+        /// <summary>
+        /// returns address Id matching the hierarchy provided. 
+        /// </summary>
+        /// <param name="ids">collection of person ids</param>
+        /// <param name="hierarchy">the addreess hierarchy</param>
+        /// <param name="date">the date for the address calculation</param>
+        /// <returns>Dictionary consisting of a person Id (key) and addressId (value)</returns>
+        Task<Dictionary<string, string>> GetHierarchyAddressIdsAsync(List<string> ids, string hierarchy, DateTime? date);
 
         /// <summary>
         /// Returns the collection of person pin entities
@@ -352,6 +361,13 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<IEnumerable<Ellucian.Colleague.Domain.Base.Entities.PersonPin>> GetPersonPinsAsync(string[] personGuids);
 
         Task<EmailAddress> GetEmailAddressFromHierarchyAsync(string personId, string emailHierarchy);
+
+        /// <summary>
+        /// Using a collection of address ids, get a dictionary collection of associated guids
+        /// </summary>
+        /// <param name="addressIds">collection of address ids</param>
+        /// <returns>Dictionary consisting of a addressId (key) and guid (value)</returns>
+        Task<Dictionary<string, string>> GetAddressGuidsCollectionAsync(IEnumerable<string> addressIds);
 
     }
 }

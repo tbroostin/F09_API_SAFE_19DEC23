@@ -76,7 +76,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         AcadPrograms = new List<string>() { "BA-EDUC" }
                     });
               
-                _catalogRepositoryMock.Setup(repo => repo.GetAsync(false)).ReturnsAsync(_catalogCollection);
+                _catalogRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<bool>())).ReturnsAsync(_catalogCollection);
 
                 var defaultsConfiguration = new DefaultsConfiguration()
                 {
@@ -151,7 +151,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.IsNotNull(acadedmicCatalog.Code);
                 Assert.IsNotNull(acadedmicCatalog.StartDate);
                 Assert.IsNotNull(acadedmicCatalog.EndDate);
-                Assert.IsNotNull(acadedmicCatalog.status);
+                Assert.IsNull(acadedmicCatalog.Status);
             }
 
             [TestMethod]
@@ -166,7 +166,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.AreEqual(expectedResults.Code, acadedmicCatalog.Code);
                 Assert.AreEqual(expectedResults.StartDate, acadedmicCatalog.StartDate);
                 Assert.AreEqual(expectedResults.EndDate, acadedmicCatalog.EndDate);
-                Assert.AreEqual(LifeCycleStatus.Active, acadedmicCatalog.status);
+                Assert.IsNull(acadedmicCatalog.Status);
                 Assert.AreEqual(defaultHostGuid, acadedmicCatalog.Institution.Id);
                 Assert.AreEqual(expectedAcademicProgram.Guid, acadedmicCatalog.AcademicPrograms.ElementAtOrDefault(0).Id);
             }
@@ -196,7 +196,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.AreEqual(expectedResults.Code, acadedmicCatalog.Code);
                 Assert.AreEqual(expectedResults.StartDate, acadedmicCatalog.StartDate);
                 Assert.AreEqual(expectedResults.EndDate, acadedmicCatalog.EndDate);
-                Assert.AreEqual(LifeCycleStatus.Active, acadedmicCatalog.status);
+                Assert.IsNull(acadedmicCatalog.Status);
                 Assert.AreEqual(defaultHostGuid, acadedmicCatalog.Institution.Id);
             }
 
@@ -209,7 +209,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.IsNotNull(acadedmicCatalog.Code);
                 Assert.IsNotNull(acadedmicCatalog.StartDate);
                 Assert.IsNotNull(acadedmicCatalog.EndDate);
-                Assert.IsNotNull(acadedmicCatalog.status);
+                Assert.IsNull(acadedmicCatalog.Status);
                 Assert.IsNotNull(acadedmicCatalog.Institution);
             }
         }

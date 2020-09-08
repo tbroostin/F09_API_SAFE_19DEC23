@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -175,7 +175,14 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <summary>
         /// Application influences (campus tour, brochure, etc)
         /// </summary>
-        Task<IEnumerable<ApplicationInfluence>> GetApplicationInfluencesAsync();
+        Task<IEnumerable<ApplicationInfluence>> GetApplicationInfluencesAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get guid for ApplicationInfluence code
+        /// </summary>
+        /// <param name="code">ApplicationInfluence code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetApplicationInfluenceGuidAsync(string code);
 
         /// <summary>
         /// Application Sources
@@ -231,10 +238,19 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <returns></returns>
         Task<IEnumerable<CampusOrganizationType>> GetCampusOrganizationTypesAsync(bool ignoreCache);
 
-        /// <summary>
-        /// Career Goals
+        // <summary>
+        /// Get a collection of CareerGoals
         /// </summary>
-        Task<IEnumerable<CareerGoal>> GetCareerGoalsAsync();
+        /// <param name="ignoreCache">Bypass cache flag</param>
+        /// <returns>Collection of CareerGoals</returns>
+        Task<IEnumerable<CareerGoal>> GetCareerGoalsAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get guid for a Career Goal code
+        /// </summary>
+        /// <param name="code">Career Goal code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetCareerGoalGuidAsync(string code);
 
         /// <summary>
         /// Certificates, Credentials, Degrees
@@ -347,7 +363,7 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// Degrees
         /// </summary>
         Task<IEnumerable<Degree>> GetDegreesAsync();
-
+        
         /// <summary>
         /// Get a collection of enrollment statuses
         /// </summary>
@@ -963,6 +979,16 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <returns>Collection of financial aid years</returns>
         Task<IEnumerable<FinancialAidYear>> GetFinancialAidYearsAsync(bool ignoreCache = false);
 
+
+
+        /// <summary>
+        /// Get guid for GetFinancialAidYears code
+        /// </summary>
+        /// <param name="code">FinancialAidYears code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetFinancialAidYearsGuidAsync(string code);
+
+
         /// <summary>
         /// Get a collection of financial aid award periods
         /// </summary>
@@ -1004,5 +1030,19 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <param name="ignoreCache"></param>
         /// <returns>List of section-registration-statuses to be included in headcounts</returns>
         Task<List<string>> GetHeadcountInclusionListAsync(bool ignoreCache = false);
+
+        /// <summary>
+        /// Get a collection of education goals.
+        /// </summary>
+        /// <param name="ignoreCache"></param>
+        /// <returns></returns>
+        Task<IEnumerable<EducationGoals>> GetEducationGoalsAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get guid for education goal code.
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
+        Task<string> GetEducationGoalGuidAsync(string code);
     }
 }

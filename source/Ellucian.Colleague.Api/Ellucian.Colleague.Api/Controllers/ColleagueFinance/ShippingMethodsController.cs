@@ -204,5 +204,25 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
 
         }
+
+        /// <summary>
+        /// Return all ShipViaCode
+        /// </summary>
+        /// <returns>List of ShipViaCodes <see cref="Dtos.ColleagueFinance.ShipViaCode"/> objects representing matching ShipToCode</returns>
+        [HttpGet]
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.ShipViaCode>> GetShipViaCodesAsync()
+        {
+            try
+            {
+                var dtos = await _shippingMethodsService.GetShipViaCodesAsync();
+                return dtos;
+            }
+            // Application exceptions will be caught below.
+            catch (Exception ex)
+            {
+                _logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException("Unable to get Ship Via Codes.", HttpStatusCode.BadRequest);
+            }
+        }
     }
 }

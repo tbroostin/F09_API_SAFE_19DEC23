@@ -18,6 +18,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
             public List<CommunicationCodeUrlRecord> CcUrls { get; set; }
             public string CcFaYear { get; set; }
             public string CcOffice { get; set; }
+            public string CcAllowsAttachments { get; set; }
         }
 
         public class CommunicationCodeUrlRecord
@@ -108,6 +109,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
                     OfficeCodeId = record.CcOffice,
                     IsStudentViewable = (corewebDefaultsData == null || corewebDefaultsData.communicationCodesAsRequiredDocuments == null) ? false :
                         corewebDefaultsData.communicationCodesAsRequiredDocuments.Contains(record.RecordKey),
+                    AllowsAttachments = true,
                     Hyperlinks = record.CcUrls == null ? new List<CommunicationCodeHyperlink>() :
                         record.CcUrls.Select(url => new CommunicationCodeHyperlink(url.url, url.title)).ToList()
                 });

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Rest.Client.Exceptions;
@@ -39,6 +39,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecutePostRequestWithResponse(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<Ellucian.Colleague.Dtos.Base.Address>>(response.Content.ReadAsStringAsync().Result);
             }
@@ -63,6 +64,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_addressPath, id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Ellucian.Colleague.Dtos.Base.Address>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -814,6 +816,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<PhoneNumber>>(response.Content.ReadAsStringAsync().Result);
             }
@@ -845,6 +848,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderPilotVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<PilotPhoneNumber>>(response.Content.ReadAsStringAsync().Result);
             }
@@ -876,6 +880,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderPilotVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<PilotPhoneNumber>>(response.Content.ReadAsStringAsync().Result);
             }
@@ -901,6 +906,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_phoneNumberPath, id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<PhoneNumber>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -1195,6 +1201,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<Ellucian.Colleague.Dtos.Base.Address>>(await response.Content.ReadAsStringAsync());
             }
@@ -1219,6 +1226,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_addressPath, personId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Ellucian.Colleague.Dtos.Base.Address>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -1970,6 +1978,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<PhoneNumber>>(await response.Content.ReadAsStringAsync());
             }
@@ -1995,6 +2004,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_phoneNumberPath, id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<PhoneNumber>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -2150,6 +2160,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_personsPath, personId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderPersonProfileVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers, useCache: useCache);
                 return JsonConvert.DeserializeObject<Profile>(await response.Content.ReadAsStringAsync());
             }
@@ -2172,7 +2183,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_personsPath, personId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderProxyUserVersion1);
-                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<PersonProxyDetails>(await response.Content.ReadAsStringAsync());
             }
@@ -2554,6 +2565,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_personsPath, personId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderPersonProfileVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, useCache: useCache, headers: headers);
                 return JsonConvert.DeserializeObject<Profile>(response.Content.ReadAsStringAsync().Result);
             }
@@ -2626,7 +2638,7 @@ namespace Ellucian.Colleague.Api.Client
         /// </summary>
         /// <param name="personId">This is the person id.</param>
         /// <returns>A list of tax form consent choices.</returns>
-        public async Task<IEnumerable<TaxFormConsent>> GetTaxFormConsents(string personId, TaxForms taxForm)
+        public async Task<IEnumerable<TaxFormConsent>> GetTaxFormConsents(string personId, Dtos.Base.TaxForms taxForm)
         {
             try
             {
@@ -2942,7 +2954,7 @@ namespace Ellucian.Colleague.Api.Client
         /// </summary>
         /// <param name="taxFormId">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
         /// <returns>Tax Form Configuration for the type of tax form.</returns>
-        public async Task<TaxFormConfiguration> GetTaxFormConfiguration(TaxForms taxFormId)
+        public async Task<TaxFormConfiguration> GetTaxFormConfiguration(Dtos.Base.TaxForms taxFormId)
         {
             try
             {
@@ -3121,6 +3133,7 @@ namespace Ellucian.Colleague.Api.Client
                 var urlPath = UrlUtility.CombineUrlPath(_personsPath, profile.Id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderPersonProfileVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePutRequestWithResponseAsync<Profile>(profile, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<Profile>(await response.Content.ReadAsStringAsync());
             }
@@ -3147,6 +3160,7 @@ namespace Ellucian.Colleague.Api.Client
                 var urlPath = UrlUtility.CombineUrlPath(_personsPath, profile.Id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderPersonProfileVersion2);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePutRequestWithResponseAsync<Profile>(profile, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<Profile>(await response.Content.ReadAsStringAsync());
             }
@@ -3511,7 +3525,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="personId">Person ID</param>
         /// <param name="taxForm">Type of tax form</param>
         /// <returns>Set of tax form statements</returns>
-        public async Task<IEnumerable<TaxFormStatement2>> GetTaxFormStatements2(string personId, TaxForms taxForm)
+        public async Task<IEnumerable<TaxFormStatement2>> GetTaxFormStatements2(string personId, Dtos.Base.TaxForms taxForm)
         {
             if (string.IsNullOrEmpty(personId))
                 throw new ArgumentNullException("personId", "personId is required.");
@@ -4476,6 +4490,46 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+
+        /// <summary>
+        /// Used to optionally update the correspondence request status and notify back office when a new attachment is added to a correspondence request.
+        /// </summary>
+        /// <param name="attachmentNotification">Object that carries Person ID (required), Communication Code (required), Assign Date (required) and optioanl instance. Used to identify the specific correspondence request.</param>
+        /// <returns>The Correspondence Request that was notified of an attachment. It may have an updated status description.</returns>
+        public async Task<CorrespondenceRequest> PutAttachmentNotificationAsync(CorrespondenceAttachmentNotification attachmentNotification)
+        {
+            if (attachmentNotification == null)
+            {
+                throw new ArgumentNullException("attachmentNotification");
+            }
+
+            if (string.IsNullOrWhiteSpace(attachmentNotification.PersonId))
+            {
+                throw new ArgumentException("Person Id is required in CorrespondenceAttachmentNotification");
+            }
+
+            if (string.IsNullOrWhiteSpace(attachmentNotification.CommunicationCode))
+            {
+                throw new ArgumentException("Communication Code is required in CorrespondenceAttachmentNotification");
+            }
+
+            var urlPath = UrlUtility.CombineUrlPath(new string[] { _correspondenceRequestsPath, _attachmentNotificationPath });
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+            try
+            {
+                var response = await ExecutePutRequestWithResponseAsync(attachmentNotification, urlPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<CorrespondenceRequest>(result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to PUT the new attachment notification.");
+                throw;
+            }
+        }
+
         /// <summary>
         /// Asynchronously returns the Required Document Configuration.
         /// </summary>
@@ -4571,7 +4625,7 @@ namespace Ellucian.Colleague.Api.Client
         /// </summary>
         /// <param name="attachmentId">Id of the attachment whose content is requested</param>
         /// <returns>A tuple whose item1 is the file's name, item2 is the file content in bytes, and item 3 is its encryption metadata</returns>
-        public async Task<Tuple<string, byte[], AttachmentEncryption>> GetAttachmentContentAsync(string attachmentId)
+        public async Task<Tuple<string, byte[], AttachmentEncryption>> GetAttachmentContentAsync(string attachmentId) 
         {
             if (string.IsNullOrWhiteSpace(attachmentId))
             {
@@ -4618,6 +4672,34 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get this attachment's content.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Query attachments
+        /// </summary>
+        /// <param name="criteria">Criteria to query attachments by</param>
+        /// <returns>List of <see cref="Attachment">Attachments matching the query criteria</see></returns>
+        public async Task<IEnumerable<Attachment>> QueryAttachmentsAsync(AttachmentSearchCriteria criteria)
+        {
+            if (criteria == null)
+                throw new ArgumentNullException("criteria");
+
+            var headers = new NameValueCollection
+            {
+                { AcceptHeaderKey, _mediaTypeHeaderVersion1 }
+            };
+
+            try
+            {
+                var response = await ExecutePostRequestWithResponseAsync(criteria, UrlUtility.CombineUrlPath(_qapiPath, _attachmentsPath), headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<IEnumerable<Attachment>>(result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to POST an attachment query.");
                 throw;
             }
         }

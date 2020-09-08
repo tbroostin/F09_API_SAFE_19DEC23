@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Colleague.Dtos.Student.DegreePlans;
@@ -446,6 +446,53 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 Assert.IsNotNull(result);
                 Assert.AreEqual(mathSection.Id, retrievedMathSection.Id);
                 Assert.AreEqual(mathSection.CourseId, retrievedMathSection.CourseId);
+            }
+
+            [TestMethod]
+            public async Task SearchSectionAsync()
+            {
+                // Arrange
+                var simpleStringValue = "12345678";
+                var simpleStringArgument = new List<string>() { simpleStringValue };
+                var pageSize = 10;
+                var pageIndex = 1;
+
+                var sectionFilter = new Filter()
+                {
+                     Count = 5,
+                     Selected = true,
+                     Value = simpleStringValue
+                };
+
+                var section1 = new Section3() { Id = "SectionId", Title = "Section Title" };
+                var sectionSearchCriteria = new SectionSearchCriteria() { Keyword = "HIST" };
+                IEnumerable<Section3> items = new List<Section3>() { section1 };
+                var sectionPageResponse = new SectionPage() { PageSize = 10, CurrentPageIndex = 1, TotalPages = 2, Terms = new List<Filter>() { sectionFilter }, CurrentPageItems = items };
+
+                var serializedResponse = JsonConvert.SerializeObject(sectionPageResponse);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+
+                var result = await client.SearchSectionsAsync(sectionSearchCriteria, pageSize, pageIndex);
+
+                var firstCourse = result.CurrentPageItems.ElementAt(0);
+                var TermFilterValues = result.Terms.Select(x => x.Value).ToList();
+
+                // Assert
+                Assert.AreEqual(pageIndex, result.CurrentPageIndex);
+                Assert.AreEqual(pageSize, result.PageSize);
+                Assert.AreEqual(1, result.CurrentPageItems.Count());
+                CollectionAssert.AreEquivalent(simpleStringArgument, TermFilterValues);
             }
 
         }
@@ -8359,6 +8406,903 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 // Act
                 var clientResponse = await client.GetStudentQuickRegistrationSectionsAsync(studentId);
             }
+        }
+
+        [TestClass]
+        public class QueryRetentionAlertCaseCategoryOrgRolesAsync_Tests
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task QueryRetentionAlertCaseCategoryOrgRolesAsync_null_caseCategoryIds()
+            {
+                var sqr = new StudentQuickRegistration();
+                var serializedResponse = JsonConvert.SerializeObject(sqr);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.QueryRetentionAlertCaseCategoryOrgRolesAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task QueryRetentionAlertCaseCategoryOrgRolesAsync_empty_caseCategoryIds()
+            {
+                var sqr = new StudentQuickRegistration();
+                var serializedResponse = JsonConvert.SerializeObject(sqr);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.QueryRetentionAlertCaseCategoryOrgRolesAsync(new List<string>() );
+            }
+
+            [TestMethod]
+            public async Task QueryRetentionAlertCaseCategoryOrgRolesAsync_one_caseCategoryIds()
+            {
+
+                var caseCatOrgRolesList = new List<RetentionAlertCaseCategoryOrgRoles>()
+                {
+                    new RetentionAlertCaseCategoryOrgRoles()
+                    {
+                        CaseCategoryId = "1",
+                        CaseCategoryOrgRoles = new List<RetentionAlertCaseCategoryOrgRole>()
+                        {
+                            new RetentionAlertCaseCategoryOrgRole()
+                            {
+                                OrgRoleId = "12",
+                                OrgRoleName = "ADVISOR",
+                                IsAssignedInitially = "Y",
+                                IsAvailableForReassignment = "Y",
+                                IsReportingAndAdministrative = "Y"
+                            },
+                            new RetentionAlertCaseCategoryOrgRole()
+                            {
+                                OrgRoleId = "13",
+                                OrgRoleName = "FACULTY",
+                                IsAssignedInitially = "N",
+                                IsAvailableForReassignment = "Y",
+                                IsReportingAndAdministrative = "N"
+                            }
+                        }
+                    }
+                };
+
+                var serializedResponse = JsonConvert.SerializeObject(caseCatOrgRolesList);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.QueryRetentionAlertCaseCategoryOrgRolesAsync(new List<string>() { caseCatOrgRolesList[0].CaseCategoryId });
+            }
+        }
+
+        [TestClass]
+        public class QueryRetentionAlertGroupOfCasesSummaryAsync_Tests
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task QueryRetentionAlertGroupOfCasesSummaryAsync_null_caseIds()
+            {
+                var sqr = new StudentQuickRegistration();
+                var serializedResponse = JsonConvert.SerializeObject(sqr);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.GetRetentionAlertCaseOwnerSummaryAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task QueryRetentionAlertGroupOfCasesSummaryAsync_empty_caseIds()
+            {
+                var sqr = new StudentQuickRegistration();
+                var serializedResponse = JsonConvert.SerializeObject(sqr);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.GetRetentionAlertCaseOwnerSummaryAsync("");
+            }
+
+            [TestMethod]
+            public async Task QueryRetentionAlertGroupOfCasesSummaryAsync_one_caseIds()
+            {
+                var caseCatGroupSum = 
+                    new RetentionAlertGroupOfCasesSummary()
+                    {
+                        Summary = "Advising Alert",
+                        EntityCases = new List<RetentionAlertGroupOfCases>()
+                        {
+                            new RetentionAlertGroupOfCases()
+                            {
+                                Name = "ADVISOR",
+                                CaseIds = new List<string>()
+                                {
+                                    "1","2","3"
+                                }
+                            },
+                            new RetentionAlertGroupOfCases()
+                            {
+                                Name = "FACULTY",
+                                CaseIds = new List<string>()
+                                {
+                                    "1","3"
+                                }
+                            }
+                        }
+                    
+                };
+
+                var serializedResponse = JsonConvert.SerializeObject(caseCatGroupSum);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.GetRetentionAlertCaseOwnerSummaryAsync( "1" );
+            }
+        }
+
+        [TestClass]
+        public class GetRetentionAlertCaseDetailAsync_Tests
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetRetentionAlertCaseDetailAsync_null_caseIds()
+            {
+                var sqr = new StudentQuickRegistration();
+                var serializedResponse = JsonConvert.SerializeObject(sqr);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.GetRetentionAlertCaseDetailAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetRetentionAlertCaseDetailAsync_empty_caseIds()
+            {
+                var sqr = new StudentQuickRegistration();
+                var serializedResponse = JsonConvert.SerializeObject(sqr);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.GetRetentionAlertCaseDetailAsync(string.Empty);
+            }
+
+            [TestMethod]
+            public async Task GetRetentionAlertCaseDetailAsync_one_caseIds()
+            {
+                var caseDetails = new RetentionAlertCaseDetail()
+                {
+                    CaseId = "1",
+                    Status = "New",
+                    StudentId = "123456789",
+                    CreatedBy = "Ellucian T. User",
+                    CaseType = "LOW_GPA",
+                    Priority = "High",
+                    CasePriorityCode = "H",
+                    CaseOwner = "Advisor Smith",
+                    CategoryName = "EARLY.ALERT",
+                    CategoryId = "1"
+                };
+
+                var serializedResponse = JsonConvert.SerializeObject(caseDetails);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.GetRetentionAlertCaseDetailAsync("1");
+
+                Assert.IsNotNull(clientResponse);
+                Assert.AreEqual(caseDetails.CaseId, clientResponse.CaseId);
+                Assert.AreEqual(caseDetails.Status, clientResponse.Status);
+                Assert.AreEqual(caseDetails.StudentId, clientResponse.StudentId);
+                Assert.AreEqual(caseDetails.CreatedBy, clientResponse.CreatedBy);
+                Assert.AreEqual(caseDetails.CaseType, clientResponse.CaseType);
+                Assert.AreEqual(caseDetails.Priority, clientResponse.Priority);
+                Assert.AreEqual(caseDetails.CasePriorityCode, clientResponse.CasePriorityCode);
+                Assert.AreEqual(caseDetails.CaseOwner, clientResponse.CaseOwner);
+                Assert.AreEqual(caseDetails.CategoryName, clientResponse.CategoryName);
+                Assert.AreEqual(caseDetails.CategoryId, clientResponse.CategoryId);
+            }
+        }
+
+        [TestClass]
+        public class GetRetentionAlertClosedCasesByReasonAsync_Tests
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetRetentionAlertClosedCasesByReasonAsync_null_categoryId()
+            {
+                var closedCasesByReason = new List<RetentionAlertClosedCasesByReason>();
+                var serializedResponse = JsonConvert.SerializeObject(closedCasesByReason);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.GetRetentionAlertClosedCasesByReasonAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetRetentionAlertClosedCasesByReasonAsync_empty_categoryId()
+            {
+                var closedCasesByReason = new List<RetentionAlertClosedCasesByReason>();
+                var serializedResponse = JsonConvert.SerializeObject(closedCasesByReason);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.GetRetentionAlertClosedCasesByReasonAsync("");
+            }
+
+            [TestMethod]
+            public async Task GetRetentionAlertClosedCasesByReasonAsync_one_caseIds()
+            {
+                
+                var closedCasesByReason = new List<RetentionAlertClosedCasesByReason>(){
+                    new RetentionAlertClosedCasesByReason()
+                    {
+                        ClosureReasonId = "1",
+                        Cases = new List<RetentionAlertClosedCase>()
+                        {
+                            new RetentionAlertClosedCase()
+                            {
+                                CasesId = "1",
+                                LastActionDate = new DateTime(2020, 1, 1)
+                            },
+                            new RetentionAlertClosedCase()
+                            {
+                                CasesId = "2",
+                                LastActionDate = new DateTime(2020, 2, 1)
+                            }
+                        }
+                    } 
+                };
+                var serializedResponse = JsonConvert.SerializeObject(closedCasesByReason);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.GetRetentionAlertClosedCasesByReasonAsync("1");
+                Assert.IsNotNull(clientResponse);
+                Assert.IsTrue(clientResponse is List<RetentionAlertClosedCasesByReason>);
+                Assert.AreEqual(closedCasesByReason.Count, clientResponse.ToList().Count());
+
+                for (var i = 0; i < closedCasesByReason.Count; i++)
+                {
+                    for (var j = 0; j < closedCasesByReason[i].Cases.Count(); j++)
+                    {
+                        Assert.AreEqual(closedCasesByReason[i].Cases.ToList()[j].CasesId, clientResponse.ToList()[i].Cases.ToList()[j].CasesId);
+                        Assert.AreEqual(closedCasesByReason[i].Cases.ToList()[j].LastActionDate, clientResponse.ToList()[i].Cases.ToList()[j].LastActionDate);
+                    }                    
+                }                    
+            }           
+        }
+
+        [TestClass]
+        public class SetRetentionAlertCaseReminderAsync_Tests
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SetRetentionAlertCaseReminderAsync_null_caseId()
+            {
+                var closedCasesByReason = new List<RetentionAlertClosedCasesByReason>();
+                var serializedResponse = JsonConvert.SerializeObject(closedCasesByReason);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.SetRetentionAlertCaseReminderAsync(null, null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SetRetentionAlertCaseReminderAsync_empty_caseId()
+            {
+                var closedCasesByReason = new List<RetentionAlertClosedCasesByReason>();
+                var serializedResponse = JsonConvert.SerializeObject(closedCasesByReason);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.SetRetentionAlertCaseReminderAsync("", null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SetRetentionAlertCaseReminderAsync_null_reminder()
+            {
+                var closedCasesByReason = new List<RetentionAlertClosedCasesByReason>();
+                var serializedResponse = JsonConvert.SerializeObject(closedCasesByReason);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.SetRetentionAlertCaseReminderAsync("1", null);
+            }
+
+            [TestMethod]
+            public async Task SetRetentionAlertCaseReminderAsync_Success()
+            {
+                var setReminder = new RetentionAlertWorkCaseActionResponse()
+                {
+                    CaseId = "1",
+                    HasError = false,
+                    ErrorMessages = new List<string>()
+                };
+                var serializedResponse = JsonConvert.SerializeObject(setReminder);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+                var reminder = new RetentionAlertWorkCaseSetReminder()
+                {
+                    UpdatedBy = "1234567",
+                    ReminderDate = new DateTime(2019, 01, 01),
+                    Summary = "Summary",
+                    Notes = new List<string>() { "Notes" }
+                };
+                var clientResponse = await client.SetRetentionAlertCaseReminderAsync("1",reminder);
+                Assert.AreEqual(setReminder.CaseId, clientResponse.CaseId);
+                Assert.AreEqual(setReminder.HasError, clientResponse.HasError);
+                CollectionAssert.AreEqual(setReminder.ErrorMessages.ToList(), clientResponse.ErrorMessages.ToList());
+                
+            }
+        }
+
+        [TestClass]
+        public class ManageRetentionAlertCaseRemindersAsync_Tests
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task ManageRetentionAlertCaseReminderAsync_1()
+            {
+                var reminders = new RetentionAlertWorkCaseManageReminders()
+                {
+                    Reminders = new List<RetentionAlertWorkCaseManageReminder>()
+                    {
+                        new RetentionAlertWorkCaseManageReminder()
+                        {
+                            CaseItemsId = "100",
+                            ClearReminderDate = "Y"
+                        }
+                    }
+                };
+                var actionResponse = new RetentionAlertWorkCaseActionResponse()
+                {
+                    CaseId = "1",
+                    HasError = false
+                };
+                var serializedResponse = JsonConvert.SerializeObject(actionResponse);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.ManageRetentionAlertCaseRemindersAsync(null, null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task ManageRetentionAlertCaseReminderAsync_2()
+            {
+                var reminders = new RetentionAlertWorkCaseManageReminders()
+                {
+                    Reminders = new List<RetentionAlertWorkCaseManageReminder>()
+                    {
+                        new RetentionAlertWorkCaseManageReminder()
+                        {
+                            CaseItemsId = "100",
+                            ClearReminderDate = "Y"
+                        }
+                    }
+                };
+                var actionResponse = new RetentionAlertWorkCaseActionResponse()
+                {
+                    CaseId = "1",
+                    HasError = false
+                };
+                var serializedResponse = JsonConvert.SerializeObject(actionResponse);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.ManageRetentionAlertCaseRemindersAsync("", null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task ManageRetentionAlertCaseReminderAsync_3()
+            {
+                var reminders = new RetentionAlertWorkCaseManageReminders()
+                {
+                    Reminders = new List<RetentionAlertWorkCaseManageReminder>()
+                    {
+                        new RetentionAlertWorkCaseManageReminder()
+                        {
+                            CaseItemsId = "100",
+                            ClearReminderDate = "Y"
+                        }
+                    }
+                };
+                var actionResponse = new RetentionAlertWorkCaseActionResponse()
+                {
+                    CaseId = "1",
+                    HasError = false
+                };
+                var serializedResponse = JsonConvert.SerializeObject(actionResponse);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.ManageRetentionAlertCaseRemindersAsync("1", null);
+            }
+
+            [TestMethod]
+            public async Task ManageRetentionAlertCaseReminderAsync_4()
+            {
+                var reminders = new RetentionAlertWorkCaseManageReminders()
+                {
+                    Reminders = new List<RetentionAlertWorkCaseManageReminder>()
+                    {
+                        new RetentionAlertWorkCaseManageReminder()
+                        {
+                            CaseItemsId = "100",
+                            ClearReminderDate = "Y"
+                        }
+                    }
+                };
+                var actionResponse = new RetentionAlertWorkCaseActionResponse()
+                {
+                    CaseId = "1",
+                    HasError = false
+                };
+                var serializedResponse = JsonConvert.SerializeObject(actionResponse);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.ManageRetentionAlertCaseRemindersAsync("1", reminders);
+
+                Assert.AreEqual("1", clientResponse.CaseId);
+                Assert.AreEqual(false, clientResponse.HasError);
+            }
+        }
+
+        [TestClass]
+        public class SetRetentionAlertEmailPreferenceAsync_Tests
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SetRetentionAlertEmailPreferenceAsync_1()
+            {
+                var preference = new RetentionAlertSendEmailPreference();
+                var serializedResponse = JsonConvert.SerializeObject(preference);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.SetRetentionAlertEmailPreferenceAsync(null, null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SetRetentionAlertEmailPreferenceAsync_2()
+            {
+                var preference = new RetentionAlertSendEmailPreference();
+                var serializedResponse = JsonConvert.SerializeObject(preference);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.SetRetentionAlertEmailPreferenceAsync("", null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SetRetentionAlertEmailPreferenceAsync_3()
+            {
+                var preference = new RetentionAlertSendEmailPreference();
+                var serializedResponse = JsonConvert.SerializeObject(preference);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.SetRetentionAlertEmailPreferenceAsync("1", null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SetRetentionAlertEmailPreferenceAsync_4()
+            {
+                var preference = new RetentionAlertSendEmailPreference();
+                var serializedResponse = JsonConvert.SerializeObject(preference);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.SetRetentionAlertEmailPreferenceAsync(null, preference);
+            }
+
+            [TestMethod]
+            public async Task SetRetentionAlertEmailPreferenceAsync_5()
+            {
+                var preference = new RetentionAlertSendEmailPreference()
+                {
+                    HasSendEmailFlag = true,
+                    Message = "message"
+                };
+                var serializedResponse = JsonConvert.SerializeObject(preference);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.SetRetentionAlertEmailPreferenceAsync("1234567", preference);
+
+                Assert.AreEqual(preference.HasSendEmailFlag, clientResponse.HasSendEmailFlag);
+                Assert.AreEqual(preference.Message, clientResponse.Message);
+            }
+        }
+
+        [TestClass]
+        public class GetRetentionAlertEmailPreferenceAsync_Tests
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetRetentionAlertEmailPreferenceAsync_1()
+            {
+                var preference = new RetentionAlertSendEmailPreference();
+                var serializedResponse = JsonConvert.SerializeObject(preference);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.GetRetentionAlertEmailPreferenceAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetRetentionAlertEmailPreferenceAsync_2()
+            {
+                var preference = new RetentionAlertSendEmailPreference()
+                {
+                    HasSendEmailFlag = true,
+                    Message = "message"
+                };
+                var serializedResponse = JsonConvert.SerializeObject(preference);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.GetRetentionAlertEmailPreferenceAsync("");
+            }
+
+            [TestMethod]
+            public async Task GetRetentionAlertEmailPreferenceAsync_3()
+            {
+                var preference = new RetentionAlertSendEmailPreference();
+                var serializedResponse = JsonConvert.SerializeObject(preference);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.GetRetentionAlertEmailPreferenceAsync("1");
+                Assert.AreEqual(preference.HasSendEmailFlag, clientResponse.HasSendEmailFlag);
+                Assert.AreEqual(preference.Message, clientResponse.Message);
+            }
+
         }
     }
 }

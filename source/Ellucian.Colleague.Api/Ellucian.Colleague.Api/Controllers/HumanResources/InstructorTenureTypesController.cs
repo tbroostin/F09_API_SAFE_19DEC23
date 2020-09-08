@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -17,6 +17,7 @@ using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Filters;
+using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
@@ -46,7 +47,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Return all instructorTenureTypes
         /// </summary>
         /// <returns>List of InstructorTenureTypes <see cref="Dtos.InstructorTenureTypes"/> objects representing matching instructorTenureTypes</returns>
-        [HttpGet]
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.InstructorTenureTypes>> GetInstructorTenureTypesAsync()
         {
@@ -60,7 +61,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
-                return await _instructorTenureTypesService.GetInstructorTenureTypesAsync(bypassCache);
+                var instructorTenureTypes = await _instructorTenureTypesService.GetInstructorTenureTypesAsync(bypassCache);
+
+                if (instructorTenureTypes != null && instructorTenureTypes.Any())
+                {
+                    AddEthosContextProperties(await _instructorTenureTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _instructorTenureTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              instructorTenureTypes.Select(a => a.Id).ToList()));
+                }
+                return instructorTenureTypes;
             }
             catch (KeyNotFoundException e)
             {
@@ -99,7 +108,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="guid">GUID to desired instructorTenureTypes</param>
         /// <returns>A instructorTenureTypes object <see cref="Dtos.InstructorTenureTypes"/> in EEDM format</returns>
-        [HttpGet]
+        [HttpGet, EedmResponseFilter]
         public async Task<Dtos.InstructorTenureTypes> GetInstructorTenureTypesByGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -109,6 +118,10 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                AddEthosContextProperties(
+                    await _instructorTenureTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _instructorTenureTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { guid }));
                 return await _instructorTenureTypesService.GetInstructorTenureTypesByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)

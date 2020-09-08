@@ -9,11 +9,13 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
 {
     public interface IPaymentTransactionsRepository
     {
-        Task<Tuple<IEnumerable<PaymentTransaction>, int>> GetPaymentTransactionsAsync(int offset, int limit, string documentId, InvoiceOrRefund invoiceOrRefund);
+        Task<Tuple<IEnumerable<PaymentTransaction>, int>> GetPaymentTransactionsAsync(int offset, int limit, string documentId, InvoiceOrRefund invoiceOrRefund, string docNumber, List<string> refPoDoc, List<string> refBpoDoc, List<string> refRecDoc);
         Task<PaymentTransaction> GetPaymentTransactionsByGuidAsync(string guid);
         Task<string> GetPaymentTransactionsIdFromGuidAsync(string guid);
-        Task<string> GetGuidFromIdAsync(string entity, string id, string secondaryField = "", string secondaryKey = "");
+        Task<Dictionary<string, string>> GetPaymentTransactionsGuidsCollectionAsync(IEnumerable<string> ids, string filename);
 
+        Task<Dictionary<string, string>> GetGuidsCollectionAsync(IEnumerable<string> ids, string filename);
 
+        Task<string> GetIdFromGuidAsync(string guid, string entity);
     }
 }

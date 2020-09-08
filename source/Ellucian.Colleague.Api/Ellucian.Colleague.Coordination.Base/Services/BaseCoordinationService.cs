@@ -550,12 +550,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="ethosResourceRouteInfo">Ethos Resource Route Info </param>
         /// <param name="resourceIds">IEnumerable of the ids for the resources in guid form</param>
         /// <returns>List with all of the extended data if aavailable. Returns an empty list if none available or none configured</returns>
-        public async Task<IList<EthosExtensibleData>> GetExtendedEthosDataByResource(EthosResourceRouteInfo ethosResourceRouteInfo, IEnumerable<string> resourceIds)
+        public async Task<IList<EthosExtensibleData>> GetExtendedEthosDataByResource(EthosResourceRouteInfo ethosResourceRouteInfo, IEnumerable<string> resourceIds, bool bypassCache = false)
         {
+            if (!bypassCache)
+            {
+                bypassCache = ethosResourceRouteInfo.BypassCache;
+            }
+
             if (configurationRepository != null)
             {
                 var extendDataFromRepo = await configurationRepository.GetExtendedEthosDataByResource(ethosResourceRouteInfo.ResourceName,
-                    ethosResourceRouteInfo.ResourceVersionNumber, ethosResourceRouteInfo.ExtendedSchemaResourceId, resourceIds);
+                    ethosResourceRouteInfo.ResourceVersionNumber, ethosResourceRouteInfo.ExtendedSchemaResourceId, resourceIds, bypassCache);
 
                 return ConvertExtendedDataFromDomainToPlatform(extendDataFromRepo);
             }
@@ -570,12 +575,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// </summary>
         /// <param name="ethosResourceRouteInfo">Ethos Resource Route Info </param>
         /// <returns>List with all of the extended configurations if aavailable. Returns an null if none available or none configured</returns>
-        public async Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(EthosResourceRouteInfo ethosResourceRouteInfo)
+        public async Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(EthosResourceRouteInfo ethosResourceRouteInfo, bool bypassCache = false)
         {
+            if (!bypassCache)
+            {
+                bypassCache = ethosResourceRouteInfo.BypassCache;
+            }
+
             if (configurationRepository != null)
             {
                 var extendDataFromRepo = await configurationRepository.GetExtendedEthosConfigurationByResource(ethosResourceRouteInfo.ResourceName,
-                    ethosResourceRouteInfo.ResourceVersionNumber, ethosResourceRouteInfo.ExtendedSchemaResourceId);
+                    ethosResourceRouteInfo.ResourceVersionNumber, ethosResourceRouteInfo.ExtendedSchemaResourceId, bypassCache);
 
                 if (extendDataFromRepo == null)
                 {
@@ -656,6 +666,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                     newEthosDataItem.ExtendedDataList.Add(row);
                 }
+
                 platformExtensibleDatas.Add(newEthosDataItem);
             }
 

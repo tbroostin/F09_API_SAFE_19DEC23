@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -1848,6 +1848,39 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         public class ConfigurationRepository_GetRequiredDocumentConfigurationAsync : ConfigurationRepositoryTests
         {
             [TestMethod]
+            public async Task GetRequiredDocumentConfiguration_CoreWebDefaultFailure()
+            {
+                var association = new List<OfficeCollectionMapOfcomap>()
+                {
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "OFFICEA", OfcoCollectionIdsAssocMember = "COLLECTIONA"},
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "", OfcoCollectionIdsAssocMember = "COLLECTIONC"},
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "OFFICEB", OfcoCollectionIdsAssocMember = "COLLECTIONB"},
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "OFFICEB", OfcoCollectionIdsAssocMember = ""},
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "OFFICEC", OfcoCollectionIdsAssocMember = "COLLECTIONC"},
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "OFFICEC", OfcoCollectionIdsAssocMember = "COLLECTIONC"},
+                };
+
+                var officeMap = new OfficeCollectionMap()
+                {
+                    OfcoDefaultCollection = "NO_OFFICE_CODE_COLLECTION",
+                    OfcoDfltOfficeCollection = "UNMAPPED_COLLECTION",
+                    OfcomapEntityAssociation = association
+                };
+
+                // Setup response to OFFICE.COLLECTION.MAP read
+                dataReaderMock.Setup(r => r.ReadRecordAsync<OfficeCollectionMap>("CORE.PARMS", "OFFICE.COLLECTION.MAP", true))
+                       .ReturnsAsync(officeMap);
+
+                // Setup response to CoreWebDefaults  read
+                dataReaderMock.Setup(r => r.ReadRecordAsync<CorewebDefaults>("CORE.PARMS", "COREWEB.DEFAULTS", true))
+                       .ThrowsAsync(new Exception());
+
+                var configuration = await ConfigRepository.GetRequiredDocumentConfigurationAsync();
+                Assert.IsNull(configuration);
+               
+            }
+
+            [TestMethod]
             public async Task GetsRequiredDocumentConfiguration_AllSettingsNullOrBlank()
             {
                 var corewebDefaultsNull = new CorewebDefaults()
@@ -1859,9 +1892,12 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     CorewebBlankDueDateText = ""
                 };
 
-                // Setup response to phoneType valcode read
+
+                // Setup response to CoreWebDefaults  read
                 dataReaderMock.Setup(r => r.ReadRecordAsync<CorewebDefaults>("CORE.PARMS", "COREWEB.DEFAULTS", true))
                        .ReturnsAsync(corewebDefaultsNull);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<OfficeCollectionMap>("CORE.PARMS", "OFFICE.COLLECTION.MAP", true))
+                        .ReturnsAsync(null);
 
                 var configuration = await ConfigRepository.GetRequiredDocumentConfigurationAsync();
                 Assert.AreEqual(false, configuration.SuppressInstance);
@@ -1869,6 +1905,9 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.AreEqual(WebSortField.OfficeDescription, configuration.SecondarySortField);
                 Assert.AreEqual("", configuration.TextForBlankStatus);
                 Assert.AreEqual("", configuration.TextForBlankDueDate);
+                Assert.IsNull(configuration.RequiredDocumentCollectionMapping.RequestsWithoutOfficeCodeCollection);
+                Assert.IsNull(configuration.RequiredDocumentCollectionMapping.UnmappedOfficeCodeCollection);
+                Assert.AreEqual(0, configuration.RequiredDocumentCollectionMapping.OfficeCodeMapping.Count);
             }
 
             [TestMethod]
@@ -1888,9 +1927,30 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     CorewebBlankDueDateText = "Due"
                 };
 
+                var association = new List<OfficeCollectionMapOfcomap>()
+                {
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "OFFICEA", OfcoCollectionIdsAssocMember = "COLLECTIONA"},
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "", OfcoCollectionIdsAssocMember = "COLLECTIONC"},
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "OFFICEB", OfcoCollectionIdsAssocMember = "COLLECTIONB"},
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "OFFICEB", OfcoCollectionIdsAssocMember = ""},
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "OFFICEC", OfcoCollectionIdsAssocMember = "COLLECTIONC"},
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "OFFICEC", OfcoCollectionIdsAssocMember = "COLLECTIONC"},
+                };
+
+                var officeMap = new OfficeCollectionMap()
+                {
+                    OfcoDefaultCollection = "NO_OFFICE_CODE_COLLECTION",
+                    OfcoDfltOfficeCollection = "UNMAPPED_COLLECTION",
+                    OfcomapEntityAssociation = association
+                };
+
                 dataReaderMock.Setup(r => r.ReadRecordAsync<Dflts>("CORE.PARMS", "DEFAULTS", true));
                 dataReaderMock.Setup(r => r.ReadRecordAsync<CorewebDefaults>("CORE.PARMS", "COREWEB.DEFAULTS", true))
                        .ReturnsAsync(corewebDefaults);
+
+                // Setup response to OFFICE.COLLECTION.MAP read
+                dataReaderMock.Setup(r => r.ReadRecordAsync<OfficeCollectionMap>("CORE.PARMS", "OFFICE.COLLECTION.MAP", true))
+                       .ReturnsAsync(officeMap);
 
                 var configuration = await ConfigRepository.GetRequiredDocumentConfigurationAsync();
                 Assert.AreEqual(true, configuration.SuppressInstance);
@@ -1898,6 +1958,16 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.AreEqual(WebSortField.Description, configuration.SecondarySortField);
                 Assert.AreEqual("Asap", configuration.TextForBlankStatus);
                 Assert.AreEqual("Due", configuration.TextForBlankDueDate);
+                Assert.IsNotNull(configuration.RequiredDocumentCollectionMapping);
+                var actualMapping = configuration.RequiredDocumentCollectionMapping;
+                Assert.AreEqual(3, actualMapping.OfficeCodeMapping.Count);
+                var officeMapping = actualMapping.OfficeCodeMapping;
+                Assert.AreEqual("OFFICEA", officeMapping[0].OfficeCode);
+                Assert.AreEqual("COLLECTIONA", officeMapping[0].AttachmentCollection);
+                Assert.AreEqual("OFFICEB", officeMapping[1].OfficeCode);
+                Assert.AreEqual("COLLECTIONB", officeMapping[1].AttachmentCollection);
+                Assert.AreEqual("OFFICEC", officeMapping[2].OfficeCode);
+                Assert.AreEqual("COLLECTIONC", officeMapping[2].AttachmentCollection);
             }
 
             #endregion

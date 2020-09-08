@@ -10,6 +10,7 @@ using Ellucian.Colleague.Api.Controllers.ColleagueFinance;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Dtos.ColleagueFinance;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -33,6 +34,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         private IEnumerable<Domain.ColleagueFinance.Entities.ShippingMethod> allShippingMethods;
         private List<Dtos.ShippingMethods> shippingMethodsCollection;
         private string expectedGuid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc";
+        private IEnumerable<Domain.ColleagueFinance.Entities.ShipViaCode> allShipViaCodeList;
+        private List<ShipViaCode> shipViaCodesCollection;
 
         [TestInitialize]
         public void Initialize() 
@@ -63,6 +66,23 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 shippingMethodsCollection.Add(shippingMethods);
             }
 
+            shipViaCodesCollection = new List<ShipViaCode>();
+            allShipViaCodeList = new List<Domain.ColleagueFinance.Entities.ShipViaCode>(){
+                    new Domain.ColleagueFinance.Entities.ShipViaCode("SM","Datatel - Central Dist. Office"),
+                    new Domain.ColleagueFinance.Entities.ShipViaCode("DT","Datatel - Downtown"),
+                    new Domain.ColleagueFinance.Entities.ShipViaCode("EC","Datatel - Extension Center"),
+                    new Domain.ColleagueFinance.Entities.ShipViaCode("MC","Datatel - Main Campus")
+            };
+            foreach (var source in allShipViaCodeList)
+            {
+                var shipViaCode = new ShipViaCode
+                {
+                    Code = source.Code,
+                    Description = source.Description
+                };
+                shipViaCodesCollection.Add(shipViaCode);
+            }
+
             shippingMethodsController = new ShippingMethodsController(shippingMethodsServiceMock.Object, loggerMock.Object)
             {
                 Request = new HttpRequestMessage()
@@ -78,6 +98,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             shippingMethodsCollection = null;
             loggerMock = null;
             shippingMethodsServiceMock = null;
+            shipViaCodesCollection = null;
+            allShipViaCodeList = null;
         }
 
         [TestMethod]
@@ -274,5 +296,41 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         {
             await shippingMethodsController.DeleteShippingMethodsAsync(shippingMethodsCollection.FirstOrDefault().Id);
         }
+
+        [TestMethod]
+        public async Task ShippingMethodsController_GetShipViaCodesAsync_ValidTests()
+        {
+            shippingMethodsServiceMock.Setup(x => x.GetShipViaCodesAsync()).ReturnsAsync(shipViaCodesCollection);
+
+            var sourceContexts = (await shippingMethodsController.GetShipViaCodesAsync()).ToList();
+            Assert.AreEqual(shipViaCodesCollection.Count, sourceContexts.Count);
+            for (var i = 0; i < sourceContexts.Count; i++)
+            {
+                var expected = shipViaCodesCollection[i];
+                var actual = sourceContexts[i];
+                Assert.AreEqual(expected.Code, actual.Code, "Code, Index=" + i.ToString());
+                Assert.AreEqual(expected.Description, actual.Description, "Description, Index=" + i.ToString());
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ShippingMethodsController_GetShipViaCodesAsync_KeyNotFoundException()
+        {
+            shippingMethodsServiceMock.Setup(x => x.GetShipViaCodesAsync())
+                .Throws<KeyNotFoundException>();
+            await shippingMethodsController.GetShipViaCodesAsync();
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ShippingMethodsController_GetShipViaCodesAsync_PermissionsException()
+        {
+
+            shippingMethodsServiceMock.Setup(x => x.GetShipViaCodesAsync())
+                .Throws<PermissionsException>();
+            await shippingMethodsController.GetShipViaCodesAsync();
+        }
+
     }
 }

@@ -1,4 +1,4 @@
-//Copyright 2019 Ellucian Company L.P. and its affiliates.  
+//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.  
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -115,6 +115,35 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                         SourceValue = "ethos",
                         FieldHelp = "Long Description for field help.",
                         FieldName = "LDMD.MAPPING.CONTROL"
+                    },
+                    new Domain.Base.Entities.ConfigurationSettings("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0f", "9", "Prospect Match Criteria")
+                    {
+                        EthosResources = new List<string>() { "person-matching-requestss" },
+                        SourceTitle = "Person Match Request Prospect",
+                        SourceValue = "INTG.PMR.PROSPECT",
+                        FieldHelp = "Long Description for field help.",
+                        EntityName = "ELF.DUPL.CRITERIA",
+                        FieldName = "LDMD.PROSPECT.DUPL.CRITERIA"
+                    },
+                    
+                    new Domain.Base.Entities.ConfigurationSettings("7125f63a-8f8c-4d41-9752-a2eced5bc8bd", "10", "Relation Match Request Criteria")
+                    {
+                        EthosResources = new List<string>() { "person-matching-requests" },
+                        SourceTitle = "Person Match Request Relation",
+                        SourceValue = "INTG.PMR.RELATION",
+                        FieldHelp = "Long Description for field help.",
+                        EntityName = "ELF.DUPL.CRITERIA",
+                        FieldName = "LDMD.RELATION.DUPL.CRITERIA"
+                    },
+                    
+                    new Domain.Base.Entities.ConfigurationSettings("c289fc49-408c-49e3-9197-010b53ceece9", "11", "Vendor Contact Match Request Criteria")
+                    {
+                        EthosResources = new List<string>() { "person-matching-requests" },
+                        SourceTitle = "Person Match Request Vendor Contact",
+                        SourceValue = "INTG.PMR.VENCONTACT",
+                        FieldHelp = "Long Description for field help.",
+                        EntityName = "ELF.DUPL.CRITERIA",
+                        FieldName = "LDMD.VENCONTACT.DUP.CRITERIA"
                     }
                 };
 
@@ -299,7 +328,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     }).ToList());
 
                 dataAccessorMock.Setup(ac => ac.SelectAsync("INTG.CONFIG.SETTINGS", ""))
-                    .ReturnsAsync(new string[] { "1", "2", "3", "4", "5", "6", "7", "8" });
+                    .ReturnsAsync(new string[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11" });
 
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<IntgConfigSettings>("INTG.CONFIG.SETTINGS", It.IsAny<string[]>(), true))
                     .ReturnsAsync(entityCollection);
@@ -313,7 +342,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     LdmdCashier = "0003582",
                     LdmdCheckPostingPerformed = "N",
                     LdmdPrinInvestigatorRole = "INTVR",
-                    LdmdMappingControl = "Update Ethos Value:Ethos"
+                    LdmdMappingControl = "Update Ethos Value:Ethos",
+                    LdmdProspectDuplCriteria = "INTG.PMR.PROSPECT",
+                    LdmdRelationDuplCriteria = "INTG.PMR.RELATION",
+                    LdmdVencontactDupCriteria = "INTG.PMR.VENCONTACT"
                 };
                 dataAccessorMock.Setup(acc => acc.ReadRecordAsync<LdmDefaults>("CORE.PARMS", "LDM.DEFAULTS", true)).ReturnsAsync(ldmDefaults);
 
@@ -328,6 +360,21 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     {
                         Recordkey = "INTG.ADDRESS",
                         ElfduplDesc = "Integration Address Matching"
+                    },
+                    new ElfDuplCriteria()
+                    {
+                        Recordkey = "INTG.PMR.PROSPECT",
+                        ElfduplDesc = "Person Match Request Prospect"
+                    },
+                    new ElfDuplCriteria()
+                    {
+                        Recordkey = "INTG.PMR.RELATION",
+                        ElfduplDesc = "Person Match Request Relation"
+                    },
+                    new ElfDuplCriteria()
+                    {
+                        Recordkey = "INTG.PMR.VENCONTACT",
+                        ElfduplDesc = "Person Match Request Vendor Contact"
                     }
                 };
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<ElfDuplCriteria>("ELF.DUPL.CRITERIA", "", true)).ReturnsAsync(elfDuplCriteria);

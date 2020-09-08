@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -203,7 +203,7 @@ namespace Ellucian.Colleague.Api.Utility
         /// <returns>Fully populated API error</returns>
         public static IntegrationApiError PopulateError(IntegrationApiError error)
         {
-            var apiError = GetMessage(error.Code);
+            var apiError = GetMessage(error.Code, error.StatusCode);
             return new IntegrationApiError(error.Code,                     
                 string.IsNullOrEmpty(error.Description) ? apiError.Description : error.Description,
                 string.IsNullOrEmpty(error.Message) ? null : error.Message.Replace("\r\n","  "),
@@ -212,7 +212,7 @@ namespace Ellucian.Colleague.Api.Utility
                 string.IsNullOrEmpty(error.Id) ? null : error.Id);
         }
 
-        private static IntegrationApiErrorMessage GetMessage(string code)
+        private static IntegrationApiErrorMessage GetMessage(string code, HttpStatusCode? httpStatusCodeOveride = null)
         {
             if (string.IsNullOrEmpty(code))
             {
@@ -222,6 +222,10 @@ namespace Ellucian.Colleague.Api.Utility
             IntegrationApiErrorMessage message = null;
             if (_errorMessages.TryGetValue(code, out message))
             {
+                if (httpStatusCodeOveride != null)
+                {
+                    message.ReturnCode = (HttpStatusCode)httpStatusCodeOveride;
+                }
                 return message;
             }
 

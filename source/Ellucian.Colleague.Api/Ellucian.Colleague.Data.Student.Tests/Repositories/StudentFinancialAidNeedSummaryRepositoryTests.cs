@@ -1,6 +1,8 @@
-﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
+using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.Repositories;
+using Ellucian.Colleague.Domain.Base.Transactions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Data.Colleague;
@@ -19,10 +21,12 @@ using System.Threading.Tasks;
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
     [TestClass]
-    public class StudentFinancialAidNeedSummaryRepositoryTests
+    public class StudentFinancialAidNeedSummaryRepositoryTests //: BaseRepositorySetup
     {
         #region SETUP
         Mock<IColleagueTransactionFactory> transFactoryMock;
+        Mock<IColleagueTransactionInvoker> transManagerMock;
+        IColleagueTransactionInvoker transManager;
         Mock<ICacheProvider> cacheProviderMock;
         Mock<IColleagueDataReader> dataReaderMock;
         Mock<ILogger> loggerMock;
@@ -62,8 +66,12 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         #region MOCK EVENTS
         private StudentFinancialAidNeedSummaryRepository BuildValidFundRepository()
         {
+            
             // transaction factory mock
             transFactoryMock = new Mock<IColleagueTransactionFactory>();
+            transManagerMock = new Mock<IColleagueTransactionInvoker>();
+            transManager = transManagerMock.Object;
+
 
             // Cache Provider Mock
             cacheProviderMock = new Mock<ICacheProvider>();
@@ -72,8 +80,12 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             dataReaderMock = new Mock<IColleagueDataReader>();
             apiSettings = new ApiSettings("TEST");
 
-            // Set up dataAccessorMock as the object for the DataAccessor
+
+            //transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(mockManager.Object);
             transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataReaderMock.Object);
+            transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager);
+
+
 
             var csRecords = new Collection<DataContracts.CsAcyr>();
             foreach (var item in allStudentFinancialAidNeedSummaries)
@@ -86,6 +98,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 csRecord.CsFc = "3";
                 csRecord.CsNeed = 1;
                 csRecord.CsInstNeed = 2;
+              
                 csRecords.Add(csRecord);
             }
 
@@ -143,10 +156,10 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             faSysRecord.FspNotAwardedCat = new List<string>() { "NAC1" };
             faSysRecords.Add(faSysRecord);
 
-            dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.FaSysParams>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync((DataContracts.FaSysParams) faSysRecord);
+            dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.FaSysParams>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync((DataContracts.FaSysParams)faSysRecord);
 
 
-            dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new string[] { "CSACYRID1" } );
+            dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new string[] { "CSACYRID1" });
 
             dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<GuidLookup[]>())).Returns<GuidLookup[]>(gla =>
             {
@@ -161,10 +174,43 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
              x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
-             .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+            .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
 
             // Construct repository
             fundRepo = new StudentFinancialAidNeedSummaryRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+           
+            var csRecordList = csRecords.Select(x => string.Concat("CS.2006." , x.Recordkey)).ToList();
+            GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+            {
+                Offset = 0,
+                Limit = 100,
+                CacheName = "AllStudentFinancialAidNeedSummary:",
+                Entity = "",
+                Sublist = csRecordList, 
+                TotalCount = csRecordList.Count(),
+                KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+            };
+
+            transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                .ReturnsAsync(resp);
+
 
             return fundRepo;
         }
@@ -185,7 +231,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             #region TESTS FOR FUNCTIONALITY
        
             [TestMethod]
-            public async Task StudentFinancialAidNeedSummaryRepository_GetStudentFinancialAidNeedSummariesAsync_False()
+            public async Task StudentFinancialAidNeedSummaryRepository_GetStudentFinancialAidNeedSummariesAsync()
             {
                 var results = await fundRepo.GetAsync(0, 100, false, new List<string>() { "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016" });
                 Assert.AreEqual(allStudentFinancialAidNeedSummaries.Count(), results.Item2);
@@ -203,7 +249,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            public async Task StudentFinancialAidNeedSummaryRepository_GetStudentFinancialAidNeedSummaryByIdAsync_False()
+            public async Task StudentFinancialAidNeedSummaryRepository_GetStudentFinancialAidNeedSummaryByIdAsync()
             {
                 var result = await fundRepo.GetByIdAsync("31d8aa32-dbe6-4a49-a1c4-2cad39e232e4");
                 var financialAidNeed = allStudentFinancialAidNeedSummaries.Where(a => a.Guid == "31d8aa32-dbe6-4a49-a1c4-2cad39e232e4").FirstOrDefault();

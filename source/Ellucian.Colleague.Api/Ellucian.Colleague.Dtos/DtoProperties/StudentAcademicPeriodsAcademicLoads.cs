@@ -1,6 +1,4 @@
-﻿
-
-//Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Newtonsoft.Json;
@@ -29,7 +27,7 @@ namespace Ellucian.Colleague.Dtos
         /// The student calculated academic load for the period.
         /// </summary>
         [JsonProperty("academicLoad", DefaultValueHandling = DefaultValueHandling.Ignore)]
-        public AcademicLoad AcademicLoad { get; set; }
+        public AcademicLoad2 AcademicLoad { get; set; }
 
     }
 }

@@ -37,6 +37,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         private IEnumerable<Domain.HumanResources.Entities.RehireType> allRehireTypes;
         private RehireTypeService rehireTypeService;
         private string guid = "625c69ff-280b-4ed3-9474-662a43616a8a";
+        private IConfigurationRepository _configurationRepository;
+        private Mock<IConfigurationRepository> _configurationRepositoryMock;
 
         private Domain.Entities.Permission permissionViewAnyPerson;
 
@@ -47,6 +49,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             personRepo = personRepoMock.Object;
             refRepoMock = new Mock<IHumanResourcesReferenceDataRepository>();
             refRepo = refRepoMock.Object;
+            _configurationRepositoryMock = new Mock<IConfigurationRepository>();
+            _configurationRepository = _configurationRepositoryMock.Object;
             adapterRegistryMock = new Mock<IAdapterRegistry>();
             adapterRegistry = adapterRegistryMock.Object;
             roleRepoMock = new Mock<IRoleRepository>();
@@ -63,12 +67,13 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             personRole.AddPermission(permissionViewAnyPerson);
             roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-            rehireTypeService = new RehireTypeService(refRepo, adapterRegistry, currentUserFactory, roleRepo, logger);
+            rehireTypeService = new RehireTypeService(refRepo, adapterRegistry, currentUserFactory, _configurationRepository, roleRepo, logger);
         }
 
         [TestCleanup]
         public void Cleanup()
         {
+            _configurationRepository = null;
             refRepo = null;
             personRepo = null;
             allRehireTypes = null;

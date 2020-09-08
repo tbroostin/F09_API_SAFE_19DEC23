@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Web.Http;
@@ -117,7 +117,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// If the request header "Cache-Control" attribute is set to "no-cache" the data returned will be pulled fresh from the database, otherwise cached data is returned.
         /// </summary>
         /// <returns>All <see cref="Dtos.InterestArea">InterestArea</see> objects.</returns>
-        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        /// 
+        [HttpGet]
+        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true), EedmResponseFilter]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.InterestArea>> GetInterestAreasAsync()
         {
             bool bypassCache = false;
@@ -131,7 +133,15 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
-                return await _interestsService.GetInterestAreasAsync(bypassCache);
+                var interestAreas = await _interestsService.GetInterestAreasAsync(bypassCache);
+
+                if (interestAreas != null && interestAreas.Any())
+                {
+                    AddEthosContextProperties(await _interestsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _interestsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              interestAreas.Select(a => a.Id).ToList()));
+                }
+                return interestAreas;                
             }
             catch (Exception ex)
             {
@@ -155,8 +165,9 @@ namespace Ellucian.Colleague.Api.Controllers
                 if (interest != null)
                 {
 
-                    AddEthosContextProperties(await _interestsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
-                              await _interestsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                    AddEthosContextProperties(
+                        await _interestsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                        await _interestsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                               new List<string>() { interest.Id }));
                 }
                 return interest;

@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -97,12 +97,31 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var zipGuidCollection = new Dictionary<string, string>();
             try
             {
+                // First build a lookup with 5 character US keys or Canadian keys with spaces removed.
                 var zipGuidLookup = zipCodeIds
                     .Where(s => !string.IsNullOrWhiteSpace(s))
                     .Distinct().ToList()
-                    .ConvertAll(p => new RecordKeyLookup("ZIP.CODE.XLAT", p, false)).ToArray();
+                    .ConvertAll(p => new RecordKeyLookup("ZIP.CODE.XLAT", p.Split('-')[0].ToString().Replace(" ", ""), false)).ToArray();
                 var recordKeyLookupResults = await DataReader.SelectAsync(zipGuidLookup);
                 
+                foreach (var recordKeyLookupResult in recordKeyLookupResults)
+                {
+                    if (recordKeyLookupResult.Value != null)
+                    {
+                        var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                        if (!zipGuidCollection.ContainsKey(splitKeys[1]))
+                        {
+                            zipGuidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
+                        }
+                    }
+                }
+                // Next build a lookup using a 3 character foreign key (non-US, non-Canadian).
+                zipGuidLookup = zipCodeIds
+                    .Where(s => !string.IsNullOrWhiteSpace(s) && s.Length >= 3)
+                    .Distinct().ToList()
+                    .ConvertAll(p => new RecordKeyLookup("ZIP.CODE.XLAT", p.Length >= 3 ? p.Substring(0,3): p, false)).ToArray();
+                recordKeyLookupResults = await DataReader.SelectAsync(zipGuidLookup);
+
                 foreach (var recordKeyLookupResult in recordKeyLookupResults)
                 {
                     if (recordKeyLookupResult.Value != null)
@@ -324,7 +343,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                     catch (Exception ex)
                     {
-                        LogDataError("Place", place.Recordkey, placeData, ex);
+                        LogDataError("Place", place.Recordkey, placeData, ex); //is this logging PII?
                     }
                 }
             }
@@ -765,6 +784,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 return new Address();
 
             var repositoryException = new RepositoryException();
+            
 
             if (!addressData.AddressLines.Any())
             {
@@ -1022,7 +1042,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                     }
                                     catch (Exception ex)
                                     {
-                                        var phoneError = "Person local phone information is invalid. PersonId: " + personId;
+                                        var phoneError = "Person local phone information is invalid.";
 
                                         // Log the original exception
                                         logger.Error(ex.ToString());
@@ -1049,7 +1069,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                         }
                                         catch (Exception ex)
                                         {
-                                            var phoneError = "Person address phone information is invalid. PersonId: " + personId;
+                                            var phoneError = "Person address phone information is invalid.";
                                             // Log the original exception
                                             logger.Error(ex.ToString());
                                             logger.Info(phoneError);
@@ -1073,13 +1093,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         }
                         catch (Exception ex)
                         {
-                            var phoneError = "Person personal phone information is invalid. PersonId: " + personId;
-                            var formattedPhoneData = ObjectFormatter.FormatAsXml(phoneData);
-                            var errorMessage = string.Format("{0}" + Environment.NewLine + "{1}", phoneError, formattedPhoneData);
+                            var phoneError = "Person personal phone information is invalid.";
 
                             // Log the original exception
                             logger.Error(ex.ToString());
-                            logger.Info(errorMessage);
+                            logger.Info(phoneError);
                         }
                     }
                 }

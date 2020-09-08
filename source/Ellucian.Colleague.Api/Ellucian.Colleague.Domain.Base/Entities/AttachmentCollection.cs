@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P.and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P.and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -369,13 +369,13 @@ namespace Ellucian.Colleague.Domain.Base.Entities
             if (Owner == user)
                 allowView = true;
 
-            // check if the user is in the collection's users list
+            // check if the user is in the collection's users list w/ any action
             if (!allowView && Users != null && Users.Any())
-                allowView = Users.Where(u => u.Id == user && u.Actions.Contains(AttachmentAction.View)).Any();
+                allowView = Users.Where(u => u.Id == user && u.Actions.Any()).Any();
 
-            // check if the user has a role in the collection's role list
+            // check if the user has a role in the collection's role list w/ any action
             if (!allowView && userRoles != null && userRoles.Any() && Roles != null && Roles.Any())
-                allowView = Roles.Where(r => userRoles.Contains(r.Id) && r.Actions.Contains(AttachmentAction.View)).Any();
+                allowView = Roles.Where(r => userRoles.Contains(r.Id) && r.Actions.Any()).Any();
 
             return allowView;
         }        

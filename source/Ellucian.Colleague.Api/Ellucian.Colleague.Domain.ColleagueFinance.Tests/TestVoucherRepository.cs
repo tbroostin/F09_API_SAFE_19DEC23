@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -15,34 +15,36 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
     public class TestVoucherRepository : IVoucherRepository
     {
         private List<Voucher> vouchers = new List<Voucher>();
+        private List<VoucherSummary> voucherSummaryList = new List<VoucherSummary>();
         #region Define all data for a voucher
-
+        //column index 18 'Requestor' added to distinguish vouchers created from WA/SS
         private string[,] vouchersArray = {
-            //  0       1           2                                               3       4           5           6               7               8                   9               10              11              12              13                  14          15          16                  17
-            //  ID      Vendor ID   Vendor Name                                     Status  AP Type     Amount      Date            Due Date        Maintenance Date    Invoice Number  Invoice Date    Check Number    Check Date      Comments            PO ID       BPO ID      RCV Schedule ID     Currency Code   
-            {   "1",    "0001234",  "Susty Corporation",                            "U",    "AP",       "800.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 ""       },  // Has approvers and next approvers
-            {   "2",    "0001234",  "Susty Corporation",                            "U",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "",        "",         "",                 "CAD"    },  // Has approvers and next approvers
-            {   "3",    "0001234",  "Susty Corporation",                            "O",    "AP",       "221.15",   "1/2/2015",     "1/10/2015",    "1/4/2015",         "null",         "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 ""       },  // Null Invoice Number
-            {   "4",    "0001234",  "Susty Corporation",                            "P",    "AP",       "221.15",   "1/2/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "12*345",       "1/8/2015",     "Just comments.",   "12",      "",         "",                 ""       },  // No approvers
-            {   "11",   "",         "Susty Corporation for the Severly Wealthy",    "U",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 ""       },  // Has a vendor name, no vendor ID
-            {   "13",   "0000002",  "null",                                         "U",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 ""       },  // Has only vendor ID, CTX long name
-            {   "14",   "0001234",  "Susty Corporation",                            "U",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 ""       },  // Has a vendor ID and name
-            {   "15",   "",         "null",                                         "U",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 ""       },  // Has neither vendor ID or name
-            {   "16",   "0001234",  "Susty Corporation",                            "U",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "",        "",         "65",               ""       },  // Originated from RC Voucher
-            {   "17",   "0001234",  "Susty Corporation",                            "N",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "",        "",         "",                 ""       },  // Not Approved voucher
-            {   "18",   "0001234",  "Susty Corporation",                            "R",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "01*0000123",   "1/10/2015",    "Just comments.",   "",        "",         "",                 ""       },  // Reconciled voucher
-            {   "19",   "0001234",  "Susty Corporation",                            "V",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "",        "",         "",                 ""       },  // Voided voucher
-            {   "20",   "",         "CANCELLED BEFORE CREATION",                    "X",      "",         "1.00",   "1/1/2015",              "",            "",       "CANCELLED",      "1/9/2015",     "",             "",                           "",   "",        "",         "",                 ""       },  // Cancelled voucher
-            {   "21",   "0001234",  "Susty Corporation",                            "U",    "AP",       "800.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "",      "21",         "",                 ""       },  // Originated from BPO
-            {   "22",   "0001234",  "Susty Corporation",                            "U",    "AP",       "800.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "",      "21",         "",                 ""       },  // GL security: Possible access - all line items visisible, but some GL numbers masked
-            {   "23",   "0001234",  "Susty Corporation",                            "U",    "AP",       "800.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "",      "21",         "",                 ""       },  // GL security: Possible access - only one line item is visible, some GL numbers masked
-            {   "24",   "0001234",  "Susty Corporation",                            "U",    "AP",       "800.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "",      "21",         "",                 ""       },  // GL security: Possible access - zero line items returned
-            {   "25",   "",         "Susty Corporation",                            "U",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 ""       },  // Has a multi-line vendor name, no vendor ID
-            {   "26",   "0000002",  "null",                                         "U",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 ""       },  // Has only vendor ID, CTX multi-line name
-            {   "27",   "0000002",  "whitespace",                                   "U",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 ""       },  // Has only vendor ID, blank name
-            {   "28",   "0001234",  "Susty Corporation",                            "U",    "AP",       "100.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 ""       },  // Has limited access to line item distributions
-            {   "29",   "0001234",  "Susty Corporation",                            "U",    "AP",       "100.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 ""       },
-            {   "30",   "0001234",  "Susty Corporation",                            "U",    "AP",       "100.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 ""       },  // Has no line items
+            //  0       1           2                                               3       4           5           6               7               8                   9               10              11              12              13                  14          15          16                  17               18
+            //  ID      Vendor ID   Vendor Name                                     Status  AP Type     Amount      Date            Due Date        Maintenance Date    Invoice Number  Invoice Date    Check Number    Check Date      Comments            PO ID       BPO ID      RCV Schedule ID     Currency Code    Requestor     
+            {   "1",    "0001234",  "Susty Corporation",                            "U",    "AP",       "800.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 "",               "0000001"         },  // Has approvers and next approvers
+            {   "2",    "0001234",  "Susty Corporation",                            "U",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "",        "",         "",                 "CAD",            ""         },  // Has approvers and next approvers
+            {   "3",    "0001234",  "Susty Corporation",                            "O",    "AP",       "221.15",   "1/2/2015",     "1/10/2015",    "1/4/2015",         "null",         "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 "",               ""         },  // Null Invoice Number
+            {   "4",    "0001234",  "Susty Corporation",                            "P",    "AP",       "221.15",   "1/2/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "12*345",       "1/8/2015",     "Just comments.",   "12",      "",         "",                 "",               ""         },  // No approvers
+            {   "11",   "",         "Susty Corporation for the Severly Wealthy",    "U",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 "",               ""         },  // Has a vendor name, no vendor ID
+            {   "13",   "0000002",  "null",                                         "U",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 "",               ""         },  // Has only vendor ID, CTX long name
+            {   "14",   "0001234",  "Susty Corporation",                            "U",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 "",               ""         },  // Has a vendor ID and name
+            {   "15",   "",         "null",                                         "U",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 "",               ""         },  // Has neither vendor ID or name
+            {   "16",   "0001234",  "Susty Corporation",                            "U",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "",        "",         "65",               "",               ""         },  // Originated from RC Voucher
+            {   "17",   "0001234",  "Susty Corporation",                            "N",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "",        "",         "",                 "",               ""         },  // Not Approved voucher
+            {   "18",   "0001234",  "Susty Corporation",                            "R",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "01*0000123",   "1/10/2015",    "Just comments.",   "",        "",         "",                 "",               ""         },  // Reconciled voucher
+            {   "19",   "0001234",  "Susty Corporation",                            "V",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "",        "",         "",                 "",               ""         },  // Voided voucher
+            {   "20",   "",         "CANCELLED BEFORE CREATION",                    "X",      "",         "1.00",   "1/1/2015",              "",            "",       "CANCELLED",      "1/9/2015",     "",             "",                           "",   "",        "",         "",                 "",               ""         },  // Cancelled voucher
+            {   "21",   "0001234",  "Susty Corporation",                            "U",    "AP",       "800.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "",      "21",         "",                 "",               ""         },  // Originated from BPO
+            {   "22",   "0001234",  "Susty Corporation",                            "U",    "AP",       "800.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "",      "21",         "",                 "",               ""         },  // GL security: Possible access - all line items visisible, but some GL numbers masked
+            {   "23",   "0001234",  "Susty Corporation",                            "U",    "AP",       "800.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "",      "21",         "",                 "",               ""         },  // GL security: Possible access - only one line item is visible, some GL numbers masked
+            {   "24",   "0001234",  "Susty Corporation",                            "U",    "AP",       "800.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "",      "21",         "",                 "",               ""         },  // GL security: Possible access - zero line items returned
+            {   "25",   "",         "Susty Corporation",                            "U",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 "",               ""         },  // Has a multi-line vendor name, no vendor ID
+            {   "26",   "0000002",  "null",                                         "U",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 "",               ""         },  // Has only vendor ID, CTX multi-line name
+            {   "27",   "0000002",  "whitespace",                                   "U",    "AP",       "400.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 "",               ""         },  // Has only vendor ID, blank name
+            {   "28",   "0001234",  "Susty Corporation",                            "U",    "AP",       "100.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 "",               ""         },  // Has limited access to line item distributions
+            {   "29",   "0001234",  "Susty Corporation",                            "U",    "AP",       "100.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 "",               ""         },
+            {   "30",   "0001234",  "Susty Corporation",                            "U",    "AP",       "100.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN12345",      "1/9/2015",     "",             "",             "Just comments.",   "12",      "",         "",                 "" ,              ""         },  // Has no line items
+            {   "31",   "0001234",  "Susty Corporation",                            "U",    "AP",       "200.00",   "1/1/2015",     "1/10/2015",    "1/4/2015",         "IN98765",      "1/9/2015",     "",             "",             "Just comments.",   "13",      "",         "",                 "" ,              "0000001"  }  // Created from WA or SS- assuming requestor name is only populated for WA/SS vouchers
         };
 
         private string[,] approversArray = {
@@ -54,6 +56,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 
             {   "0000002",  "Gary Thorne",          "1/3/2015",     "28" },
             {   "0000003",  "Teresa Longerbeam",    "1/4/2015",     "28" },
+            {   "0000004",  "Favas M K",          "1/3/2015",     "31" }
         };
 
         private string[,] lineItemsArray = {
@@ -80,7 +83,9 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             {   "10",   "3",            "Outlets",              "14",       "208.09",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN9876",       "TaxForm",  "TaxFormCode",  "TFLocation",       "Install the covers."},
             {   "10",   "4",            "Outlets",              "14",       "208.09",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN9876",       "TaxForm",  "TaxFormCode",  "TFLocation",       "Install the covers."},
             {   "10",   "18",           "Outlets",              "14",       "208.09",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN9876",       "TaxForm",  "TaxFormCode",  "TFLocation",       "Install the covers."},
-            {   "10",   "19",           "Outlets",              "14",       "208.09",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN9876",       "TaxForm",  "TaxFormCode",  "TFLocation",       "Install the covers."}
+            {   "10",   "19",           "Outlets",              "14",       "208.09",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN9876",       "TaxForm",  "TaxFormCode",  "TFLocation",       "Install the covers."},
+            {   "11",   "31",           "vou item1",            "14",       "100.00",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN98765",      "TaxForm",  "TaxFormCode",  "TFLocation",       "voucher item 1."},
+            {   "12",   "31",           "vou item2",            "14",       "100.00",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN98765",      "TaxForm",  "TaxFormCode",  "TFLocation",       "voucher item 2."}
         };
 
         // The LineItemGlDistribution domain entity into which this data is mapped only contains a single local amount field, but the foreign amount property in the
@@ -92,7 +97,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             {   "11_10_00_01_20601_51000",  "1",                        "10",           "AJK-100",          "50",                       "AJK1",             "43",       "75.00",        "false" },
             {   "11_10_00_01_20601_51001",  "1",                        "11",           "AJK-200",          "60",                       "AJK2",             "10",       "100.00",       "false" },
             {   "11_10_00_01_20601_52001",  "1",                        "11",           "AJK-200",          "60",                       "AJK2",             "10",       "125.00",       "false" },
-            
+
             {   "11_10_00_01_20601_51000",  "2",                        "10",           "AJK-100",          "50",                       "AJK1",             "43",       "175.00",       "false" },
             {   "11_10_00_01_20601_51001",  "2",                        "11",           "AJK-200",          "60",                       "AJK2",             "10",       "125.00",       "false" },
 
@@ -103,26 +108,34 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             {   "11_10_00_01_20601_51000",  "4",                        "10",           "AJK-100",          "50",                       "AJK1",             "43",       "75.00",        "false" },
             {   "11_10_00_01_20601_51001",  "4",                        "11",           "AJK-200",          "60",                       "AJK2",             "10",       "100.00",       "false" },
             {   "11_10_00_01_20601_52001",  "4",                        "11",           "AJK-200",          "60",                       "AJK2",             "10",       "125.00",       "false" },
-            
+
             {   "11_10_00_01_20601_51000",  "5",                        "10",           "AJK-100",          "50",                       "AJK1",             "43",       "175.00",       "false" },
             {   "11_10_00_01_20601_51001",  "5",                        "11",           "AJK-200",          "60",                       "AJK2",             "10",       "125.00",       "false" },
 
             {   "11_10_00_01_20601_51000",  "6",                        "10",           "AJK-100",          "50",                       "AJK1",             "43",       "75.00",        "false" },
             {   "11_10_00_01_20601_51001",  "6",                        "11",           "AJK-200",          "60",                       "AJK2",             "10",       "100.00",       "false" },
             {   "11_10_00_01_20601_52001",  "6",                        "11",           "AJK-200",          "60",                       "AJK2",             "10",       "125.00",       "false" },
-            
+
             {   "11_10_00_01_20601_51000",  "7",                        "10",           "AJK-100",          "50",                       "AJK1",             "43",       "175.00",       "false" },
             {   "11_10_00_01_20601_51001",  "7",                        "11",           "AJK-200",          "60",                       "AJK2",             "10",       "125.00",       "false" },
 
             {   "11_10_00_01_20601_51000",  "8",                        "10",           "AJK-100",          "50",                       "AJK1",             "43",       "75.00",        "false" },
             {   "11_10_00_01_20601_51001",  "8",                        "11",           "AJK-200",          "60",                       "AJK2",             "10",       "100.00",       "false" },
             {   "11_10_00_01_20601_52001",  "8",                        "11",           "AJK-200",          "60",                       "AJK2",             "10",       "125.00",       "false" },
-            
+
             {   "11_10_00_01_20601_51000",  "9",                        "10",           "AJK-100",          "50",                       "AJK1",             "43",       "175.00",       "false" },
             {   "11_10_00_01_20601_51001",  "9",                        "11",           "AJK-200",          "60",                       "AJK2",             "10",       "125.00",       "false" },
 
             {   "11_10_00_01_20601_51000",  "10",                       "10",           "AJK-100",          "50",                       "AJK1",             "43",       "50.00",        "true"  },
             {   "11_10_00_01_20601_51001",  "10",                       "11",           "AJK-200",          "60",                       "AJK2",             "10",       "50.00",        "false" },
+
+            {   "11_10_00_01_20601_51000",  "11",                       "10",           "AJK-100",          "50",                       "AJK1",             "1",       "50.00",        "true"  },
+            {   "11_10_00_01_20601_51001",  "11",                       "11",           "AJK-200",          "60",                       "AJK2",             "1",       "50.00",        "false" },
+
+            {   "11_10_00_01_20601_51000",  "12",                       "10",           "AJK-100",          "50",                       "AJK1",             "0.33",     "33.33",        "false"  },
+            {   "11_10_00_01_20601_51001",  "12",                       "11",           "AJK-200",          "60",                       "AJK2",             "0.33",     "33.33",        "false" },
+            {   "11_10_00_01_20601_51001",  "12",                       "12",           "AJK-201",          "70",                       "AJK21",            "0.34",     "33.34",        "false" }
+
         };
 
         private string[,] taxArray = {
@@ -473,6 +486,92 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 }
             }
             #endregion
+
+            #region Populate VouchersSummary
+
+            // Loop through the voucher array and create voucher domain entities
+            string requestorName, requestorPersonId;
+            VoucherStatus voucherStatus;
+            DateTime date;
+
+            for (var i = 0; i < vouchersArray.GetLength(0); i++)
+            {
+                //added to skip all vouchers created not from SS
+                if (!string.IsNullOrEmpty(vouchersArray[i, 18]))
+                {
+                    voucherId = vouchersArray[i, 0];
+                    vendorId = vouchersArray[i, 1];
+                    vendorName = vouchersArray[i, 2];
+
+                    switch (vouchersArray[i, 3])
+                    {
+                        case "U":
+                            voucherStatus = VoucherStatus.InProgress;
+                            break;
+                        case "N":
+                            voucherStatus = VoucherStatus.NotApproved;
+                            break;
+                        case "O":
+                            voucherStatus = VoucherStatus.Outstanding;
+                            break;
+                        case "P":
+                            voucherStatus = VoucherStatus.Paid;
+                            break;
+                        case "R":
+                            voucherStatus = VoucherStatus.Reconciled;
+                            break;
+                        case "V":
+                            voucherStatus = VoucherStatus.Voided;
+                            break;
+                        case "X":
+                            voucherStatus = VoucherStatus.Cancelled;
+                            break;
+                        default:
+                            throw new Exception("Invalid status specified in TestVucherRepository.");
+                    }
+
+                    voucherAmount = !string.IsNullOrEmpty(vouchersArray[i, 5]) ? Convert.ToDecimal(Convert.ToDecimal(vouchersArray[i, 5])) : 0;
+                    date = Convert.ToDateTime(vouchersArray[i, 6]);
+                    maintenanceDate = Convert.ToDateTime(vouchersArray[i, 8]);
+                    invoiceNumber = vouchersArray[i, 9];
+                    requestorName = vouchersArray[i, 18];
+
+                    var voucherSummary = new VoucherSummary(voucherId, invoiceNumber, vendorName, date);
+
+                    voucherSummary.Status = voucherStatus;
+                    voucherSummary.VendorId = vendorId;
+                    voucherSummary.Amount = voucherAmount;
+                    voucherSummary.MaintenanceDate = maintenanceDate;
+                    voucherSummary.RequestorName = requestorName;
+                    voucherSummaryList.Add(voucherSummary);
+                }
+            }
+            #endregion
+        }
+
+        public async Task<IEnumerable<VoucherSummary>> GetVoucherSummariesByPersonIdAsync(string personId)
+        {
+            return await Task.Run(() => voucherSummaryList.Where(x => !string.IsNullOrEmpty(x.RequestorName)));
+        }
+
+        public Task<VoucherCreateUpdateResponse> CreateVoucherAsync(VoucherCreateUpdateRequest createUpdateRequest)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<VendorsVoucherSearchResult> GetReimbursePersonAddressForVoucherAsync(string personId)
+        {
+            throw new NotImplementedException();
+        }
+
+        Task<VoucherVoidResponse> IVoucherRepository.VoidVoucherAsync(VoucherVoidRequest voucherVoidRequest)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<VoucherCreateUpdateResponse> UpdateVoucherAsync(VoucherCreateUpdateRequest createUpdateRequest, Voucher originalVoucher)
+        {
+            throw new NotImplementedException();
         }
     }
 }

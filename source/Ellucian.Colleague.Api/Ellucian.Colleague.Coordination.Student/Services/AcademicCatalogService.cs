@@ -44,13 +44,33 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Collection of AcademicCatalog2 DTO objects</returns>
         public async Task<IEnumerable<AcademicCatalog2>> GetAcademicCatalogs2Async(bool bypassCache = false)
         {
-            var catalogCollection = await _catalogRepository.GetAsync(bypassCache);
+            ICollection<Domain.Student.Entities.Requirements.Catalog> catalogCollection = null;
+            IEnumerable<Domain.Student.Entities.AcademicProgram> programs = null;
+            string defaultHost = string.Empty;
+            try
+            {
+                catalogCollection = await _catalogRepository.GetAsync(bypassCache);
+                programs = await _studentReferenceDataRepository.GetAcademicProgramsAsync(false);
+                defaultHost = await GetDefaultHostGuidAsync();
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(string.Format("Errors getting catalog, program or default institution: {0}", ex.Message), "Bad.Data");
+            }
 
             // Map the Catalog entity to the AcademicCatalog DTO
             var academicCatalogDtoCollection = new List<AcademicCatalog2>();
             foreach (var catalog in catalogCollection)
             {
-                academicCatalogDtoCollection.Add(await ConvertCatalogEntitytoAcademicCatalog2DtoAsync(catalog));
+                var catalogDto = ConvertCatalogEntitytoAcademicCatalog2DtoAsync(catalog, programs, defaultHost);
+                if (catalogDto != null)
+                {
+                    academicCatalogDtoCollection.Add(catalogDto);
+                }
+            }
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
             }
 
             return academicCatalogDtoCollection;
@@ -83,17 +103,41 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// Get an Academic Catalog from its GUID
         /// </summary>
         /// <returns>AcademicCatalog2 DTO object</returns>
-        public async Task<Ellucian.Colleague.Dtos.AcademicCatalog2> GetAcademicCatalogByGuid2Async(string guid)
+        public async Task<AcademicCatalog2> GetAcademicCatalogByGuid2Async(string guid)
         {
+            ICollection<Domain.Student.Entities.Requirements.Catalog> catalogCollections = null;
+            IEnumerable<Domain.Student.Entities.AcademicProgram> programs = null;
+            string defaultHost = string.Empty;
             try
             {
-                var catalogCollection = await _catalogRepository.GetAsync(false);
-                return await ConvertCatalogEntitytoAcademicCatalog2DtoAsync(catalogCollection.Where(ac => ac.Guid == guid).First());
+                catalogCollections = await _catalogRepository.GetAsync(true);
+                programs = await _studentReferenceDataRepository.GetAcademicProgramsAsync(false);
+                defaultHost = await GetDefaultHostGuidAsync();
             }
-            catch (InvalidOperationException ex)
+            catch (Exception ex)
             {
-                throw new KeyNotFoundException("Academic Catalog not found for GUID " + guid, ex);
+                IntegrationApiExceptionAddError(string.Format("Errors getting catalog, program or default institution: {0}", ex.Message), "Bad.Data");
             }
+
+            if (catalogCollections == null)
+            {
+                throw new KeyNotFoundException(string.Format("No academic-catalogs resource was found for GUID '{0}'", guid));
+            }
+
+            var catalogEntity = catalogCollections.FirstOrDefault(cc => cc.Guid.Equals(guid, StringComparison.OrdinalIgnoreCase));
+            if (catalogEntity == null)
+            {
+                throw new KeyNotFoundException(string.Format("No academic-catalogs resource was found for GUID '{0}'", guid));
+            }
+
+            var catalogDto = ConvertCatalogEntitytoAcademicCatalog2DtoAsync(catalogEntity, programs, defaultHost);
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+
+            return catalogDto;
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
@@ -102,30 +146,46 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="source">Academic Catalog domain entity</param>
         /// <returns>AcademicCatalog DTO</returns>
-        private async Task<Dtos.AcademicCatalog2> ConvertCatalogEntitytoAcademicCatalog2DtoAsync(Domain.Student.Entities.Requirements.Catalog source)
+        private Dtos.AcademicCatalog2 ConvertCatalogEntitytoAcademicCatalog2DtoAsync(Domain.Student.Entities.Requirements.Catalog source, IEnumerable<Domain.Student.Entities.AcademicProgram> programs, string defaultHost)
         {
-            var academicCatalog = new Dtos.AcademicCatalog2();
-            academicCatalog.Id = source.Guid;
-            academicCatalog.StartDate = source.StartDate;
-            academicCatalog.EndDate = source.EndDate;
-            academicCatalog.Code = source.Code;
-            academicCatalog.Title = source.Description;
-            academicCatalog.status = source.IsActive ? LifeCycleStatus.Active : LifeCycleStatus.Inactive;
+            var academicCatalog = new AcademicCatalog2()
+            {
+                Id = source.Guid,
+                StartDate = source.StartDate,
+                EndDate = source.EndDate,
+                Code = source.Code,
+                Title = source.Description
+            };
+            // v6.1.0, status is optional therefore, no longer return a derrived status that has no real meaning.
+            // academicCatalog.status = source.IsActive ? LifeCycleStatus.Active : LifeCycleStatus.Inactive;
 
-            if (source.AcadPrograms != null)
+            if (source.AcadPrograms != null && programs != null)
             {
                 var acadProgramCollection = new List<GuidObject2>();
                 foreach (var acadProgram in source.AcadPrograms)
                 {
-                    var program = (await _studentReferenceDataRepository.GetAcademicProgramsAsync(false)).FirstOrDefault(x => x.Code == acadProgram);
-                    if (program != null)
+                    try
                     {
-                        acadProgramCollection.Add(new GuidObject2(program.Guid));
+                        var program = programs.FirstOrDefault(x => x.Code == acadProgram);
+                        if (program != null)
+                        {
+                            acadProgramCollection.Add(new GuidObject2(program.Guid));
+                        }
+                        else
+                        {
+                            IntegrationApiExceptionAddError(string.Format("The academic program code '{0}' is referenced in the catalog but not properly defined.", acadProgram), "Bad.Data", source.Guid, source.Code);
+                        }
+                    }
+                    catch
+                    {
+                        IntegrationApiExceptionAddError(string.Format("The academic program code '{0}' is referenced in the catalog but not properly defined.", acadProgram), "Bad.Data", source.Guid, source.Code);
                     }
                 }
                 academicCatalog.AcademicPrograms = acadProgramCollection;
             }
-            academicCatalog.Institution = new GuidObject2(await GetDefaultHostGuidAsync());
+            if (!string.IsNullOrEmpty(defaultHost))
+                academicCatalog.Institution = new GuidObject2(defaultHost);
+
             return academicCatalog;
         }
 

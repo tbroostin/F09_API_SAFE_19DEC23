@@ -1,9 +1,11 @@
 ﻿using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Domain.Base;
+using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
+using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos;
@@ -11,6 +13,7 @@ using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Dtos.Filters;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -33,7 +36,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             //Mock<IPositionRepository> positionRepositoryMock;
             Mock<IVendorsRepository> vendorRepositoryMock;
             Mock<IColleagueFinanceReferenceDataRepository> referenceDataRepositoryMock;
+            Mock<IReferenceDataRepository> refDataRepositoryMock;
             Mock<IPersonRepository> personRepositoryMock;
+            Mock<IAddressRepository> addressRepositoryMock;
             Mock<IAdapterRegistry> adapterRegistryMock;
             Mock<IInstitutionRepository> institutionRepositoryMock;
             ICurrentUserFactory currentUserFactory;
@@ -64,7 +69,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 //positionRepositoryMock = new Mock<IPositionRepository>();
                 vendorRepositoryMock = new Mock<IVendorsRepository>();
                 referenceDataRepositoryMock = new Mock<IColleagueFinanceReferenceDataRepository>();
+                refDataRepositoryMock = new Mock<IReferenceDataRepository>();
                 personRepositoryMock = new Mock<IPersonRepository>();
+                addressRepositoryMock = new Mock<IAddressRepository>();
                 institutionRepositoryMock = new Mock<IInstitutionRepository>();
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 roleRepositoryMock = new Mock<IRoleRepository>();
@@ -81,7 +88,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object, 
                                                baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
             }
 
@@ -155,11 +162,16 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 vendorRepositoryMock.Setup(i => i.GetVendorsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), null, null, null, null)).ReturnsAsync(vendorEntityTuple);
                 personRepositoryMock = null;
                 personRepositoryMock = new Mock<IPersonRepository>();
+                addressRepositoryMock = new Mock<IAddressRepository>();
+
                 personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(VenderID);
                 personRepositoryMock.Setup(p => p.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(new Guid().ToString());
+                var personGuidCollection = new Dictionary<string, string>();
+                personGuidCollection.Add("1", "db8f690b-071f-4d98-8da8-d4312511a4c2");
+                personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(personGuidCollection);
 
                 vendorService = null;
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object, 
                                               baseConfigurationRepository,  adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
 
                 var actualsTuple =
@@ -194,7 +206,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
 
                 vendorService = null;
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
 
                 var actualsTuple =
@@ -214,7 +226,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 vendorRepositoryMock.Setup(i => i.GetVendorsAsync(It.IsAny<int>(), It.IsAny<int>(), "", It.IsAny<List<string>>(), null, null, null)).ReturnsAsync(vendorEntityTuple);
 
                 vendorService = null;
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository,  adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
 
                 var actualsTuple =
@@ -246,7 +258,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 vendorRepositoryMock.Setup(i => i.GetVendorsAsync(It.IsAny<int>(), It.IsAny<int>(), "", It.IsAny<List<string>>(), null, null, It.IsAny<List<string>>())).ReturnsAsync(vendorEntityTuple);
 
                 vendorService = null;
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
 
                 var actualsTuple =
@@ -372,6 +384,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new Domain.ColleagueFinance.Entities.AccountsPayableSources("17ff700b-8d20-43d7-be31-c34933baca75", "CVIL", "Loc Description"),
                 };
                 referenceDataRepositoryMock.Setup(i => i.GetAccountsPayableSourcesAsync(It.IsAny<bool>())).ReturnsAsync(acctPaySourceEntities);
+                foreach (var record in acctPaySourceEntities)
+                {
+                    referenceDataRepositoryMock.Setup(loc => loc.GetAccountsPayableSourceGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
 
                 vendorTypeEntities = new List<Domain.ColleagueFinance.Entities.VendorType>() 
                 {
@@ -382,6 +398,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new Domain.ColleagueFinance.Entities.VendorType("ccce9689-aab1-47ab-ae76-fa128fe8b97e", "Anthropology", "Anthropology"),
                 };
                 referenceDataRepositoryMock.Setup(i => i.GetVendorTypesAsync(It.IsAny<bool>())).ReturnsAsync(vendorTypeEntities);
+                foreach (var record in vendorTypeEntities)
+                {
+                    referenceDataRepositoryMock.Setup(loc => loc.GetVendorTypesGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
 
                 vendorTermEntities = new List<Domain.ColleagueFinance.Entities.VendorTerm>() 
                 {
@@ -391,6 +411,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new Domain.ColleagueFinance.Entities.VendorTerm("5b05410c-c94c-464a-98ee-684198bde60b", "ITS", "IT Support"),
                 };
                 referenceDataRepositoryMock.Setup(i => i.GetVendorTermsAsync(It.IsAny<bool>())).ReturnsAsync(vendorTermEntities);
+
+                foreach (var record in vendorTermEntities)
+                {
+                    referenceDataRepositoryMock.Setup(loc => loc.GetVendorTermGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
 
                 currencyConversionEntities = new List<Domain.ColleagueFinance.Entities.CurrencyConversion>() 
                 {
@@ -436,6 +461,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 vendorRepositoryMock.Setup(i => i.GetVendorsAsync(It.IsAny<int>(), It.IsAny<int>(), "", null, null, null, It.IsAny<List<string>>())).ReturnsAsync(vendorEntityTuple);
                 vendorRepositoryMock.Setup(i => i.GetVendorsByGuidAsync(It.IsAny<string>())).ReturnsAsync(vendorEntities.ToList()[0]);
                 personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("db8f690b-071f-4d98-8da8-d4312511a4c2");
+                var personGuidCollection = new Dictionary<string, string>();
+                personGuidCollection.Add("1", "db8f690b-071f-4d98-8da8-d4312511a4c2");
+                personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(personGuidCollection);
 
                 institutionsEntities = new List<Domain.Base.Entities.Institution>() 
                 {
@@ -451,7 +479,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         {
             Mock<IVendorsRepository> vendorRepositoryMock;
             Mock<IColleagueFinanceReferenceDataRepository> referenceDataRepositoryMock;
+            Mock<IReferenceDataRepository> refDataRepositoryMock;
             Mock<IPersonRepository> personRepositoryMock;
+            Mock<IAddressRepository> addressRepositoryMock;
             Mock<IAdapterRegistry> adapterRegistryMock;
             Mock<IInstitutionRepository> institutionRepositoryMock;
             ICurrentUserFactory currentUserFactory;
@@ -478,7 +508,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             {
                 vendorRepositoryMock = new Mock<IVendorsRepository>();
                 referenceDataRepositoryMock = new Mock<IColleagueFinanceReferenceDataRepository>();
+                refDataRepositoryMock = new Mock<IReferenceDataRepository>();
                 personRepositoryMock = new Mock<IPersonRepository>();
+                addressRepositoryMock = new Mock<IAddressRepository>();
                 institutionRepositoryMock = new Mock<IInstitutionRepository>();
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 roleRepositoryMock = new Mock<IRoleRepository>();
@@ -495,7 +527,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
             }
 
@@ -862,6 +894,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new Domain.ColleagueFinance.Entities.AccountsPayableSources("17ff700b-8d20-43d7-be31-c34933baca75", "CVIL", "Loc Description"),
                 };
                 referenceDataRepositoryMock.Setup(i => i.GetAccountsPayableSourcesAsync(It.IsAny<bool>())).ReturnsAsync(acctPaySourceEntities);
+                foreach (var record in acctPaySourceEntities)
+                {
+                    referenceDataRepositoryMock.Setup(loc => loc.GetAccountsPayableSourceGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
 
                 vendorTypeEntities = new List<Domain.ColleagueFinance.Entities.VendorType>() 
                 {
@@ -872,6 +908,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new Domain.ColleagueFinance.Entities.VendorType("ccce9689-aab1-47ab-ae76-fa128fe8b97e", "Anthropology", "Anthropology"),
                 };
                 referenceDataRepositoryMock.Setup(i => i.GetVendorTypesAsync(It.IsAny<bool>())).ReturnsAsync(vendorTypeEntities);
+                foreach (var record in vendorTypeEntities)
+                {
+                    referenceDataRepositoryMock.Setup(loc => loc.GetVendorTypesGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
 
                 vendorTermEntities = new List<Domain.ColleagueFinance.Entities.VendorTerm>() 
                 {
@@ -881,6 +921,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new Domain.ColleagueFinance.Entities.VendorTerm("5b05410c-c94c-464a-98ee-684198bde60b", "ITS", "IT Support"),
                 };
                 referenceDataRepositoryMock.Setup(i => i.GetVendorTermsAsync(It.IsAny<bool>())).ReturnsAsync(vendorTermEntities);
+                foreach (var record in vendorTermEntities)
+                {
+                    referenceDataRepositoryMock.Setup(loc => loc.GetVendorTermGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
 
                 currencyConversionEntities = new List<Domain.ColleagueFinance.Entities.CurrencyConversion>() 
                 {
@@ -927,10 +971,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new Domain.ColleagueFinance.Entities.VendorHoldReasons("f9865084-2c02-484e-8286-b98afa5909cc", "DISP", "Disputed Transaction desc"),
                 };
                 referenceDataRepositoryMock.Setup(i => i.GetVendorHoldReasonsAsync(It.IsAny<bool>())).ReturnsAsync(vendorHoldReasons);
+                foreach (var record in vendorHoldReasons)
+                {
+                    referenceDataRepositoryMock.Setup(loc => loc.GetVendorHoldReasonsGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
 
                 personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("db8f690b-071f-4d98-8da8-d4312511a4c2");
                 personRepositoryMock.Setup(i => i.GetPersonByGuidNonCachedAsync(It.IsAny<string>()))
                     .ReturnsAsync(new Domain.Base.Entities.Person("5bc2d86c-6a0c-46b1-824d-485ccb27dc67", "LastName") { PersonCorpIndicator = "Y" });
+                var personGuidCollection = new Dictionary<string, string>();
+                personGuidCollection.Add("1", "db8f690b-071f-4d98-8da8-d4312511a4c2");
+                personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(personGuidCollection);
 
                 institutionsEntities = new List<Domain.Base.Entities.Institution>() 
                 {
@@ -953,7 +1004,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             //Mock<IPositionRepository> positionRepositoryMock;
             Mock<IVendorsRepository> vendorRepositoryMock;
             Mock<IColleagueFinanceReferenceDataRepository> referenceDataRepositoryMock;
+            Mock<IReferenceDataRepository> refDataRepositoryMock;
             Mock<IPersonRepository> personRepositoryMock;
+            Mock<IAddressRepository> addressRepositoryMock;
             Mock<IAdapterRegistry> adapterRegistryMock;
             Mock<IInstitutionRepository> institutionRepositoryMock;
             ICurrentUserFactory currentUserFactory;
@@ -962,9 +1015,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             VendorsService vendorService;
             IEnumerable<Domain.ColleagueFinance.Entities.Vendors> vendorEntities;
+            IEnumerable<Domain.ColleagueFinance.Entities.VendorHoldReasons> VendorHoldReasonsEntities;
             Tuple<IEnumerable<Domain.ColleagueFinance.Entities.Vendors>, int> vendorEntityTuple;
 
             IEnumerable<Domain.ColleagueFinance.Entities.VendorTerm> vendorTermEntities;
+            IEnumerable<Domain.Base.Entities.TaxForms2> taxFormEntities;
+            IEnumerable<BoxCodes> taxBoxEntities;
+            IEnumerable<IntgVendorAddressUsages> addressUsages;
             IEnumerable<Domain.ColleagueFinance.Entities.VendorType> vendorTypeEntities;
             IEnumerable<Domain.ColleagueFinance.Entities.AccountsPayableSources> acctPaySourceEntities;
             IEnumerable<Domain.ColleagueFinance.Entities.CurrencyConversion> currencyConversionEntities;
@@ -984,7 +1041,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 //positionRepositoryMock = new Mock<IPositionRepository>();
                 vendorRepositoryMock = new Mock<IVendorsRepository>();
                 referenceDataRepositoryMock = new Mock<IColleagueFinanceReferenceDataRepository>();
+                refDataRepositoryMock = new Mock<IReferenceDataRepository>();
                 personRepositoryMock = new Mock<IPersonRepository>();
+                addressRepositoryMock = new Mock<IAddressRepository>();
                 institutionRepositoryMock = new Mock<IInstitutionRepository>();
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 roleRepositoryMock = new Mock<IRoleRepository>();
@@ -1001,7 +1060,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
             }
 
@@ -1011,6 +1070,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 vendorEntityTuple = null;
                 vendorEntities = null;
                 vendorTermEntities = null;
+                taxFormEntities = null;
                 vendorTypeEntities = null;
                 acctPaySourceEntities = null;
                 currencyConversionEntities = null;
@@ -1029,7 +1089,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 VendorFilter filter = new VendorFilter();
                 var actualsTuple =
                     await
-                        vendorService.GetVendorsAsync2(offset, limit, "", null, null, null, null, It.IsAny<bool>());
+                        vendorService.GetVendorsAsync2(offset, limit, "", null, null, null, null, null, It.IsAny<bool>());
 
                 Assert.IsNotNull(actualsTuple);
 
@@ -1055,8 +1115,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 };
                 vendorEntityTuple = new Tuple<IEnumerable<Domain.ColleagueFinance.Entities.Vendors>, int>(vendorEntities, 0);
-                vendorRepositoryMock.Setup(i => i.GetVendorsAsync(It.IsAny<int>(), It.IsAny<int>(), "", null, null, null, null)).ReturnsAsync(vendorEntityTuple);
-                var actualsTuple = await vendorService.GetVendorsAsync2(offset, limit, "", null, null, null, null, It.IsAny<bool>());
+                vendorRepositoryMock.Setup(i => i.GetVendors2Async(It.IsAny<int>(), It.IsAny<int>(), "", null, null, null, null, null)).ReturnsAsync(vendorEntityTuple);
+                var actualsTuple = await vendorService.GetVendorsAsync2(offset, limit, "", null, null, null, null, null,It.IsAny<bool>());
 
                 Assert.AreEqual(0, actualsTuple.Item1.Count());
             }
@@ -1069,19 +1129,26 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 
                 vendorRepositoryMock = null;
                 vendorRepositoryMock = new Mock<IVendorsRepository>();
-                vendorRepositoryMock.Setup(i => i.GetVendorsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), null, null, null, null)).ReturnsAsync(vendorEntityTuple);
+                vendorRepositoryMock.Setup(i => i.GetVendors2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), null, null, null, null, null)).ReturnsAsync(vendorEntityTuple);
                 personRepositoryMock = null;
                 personRepositoryMock = new Mock<IPersonRepository>();
+                addressRepositoryMock = new Mock<IAddressRepository>();
                 personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(VenderID);
                 personRepositoryMock.Setup(p => p.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(new Guid().ToString());
+                var personGuidCollection = new Dictionary<string, string>();
+                personGuidCollection.Add("0000231", "db8f690b-071f-4d98-8da8-d4312511a4c2");
+                personGuidCollection.Add("0000232", "db8f690b-071f-4d98-8da8-d4312511a4c3");
+                personGuidCollection.Add("0000233", "db8f690b-071f-4d98-8da8-d4312511a4c4");
+                personGuidCollection.Add("0000234", "db8f690b-071f-4d98-8da8-d4312511a4c5");
+                personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(personGuidCollection);
 
                 vendorService = null;
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                               baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
 
                 var actualsTuple =
                     await
-                        vendorService.GetVendorsAsync2(offset, limit, VendorGuid, null, null, null, null, It.IsAny<bool>());
+                        vendorService.GetVendorsAsync2(offset, limit, VendorGuid, null, null, null, null, null,It.IsAny<bool>());
 
                 Assert.IsNotNull(actualsTuple);
 
@@ -1104,22 +1171,45 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 //For some reason need to reset repo's and service to truly run the tests
                  vendorRepositoryMock = null;
                 vendorRepositoryMock = new Mock<IVendorsRepository>();
-                vendorRepositoryMock.Setup(i => i.GetVendorsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), null, null, null, null)).ReturnsAsync(vendorEntityTuple);
+                vendorRepositoryMock.Setup(i => i.GetVendors2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), null, null, null, null, null)).ReturnsAsync(vendorEntityTuple);
                 personRepositoryMock = null;
                 personRepositoryMock = new Mock<IPersonRepository>();
                 personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
 
                 vendorService = null;
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
 
                 var actualsTuple =
                     await
-                        vendorService.GetVendorsAsync2(offset, limit, "VenderGUID123", null, null, null, null, It.IsAny<bool>());
+                        vendorService.GetVendorsAsync2(offset, limit, "VenderGUID123", null, null, null, null, null, It.IsAny<bool>());
 
                 Assert.AreEqual(0, actualsTuple.Item1.Count());
-
             }
+
+            [TestMethod]
+            public async Task Vendors_GETAllAsync_VenderFilter_PersonGuidLookupException()
+            {
+                //For some reason need to reset repo's and service to truly run the tests
+                vendorRepositoryMock = null;
+                vendorRepositoryMock = new Mock<IVendorsRepository>();
+                vendorRepositoryMock.Setup(i => i.GetVendors2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), null, null, null, null, null)).ReturnsAsync(vendorEntityTuple);
+                personRepositoryMock = null;
+                personRepositoryMock = new Mock<IPersonRepository>();
+                personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+
+                vendorService = null;
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
+                                               baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
+
+                var actualsTuple =
+                    await
+                        vendorService.GetVendorsAsync2(offset, limit, "VenderGUID123", null, null, null, null, null, It.IsAny<bool>());
+
+                Assert.AreEqual(0, actualsTuple.Item1.Count());
+            }
+
+
             [TestMethod]
             public async Task Vendors_GETAllAsync_ClassificationFilter2()
             {
@@ -1127,15 +1217,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 vendorRepositoryMock = null;
                 vendorRepositoryMock = new Mock<IVendorsRepository>();
-                vendorRepositoryMock.Setup(i => i.GetVendorsAsync(It.IsAny<int>(), It.IsAny<int>(), "", It.IsAny<List<string>>(), null, null, null)).ReturnsAsync(vendorEntityTuple);
+                vendorRepositoryMock.Setup(i => i.GetVendors2Async(It.IsAny<int>(), It.IsAny<int>(), "", It.IsAny<List<string>>(), null, null, null, null)).ReturnsAsync(vendorEntityTuple);
 
                 vendorService = null;
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
 
                 var actualsTuple =
                    await
-                       vendorService.GetVendorsAsync2(offset, limit, "", classficationGuid, null, null, null, It.IsAny<bool>());
+                       vendorService.GetVendorsAsync2(offset, limit, "", classficationGuid, null, null, null, null, It.IsAny<bool>());
 
                 Assert.IsNotNull(actualsTuple);
 
@@ -1153,21 +1243,44 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
+            public async Task Vendors_GETAllAsync_relatedReferences_PaymentVendor()
+            {
+               
+                vendorRepositoryMock = null;
+                vendorRepositoryMock = new Mock<IVendorsRepository>();
+                vendorRepositoryMock.Setup(i => i.GetVendors2Async(It.IsAny<int>(), It.IsAny<int>(), "", It.IsAny<List<string>>(), null, null, null, null)).ReturnsAsync(vendorEntityTuple);
+
+                vendorService = null;
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
+                                               baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
+
+                var actualsTuple =
+                   await
+                       vendorService.GetVendorsAsync2(offset, limit, "", null, null, new List<string>(){ "paymentvendor"} , null, null, It.IsAny<bool>());
+
+                Assert.IsNotNull(actualsTuple);
+                Assert.AreEqual(actualsTuple.Item2, 0);
+                Assert.AreEqual(actualsTuple.Item1.Count(), 0);
+            }
+
+
+
+            [TestMethod]
             public async Task Vendors_GETAllAsync_ClassificationFilter_ClassificationMissing2()
             {
                 var classficationGuid = new List<string> { "BadGuid" };
 
                 vendorRepositoryMock = null;
                 vendorRepositoryMock = new Mock<IVendorsRepository>();
-                vendorRepositoryMock.Setup(i => i.GetVendorsAsync(It.IsAny<int>(), It.IsAny<int>(), "", It.IsAny<List<string>>(), null, null, It.IsAny<List<string>>())).ReturnsAsync(vendorEntityTuple);
+                vendorRepositoryMock.Setup(i => i.GetVendors2Async(It.IsAny<int>(), It.IsAny<int>(), "", It.IsAny<List<string>>(), null, null, It.IsAny<List<string>>(), null)).ReturnsAsync(vendorEntityTuple);
 
                 vendorService = null;
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
 
                 var actualsTuple =
                    await
-                       vendorService.GetVendorsAsync2(offset, limit, "", classficationGuid, null, null, null, It.IsAny<bool>());
+                       vendorService.GetVendorsAsync2(offset, limit, "", classficationGuid, null, null, null, null, It.IsAny<bool>());
 
                 Assert.AreEqual(0, actualsTuple.Item1.Count());
             }
@@ -1178,11 +1291,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 var status =  "active" ;
                 var statuses = new List<string>();
                 statuses.Add(status);
-                vendorRepositoryMock.Setup(i => i.GetVendorsAsync(It.IsAny<int>(), It.IsAny<int>(), "", null, statuses, null, It.IsAny<List<string>>())).ReturnsAsync(vendorEntityTuple);
+                vendorRepositoryMock.Setup(i => i.GetVendors2Async(It.IsAny<int>(), It.IsAny<int>(), "", null, statuses, null, It.IsAny<List<string>>(), null)).ReturnsAsync(vendorEntityTuple);
 
                 var actualsTuple =
                     await
-                        vendorService.GetVendorsAsync2(offset, limit, "", null, null, null, null, It.IsAny<bool>());
+                        vendorService.GetVendorsAsync2(offset, limit, "", null, statuses, null, null, null, It.IsAny<bool>());
 
                 Assert.IsNotNull(actualsTuple);
 
@@ -1200,18 +1313,215 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
+            public async Task Vendors_GETAllAsync_StatusFilter2_Invalid()
+            {
+                var status = "actively";
+                var statuses = new List<string>();
+                statuses.Add(status);
+                vendorRepositoryMock.Setup(i => i.GetVendors2Async(It.IsAny<int>(), It.IsAny<int>(), "", null, statuses, null, It.IsAny<List<string>>(), null)).ReturnsAsync(vendorEntityTuple);
+
+                var actualsTuple =
+                    await
+                        vendorService.GetVendorsAsync2(offset, limit, "", null, statuses, null, null, null, It.IsAny<bool>());
+
+                Assert.IsNotNull(actualsTuple);
+
+                Assert.IsNotNull(actualsTuple);
+                Assert.AreEqual(actualsTuple.Item2, 0);
+                Assert.AreEqual(actualsTuple.Item1.Count(), 0);
+            }
+
+            [TestMethod]
+            
+            public async Task Vendors_GETAllAsync_Types_Invalid()
+            {
+                var type = "actively";
+                var types = new List<string>();
+                types.Add(type);
+                vendorRepositoryMock.Setup(i => i.GetVendors2Async(It.IsAny<int>(), It.IsAny<int>(), "", null, types, null, It.IsAny<List<string>>(), null)).ReturnsAsync(vendorEntityTuple);
+
+                var actualsTuple =
+                    await
+                        vendorService.GetVendorsAsync2(offset, limit, "", null, null, null, types,  null, It.IsAny<bool>());
+                Assert.IsNotNull(actualsTuple);
+
+                Assert.IsNotNull(actualsTuple);
+                Assert.AreEqual(actualsTuple.Item2, 0);
+                Assert.AreEqual(actualsTuple.Item1.Count(), 0);
+            }
+
+
+            [TestMethod]
             public async Task Vendors_GET_ById2()
             {
                 var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
                 var expected = vendorEntities.ToList()[0];
-                vendorRepositoryMock.Setup(i => i.GetVendorsByGuidAsync(id)).ReturnsAsync(expected);
+                vendorRepositoryMock.Setup(i => i.GetVendorsByGuid2Async(id)).ReturnsAsync(expected);
                 var actual = await vendorService.GetVendorsByGuidAsync2(id);
 
                 Assert.IsNotNull(actual);
 
                 Assert.AreEqual(expected.Guid, actual.Id);
             }
-            
+
+            [TestMethod]
+            public async Task Vendors_GET_ById2_Institution()
+            {
+                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
+                var expected = vendorEntities.ToList()[0];
+                institutionsEntities = new List<Domain.Base.Entities.Institution>()
+                {
+                    new Domain.Base.Entities.Institution("0000231", Domain.Base.Entities.InstType.College),
+                };
+                institutionRepositoryMock.Setup(i => i.GetInstitutionsFromListAsync(It.IsAny<string[]>())).ReturnsAsync(institutionsEntities);
+                vendorRepositoryMock.Setup(i => i.GetVendorsByGuid2Async(id)).ReturnsAsync(expected);
+                var actual = await vendorService.GetVendorsByGuidAsync2(id);
+
+                Assert.IsNotNull(actual);
+
+                Assert.AreEqual(expected.Guid, actual.Id);
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task VendorService_GET_ById2_PermissionException()
+            {
+                personRole.RemovePermission(permissionViewAnyPerson); //Removing the VIEW.VOUCHER Permission
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
+                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
+                var expected = vendorEntities.ToList()[0];
+                vendorRepositoryMock.Setup(i => i.GetVendorsByGuid2Async(id)).ReturnsAsync(expected);
+                var actual = await vendorService.GetVendorsByGuidAsync2(id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task Vendors_GET_ById2_noGUID()
+            {
+                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
+                vendorRepositoryMock.Setup(i => i.GetVendorsByGuid2Async(id)).ReturnsAsync(new Domain.ColleagueFinance.Entities.Vendors(string.Empty));
+                var actual = await vendorService.GetVendorsByGuidAsync2(id);                
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_GET_ById_Invalid_VendorHoldReasons()
+            {
+                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
+                var expected = vendorEntities.ToList()[0];
+                vendorRepositoryMock.Setup(i => i.GetVendorsByGuid2Async(id)).ReturnsAsync(expected);
+                referenceDataRepositoryMock.Setup(loc => loc.GetVendorHoldReasonsGuidAsync(It.IsAny<string>())).Throws<RepositoryException>();
+                var actual = await vendorService.GetVendorsByGuidAsync2(id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_GET_ById_Invalid_TaxForm()
+            {
+                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
+                var expected = vendorEntities.ToList()[0];
+                expected.TaxForm = "Form546";
+                vendorRepositoryMock.Setup(i => i.GetVendorsByGuid2Async(id)).ReturnsAsync(expected);
+                var actual = await vendorService.GetVendorsByGuidAsync2(id);
+            }
+
+            [TestMethod]
+            public async Task Vendors_GET_ById_NotDefault_TaxBox()
+            {
+                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
+                var expected = vendorEntities.ToList()[0];
+                expected.TaxForm = "Form128";
+                vendorRepositoryMock.Setup(i => i.GetVendorsByGuid2Async(id)).ReturnsAsync(expected);
+                var actual = await vendorService.GetVendorsByGuidAsync2(id);
+                Assert.IsNotNull(actual);
+
+                Assert.AreEqual(expected.Guid, actual.Id);
+                Assert.AreEqual(actual.DefaultTaxFormComponent, null); ; ;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_GET_ById_Invalid_AccountsPayableSource()
+            {
+                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
+                var expected = vendorEntities.ToList()[0];
+                vendorRepositoryMock.Setup(i => i.GetVendorsByGuid2Async(id)).ReturnsAsync(expected);
+                referenceDataRepositoryMock.Setup(loc => loc.GetAccountsPayableSourceGuidAsync(It.IsAny<string>())).Throws<RepositoryException>();
+                var actual = await vendorService.GetVendorsByGuidAsync2(id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_GET_ById_Invalid_VendorTerm()
+            {
+                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
+                var expected = vendorEntities.ToList()[0];
+                vendorRepositoryMock.Setup(i => i.GetVendorsByGuid2Async(id)).ReturnsAsync(expected);
+                referenceDataRepositoryMock.Setup(loc => loc.GetVendorTermGuidAsync(It.IsAny<string>())).Throws<RepositoryException>();
+                var actual = await vendorService.GetVendorsByGuidAsync2(id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_GET_ById_Invalid_VendorTypes()
+            {
+                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
+                var expected = vendorEntities.ToList()[0];
+                vendorRepositoryMock.Setup(i => i.GetVendorsByGuid2Async(id)).ReturnsAsync(expected);
+                referenceDataRepositoryMock.Setup(loc => loc.GetVendorTypesGuidAsync(It.IsAny<string>())).Throws<RepositoryException>();
+                var actual = await vendorService.GetVendorsByGuidAsync2(id);               
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_GET_ById_Invalid_IntgVendorAddressUsages()
+            {
+                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
+                var expected = vendorEntities.ToList()[0];
+                vendorRepositoryMock.Setup(i => i.GetVendorsByGuid2Async(id)).ReturnsAsync(expected);
+                referenceDataRepositoryMock.Setup(loc => loc.GetIntgVendorAddressUsagesGuidAsync(It.IsAny<string>())).Throws<RepositoryException>();
+                var actual = await vendorService.GetVendorsByGuidAsync2(id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_GET_ById_Invalid_AddressId()
+            {
+                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
+                var expected = vendorEntities.ToList()[0];
+                vendorRepositoryMock.Setup(i => i.GetVendorsByGuid2Async(id)).ReturnsAsync(expected);
+                var addressGuidCollection = new Dictionary<string, string>();
+                addressGuidCollection.Add("address3", "db8f690b-071f-4d98-8da8-d4312591a4c2");
+                personRepositoryMock.Setup(p => p.GetAddressGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(addressGuidCollection);
+                var actual = await vendorService.GetVendorsByGuidAsync2(id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_GET_ById_Invalid_PersonGuidCollection_null()
+            {
+                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
+                var expected = vendorEntities.ToList()[0];
+                vendorRepositoryMock.Setup(i => i.GetVendorsByGuid2Async(id)).ReturnsAsync(expected);
+                var personGuidCollection = new Dictionary<string, string>();
+                personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(null);
+                var actual = await vendorService.GetVendorsByGuidAsync2(id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_GET_ById_Invalid_PersonGuidCollection_empty()
+            {
+                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
+                var expected = vendorEntities.ToList()[0];
+                vendorRepositoryMock.Setup(i => i.GetVendorsByGuid2Async(id)).ReturnsAsync(expected);
+                var personGuidCollection = new Dictionary<string, string>();
+                personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(personGuidCollection);
+                var actual = await vendorService.GetVendorsByGuidAsync2(id);
+            }
+
+
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task Vendors_GET_ById_NullId_ArgumentNullException2()
@@ -1219,21 +1529,44 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 var actual = await vendorService.GetVendorsByGuidAsync2(string.Empty);
             }
 
+
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task Vendors_GET_ById_ReturnsNullEntity_KeyNotFoundException2()
             {
                 var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
-                vendorRepositoryMock.Setup(i => i.GetVendorsByGuidAsync(id)).Throws<KeyNotFoundException>();
+                vendorRepositoryMock.Setup(i => i.GetVendorsByGuid2Async(id)).Throws<KeyNotFoundException>();
                 var actual = await vendorService.GetVendorsByGuidAsync2(id);
             }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_GET_ById_ReturnsNullEntity_IntegrationApiException()
+            {
+                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
+                vendorRepositoryMock.Setup(i => i.GetVendorsByGuid2Async(id)).Throws<IntegrationApiException>();
+                var actual = await vendorService.GetVendorsByGuidAsync2(id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_GET_RepoException_IntegrationApiException()
+            {
+                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
+                vendorRepositoryMock.Setup(i => i.GetVendors2Async(It.IsAny<int>(), It.IsAny<int>(), "", null, null, null, It.IsAny<List<string>>(), null)).Throws<RepositoryException>();
+
+                var actualsTuple =
+                    await
+                        vendorService.GetVendorsAsync2(offset, limit, "", null, null, null, null, null, It.IsAny<bool>());
+            }
+
 
             [TestMethod]
             [ExpectedException(typeof(InvalidOperationException))]
             public async Task Vendors_GET_ById_ReturnsNullEntity_InvalidOperationException2()
             {
                 var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
-                vendorRepositoryMock.Setup(i => i.GetVendorsByGuidAsync(id)).Throws<InvalidOperationException>();
+                vendorRepositoryMock.Setup(i => i.GetVendorsByGuid2Async(id)).Throws<InvalidOperationException>();
                 var actual = await vendorService.GetVendorsByGuidAsync2(id);
             }
 
@@ -1242,7 +1575,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             public async Task Vendors_GET_ById_ReturnsNullEntity_RepositoryException2()
             {
                 var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
-                vendorRepositoryMock.Setup(i => i.GetVendorsByGuidAsync(id)).Throws<RepositoryException>();
+                vendorRepositoryMock.Setup(i => i.GetVendorsByGuid2Async(id)).Throws<RepositoryException>();
                 var actual = await vendorService.GetVendorsByGuidAsync2(id);
             }
 
@@ -1251,7 +1584,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             public async Task Vendors_GET_ById_ReturnsNullEntity_Exception2()
             {
                 var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
-                vendorRepositoryMock.Setup(i => i.GetVendorsByGuidAsync(id)).Throws<Exception>();
+                vendorRepositoryMock.Setup(i => i.GetVendorsByGuid2Async(id)).Throws<Exception>();
                 var actual = await vendorService.GetVendorsByGuidAsync2(id);
             }
 
@@ -1266,6 +1599,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new Domain.ColleagueFinance.Entities.AccountsPayableSources("17ff700b-8d20-43d7-be31-c34933baca75", "CVIL", "Loc Description"),
                 };
                 referenceDataRepositoryMock.Setup(i => i.GetAccountsPayableSourcesAsync(It.IsAny<bool>())).ReturnsAsync(acctPaySourceEntities);
+                foreach (var record in acctPaySourceEntities)
+                {
+                    referenceDataRepositoryMock.Setup(loc => loc.GetAccountsPayableSourceGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
 
                 vendorTypeEntities = new List<Domain.ColleagueFinance.Entities.VendorType>()
                 {
@@ -1276,6 +1613,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new Domain.ColleagueFinance.Entities.VendorType("ccce9689-aab1-47ab-ae76-fa128fe8b97e", "Anthropology", "Anthropology"),
                 };
                 referenceDataRepositoryMock.Setup(i => i.GetVendorTypesAsync(It.IsAny<bool>())).ReturnsAsync(vendorTypeEntities);
+                foreach (var record in vendorTypeEntities)
+                {
+                    referenceDataRepositoryMock.Setup(loc => loc.GetVendorTypesGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
 
                 vendorTermEntities = new List<Domain.ColleagueFinance.Entities.VendorTerm>()
                 {
@@ -1285,6 +1626,61 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new Domain.ColleagueFinance.Entities.VendorTerm("5b05410c-c94c-464a-98ee-684198bde60b", "ITS", "IT Support"),
                 };
                 referenceDataRepositoryMock.Setup(i => i.GetVendorTermsAsync(It.IsAny<bool>())).ReturnsAsync(vendorTermEntities);
+                foreach (var record in vendorTermEntities)
+                {
+                    referenceDataRepositoryMock.Setup(loc => loc.GetVendorTermGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
+
+                taxFormEntities = new List<TaxForms2>()
+                {
+                    new TaxForms2("c1b91008-ba77-4b5b-8b77-84f5a7ae1632", "Form123", "Form123", "box123" ),
+                    new TaxForms2("874dee09-8662-47e6-af0d-504c257493a3", "Form124", "Form124","box124"),
+                    new TaxForms2("29391a8c-75e7-41e8-a5ff-5d7f7598b87c", "Form123", "Form125","box125"),
+                    new TaxForms2("5b05410c-c94c-464a-98ee-684198bde60b", "Form128", "Form126","box127"),
+                };
+                refDataRepositoryMock.Setup(i => i.GetTaxFormsBaseAsync(It.IsAny<bool>())).ReturnsAsync(taxFormEntities);
+                foreach (var record in taxFormEntities)
+                {
+                    refDataRepositoryMock.Setup(loc => loc.GetTaxFormsGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
+
+                taxBoxEntities = new List<BoxCodes>()
+                {
+                    new BoxCodes("c1b91008-ba77-4b5b-8b77-84f5a7ae1632", "box123", "box123",  "Form123"),
+                    new BoxCodes("874dee09-8662-47e6-af0d-504c257493a3", "box124", "box124", "Form124"),
+                    new BoxCodes("29391a8c-75e7-41e8-a5ff-5d7f7598b87c", "box125", "box125", "Form125"),
+                    new BoxCodes("5b05410c-c94c-464a-98ee-684198bde60b", "box126", "box126", "Form126"),
+                };
+                refDataRepositoryMock.Setup(i => i.GetAllBoxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxBoxEntities);
+                foreach (var record in taxBoxEntities)
+                {
+                    refDataRepositoryMock.Setup(loc => loc.GetBoxCodesGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
+
+                addressUsages = new List<IntgVendorAddressUsages>()
+                {
+                    new IntgVendorAddressUsages("c1b91008-ba77-4b5b-8b77-84f5a7ae1632", "PO", "Purchase Order Address"),
+                    new IntgVendorAddressUsages("874dee09-8662-47e6-af0d-504c257493a3",  "CHECK", "AP Check Address"),
+                    
+                };
+                referenceDataRepositoryMock.Setup(i => i.GetIntgVendorAddressUsagesAsync(It.IsAny<bool>())).ReturnsAsync(addressUsages);
+                foreach (var record in addressUsages)
+                {
+                    referenceDataRepositoryMock.Setup(loc => loc.GetIntgVendorAddressUsagesGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
+
+                VendorHoldReasonsEntities = new List<Domain.ColleagueFinance.Entities.VendorHoldReasons>()
+                {
+                    new Domain.ColleagueFinance.Entities.VendorHoldReasons("c1b91008-ba77-4b5b-8b77-84f5a7ae1632", "ADJ", "Adjunct Faculty"),
+                    new Domain.ColleagueFinance.Entities.VendorHoldReasons("874dee09-8662-47e6-af0d-504c257493a3", "SUP", "Support"),
+                    new Domain.ColleagueFinance.Entities.VendorHoldReasons("29391a8c-75e7-41e8-a5ff-5d7f7598b87c", "AS", "Anuj Test"),
+                    new Domain.ColleagueFinance.Entities.VendorHoldReasons("5b05410c-c94c-464a-98ee-684198bde60b", "ITS", "IT Support"),
+                };
+                referenceDataRepositoryMock.Setup(i => i.GetVendorHoldReasonsAsync(It.IsAny<bool>())).ReturnsAsync(VendorHoldReasonsEntities);
+                foreach (var record in VendorHoldReasonsEntities)
+                {
+                    referenceDataRepositoryMock.Setup(loc => loc.GetVendorHoldReasonsGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
 
                 currencyConversionEntities = new List<Domain.ColleagueFinance.Entities.CurrencyConversion>()
                 {
@@ -1302,7 +1698,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                         StopPaymentFlag = "Y",
                         ApprovalFlag = "Y",
                         ActiveFlag = "Y",
-                        CurrencyCode = "ALU",
+                        CurrencyCode = "USD",
                         Comments = "comments",
                         AddDate = DateTime.Now,
                         ApTypes = new List<string>()
@@ -1321,23 +1717,38 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                         {
                             "Admissions"
                         },
-                        Categories = new List<string>() { "EP", "TR" }
+                        IntgHoldReasons = new List<string>(){"AS" },
+                        Categories = new List<string>() { "EP", "TR", "PR" },
+                        CorpParent =  new List<string>(){"0000231" },
+                        TaxId = "EIN123",
+                        TaxForm = "Form123"
+                        
                     },
-                    new Domain.ColleagueFinance.Entities.Vendors("5bc2d86c-6a0c-46b1-824d-485ccb27dc67"){IsOrganization = false, Id = "5bc2d86c-6a0c-46b1-824d-485ccb27dc67"},
-                    new Domain.ColleagueFinance.Entities.Vendors("7ea5142f-12f1-4ac9-b9f3-73e4205dfc11"),
-                    new Domain.ColleagueFinance.Entities.Vendors("db8f690b-071f-4d98-8da8-d4312511a4c1")
+                    new Domain.ColleagueFinance.Entities.Vendors("5bc2d86c-6a0c-46b1-824d-485ccb27dc67"){IsOrganization = false, Id = "0000232"},
+                    new Domain.ColleagueFinance.Entities.Vendors("7ea5142f-12f1-4ac9-b9f3-73e4205dfc11"){Id = "0000233"},
+                    new Domain.ColleagueFinance.Entities.Vendors("db8f690b-071f-4d98-8da8-d4312511a4c1"){Id = "0000234"}
                 };
                 vendorEntityTuple = new Tuple<IEnumerable<Domain.ColleagueFinance.Entities.Vendors>, int>(vendorEntities, vendorEntities.Count());
-                vendorRepositoryMock.Setup(i => i.GetVendorsAsync(It.IsAny<int>(), It.IsAny<int>(), "", null, null, null, It.IsAny<List<string>>())).ReturnsAsync(vendorEntityTuple);
-                vendorRepositoryMock.Setup(i => i.GetVendorsByGuidAsync(It.IsAny<string>())).ReturnsAsync(vendorEntities.ToList()[0]);
+                vendorRepositoryMock.Setup(i => i.GetVendors2Async(It.IsAny<int>(), It.IsAny<int>(), "", null, null, null, It.IsAny<List<string>>(), null)).ReturnsAsync(vendorEntityTuple);
+                vendorRepositoryMock.Setup(i => i.GetVendorsByGuid2Async(It.IsAny<string>())).ReturnsAsync(vendorEntities.ToList()[0]);
+                vendorRepositoryMock.Setup(i => i.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("123");
                 personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("db8f690b-071f-4d98-8da8-d4312511a4c2");
+                var personGuidCollection = new Dictionary<string, string>();
+                personGuidCollection.Add("0000231", "db8f690b-071f-4d98-8da8-d4312511a4c2");
+                personGuidCollection.Add("0000232", "db8f690b-071f-4d98-8da8-d4312511a4c3");
+                personGuidCollection.Add("0000233", "db8f690b-071f-4d98-8da8-d4312511a4c4");
+                personGuidCollection.Add("0000234", "db8f690b-071f-4d98-8da8-d4312511a4c5");
+                var personAddressCollection = new Dictionary<string, string>();
+                personAddressCollection.Add("0000231", "address1");
+                personAddressCollection.Add("0000232", "address2");
+                personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(personGuidCollection);
+                personRepositoryMock.Setup(p => p.GetHierarchyAddressIdsAsync(It.IsAny<List<string>>(), It.IsAny<string>(), DateTime.Today)).ReturnsAsync(personAddressCollection);
+                var addressGuidCollection = new Dictionary<string, string>();
+                addressGuidCollection.Add( "address1", "db8f690b-071f-4d98-8da8-d4312591a4c2");
+                addressGuidCollection.Add( "address2", "db8f698b-071f-4d98-8da8-d4312511a4c2");
+                personRepositoryMock.Setup(p => p.GetAddressGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(addressGuidCollection);
 
-                institutionsEntities = new List<Domain.Base.Entities.Institution>()
-                {
-                    new Domain.Base.Entities.Institution("5bc2d86c-6a0c-46b1-824d-485ccb27dc67", Domain.Base.Entities.InstType.College),
-                    new Domain.Base.Entities.Institution("61f1f719-cb8e-4827-b314-1e7861bc6e09", Domain.Base.Entities.InstType.College)
-                };
-                institutionRepositoryMock.Setup(i => i.Get()).Returns(institutionsEntities);
+                
             }
         }
 
@@ -1346,7 +1757,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         {
             Mock<IVendorsRepository> vendorRepositoryMock;
             Mock<IColleagueFinanceReferenceDataRepository> referenceDataRepositoryMock;
+            Mock<IReferenceDataRepository> refDataRepositoryMock;
             Mock<IPersonRepository> personRepositoryMock;
+            Mock<IAddressRepository> addressRepositoryMock;
             Mock<IAdapterRegistry> adapterRegistryMock;
             Mock<IInstitutionRepository> institutionRepositoryMock;
             ICurrentUserFactory currentUserFactory;
@@ -1359,6 +1772,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             IEnumerable<Domain.ColleagueFinance.Entities.VendorTerm> vendorTermEntities;
             IEnumerable<Domain.ColleagueFinance.Entities.VendorType> vendorTypeEntities;
+            IEnumerable<Domain.Base.Entities.TaxForms2> taxFormEntities;
+            IEnumerable<BoxCodes> taxBoxEntities;
             IEnumerable<Domain.ColleagueFinance.Entities.AccountsPayableSources> acctPaySourceEntities;
             IEnumerable<Domain.ColleagueFinance.Entities.CurrencyConversion> currencyConversionEntities;
             IEnumerable<Domain.Base.Entities.Institution> institutionsEntities;
@@ -1373,7 +1788,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             {
                 vendorRepositoryMock = new Mock<IVendorsRepository>();
                 referenceDataRepositoryMock = new Mock<IColleagueFinanceReferenceDataRepository>();
+                refDataRepositoryMock = new Mock<IReferenceDataRepository>();
                 personRepositoryMock = new Mock<IPersonRepository>();
+                addressRepositoryMock = new Mock<IAddressRepository>();
                 institutionRepositoryMock = new Mock<IInstitutionRepository>();
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 roleRepositoryMock = new Mock<IRoleRepository>();
@@ -1390,7 +1807,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
             }
 
@@ -1428,58 +1845,60 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task Vendors_POST2_VendorDetail_Person()
+            {
+                personRepositoryMock.Setup(i => i.GetPersonByGuidNonCachedAsync(It.IsAny<string>()))
+                   .ReturnsAsync(new Domain.Base.Entities.Person("5bc2d86c-6a0c-46b1-824d-485ccb27dc67", "LastName") { PersonCorpIndicator = "" });
+                vendorDto.VendorDetail = new VendorDetailsDtoProperty() { Person = new GuidObject2("5bc2d86c-6a0c-46b1-824d-485ccb27dc67") };
+                vendorDto.TaxId = null;
+                institutionRepositoryMock.Setup(i => i.GetInstitutionsFromListAsync(It.IsAny<string[]>())).ReturnsAsync(new List<Domain.Base.Entities.Institution>());
+                var result = await vendorService.PostVendorAsync2(vendorDto);
+                Assert.IsNotNull(result);
+                Assert.AreEqual(vendorDto.Id, result.Id);
+            }
+
+
+            [TestMethod]
+            public async Task Vendors_POST2_VendorDetail_Person_Inst()
+            {
+                personRepositoryMock.Setup(i => i.GetPersonByGuidNonCachedAsync(It.IsAny<string>()))
+                   .ReturnsAsync(new Domain.Base.Entities.Person("5bc2d86c-6a0c-46b1-824d-485ccb27dc67", "LastName") { PersonCorpIndicator = "" });
+                vendorDto.VendorDetail = new VendorDetailsDtoProperty() { Person = new GuidObject2("5bc2d86c-6a0c-46b1-824d-485ccb27dc67") };
+                vendorDto.TaxId = null;
+                institutionRepositoryMock.Setup(i => i.GetInstitutionsFromListAsync(It.IsAny<string[]>())).ReturnsAsync(new List<Domain.Base.Entities.Institution>());
+                var result = await vendorService.PostVendorAsync2(vendorDto);
+                Assert.IsNotNull(result);
+                Assert.AreEqual(vendorDto.Id, result.Id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_POST2_Permission()
+            {
+                personRole.RemovePermission(permissionViewAnyPerson); //Removing the VIEW.VOUCHER Permission
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
+                var result = await vendorService.PostVendorAsync2(vendorDto);
+                
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_DtoNull_ArgumentNullException2()
             {
                 var result = await vendorService.PutVendorAsync2(vendorGuid, null);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_DtoIdNull_ArgumentNullException2()
             {
                 vendorDto.Id = "";
                 var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
             }
-
+            
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task Vendors_PUT_StartDateChange_ArgumentException2()
-            {
-                vendorEntity.AddDate = DateTime.Today.AddDays(-1);
-                vendorRepositoryMock.Setup(i => i.GetVendorsByGuidAsync(It.IsAny<string>())).ReturnsAsync(vendorEntity);
-                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task Vendors_PUT_NotContainActive_ArgumentException2()
-            {
-                vendorDto.Statuses = new List<VendorsStatuses?>() { VendorsStatuses.Active };
-                vendorDto.VendorHoldReasons = null;
-                vendorEntity.AddDate = null;
-                vendorRepositoryMock.Setup(i => i.GetVendorsByGuidAsync(It.IsAny<string>())).ReturnsAsync(vendorEntity);
-                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
-            public async Task Vendors_PUT_RepositoryException2()
-            {
-                vendorRepositoryMock.Setup(i => i.GetVendorsByGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
-                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task Vendors_PUT_Exception2()
-            {
-                vendorRepositoryMock.Setup(i => i.GetVendorsByGuidAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
-                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_CurrencyCodes_Null_KeyNotFoundException2()
             {
                 referenceDataRepositoryMock.Setup(i => i.GetCurrencyConversionAsync())
@@ -1488,7 +1907,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_CurrencyCode_NotSet_KeyNotFoundException2()
             {
                 vendorDto.DefaultCurrency = CurrencyIsoCode.NotSet;
@@ -1496,7 +1915,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_Institution_Null_KeyNotFoundException2()
             {
                 personRepositoryMock.Setup(i => i.GetPersonByGuidNonCachedAsync(It.IsAny<string>())).ReturnsAsync(null);
@@ -1504,7 +1923,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_Institution_Null_Record()
+            {
+                institutionRepositoryMock.Setup(i => i.GetInstitutionsFromListAsync(It.IsAny<string[]>())).ReturnsAsync(null);
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_PersonCorpIndicator_Null_ArgumentException2()
             {
                 personRepositoryMock.Setup(i => i.GetPersonByGuidNonCachedAsync(It.IsAny<string>()))
@@ -1513,7 +1940,30 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_Person_PersonCorpIndicator_()
+            {
+                personRepositoryMock.Setup(i => i.GetPersonByGuidNonCachedAsync(It.IsAny<string>()))
+                   .ReturnsAsync(new Domain.Base.Entities.Person("5bc2d86c-6a0c-46b1-824d-485ccb27dc67", "LastName") { PersonCorpIndicator = "Y" });
+                vendorDto.VendorDetail = new VendorDetailsDtoProperty() { Person = new GuidObject2("5bc2d86c-6a0c-46b1-824d-485ccb27dc67") };
+                vendorDto.TaxId = null;
+                institutionRepositoryMock.Setup(i => i.GetInstitutionsFromListAsync(It.IsAny<string[]>())).ReturnsAsync(institutionsEntities);
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_Person_Person_taxId()
+            {
+                personRepositoryMock.Setup(i => i.GetPersonByGuidNonCachedAsync(It.IsAny<string>()))
+                   .ReturnsAsync(new Domain.Base.Entities.Person("5bc2d86c-6a0c-46b1-824d-485ccb27dc67", "LastName") { PersonCorpIndicator = "Y" });
+                vendorDto.VendorDetail = new VendorDetailsDtoProperty() { Person = new GuidObject2("5bc2d86c-6a0c-46b1-824d-485ccb27dc67") };
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_PersonCorpIndicator_Is_N_ArgumentException2()
             {
                 personRepositoryMock.Setup(i => i.GetPersonByGuidNonCachedAsync(It.IsAny<string>()))
@@ -1522,7 +1972,97 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_EndOn()
+            {
+                vendorDto.EndOn = DateTime.Today;
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_VendorDetail_Null()
+            {
+                vendorDto.VendorDetail = null;
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_VendorDetail_Empty()
+            {
+                vendorDto.VendorDetail = new VendorDetailsDtoProperty();
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_VendorDetail_All()
+            {
+                vendorDto.VendorDetail = new VendorDetailsDtoProperty() { Institution = new GuidObject2("1"), Organization = new GuidObject2("2"), Person = new GuidObject2("3") };
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_VendorDetail_Per_Org()
+            {
+                vendorDto.VendorDetail = new VendorDetailsDtoProperty() { Organization = new GuidObject2("2"), Person = new GuidObject2("3") };
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_VendorDetail_Per_Inst()
+            {
+                vendorDto.VendorDetail = new VendorDetailsDtoProperty() { Institution = new GuidObject2("1"), Person = new GuidObject2("3") };
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_VendorDetail_Org_Inst()
+            {
+                vendorDto.VendorDetail = new VendorDetailsDtoProperty() { Institution = new GuidObject2("1"), Organization = new GuidObject2("2") };
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_VendorDetail_Org_Per()
+            {
+                vendorDto.VendorDetail = new VendorDetailsDtoProperty() { Organization = new GuidObject2("2"), Person = new GuidObject2("3") };
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_VendorDetail_Org_Null_id()
+            {
+                vendorDto.VendorDetail = new VendorDetailsDtoProperty() { Organization = new GuidObject2("") };
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_VendorDetail_Person_Null_id()
+            {
+                vendorDto.VendorDetail = new VendorDetailsDtoProperty() { Person = new GuidObject2("") };
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_VendorDetail_Inst_Null_id()
+            {
+                vendorDto.VendorDetail = new VendorDetailsDtoProperty() { Institution = new GuidObject2("") };
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_Invalid_InstitutionId_ArgumentException2()
             {
                 personRepositoryMock.Setup(i => i.GetPersonByGuidNonCachedAsync(It.IsAny<string>()))
@@ -1530,8 +2070,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
             }
 
+
+
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_Organization_Null_KeyNotFoundException2()
             {
                 vendorDto.VendorDetail.Institution = null;
@@ -1543,7 +2085,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_OrganizationId_Invalid_KeyNotFoundException2()
             {
                 vendorDto.VendorDetail.Institution = null;
@@ -1555,7 +2097,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_PersonCorpIndicator_Y_ArgumentException2()
             {
                 vendorDto.VendorDetail.Institution = null;
@@ -1567,7 +2109,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_VendorDetail_Person_Null_KeyNotFoundException2()
             {
                 vendorDto.VendorDetail.Institution = null;
@@ -1580,7 +2122,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_VendorDetail_Person_Not_Null_ArgumentException2()
             {
                 vendorDto.VendorDetail.Institution = null;
@@ -1593,7 +2135,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_VendorDetail_PersonCorpIndicator_Y_ArgumentException2()
             {
                 vendorDto.VendorDetail.Institution = null;
@@ -1606,7 +2148,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_AccountsPayableSources_Null_KeyNotFoundException2()
             {
                 referenceDataRepositoryMock.Setup(i => i.GetAccountsPayableSourcesAsync(It.IsAny<bool>())).ReturnsAsync(null);
@@ -1614,7 +2156,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_AccountsPayableSource_Null_KeyNotFoundException2()
             {
                 vendorDto.PaymentSources.First().Id = "";
@@ -1622,7 +2164,73 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_AccountsPayableSource_Invalid()
+            {
+                vendorDto.PaymentSources.First().Id = "123";
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_PaymentTerms_Invalid()
+            {
+                vendorDto.PaymentTerms.First().Id = "123";
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_Classifications_Invalid()
+            {
+                vendorDto.Classifications.First().Id = "123";
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_VendorHoldReasons_Invalid()
+            {
+                vendorDto.VendorHoldReasons.First().Id = "123";
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_DefaultTaxFormComponent_Invalid()
+            {
+                vendorDto.DefaultTaxFormComponent.Id = "123";
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_DefaultTaxFormComponent_No_Default()
+            {
+                vendorDto.DefaultTaxFormComponent.Id = "5b05410c-c94c-464a-98ee-684198bde60b";
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_BoxCodes_Null()
+            {
+                refDataRepositoryMock.Setup(i => i.GetAllBoxCodesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_TaxForms_Null()
+            {
+                refDataRepositoryMock.Setup(i => i.GetTaxFormsBaseAsync(It.IsAny<bool>())).ReturnsAsync(null);
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_VendorTerms_Null_KeyNotFoundException2()
             {
                 referenceDataRepositoryMock.Setup(i => i.GetVendorTermsAsync(It.IsAny<bool>()))
@@ -1631,7 +2239,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_PaymentTerm_Null_KeyNotFoundException2()
             {
                 vendorDto.PaymentTerms = new List<GuidObject2>() { new GuidObject2("") };
@@ -1639,7 +2247,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_VendorTypes_Null_KeyNotFoundException2()
             {
                 referenceDataRepositoryMock.Setup(i => i.GetVendorTypesAsync(It.IsAny<bool>()))
@@ -1648,7 +2256,23 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_RepoExceptopn()
+            {
+                vendorRepositoryMock.Setup(i => i.UpdateVendors2Async(It.IsAny<Domain.ColleagueFinance.Entities.Vendors>())).ThrowsAsync(new RepositoryException());
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Vendors_PUT_Exceptopn()
+            {
+                vendorRepositoryMock.Setup(i => i.UpdateVendors2Async(It.IsAny<Domain.ColleagueFinance.Entities.Vendors>())).ThrowsAsync(new Exception());
+                var result = await vendorService.PutVendorAsync2(vendorGuid, vendorDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_Classifications_Null_KeyNotFoundException2()
             {
                 vendorDto.Classifications = new List<GuidObject2>() { new GuidObject2("") };
@@ -1656,7 +2280,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_VendorHoldReasons_Null_KeyNotFoundException2()
             {
                 referenceDataRepositoryMock.Setup(i => i.GetVendorHoldReasonsAsync(It.IsAny<bool>()))
@@ -1665,7 +2289,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_PUT_VendorHoldReason_Null_KeyNotFoundException2()
             {
                 vendorDto.VendorHoldReasons = new List<GuidObject2>() { new GuidObject2("") };
@@ -1673,14 +2297,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_POST_VendorNull_ArgumentNullException2()
             {
                 var result = await vendorService.PostVendorAsync2(null);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_POST_VendorIdNull_ArgumentNullException2()
             {
                 vendorDto.Id = null;
@@ -1688,19 +2312,19 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_POST_RepositoryException2()
             {
-                vendorRepositoryMock.Setup(i => i.CreateVendorsAsync(It.IsAny<Domain.ColleagueFinance.Entities.Vendors>()))
+                vendorRepositoryMock.Setup(i => i.CreateVendors2Async(It.IsAny<Domain.ColleagueFinance.Entities.Vendors>()))
                     .ThrowsAsync(new RepositoryException());
                 var result = await vendorService.PostVendorAsync2(vendorDto);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Vendors_POST_Exception2()
             {
-                vendorRepositoryMock.Setup(i => i.CreateVendorsAsync(It.IsAny<Domain.ColleagueFinance.Entities.Vendors>()))
+                vendorRepositoryMock.Setup(i => i.CreateVendors2Async(It.IsAny<Domain.ColleagueFinance.Entities.Vendors>()))
                     .ThrowsAsync(new Exception());
                 var result = await vendorService.PostVendorAsync2(vendorDto);
             }
@@ -1743,9 +2367,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     },
                     Statuses = new List<Dtos.EnumProperties.VendorsStatuses?>()
                     {
-                        Dtos.EnumProperties.VendorsStatuses.Holdpayment
+                        Dtos.EnumProperties.VendorsStatuses.Holdpayment,
+                        Dtos.EnumProperties.VendorsStatuses.Active,
+                        Dtos.EnumProperties.VendorsStatuses.Approved
                     },
-                    Types = new List<VendorTypes>() {  VendorTypes.Travel}
+                    Types = new List<VendorTypes>() {  VendorTypes.Travel, VendorTypes.EProcurement, VendorTypes.Procurement},
+                    TaxId = "tax123",
+                    DefaultTaxFormComponent =  new GuidObject2("c1b91008-ba77-4b5b-8b77-84f5a7ae1632")
+                   
                 };
                 vendorRepositoryMock.Setup(repo => repo.GetVendorIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("0000231");
                 acctPaySourceEntities = new List<Domain.ColleagueFinance.Entities.AccountsPayableSources>()
@@ -1757,6 +2386,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new Domain.ColleagueFinance.Entities.AccountsPayableSources("17ff700b-8d20-43d7-be31-c34933baca75", "CVIL", "Loc Description"),
                 };
                 referenceDataRepositoryMock.Setup(i => i.GetAccountsPayableSourcesAsync(It.IsAny<bool>())).ReturnsAsync(acctPaySourceEntities);
+                foreach (var record in acctPaySourceEntities)
+                {
+                    referenceDataRepositoryMock.Setup(loc => loc.GetAccountsPayableSourceGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
 
                 vendorTypeEntities = new List<Domain.ColleagueFinance.Entities.VendorType>()
                 {
@@ -1767,6 +2400,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new Domain.ColleagueFinance.Entities.VendorType("ccce9689-aab1-47ab-ae76-fa128fe8b97e", "Anthropology", "Anthropology"),
                 };
                 referenceDataRepositoryMock.Setup(i => i.GetVendorTypesAsync(It.IsAny<bool>())).ReturnsAsync(vendorTypeEntities);
+                foreach (var record in vendorTypeEntities)
+                {
+                    referenceDataRepositoryMock.Setup(loc => loc.GetVendorTypesGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
 
                 vendorTermEntities = new List<Domain.ColleagueFinance.Entities.VendorTerm>()
                 {
@@ -1776,6 +2413,32 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new Domain.ColleagueFinance.Entities.VendorTerm("5b05410c-c94c-464a-98ee-684198bde60b", "ITS", "IT Support"),
                 };
                 referenceDataRepositoryMock.Setup(i => i.GetVendorTermsAsync(It.IsAny<bool>())).ReturnsAsync(vendorTermEntities);
+
+                taxFormEntities = new List<TaxForms2>()
+                {
+                    new TaxForms2("c1b91008-ba77-4b5b-8b77-84f5a7ae1632", "Form123", "Form123", "box123" ),
+                    new TaxForms2("874dee09-8662-47e6-af0d-504c257493a3", "Form124", "Form124","box124"),
+                    new TaxForms2("29391a8c-75e7-41e8-a5ff-5d7f7598b87c", "Form125", "Form125","box125"),
+                    new TaxForms2("5b05410c-c94c-464a-98ee-684198bde60b", "Form126", "Form126",""),
+                };
+                refDataRepositoryMock.Setup(i => i.GetTaxFormsBaseAsync(It.IsAny<bool>())).ReturnsAsync(taxFormEntities);
+                foreach (var record in taxFormEntities)
+                {
+                    refDataRepositoryMock.Setup(loc => loc.GetTaxFormsGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
+
+                taxBoxEntities = new List<BoxCodes>()
+                {
+                    new BoxCodes("c1b91008-ba77-4b5b-8b77-84f5a7ae1632", "box123", "box123",  "Form123"),
+                    new BoxCodes("874dee09-8662-47e6-af0d-504c257493a3", "box124", "box124", "Form124"),
+                    new BoxCodes("29391a8c-75e7-41e8-a5ff-5d7f7598b87c", "box125", "box125", "Form125"),
+                    new BoxCodes("5b05410c-c94c-464a-98ee-684198bde60b", "box126", "box126", "Form126"),
+                };
+                refDataRepositoryMock.Setup(i => i.GetAllBoxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxBoxEntities);
+                foreach (var record in taxFormEntities)
+                {
+                    refDataRepositoryMock.Setup(loc => loc.GetBoxCodesGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
 
                 currencyConversionEntities = new List<Domain.ColleagueFinance.Entities.CurrencyConversion>()
                 {
@@ -1811,8 +2474,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                             "Admissions"
                         }
                 };
-                vendorRepositoryMock.Setup(i => i.UpdateVendorsAsync(It.IsAny<Domain.ColleagueFinance.Entities.Vendors>())).ReturnsAsync(vendorEntity);
-                vendorRepositoryMock.Setup(i => i.CreateVendorsAsync(It.IsAny<Domain.ColleagueFinance.Entities.Vendors>())).ReturnsAsync(vendorEntity);
+                vendorRepositoryMock.Setup(i => i.UpdateVendors2Async(It.IsAny<Domain.ColleagueFinance.Entities.Vendors>())).ReturnsAsync(vendorEntity);
+                vendorRepositoryMock.Setup(i => i.CreateVendors2Async(It.IsAny<Domain.ColleagueFinance.Entities.Vendors>())).ReturnsAsync(vendorEntity);
 
                 List<Domain.ColleagueFinance.Entities.VendorHoldReasons> vendorHoldReasons = new List<Domain.ColleagueFinance.Entities.VendorHoldReasons>()
                 {
@@ -1822,10 +2485,27 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new Domain.ColleagueFinance.Entities.VendorHoldReasons("f9865084-2c02-484e-8286-b98afa5909cc", "DISP", "Disputed Transaction desc"),
                 };
                 referenceDataRepositoryMock.Setup(i => i.GetVendorHoldReasonsAsync(It.IsAny<bool>())).ReturnsAsync(vendorHoldReasons);
+                foreach (var record in vendorHoldReasons)
+                {
+                    referenceDataRepositoryMock.Setup(loc => loc.GetVendorHoldReasonsGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
 
                 personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("db8f690b-071f-4d98-8da8-d4312511a4c2");
                 personRepositoryMock.Setup(i => i.GetPersonByGuidNonCachedAsync(It.IsAny<string>()))
                     .ReturnsAsync(new Domain.Base.Entities.Person("5bc2d86c-6a0c-46b1-824d-485ccb27dc67", "LastName") { PersonCorpIndicator = "Y" });
+                var personGuidCollection = new Dictionary<string, string>();
+                personGuidCollection.Add("0000231", "db8f690b-071f-4d98-8da8-d4312511a4c2");
+                personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(personGuidCollection);
+
+                var personAddressCollection = new Dictionary<string, string>();
+                personAddressCollection.Add("0000231", "address1");
+                personAddressCollection.Add("0000232", "address2");
+                personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(personGuidCollection);
+                personRepositoryMock.Setup(p => p.GetHierarchyAddressIdsAsync(It.IsAny<List<string>>(), It.IsAny<string>(), DateTime.Today)).ReturnsAsync(personAddressCollection);
+                var addressGuidCollection = new Dictionary<string, string>();
+                addressGuidCollection.Add("address1", "db8f690b-071f-4d98-8da8-d4312591a4c2");
+                addressGuidCollection.Add("address2", "db8f698b-071f-4d98-8da8-d4312511a4c2");
+                personRepositoryMock.Setup(p => p.GetAddressGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(addressGuidCollection);
 
                 institutionsEntities = new List<Domain.Base.Entities.Institution>()
                 {
@@ -1835,6 +2515,338 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 institutionRepositoryMock.Setup(i => i.GetInstitutionsFromListAsync(It.IsAny<string[]>())).ReturnsAsync(institutionsEntities);
             }
         }
+    }
+    #endregion
+    
+    #region VendorServiceTests_SS
+
+    [TestClass]
+    public class VendorServiceTests_SS : CurrentUserSetup
+    {
+        #region DECLARATION
+        Mock<IVendorsRepository> vendorRepositoryMock;
+        Mock<IColleagueFinanceReferenceDataRepository> referenceDataRepositoryMock;
+        Mock<IReferenceDataRepository> refDataRepositoryMock;
+        Mock<IPersonRepository> personRepositoryMock;
+        Mock<IAddressRepository> addressRepositoryMock;
+        Mock<IAdapterRegistry> adapterRegistryMock;
+        Mock<IInstitutionRepository> institutionRepositoryMock;
+        ICurrentUserFactory currentUserFactory;
+        Mock<IRoleRepository> roleRepositoryMock;
+        Mock<ILogger> loggerMock;
+        private IEnumerable<Domain.Entities.Role> roles;
+
+        VendorsService vendorService;
+        Dtos.ColleagueFinance.VendorSearchCriteria vendorSearchCriteria; 
+        IEnumerable<Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult> vendorEntities;
+        Tuple<IEnumerable<Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult>, int> vendorEntityTuple;
+
+        IEnumerable<Domain.ColleagueFinance.Entities.VendorSearchResult> vendorSearchResultEntities;        
+        Domain.ColleagueFinance.Entities.VendorDefaultTaxFormInfo vendorDefaultTaxFormInfoEntity;
+        private string vendorId;
+        private string apType;
+
+
+        private IConfigurationRepository baseConfigurationRepository;
+        private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+
+        private Domain.Entities.Permission permissionViewAnyPerson;
+
+        #endregion
+
+        #region SET UP 
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            vendorRepositoryMock = new Mock<IVendorsRepository>();
+            referenceDataRepositoryMock = new Mock<IColleagueFinanceReferenceDataRepository>();
+            refDataRepositoryMock = new Mock<IReferenceDataRepository>();
+            personRepositoryMock = new Mock<IPersonRepository>();
+            addressRepositoryMock = new Mock<IAddressRepository>();
+            institutionRepositoryMock = new Mock<IInstitutionRepository>();
+            adapterRegistryMock = new Mock<IAdapterRegistry>();
+            roleRepositoryMock = new Mock<IRoleRepository>();
+            loggerMock = new Mock<ILogger>();
+            baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
+            baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+
+            BuildData();
+            // Set up current user
+            currentUserFactory = new CurrentUserSetup.PersonUserFactory();
+
+            // Mock permissions
+            permissionViewAnyPerson = new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.ViewVendor);
+            personRole.AddPermission(permissionViewAnyPerson);
+            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
+
+            vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object,
+                                           institutionRepositoryMock.Object, baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
+
+             // Set up and mock the adapter, and setup the GetAdapter method.
+            var vendorDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult, Dtos.ColleagueFinance.VendorsVoucherSearchResult>(adapterRegistryMock.Object, loggerMock.Object);
+            adapterRegistryMock.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult, Dtos.ColleagueFinance.VendorsVoucherSearchResult>()).Returns(vendorDtoAdapter);
+
+            var vendorSearchResultDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.VendorSearchResult, Dtos.ColleagueFinance.VendorSearchResult>(adapterRegistryMock.Object, loggerMock.Object);
+            adapterRegistryMock.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.VendorSearchResult, Dtos.ColleagueFinance.VendorSearchResult>()).Returns(vendorSearchResultDtoAdapter);
+
+            var vendorDefaultTaxFormInfoDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.VendorDefaultTaxFormInfo, Dtos.ColleagueFinance.VendorDefaultTaxFormInfo>(adapterRegistryMock.Object, loggerMock.Object);
+            adapterRegistryMock.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.VendorDefaultTaxFormInfo, Dtos.ColleagueFinance.VendorDefaultTaxFormInfo>()).Returns(vendorDefaultTaxFormInfoDtoAdapter);
+
+        }
+
+
+        private void BuildData()
+        {
+            vendorSearchCriteria = new Dtos.ColleagueFinance.VendorSearchCriteria();
+
+            vendorEntities = new List<Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult>()
+                {
+                    new Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult()
+                    {
+                        VendorId = "0000192",
+                        VendorNameLines = new List<string>{"Blue Cross Office supply" },
+                        VendorMiscName = null,
+                        AddressLines =  new List<string>{ "PO Box 69845" },
+                        City = "Minneapolis",
+                        State = "MN",
+                        Zip = "55430",
+                        Country = "",
+                        FormattedAddress = "PO Box 69845 Minneapolis MN 55430",
+                        AddressId = "143"
+                    },
+                    new Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult()
+                    {
+                        VendorId = "0000193",
+                        VendorNameLines = new List<string> {"Logistic Office supply" },
+                        VendorMiscName = null,
+                        AddressLines = new List<string> { "PO Box 7777" },
+                        City = "New York",
+                        State = "MN",
+                        Zip = "55430",
+                        Country = "USA",
+                        FormattedAddress = "PO Box 7777 New York MN 55430",
+                        AddressId = "144"
+                    }
+                };
+            vendorEntityTuple = new Tuple<IEnumerable<Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult>, int>(vendorEntities, vendorEntities.Count());
+            vendorRepositoryMock.Setup(i => i.VendorSearchForVoucherAsync(It.IsAny<string>())).ReturnsAsync(vendorEntities);
+
+            vendorSearchResultEntities = new List<Domain.ColleagueFinance.Entities.VendorSearchResult>()
+                {
+
+                    new Domain.ColleagueFinance.Entities.VendorSearchResult("0000192")
+                    {                        
+                        VendorName = "Blue Cross Office supply",
+                        VendorAddress = "Blue Cross Office supply Address",
+                        TaxForm = "1098",
+                        TaxFormCode = "MTG",
+                        TaxFormLocation = "FL"
+                    },
+                    new Domain.ColleagueFinance.Entities.VendorSearchResult("0000193")
+                    {
+                        VendorName = "Logistic Office supply",
+                        VendorAddress = "Logistic Office supply Address",
+                        TaxForm = "1099",
+                        TaxFormCode = "NEC",
+                        TaxFormLocation = "MN"
+                    }                    
+                };            
+            vendorRepositoryMock.Setup(i => i.SearchByKeywordAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(vendorSearchResultEntities);
+
+            vendorId = "0000192";
+            apType = "AP";
+            vendorDefaultTaxFormInfoEntity = new VendorDefaultTaxFormInfo(vendorId)
+            {
+                TaxForm = "1098",
+                TaxFormBoxCode = "MTG",
+                TaxFormState = "FL"
+            };
+            vendorRepositoryMock.Setup(i => i.GetVendorDefaultTaxFormInfoAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(vendorDefaultTaxFormInfoEntity);
+
+            roles = new List<Domain.Entities.Role>() { new Domain.Entities.Role(1, "VIEW.VENDOR") };
+
+            roles.FirstOrDefault().AddPermission(new Permission(ColleagueFinancePermissionCodes.ViewVendor));
+        }
+
+        #endregion
+
+        #region Clean Up
+        [TestCleanup]
+        public void Cleanup()
+        {
+            vendorEntityTuple = null;
+            vendorEntities = null;
+            vendorDefaultTaxFormInfoEntity = null;
+            vendorSearchResultEntities = null;
+            vendorRepositoryMock = null;
+            referenceDataRepositoryMock = null;
+            adapterRegistryMock = null;
+            currentUserFactory = null;
+            roleRepositoryMock = null;
+            loggerMock = null;
+            institutionRepositoryMock = null;
+        }
+        #endregion
+
+        #region TEST METHODS
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task VendorService_QueryVendorForVoucherAsync_SearchCriteria_Null()
+        {
+            await vendorService.QueryVendorForVoucherAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task VendorService_QueryVendorForVoucherAsync_SearchCriteria_Empty()
+        {
+            vendorSearchCriteria.QueryKeyword = "";   
+            await vendorService.QueryVendorForVoucherAsync(vendorSearchCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task VendorService_QueryVendorForVoucherAsync_PermissionException()
+        {
+            personRole.RemovePermission(permissionViewAnyPerson); //Removing the VIEW.VOUCHER Permission
+            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
+            vendorSearchCriteria.QueryKeyword = "Office";
+            await vendorService.QueryVendorForVoucherAsync(vendorSearchCriteria);
+        }
+
+        [TestMethod]
+        public async Task VendorService_VendorSearchForVoucherAsync_Repository_ReturnsNull()
+        {
+            vendorSearchCriteria.QueryKeyword = "Office";
+            vendorRepositoryMock.Setup(i => i.VendorSearchForVoucherAsync(It.IsAny<string>())).ReturnsAsync(null);
+            var resultDto = await vendorService.QueryVendorForVoucherAsync(vendorSearchCriteria);
+            Assert.AreEqual(resultDto.Count(), 0);
+        }
+
+        [TestMethod]
+        public async Task VendorService_VendorSearchForVoucherAsync_Repository_ReturnsVendorSearchResults()
+        {
+            vendorSearchCriteria.QueryKeyword = "Office";
+            vendorRepositoryMock.Setup(i => i.VendorSearchForVoucherAsync(It.IsAny<string>())).ReturnsAsync(vendorEntities);
+            var vendorSearchResultDtos = await vendorService.QueryVendorForVoucherAsync(vendorSearchCriteria);
+
+            var vendorSearchResultDto = vendorSearchResultDtos.Where(x => x.VendorId == x.VendorId).FirstOrDefault();
+            var vendorDomainEntity = vendorEntities.Where(x => x.VendorId == x.VendorId).FirstOrDefault();
+
+            Assert.AreEqual(vendorSearchResultDtos.Count(), 2);
+            Assert.AreEqual(vendorSearchResultDto.VendorId, vendorDomainEntity.VendorId);
+            Assert.AreEqual(vendorSearchResultDto.Zip, vendorDomainEntity.Zip);
+            Assert.AreEqual(vendorSearchResultDto.Country, vendorDomainEntity.Country);
+            Assert.AreEqual(vendorSearchResultDto.FormattedAddress, vendorDomainEntity.FormattedAddress);
+            Assert.AreEqual(vendorSearchResultDto.AddressId, vendorDomainEntity.AddressId);
+        }
+        #endregion
+
+        #region QueryVendorsByPostAsync
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task VendorService_QueryVendorsByPostAsync_SearchCriteria_Null()
+        {
+            await vendorService.QueryVendorsByPostAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task VendorService_QueryVendorsByPostAsync_SearchCriteria_Empty()
+        {
+            vendorSearchCriteria.QueryKeyword = "";
+            await vendorService.QueryVendorsByPostAsync(vendorSearchCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task VendorService_QueryVendorsByPostAsync_PermissionException()
+        {
+            personRole.RemovePermission(permissionViewAnyPerson); //Removing the VIEW.VOUCHER Permission
+            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
+            vendorSearchCriteria.QueryKeyword = "Office";
+            await vendorService.QueryVendorsByPostAsync(vendorSearchCriteria);
+        }
+
+        [TestMethod]
+        public async Task VendorService_QueryVendorsByPostAsync_Repository_ReturnsNull()
+        {
+            vendorSearchCriteria.QueryKeyword = "Office";
+            vendorRepositoryMock.Setup(i => i.SearchByKeywordAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
+            var resultDto = await vendorService.QueryVendorsByPostAsync(vendorSearchCriteria);
+            Assert.AreEqual(resultDto.Count(), 0);
+        }
+
+        [TestMethod]
+        public async Task VendorService_QueryVendorsByPostAsync_Repository_ReturnsVendorSearchResults()
+        {
+            vendorSearchCriteria.QueryKeyword = "Office";
+            vendorRepositoryMock.Setup(i => i.SearchByKeywordAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(vendorSearchResultEntities);
+            var vendorSearchResultDtos = await vendorService.QueryVendorsByPostAsync(vendorSearchCriteria);
+
+            var vendorSearchResultDto = vendorSearchResultDtos.Where(x => x.VendorId == x.VendorId).FirstOrDefault();
+            var vendorDomainEntity = vendorSearchResultEntities.Where(x => x.VendorId == x.VendorId).FirstOrDefault();
+
+            Assert.AreEqual(vendorSearchResultDtos.Count(), 2);
+            Assert.AreEqual(vendorSearchResultDto.VendorId, vendorDomainEntity.VendorId);
+            Assert.AreEqual(vendorSearchResultDto.VendorName, vendorDomainEntity.VendorName);
+            Assert.AreEqual(vendorSearchResultDto.VendorAddress, vendorDomainEntity.VendorAddress);
+            Assert.AreEqual(vendorSearchResultDto.TaxForm, vendorDomainEntity.TaxForm);
+            Assert.AreEqual(vendorSearchResultDto.TaxFormCode, vendorDomainEntity.TaxFormCode);
+            Assert.AreEqual(vendorSearchResultDto.TaxFormLocation, vendorDomainEntity.TaxFormLocation);
+        }
+        #endregion
+
+        #region GetVendorDefaultTaxFormInfoAsync
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task VendorService_GetVendorDefaultTaxFormInfoAsync_SearchCriteria_Null()
+        {
+            await vendorService.GetVendorDefaultTaxFormInfoAsync(null, apType);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task VendorService_GetVendorDefaultTaxFormInfoAsync_SearchCriteria_Empty()
+        {
+            await vendorService.GetVendorDefaultTaxFormInfoAsync("", apType);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task VendorService_GetVendorDefaultTaxFormInfoAsync_PermissionException()
+        {
+            personRole.RemovePermission(permissionViewAnyPerson); //Removing the VIEW.VOUCHER Permission
+            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
+            
+            await vendorService.GetVendorDefaultTaxFormInfoAsync(vendorId, apType);
+        }
+
+        [TestMethod]
+        public async Task VendorService_GetVendorDefaultTaxFormInfoAsync_Repository_ReturnsNull()
+        {             
+            vendorRepositoryMock.Setup(i => i.GetVendorDefaultTaxFormInfoAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
+            var resultDto = await vendorService.GetVendorDefaultTaxFormInfoAsync(vendorId, apType);
+            Assert.IsNotNull(resultDto);
+            Assert.IsNull(resultDto.TaxForm);
+            Assert.IsNull(resultDto.TaxFormBoxCode);
+            Assert.IsNull(resultDto.TaxFormState);
+        }
+
+        [TestMethod]
+        public async Task VendorService_GetVendorDefaultTaxFormInfoAsync_Repository_ReturnsResult()
+        {
+            vendorRepositoryMock.Setup(i => i.GetVendorDefaultTaxFormInfoAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(this.vendorDefaultTaxFormInfoEntity);
+            var resultDto = await vendorService.GetVendorDefaultTaxFormInfoAsync(vendorId, apType);
+                        
+            Assert.AreEqual(resultDto.VendorId, vendorDefaultTaxFormInfoEntity.VendorId);
+            Assert.AreEqual(resultDto.TaxForm, vendorDefaultTaxFormInfoEntity.TaxForm);
+            Assert.AreEqual(resultDto.TaxFormBoxCode, vendorDefaultTaxFormInfoEntity.TaxFormBoxCode);
+            Assert.AreEqual(resultDto.TaxFormState, vendorDefaultTaxFormInfoEntity.TaxFormState);
+        }
+        #endregion
     }
     #endregion
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Web.Http.Filters;
+using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -74,6 +75,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Retrieves all course levels.
         /// </summary>
         /// <returns>All <see cref="CourseLevel2">CourseLevels.</see></returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.CourseLevel2>> GetCourseLevels2Async()
         {
@@ -87,7 +89,15 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
-                return await _curriculumService.GetCourseLevels2Async(bypassCache);
+                var courseLevels = await _curriculumService.GetCourseLevels2Async(bypassCache);
+
+                if (courseLevels != null && courseLevels.Any())
+                {
+                    AddEthosContextProperties(await _curriculumService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _curriculumService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              courseLevels.Select(a => a.Id).ToList()));
+                }
+                return courseLevels;
             }
             catch (Exception ex)
             {
@@ -101,10 +111,15 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Retrieves a course level by ID.
         /// </summary>
         /// <returns>A <see cref="CourseLevel2">CourseLevel.</see></returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.CourseLevel2> GetCourseLevelById2Async(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                    await _curriculumService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _curriculumService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { id }));
                 return await _curriculumService.GetCourseLevelById2Async(id);
             }
             catch (Exception ex)

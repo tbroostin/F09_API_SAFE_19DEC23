@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -5872,9 +5872,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             }
 
-            if (sectionDto.InstructionalPlatform != null && !string.IsNullOrEmpty(sectionDto.InstructionalPlatform.Id))
-                entity.LearningProvider = sectionDto.InstructionalPlatform.Id;
-
             // Course Categories/types
             if (sectionDto.CourseCategories != null && sectionDto.CourseCategories.Count() > 0)
             {
@@ -7925,9 +7922,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     ? true : false;
             }
 
-            if (sectionDto.InstructionalPlatform != null && !string.IsNullOrEmpty(sectionDto.InstructionalPlatform.Id))
-                entity.LearningProvider = sectionDto.InstructionalPlatform.Id;
-
             // Course Categories/types
             if (sectionDto.CourseCategories != null && sectionDto.CourseCategories.Count() > 0)
             {
@@ -9296,6 +9290,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     Domain.Base.Entities.PersonIntegration person = await GetPersonDataForFacultyByGuidAsync(personGuid);
 
+                    if (person == null)
+                    {
+                        throw new ArgumentOutOfRangeException("personId", "Unable to retrieve person record, or duplicate GUID, found for person ID " + sectionFaculty.FacultyId);
+                    }
+
+
                     var returnInstructor = new InstructorDtoProperty3 { Detail = new GuidObject2(personGuid) };
 
                     returnInstructor.Names = await GetInstructorNames(person, bypassCache);
@@ -9737,6 +9737,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var sectionDto = await ConvertSectionMeetingToInstructionalEvent2Async(entity);
                     instructionalEventDtos.Add(sectionDto);
                 }
+                else
+                {
+                    throw new ArgumentException(string.Format("GUID is missing for COURSE.SEC.MEETING record '{0}'. ", entity.Id), "GUID");
+                }
             }
             return new Tuple<IEnumerable<InstructionalEvent2>, int>(instructionalEventDtos, pageOfItems.Item2);
         }
@@ -9940,6 +9944,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var sectionDto = await ConvertSectionMeetingToInstructionalEvent3Async(entity);
                     instructionalEventDtos.Add(sectionDto);
                 }
+                else
+                {
+                    throw new ArgumentException(string.Format("GUID is missing for COURSE.SEC.MEETING record '{0}'. ", entity.Id), "GUID");
+                }
             }
             return new Tuple<IEnumerable<InstructionalEvent3>, int>(instructionalEventDtos, pageOfItems.Item2);
         }
@@ -10027,7 +10035,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 //no results
                 return new Tuple<IEnumerable<Dtos.InstructionalEvent4>, int>(new List<Dtos.InstructionalEvent4>(), 0);
-                //throw new ArgumentException("Invalid time format in date arguments");
             }
 
             if (!string.IsNullOrEmpty(section))
@@ -10039,7 +10046,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         //no results
                         return new Tuple<IEnumerable<Dtos.InstructionalEvent4>, int>(new List<Dtos.InstructionalEvent4>(), 0);
-                        //throw new KeyNotFoundException("Invalid section Id argument");
                     }
                 }
                 catch
@@ -10053,15 +10059,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 try
                 {
-                    var acadPeriod = academicPeriods.FirstOrDefault(ap => ap.Guid.Equals(academicPeriod, StringComparison.OrdinalIgnoreCase));
-                    if (acadPeriod == null)
+                    newTerm = await _termRepository.GetAcademicPeriodsCodeFromGuidAsync(academicPeriod);
+                    if (string.IsNullOrEmpty(newTerm))
                     {
                         //no results
                         return new Tuple<IEnumerable<Dtos.InstructionalEvent4>, int>(new List<Dtos.InstructionalEvent4>(), 0);
-                        //throw new KeyNotFoundException(string.Format("Academic period not found, invalid id provided: {0}", academicPeriod));
                     }
-
-                    newTerm = acadPeriod.Code;
                 }
                 catch
                 {
@@ -10071,17 +10074,51 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             var instructionalEventDtos = new List<Dtos.InstructionalEvent4>();
-            var pageOfItems = await _sectionRepository.GetSectionMeeting2Async(offset, limit, newSection, startDate, endDate, startTime, endTime, new List<string>(), new List<string>(), new List<string>(), newTerm);
+            Tuple<IEnumerable<SectionMeeting>, int> pageOfItems = null;
+
+            try
+            {
+                pageOfItems = await _sectionRepository.GetSectionMeeting2Async(offset, limit, newSection, startDate, endDate, startTime, endTime,
+                    new List<string>(), new List<string>(), new List<string>(), newTerm);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError("An unexpected exception occurred retrieving instructional-events from the database" + ex.Message);
+                throw IntegrationApiException;
+            }
+
             var entities = pageOfItems.Item1;
+
+            if (entities == null || !entities.Any())
+            { 
+                return new Tuple<IEnumerable<Dtos.InstructionalEvent4>, int>(new List<Dtos.InstructionalEvent4>(), 0);
+            }
+
+
+            var sectionIds = entities.Where(p => !string.IsNullOrEmpty(p.SectionId)).Select(s => s.SectionId);
+            var sectionIdDict = await _sectionRepository.GetSectionGuidsCollectionAsync(sectionIds.Distinct().ToArray());
 
             foreach (var entity in entities)
             {
-                if (entity.Guid != null)
+                try
                 {
-                    var sectionDto = await ConvertSectionMeetingToInstructionalEvent4Async(entity);
-                    instructionalEventDtos.Add(sectionDto);
+                    instructionalEventDtos.Add(await ConvertSectionMeetingToInstructionalEvent4Async(entity, sectionIdDict ));
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError("An unexpected error occurred extracting instructional-event." + ex.Message, "Global.Internal.Error", entity.Guid, entity.Id);
                 }
             }
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+
             return new Tuple<IEnumerable<InstructionalEvent4>, int>(instructionalEventDtos, pageOfItems.Item2);
         }
 
@@ -10094,37 +10131,141 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             if (string.IsNullOrEmpty(id))
             {
-                throw new ArgumentNullException("id");
+                IntegrationApiExceptionAddError("Must provide a instructional-events GUID for retrieval.", "Missing.GUID",
+                   "", "", System.Net.HttpStatusCode.NotFound);
+                throw IntegrationApiException;
             }
 
-            var entity = await _sectionRepository.GetSectionMeetingByGuidAsync(id);
+            SectionMeeting entity = null;
+            try
+            {
+                entity = await _sectionRepository.GetSectionMeetingByGuidAsync(id);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(string.Format("No instructional-events was found for GUID '{0}'", id), "GUID.Not.Found", id, "", 
+                   System.Net.HttpStatusCode.NotFound);
+                throw IntegrationApiException;
+            }
+
             if (entity == null)
             {
-                throw new KeyNotFoundException(string.Format("Record not found, invalid id provided: {0}", id));
+                IntegrationApiExceptionAddError(string.Format("No instructional-events was found for GUID '{0}'", id), "GUID.Not.Found", id, "",
+                   System.Net.HttpStatusCode.NotFound);
+                throw IntegrationApiException;
             }
-            var dto = await ConvertSectionMeetingToInstructionalEvent4Async(entity);
+            InstructionalEvent4 dto = null;
+            try
+            {
+                var sectionIdDict = await _sectionRepository.GetSectionGuidsCollectionAsync(new List<string>() { entity.SectionId } );
+
+                dto = await ConvertSectionMeetingToInstructionalEvent4Async(entity, sectionIdDict);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError("An unexpected exception occurred extracting response. " + ex.Message, "Global.Internal.Error", id);
+            }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
             return dto;
         }
 
         /// <summary>
         /// Create an instructional event V11
         /// </summary>
-        /// <param name="meeting">The event to create</param>
+        /// <param name="meeting">The instructional event to create</param>
         /// <returns>InstructionalEvent DTO</returns>
         public async Task<Dtos.InstructionalEvent4> CreateInstructionalEvent4Async(Dtos.InstructionalEvent4 meeting)
         {
             if (meeting == null)
             {
-                throw new ArgumentNullException("meeting");
+                IntegrationApiExceptionAddError("Missing request body.", "Validation.Exception");
+                throw IntegrationApiException;
             }
 
             CheckInstructionalEvent4Permissions(meeting);
 
-            _sectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+            #region create domain entity from request
+            Domain.Student.Entities.Section section = null;
+           _sectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+            try
+            {
+                section = await ConvertInstructionalEvent4ToSectionMeetingAsync(meeting);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError("Record not created.  Error extracting request." + ex.Message, "Global.Internal.Error",
+                   !string.IsNullOrEmpty(meeting.Id) ? meeting.Id : null
+                  );
+            }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            #endregion
 
-            var section = await ConvertInstructionalEvent4ToSectionMeetingAsync(meeting);
-            var entity = await _sectionRepository.PostSectionMeeting2Async(section, meeting.Id);
-            var dto = await ConvertSectionMeetingToInstructionalEvent4Async(entity);
+            #region Create record from domain entity
+            SectionMeeting entity = null;
+            try
+            {
+                entity = await _sectionRepository.PostSectionMeeting2Async(section, meeting.Id);
+
+                if (entity == null)
+                {
+                    IntegrationApiExceptionAddError("An unexpected error occurred attempting to create the instructional-event record. "
+                        , "Global.Internal.Error", !string.IsNullOrEmpty(meeting.Id) ? meeting.Id : null);
+                }
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);             
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError("An unexpected error occurred attempting to create the instructional-event record. " + ex.Message, "Global.Internal.Error",
+                     !string.IsNullOrEmpty(meeting.Id) ? meeting.Id : null);               
+            }
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            #endregion
+
+            #region Build DTO response
+
+            InstructionalEvent4 dto = null;
+
+            try
+            {
+                var sectionIdDict = await _sectionRepository.GetSectionGuidsCollectionAsync(new List<string>() { entity.SectionId });
+
+                dto = await ConvertSectionMeetingToInstructionalEvent4Async(entity, sectionIdDict);
+
+                if (dto == null)
+                {
+                    IntegrationApiExceptionAddError("Record created. Error building response. ", "Global.Internal.Error",
+                       !string.IsNullOrEmpty(meeting.Id) ? meeting.Id : null);
+                }
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError("Record created. Error building response. " + ex.Message, "Global.Internal.Error",
+                       !string.IsNullOrEmpty(meeting.Id) ? meeting.Id : null);
+            }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            #endregion
 
             return dto;
         }
@@ -10138,17 +10279,91 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             if (meeting == null)
             {
-                throw new ArgumentNullException("meeting");
+                IntegrationApiExceptionAddError("Missing request body.", "Validation.Exception");
+                throw IntegrationApiException;
             }
 
             CheckInstructionalEvent4Permissions(meeting);
 
+            #region update domain entity from request
+         
+            Domain.Student.Entities.Section section = null;
             _sectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+            try
+            {
+                section = await ConvertInstructionalEvent4ToSectionMeetingAsync(meeting);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError("Record not updated.  Error extracting request." + ex.Message, "Global.Internal.Error",
+                   !string.IsNullOrEmpty(meeting.Id) ? meeting.Id : null
+                  );
+            }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
 
-            var section = await ConvertInstructionalEvent4ToSectionMeetingAsync(meeting);
-            var updatedEntity = await _sectionRepository.PutSectionMeeting2Async(section, meeting.Id);
-            var dto = await ConvertSectionMeetingToInstructionalEvent4Async(updatedEntity);
+            #endregion
 
+            #region Update record from domain entity
+
+            SectionMeeting entity = null;
+            try
+            {
+                entity = await _sectionRepository.PutSectionMeeting2Async(section, meeting.Id);
+
+                if (entity == null)
+                {
+                    IntegrationApiExceptionAddError("An unexpected error occurred attempting to update the instructional-event record. "
+                        , "Global.Internal.Error", !string.IsNullOrEmpty(meeting.Id) ? meeting.Id : null);
+                }
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError("An unexpected error occurred attempting to update the instructional-event record. " + ex.Message, "Global.Internal.Error",
+                     !string.IsNullOrEmpty(meeting.Id) ? meeting.Id : null);
+            }
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+            #endregion
+
+            #region Build DTO response
+
+            InstructionalEvent4 dto = null;
+
+            try
+            {
+                var sectionIdDict = await _sectionRepository.GetSectionGuidsCollectionAsync(new List<string>() { entity.SectionId });
+
+                dto = await ConvertSectionMeetingToInstructionalEvent4Async(entity, sectionIdDict);
+
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError("Record updated. Error building response. " + ex.Message, "Global.Internal.Error",
+                       !string.IsNullOrEmpty(meeting.Id) ? meeting.Id : null);
+            }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+            #endregion
+            
             return dto;
         }
 
@@ -10596,44 +10811,77 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="meeting"></param>
         /// <returns>Task<Dtos.InstructionalEvent4></returns>
-        private async Task<Dtos.InstructionalEvent4> ConvertSectionMeetingToInstructionalEvent4Async(Domain.Student.Entities.SectionMeeting meeting)
+        private async Task<Dtos.InstructionalEvent4> ConvertSectionMeetingToInstructionalEvent4Async(Domain.Student.Entities.SectionMeeting meeting, Dictionary<string, string> sectionIdDict)
         {
             var outputDto = new Dtos.InstructionalEvent4();
             if (meeting == null)
             {
-                throw new ArgumentException("SectionMeeting is required.");
+                IntegrationApiExceptionAddError("SectionMeeting is required.", "Global.Internal.Error");
+                return outputDto;
             }
             if (string.IsNullOrEmpty(meeting.Guid) || (meeting.Guid.Equals(Guid.Empty.ToString())))
             {
-                IntegrationApiExceptionAddError("GUID is missing for the instructional event.", "GUID.Not.Found");
-                throw IntegrationApiException;
+                IntegrationApiExceptionAddError("GUID is missing for the instructional event.", "Missing.GUID");
+                return outputDto;
 
             }
             outputDto.Id = meeting.Guid;
-            
-            try
+
+            if (string.IsNullOrEmpty(meeting.SectionId))
             {
-                outputDto.Section = new Dtos.GuidObject2(await _sectionRepository.GetSectionGuidFromIdAsync(meeting.SectionId));
+                IntegrationApiExceptionAddError("Section ID is missing for instructional event.",  "Bad.Data", meeting.Guid, meeting.Id);
             }
-            catch
+            else if (sectionIdDict == null)
             {
-                if (string.IsNullOrEmpty(meeting.SectionId))
+                IntegrationApiExceptionAddError(string.Format("GUID not found for the section id '{0}'. ", meeting.SectionId), "Bad.Data", meeting.Guid, meeting.Id);
+            }
+            else
+            {
+                try
                 {
-                    throw new ArgumentException(string.Format("Section ID is missing for the instructional event '{0}'. ", meeting.Guid), "meeting.SectionId");
+                    //var sectionGuid = await _sectionRepository.GetSectionGuidFromIdAsync(meeting.SectionId);
+                    string sectionGuid = null;
+                    if (sectionIdDict.TryGetValue(meeting.SectionId, out sectionGuid))
+                        
+                    if (string.IsNullOrEmpty(sectionGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("GUID not found for the section id '{0}'. ", meeting.SectionId),
+                                 "GUID.Not.Found", meeting.Guid, meeting.Id);
+                    }
+                    else
+                    {
+                        outputDto.Section = new Dtos.GuidObject2(sectionGuid);
+                    }
                 }
-                throw new ArgumentException(string.Format("Section ID '{0}' is invalid for the instructional event '{1}'. ", meeting.SectionId, meeting.Guid), "meeting.SectionId");
-            }
-            try
-            {
-                outputDto.InstructionalMethod = new Dtos.GuidObject2(ConvertCodeToGuid(await InstructionalMethodsAsync(), meeting.InstructionalMethodCode));
-            }
-            catch
-            {
-                if (string.IsNullOrEmpty(meeting.InstructionalMethodCode))
+                catch (RepositoryException ex)
                 {
-                    throw new ArgumentException(string.Format("Instructional Method is missing for the instructional event '{0}'. ", meeting.Guid), "meeting.InstructionalMethodCode");
+                    IntegrationApiExceptionAddError(ex, "GUID.Not.Found", meeting.Guid, meeting.Id);
                 }
-                throw new ArgumentException(string.Format("Instructional Method '{0}' is invalid for the instructional event '{1}'. ", meeting.InstructionalMethodCode, meeting.Guid), "meeting.InstructionalMethodCode");
+            }
+
+            if (string.IsNullOrEmpty(meeting.InstructionalMethodCode))
+            {
+                IntegrationApiExceptionAddError(string.Format("Instructional Method is missing for the instructional event '{0}'.", meeting.Guid), "Bad.Data", meeting.Guid, meeting.Id);
+            }
+            else {
+                try
+                {
+                    var instMethodGuid = await _studentReferenceDataRepository.GetInstructionalMethodGuidAsync(meeting.InstructionalMethodCode);
+                    if (string.IsNullOrEmpty(instMethodGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("GUID not found for the instructional method '{0}'. ", meeting.InstructionalMethodCode),
+                            "GUID.Not.Found", meeting.Guid, meeting.Id);
+                    }
+                    else
+                    {
+                        outputDto.InstructionalMethod = new Dtos.GuidObject2(instMethodGuid);
+                    }
+
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "GUID.Not.Found", meeting.Guid, meeting.Id);
+                }
             }
             outputDto.Recurrence = new Dtos.Recurrence3();
             outputDto.Recurrence.TimePeriod = new Dtos.RepeatTimePeriod2()
@@ -10646,84 +10894,89 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var repeatCode = scheduleRepeats.FirstOrDefault(x => x.Code == meeting.Frequency);
                 if (repeatCode == null)
                 {
-                    throw new ArgumentException("Invalid meeting frequency code: " + meeting.Frequency, "meeting.Frequency");
+                    IntegrationApiExceptionAddError("Invalid meeting frequency code: " + meeting.Frequency, "Bad.Data", meeting.Guid, meeting.Id);
                 }
-
-                switch ((Dtos.FrequencyType2)repeatCode.FrequencyType)
+                else
                 {
-                    case Dtos.FrequencyType2.Daily:
-                        var repeatRuleDaily = new Dtos.RepeatRuleDaily()
-                        {
-                            Interval = repeatCode.Interval.GetValueOrDefault(),
-                            Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date }
-                        };
-                        outputDto.Recurrence.RepeatRule = repeatRuleDaily;
-                        break;
-                    case Dtos.FrequencyType2.Weekly:
-                        var repeatRuleWeekly = new Dtos.RepeatRuleWeekly()
-                        {
-                            Interval = repeatCode.Interval.GetValueOrDefault(),
-                            Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date },
-                            DayOfWeek = ConvertDaysToHedmDays(meeting.Days)
-                        };
-
-                        outputDto.Recurrence.RepeatRule = repeatRuleWeekly;
-                        break;
-                    case Dtos.FrequencyType2.Monthly:
-                        int? dayOfMonth = null;
-                        RepeatRuleDayOfWeek dayOfWeek = null;
-                        if (meeting.Days.Any())
-                        {
-                            dayOfWeek = new RepeatRuleDayOfWeek()
+                    switch ((Dtos.FrequencyType2)repeatCode.FrequencyType)
+                    {
+                        case Dtos.FrequencyType2.Daily:
+                            var repeatRuleDaily = new Dtos.RepeatRuleDaily()
                             {
-                                Day = ConvertDaysToHedmDays(meeting.Days).ElementAt(0)
+                                Interval = repeatCode.Interval.GetValueOrDefault(),
+                                Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date }
                             };
-                        }
-                        else
-                        {
-                            dayOfMonth = meeting.StartDate.GetValueOrDefault().Day;
-                        }
-                        var repeatRuleMonthly = new Dtos.RepeatRuleMonthly()
-                        {
-                            Interval = repeatCode.Interval.GetValueOrDefault(),
-                            Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date },
-                            RepeatBy = new RepeatRuleRepeatBy()
+                            outputDto.Recurrence.RepeatRule = repeatRuleDaily;
+                            break;
+                        case Dtos.FrequencyType2.Weekly:
+                            var repeatRuleWeekly = new Dtos.RepeatRuleWeekly()
                             {
-                                DayOfWeek = dayOfWeek,
-                                DayOfMonth = dayOfMonth
-                            }
-                        };
-                        outputDto.Recurrence.RepeatRule = repeatRuleMonthly;
-                        break;
-                    case Dtos.FrequencyType2.Yearly:
-                        var repeatRuleYearly = new Dtos.RepeatRuleYearly()
-                        {
-                            Interval = repeatCode.Interval.GetValueOrDefault(),
-                            Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date }
-                        };
-                        outputDto.Recurrence.RepeatRule = repeatRuleYearly;
-                        break;
-                    default: break;
-                }
+                                Interval = repeatCode.Interval.GetValueOrDefault(),
+                                Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date },
+                                DayOfWeek = ConvertDaysToHedmDays(meeting.Days)
+                            };
 
+                            outputDto.Recurrence.RepeatRule = repeatRuleWeekly;
+                            break;
+                        case Dtos.FrequencyType2.Monthly:
+                            int? dayOfMonth = null;
+                            RepeatRuleDayOfWeek dayOfWeek = null;
+                            if (meeting.Days.Any())
+                            {
+                                dayOfWeek = new RepeatRuleDayOfWeek()
+                                {
+                                    Day = ConvertDaysToHedmDays(meeting.Days).ElementAt(0)
+                                };
+                            }
+                            else
+                            {
+                                dayOfMonth = meeting.StartDate.GetValueOrDefault().Day;
+                            }
+                            var repeatRuleMonthly = new Dtos.RepeatRuleMonthly()
+                            {
+                                Interval = repeatCode.Interval.GetValueOrDefault(),
+                                Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date },
+                                RepeatBy = new RepeatRuleRepeatBy()
+                                {
+                                    DayOfWeek = dayOfWeek,
+                                    DayOfMonth = dayOfMonth
+                                }
+                            };
+                            outputDto.Recurrence.RepeatRule = repeatRuleMonthly;
+                            break;
+                        case Dtos.FrequencyType2.Yearly:
+                            var repeatRuleYearly = new Dtos.RepeatRuleYearly()
+                            {
+                                Interval = repeatCode.Interval.GetValueOrDefault(),
+                                Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date }
+                            };
+                            outputDto.Recurrence.RepeatRule = repeatRuleYearly;
+                            break;
+                        default: break;
+                    }
+                }
             }
-            var locations = new List<Location>();
+           
             if (!string.IsNullOrEmpty(meeting.Room) && meeting.Room != "*")
             {
-                var roomGuid = ConvertRoomCodeToGuid(await RoomsAsync(), meeting.Room);
-                if ((roomGuid == null) || (roomGuid.Equals(Guid.Empty.ToString())))
+                var locations = new List<Location>();
+                
+                var roomGuid = await _roomRepository.GetRoomsGuidAsync(meeting.Room);               
+
+                if ((string.IsNullOrEmpty(roomGuid)) || (roomGuid.Equals(Guid.Empty.ToString())))
                 {
-                    //throw new ArgumentException(string.Format("Guid is missing, or not found, for meeting.Room '{0}'. ", meeting.Room), "meeting.Room");
-                    IntegrationApiExceptionAddError(string.Format("GUID is missing, or not found, for meeting.Room ''{0}'. ", meeting.Room ), "GUID.Not.Found");
-                    throw IntegrationApiException;
-
+                    IntegrationApiExceptionAddError(string.Format("GUID is missing, or not found, for room '{0}'. ", meeting.Room), 
+                        "GUID.Not.Found" , meeting.Guid, meeting.Id);
                 }
-                var roomid = new GuidObject2(roomGuid);
-                var room = new Dtos.InstructionalRoom2() { Room = roomid, LocationType = InstructionalLocationType.InstructionalRoom };
+                else
+                {
+                    var roomid = new GuidObject2(roomGuid);
+                    var room = new Dtos.InstructionalRoom2() { Room = roomid, LocationType = InstructionalLocationType.InstructionalRoom };
 
-                var location = new Location() { Locations = room };
-                locations.Add(location);
-                outputDto.Locations = locations;
+                    var location = new Location() { Locations = room };
+                    locations.Add(location);
+                    outputDto.Locations = locations;
+                }
             }
 
             outputDto.Workload = meeting.Load;
@@ -11750,157 +12003,211 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns></returns>
         private async Task<Domain.Student.Entities.Section> ConvertInstructionalEvent4ToSectionMeetingAsync(Dtos.InstructionalEvent4 meeting)
         {
+            Domain.Student.Entities.Section section = null;
+            string meetingId = string.Empty;
+            string instructionalMethod = string.Empty;
+            
             // Initialize the logger for the section processor service
             SectionProcessor.InitializeLogger(logger);
 
             // Check for required data - A GUID must be supplied, but it may not correspond to an ID if this is a new record
             if (string.IsNullOrEmpty(meeting.Id))
             {
-                // Integration API error InstructionalEvent.NotFound
-                var ex = new IntegrationApiException("Validation exception");
-                ex.AddError(new IntegrationApiError() { Code = "InstructionalEvent.NotFound", Message = "The instructional event was not supplied." });
-                throw ex;
+                IntegrationApiExceptionAddError("Missing request body.", "Missing.Request.Body");
+                return section;
             }
+
+            if (string.IsNullOrEmpty(meeting.Id))
+            {
+                IntegrationApiExceptionAddError("The instructional event was not supplied.", "Missing.Required.Property");
+            }
+            else
+            {
+                try
+                {
+                    meetingId = await _sectionRepository.GetSectionMeetingIdFromGuidAsync(meeting.Id);
+                }
+                catch (KeyNotFoundException ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", meeting.Id, "",
+                       System.Net.HttpStatusCode.NotFound);
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", meeting.Id);
+                }
+            }
+
             if (meeting.Section == null || string.IsNullOrEmpty(meeting.Section.Id))
             {
-                // Integration API error InstructionalEvent.Section.NotFound
-                var ex = new IntegrationApiException("Validation exception");
-                ex.AddError(new IntegrationApiError()
-                {
-                    Code = "InstructionalEvent.Section.NotFound",
-                    Message = "Section id is required in order to schedule meeting times."
-                });
-                throw ex;
+                IntegrationApiExceptionAddError("Section id is required in order to schedule meeting times.", "Missing.Required.Property");
             }
-            string meetingId = await _sectionRepository.GetSectionMeetingIdFromGuidAsync(meeting.Id);
-
-            // Section ID is required
-            Domain.Student.Entities.Section section = null;
-            section = await _sectionRepository.GetSectionByGuidAsync(meeting.Section.Id);
-
-            if (section == null || string.IsNullOrEmpty(section.Id))
+            else
             {
-                // Integration API error InstructionalEvent.Section.NotFound
-                var ex = new IntegrationApiException("Validation exception");
-                ex.AddError(new IntegrationApiError()
+
+                try
                 {
-                    Code = "InstructionalEvent.Section.NotFound",
-                    Message = "Section id is required in order to schedule meeting times."
-                });
-                throw ex;
+                    meetingId = await _sectionRepository.GetSectionMeetingIdFromGuidAsync(meeting.Id);
+                    // Section ID is required
+
+                    section = await _sectionRepository.GetSectionByGuidAsync(meeting.Section.Id);
+
+                }
+                catch (KeyNotFoundException ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", meeting.Id, "",
+                       System.Net.HttpStatusCode.NotFound);
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", meeting.Id);
+                }
+
+                if (section == null || string.IsNullOrEmpty(section.Id))
+                {
+                    IntegrationApiExceptionAddError("Section id is required in order to schedule meeting times.", "Validation.Exception");
+                }
             }
 
-            if (meeting.Recurrence != null)
+
+            if (meeting.InstructionalMethod == null || string.IsNullOrEmpty(meeting.InstructionalMethod.Id))
             {
-                if (meeting.Recurrence.RepeatRule == null)
+
+                try
                 {
-                    // Integration API error InstructionalEvent.InvalidInstructionalMethod.NotFound
-                    var ex = new IntegrationApiException("Validation exception");
-                    ex.AddError(new IntegrationApiError()
+                    var allInstructionalMethods = await InstructionalMethodsAsync();
+                    if (allInstructionalMethods != null)
                     {
-                        Code = "InstructionalEvent.Recurrence.RepeatRule",
-                        Message = "Repeat rule is required when recurrence is not null. "
-                    });
-                    throw ex;
+                        var instructionalMethodRecord = allInstructionalMethods.FirstOrDefault(im => im.Guid.Equals(meeting.InstructionalMethod.Id, StringComparison.OrdinalIgnoreCase));
+
+                        if (instructionalMethodRecord != null)
+                        {
+                            instructionalMethod = instructionalMethodRecord.Code;
+                        }
+                    }
                 }
-                if (meeting.Recurrence.RepeatRule.Type == null)
+                catch (Exception)
                 {
-                    // Integration API error InstructionalEvent.InvalidInstructionalMethod.NotFound
-                    var ex = new IntegrationApiException("Validation exception");
-                    ex.AddError(new IntegrationApiError()
-                    {
-                        Code = "InstructionalEvent.Recurrence.RepeatRule.Type",
-                        Message = "Repeat rule type was not specified and is required. "
-                    });
-                    throw ex;
-                }
-                if (meeting.Recurrence.TimePeriod == null || (meeting.Recurrence.TimePeriod.StartOn == null && meeting.Recurrence.TimePeriod.EndOn == null))
-                {
-                    // Integration API error InstructionalEvent.Recurrence.TimePeriod
-                    var ex = new IntegrationApiException("Validation exception");
-                    ex.AddError(new IntegrationApiError()
-                    {
-                        Code = "InstructionalEvent.Recurrence.TimePeriod",
-                        Message = "At least one timePeriod must be specified on the recurrence pattern. "
-                    });
-                    throw ex;
+                    // do not throw and continue to check below...
                 }
             }
-
-            int interval = new int();
-            List<HedmDayOfWeek?> daysOfWeek = new List<HedmDayOfWeek?>();
-
-            if (meeting.Recurrence != null && meeting.Recurrence.RepeatRule != null && meeting.Recurrence.RepeatRule.Interval.ToString() != null)
-            {
-                var frequencyType = (Dtos.FrequencyType2?)meeting.Recurrence.RepeatRule.Type;
-                if (frequencyType == null)
-                {
-                    // Integration API error InstructionalEvent.Section.NotFound
-                    var ex = new IntegrationApiException("Validation exception");
-                    ex.AddError(new IntegrationApiError()
-                    {
-                        Code = "InstructionalEvent.Recurrence.RepeatRule.Type",
-                        Message = "RepeatRule type is required in order to schedule meeting times."
-                    });
-                    throw ex;
-                }
-
-                interval = meeting.Recurrence.RepeatRule.Interval;
-                switch ((Dtos.FrequencyType2)meeting.Recurrence.RepeatRule.Type)
-                {
-                    case Dtos.FrequencyType2.Daily:
-                        var repeatRuleDaily = (RepeatRuleDaily)meeting.Recurrence.RepeatRule;
-                        if (repeatRuleDaily != null)
-                        {
-                            daysOfWeek = Enum.GetValues(typeof(HedmDayOfWeek)).Cast<HedmDayOfWeek?>().ToList();
-                        }
-                        break;
-                    case Dtos.FrequencyType2.Weekly:
-                        var repeatRuleWeekly = (RepeatRuleWeekly)meeting.Recurrence.RepeatRule;
-                        if (repeatRuleWeekly != null)
-                        {
-                            daysOfWeek = repeatRuleWeekly.DayOfWeek;
-                        }
-                        break;
-                    case Dtos.FrequencyType2.Monthly:
-                        var repeatRuleMonthly = (RepeatRuleMonthly)meeting.Recurrence.RepeatRule;
-                        if (repeatRuleMonthly != null)
-                        {
-                            if ((repeatRuleMonthly.RepeatBy != null) && (repeatRuleMonthly.RepeatBy.DayOfWeek != null))
-                                daysOfWeek = new List<HedmDayOfWeek?>() { repeatRuleMonthly.RepeatBy.DayOfWeek.Day };
-                        }
-                        break;
-                    case Dtos.FrequencyType2.Yearly:
-
-                        break;
-                    default: break;
-                }
-            }
-
-            string instructionalMethod = meeting.InstructionalMethod == null ? null : ConvertGuidToCode(await InstructionalMethodsAsync(), meeting.InstructionalMethod.Id);
-            // Instructional method is required - use the (first) instructional method from the section
-            if (string.IsNullOrEmpty(instructionalMethod))
+            if ((section != null) && (string.IsNullOrEmpty(instructionalMethod)))
             {
                 var firstContact = section.InstructionalContacts.FirstOrDefault();
                 instructionalMethod = firstContact == null ? null : firstContact.InstructionalMethodCode;
                 if (string.IsNullOrEmpty(instructionalMethod))
                 {
-                    instructionalMethod = (await GetCurriculumConfigurationAsync()).DefaultInstructionalMethodCode;
+                    try
+                    {
+                        var curriculumConfiguration = await GetCurriculumConfigurationAsync();
+                        if (curriculumConfiguration != null)
+                        {
+                            instructionalMethod = curriculumConfiguration.DefaultInstructionalMethodCode;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // do not throw and continue to check below...
+                    }
                 }
             }
-
             if (string.IsNullOrEmpty(instructionalMethod))
             {
-                // Integration API error InstructionalEvent.InvalidInstructionalMethod.NotFound
-                var ex = new IntegrationApiException("Validation exception");
-                ex.AddError(new IntegrationApiError()
-                {
-                    Code = "InstructionalEvent.InvalidInstructionalMethod.NotFound",
-                    Message = "No valid instructional method found."
-                });
-                throw ex;
+                IntegrationApiExceptionAddError("No valid instructional method found.", "Validation.Exception");
             }
+            
+         
+            int interval = new int();
+            var daysOfWeek = new List<HedmDayOfWeek?>();
 
+            if (meeting.Recurrence != null)
+            {
+                if (meeting.Recurrence.RepeatRule == null)
+                {
+
+                    IntegrationApiExceptionAddError("Repeat rule is required when recurrence is not null.", "Validation.Exception");
+                    // Integration API error InstructionalEvent.InvalidInstructionalMethod.NotFound
+                }
+                if (meeting.Recurrence.RepeatRule != null && meeting.Recurrence.RepeatRule.Type == null)
+                {
+                    IntegrationApiExceptionAddError("Repeat rule type was not specified and is required.", "Validation.Exception");
+                }
+                if (meeting.Recurrence.TimePeriod == null || (meeting.Recurrence.TimePeriod.StartOn == null && meeting.Recurrence.TimePeriod.EndOn == null))
+                {
+                    IntegrationApiExceptionAddError("At least one timePeriod must be specified on the recurrence pattern.", "Validation.Exception");
+                }
+
+                if (meeting.Recurrence.RepeatRule != null && meeting.Recurrence.RepeatRule.Interval.ToString() != null)
+                {
+                    var frequencyType = (Dtos.FrequencyType2?)meeting.Recurrence.RepeatRule.Type;
+                    if (frequencyType == null)
+                    {
+                        IntegrationApiExceptionAddError("RepeatRule type is required in order to schedule meeting times.", "Validation.Exception");
+                    }
+
+                    interval = meeting.Recurrence.RepeatRule.Interval;
+                    switch ((Dtos.FrequencyType2)meeting.Recurrence.RepeatRule.Type)
+                    {
+                        case Dtos.FrequencyType2.Daily:
+                            var repeatRuleDaily = (RepeatRuleDaily)meeting.Recurrence.RepeatRule;
+                            if (repeatRuleDaily != null)
+                            {
+                                daysOfWeek = Enum.GetValues(typeof(HedmDayOfWeek)).Cast<HedmDayOfWeek?>().ToList();
+                            }
+                            break;
+                        case Dtos.FrequencyType2.Weekly:
+                            var repeatRuleWeekly = (RepeatRuleWeekly)meeting.Recurrence.RepeatRule;
+                            if (repeatRuleWeekly != null)
+                            {
+                                daysOfWeek = repeatRuleWeekly.DayOfWeek;
+                            }
+                            break;
+                        case Dtos.FrequencyType2.Monthly:
+                            var repeatRuleMonthly = (RepeatRuleMonthly)meeting.Recurrence.RepeatRule;
+                            if (repeatRuleMonthly != null)
+                            {
+                                if ((repeatRuleMonthly.RepeatBy != null) && (repeatRuleMonthly.RepeatBy.DayOfWeek != null))
+                                    daysOfWeek = new List<HedmDayOfWeek?>() { repeatRuleMonthly.RepeatBy.DayOfWeek.Day };
+                            }
+                            break;
+                        case Dtos.FrequencyType2.Yearly:
+
+                            break;
+                        default: break;
+                    }
+                }
+
+                if (meeting.Recurrence.TimePeriod == null)
+                {
+                    IntegrationApiExceptionAddError("Time period is required.", "Validation.Exception");
+                }
+                else
+                {
+                    if (meeting.Recurrence.TimePeriod.StartOn == null)
+                    {
+                        IntegrationApiExceptionAddError("Start date is required field when time period is not null.", "Validation.Exception");
+                    }
+                    if (meeting.Recurrence.TimePeriod.EndOn == null)
+                    {
+                        IntegrationApiExceptionAddError("End date is required field when time period is not null.", "Validation.Exception");
+                    }
+
+                    if (meeting.Recurrence.TimePeriod.StartOn != null && meeting.Recurrence.TimePeriod.EndOn != null)
+                    {
+                        // Check the date and time ranges
+                        if (meeting.Recurrence.TimePeriod.EndOn.Value.Date < meeting.Recurrence.TimePeriod.StartOn.Value.Date)
+                        {
+                            IntegrationApiExceptionAddError("End date must be after start date.", "Validation.Exception");
+                        }
+                        if (meeting.Recurrence.TimePeriod.EndOn.Value.ToLocalTime().TimeOfDay < meeting.Recurrence.TimePeriod.StartOn.Value.ToLocalTime().TimeOfDay)
+                        {
+                            IntegrationApiExceptionAddError("End time must be after start time.", "Validation.Exception");
+                        }
+                    }
+                }
+            }
+           
+          
             // The frequency code in Colleague represents both frequency and the interval
             string frequency = null;
             if (meeting.Recurrence != null && meeting.Recurrence.RepeatRule != null)
@@ -11936,14 +12243,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (location.Locations != null && location.Locations.LocationType == null)
                     {
-                        // Integration API error InstructionalEvent.Section.NotFound
-                        var ex = new IntegrationApiException("Validation exception");
-                        ex.AddError(new IntegrationApiError()
-                        {
-                            Code = "InstructionalEvent.Locations.Location.Type",
-                            Message = "Location type is required in order to assign a classroom."
-                        });
-                        throw ex;
+                        IntegrationApiExceptionAddError("Location type is required in order to assign a classroom.", "Validation.Exception");
                     }
 
                     if (location.Locations != null && location.Locations.LocationType == InstructionalLocationType.InstructionalRoom)
@@ -11959,160 +12259,124 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 if (classroom != null && classroom.Room != null)
                 {
-                    var room = (await RoomsAsync()).FirstOrDefault(x => x.Guid == classroom.Room.Id);
-                    if (room == null)
+                    var allRooms = await RoomsAsync();
+                    if (allRooms == null)
                     {
-                        // Integration API error InstructionalEvent.Location.RoomNotFound
-                        var ex = new IntegrationApiException("Validation exception");
-                        ex.AddError(new IntegrationApiError()
-                        {
-                            Code = "InstructionalEvent.Location.RoomNotFound",
-                            Message = "The room (" + classroom.Room.Id + ") was not found for the room assignment."
-                        });
-                        throw ex;
+                        IntegrationApiExceptionAddError("Unable to retrieve any rooms.", "GUID.Not.Found");
                     }
-                    roomId = room.Id;
-                    if (section.Capacity.HasValue && room.Capacity < section.Capacity)
+                    else
                     {
-                        if (overrideRoomCapacity)
+                        var room = allRooms.FirstOrDefault(x => x.Guid.Equals(classroom.Room.Id, StringComparison.OrdinalIgnoreCase));
+                        if (room == null)
                         {
-                            logger.Info("Overriding room capacity for section " + section.Name + " and room " + room.Id);
+                            IntegrationApiExceptionAddError("The room (" + classroom.Room.Id + ") was not found for the room assignment.", "GUID.Not.Found");
                         }
                         else
                         {
-                            // Integration API error InstructionalEvent.Location.InsufficientRoomCapacity
-                            var ex = new IntegrationApiException("Validation exception");
-                            ex.AddError(new IntegrationApiError()
+                            roomId = room.Id;
+                            if (section != null && section.Capacity.HasValue && room.Capacity < section.Capacity)
                             {
-                                Code = "InstructionalEvent.Location.InsufficientRoomCapacity",
-                                Message = string.Format("Room {0} has capacity of {1}; section {2} has capacity of {3}", room.Id, room.Capacity, section.Name, section.Capacity)
-                            });
-                            throw ex;
+                                if (overrideRoomCapacity)
+                                {
+                                    logger.Info("Overriding room capacity for section " + section.Name + " and room " + room.Id);
+                                }
+                                else
+                                {
+                                    var message = string.Format("Room {0} has capacity of {1}; section {2} has capacity of {3}", room.Id, room.Capacity, section.Name, section.Capacity);
+                                    IntegrationApiExceptionAddError(message, "Validation.Exception");
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            if (meeting.Recurrence != null)
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
             {
-                if (meeting.Recurrence.TimePeriod == null)
-                {
-                    // Must have start and end date in the recurrence pattern
-                    var ex = new IntegrationApiException("Validation exception");
-                    ex.AddError(new IntegrationApiError() { Code = "InstructionalEvent.Recurrence.TimePeriod", Message = "Time period is required. " });
-                    throw ex;
-                }
-                if (meeting.Recurrence.TimePeriod.StartOn == null)
-                {
-                    // Must have start and end date in the recurrence pattern
-                    var ex = new IntegrationApiException("Validation exception");
-                    ex.AddError(new IntegrationApiError() { Code = "InstructionalEvent.Recurrence.TimePeriod.StartOn", Message = "start date is required field when time period is not null. " });
-                    throw ex;
-                }
-                if (meeting.Recurrence.TimePeriod.EndOn == null)
-                {
-                    // Must have start and end date in the recurrence pattern
-                    var ex = new IntegrationApiException("Validation exception");
-                    ex.AddError(new IntegrationApiError() { Code = "InstructionalEvent.Recurrence.TimePeriod.EndOn", Message = "end date is required field when time period is not null. " });
-                    throw ex;
-                }
-            }
-            if (meeting.Recurrence != null && meeting.Recurrence.TimePeriod != null)
-            {
-                // Check the date and time ranges
-                if (meeting.Recurrence.TimePeriod.StartOn != null && meeting.Recurrence.TimePeriod.EndOn != null && meeting.Recurrence.TimePeriod.EndOn.Value.Date < meeting.Recurrence.TimePeriod.StartOn.Value.Date)
-                {
-                    // Integration API error InstructionalEvent.EndDate.OutOfRange
-                    var ex = new IntegrationApiException("Validation exception");
-                    ex.AddError(new IntegrationApiError() { Code = "InstructionalEvent.EndDate.OutOfRange", Message = "End date must be after start date." });
-                    throw ex;
-                }
-                if (meeting.Recurrence.TimePeriod.StartOn != null && meeting.Recurrence.TimePeriod.EndOn != null && meeting.Recurrence.TimePeriod.EndOn.Value.ToLocalTime().TimeOfDay < meeting.Recurrence.TimePeriod.StartOn.Value.ToLocalTime().TimeOfDay)
-                {
-                    // Integration API error InstructionalEvent.EndTime.OutOfRange
-                    var ex = new IntegrationApiException("Validation exception");
-                    ex.AddError(new IntegrationApiError() { Code = "InstructionalEvent.EndTime.OutOfRange", Message = "End time must be after start time." });
-                    throw ex;
-                }
+                return section;
             }
 
-            // Everything looks good - create a SectionMeeting entity
-            var entity = new Domain.Student.Entities.SectionMeeting(meetingId, section.Id, instructionalMethod,
-                (meeting.Recurrence != null && meeting.Recurrence.TimePeriod != null && meeting.Recurrence.TimePeriod.StartOn != null ? meeting.Recurrence.TimePeriod.StartOn.Value.Date : section.StartDate),
-                (meeting.Recurrence != null && meeting.Recurrence.TimePeriod != null && meeting.Recurrence.TimePeriod.EndOn != null ? meeting.Recurrence.TimePeriod.EndOn.Value.Date : section.EndDate),
-                frequency)
-            {
-                Guid = meeting.Id,
-                StartTime = (meeting.Recurrence != null && meeting.Recurrence.TimePeriod != null ? meeting.Recurrence.TimePeriod.StartOn.Value.ToLocalTime() : new DateTimeOffset?()),
-                EndTime = (meeting.Recurrence != null && meeting.Recurrence.TimePeriod != null ? meeting.Recurrence.TimePeriod.EndOn.Value.ToLocalTime() : new DateTimeOffset?()),
-                Days = meeting.Recurrence == null || daysOfWeek == null ? new List<DayOfWeek>() : ConvertHedmDaysToDays(daysOfWeek),
-                Room = roomId,
-                Load = (meeting.Workload != null ? meeting.Workload : null),
-                TotalMeetingMinutes = (meeting.Recurrence != null && daysOfWeek != null && daysOfWeek.Any() && meeting.Recurrence.RepeatRule != null && meeting.Recurrence.TimePeriod.StartOn != null ? CalculateMeetingMinutes4(meeting) : new int()),
-                OverrideRoomCapacity = overrideRoomCapacity,
-                OverrideRoomAvailability = overrideRoomAvailability,
-                OverrideFacultyAvailability = overrideFacultyAvailability,
-                OverrideFacultyCapacity = overrideFacultyCapacity
-            };
-
-            // Get the contact info for the meeting's instruction method
-            // var contact = section.InstructionalContacts.FirstOrDefault(x => x.InstructionalMethodCode == entity.InstructionalMethodCode);
-            // decimal loadAmount = contact == null ? 0 : contact.Load.GetValueOrDefault();
-            decimal loadAmount = (meeting.Workload != null ? meeting.Workload.GetValueOrDefault() : new decimal());
-            // Make sure the meeting we're working on is included
-            if (string.IsNullOrEmpty(entity.Id) || !section.Meetings.Any(m => m.Id == entity.Id))
-            {
-                section.AddSectionMeeting(entity);
-            }
-
-            int entityPos = 0;
+            Domain.Student.Entities.SectionMeeting entity = null;
             try
             {
-                entityPos = section.Meetings.IndexOf(section.Meetings.Where(m => m.Guid == entity.Guid).First());
-
-                var existingMeeting = section.Meetings.ElementAt(entityPos);
-
-                bool updateMeeting = false;
-
-                var dayListExisting = existingMeeting.Days; dayListExisting.Sort();
-                var dayListNew = entity.Days; dayListNew.Sort();
-                if (dayListExisting.ToString() != dayListNew.ToString()) { updateMeeting = true; }
-                if ((existingMeeting.Days.Count != entity.Days.Count) ||
-                    (existingMeeting.Room != entity.Room) ||
-                    (existingMeeting.StartDate != entity.StartDate) ||
-                    (existingMeeting.StartTime != entity.StartTime) ||
-                    (existingMeeting.EndDate != entity.EndDate) ||
-                    (existingMeeting.EndTime != entity.EndTime) ||
-                    (existingMeeting.Frequency != entity.Frequency) ||
-                    (existingMeeting.TotalMeetingMinutes != entity.TotalMeetingMinutes) ||
-                    (existingMeeting.OverrideRoomCapacity != entity.OverrideRoomCapacity) ||
-                    (existingMeeting.OverrideRoomAvailability != entity.OverrideRoomAvailability) ||
-                    (existingMeeting.OverrideFacultyAvailability != entity.OverrideFacultyAvailability) ||
-                    (existingMeeting.OverrideFacultyCapacity != entity.OverrideFacultyCapacity) ||
-                    (existingMeeting.EndTime != entity.EndTime))
+                // Everything looks good - create a SectionMeeting entity
+                entity = new Domain.Student.Entities.SectionMeeting(meetingId, section.Id, instructionalMethod,
+                    (meeting.Recurrence != null && meeting.Recurrence.TimePeriod != null && meeting.Recurrence.TimePeriod.StartOn != null ? meeting.Recurrence.TimePeriod.StartOn.Value.Date : section.StartDate),
+                    (meeting.Recurrence != null && meeting.Recurrence.TimePeriod != null && meeting.Recurrence.TimePeriod.EndOn != null ? meeting.Recurrence.TimePeriod.EndOn.Value.Date : section.EndDate),
+                    frequency)
                 {
-                    updateMeeting = true;
-                }
+                    Guid = meeting.Id,
+                    StartTime = (meeting.Recurrence != null && meeting.Recurrence.TimePeriod != null ? meeting.Recurrence.TimePeriod.StartOn.Value.ToLocalTime() : new DateTimeOffset?()),
+                    EndTime = (meeting.Recurrence != null && meeting.Recurrence.TimePeriod != null ? meeting.Recurrence.TimePeriod.EndOn.Value.ToLocalTime() : new DateTimeOffset?()),
+                    Days = meeting.Recurrence == null || daysOfWeek == null ? new List<DayOfWeek>() : ConvertHedmDaysToDays(daysOfWeek),
+                    Room = roomId,
+                    Load = (meeting.Workload != null ? meeting.Workload : null),
+                    TotalMeetingMinutes = (meeting.Recurrence != null && daysOfWeek != null && daysOfWeek.Any() && meeting.Recurrence.RepeatRule != null && meeting.Recurrence.TimePeriod.StartOn != null 
+                        ? CalculateMeetingMinutes4(meeting.Recurrence) : new int()),
+                    OverrideRoomCapacity = overrideRoomCapacity,
+                    OverrideRoomAvailability = overrideRoomAvailability,
+                    OverrideFacultyAvailability = overrideFacultyAvailability,
+                    OverrideFacultyCapacity = overrideFacultyCapacity
+                };
 
-                if (updateMeeting)
+                // Get the contact info for the meeting's instruction method
+                // var contact = section.InstructionalContacts.FirstOrDefault(x => x.InstructionalMethodCode == entity.InstructionalMethodCode);
+                // decimal loadAmount = contact == null ? 0 : contact.Load.GetValueOrDefault();
+                decimal loadAmount = (meeting.Workload != null ? meeting.Workload.GetValueOrDefault() : new decimal());
+                // Make sure the meeting we're working on is included
+                if (string.IsNullOrEmpty(entity.Id) || !section.Meetings.Any(m => m.Id == entity.Id))
                 {
-                    section.RemoveSectionMeeting(existingMeeting);
                     section.AddSectionMeeting(entity);
                 }
-
-
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Integration API error InstructionalEvent.SectionMeeting.Guid.NotFound
-                var ex = new IntegrationApiException("Validation exception");
-                ex.AddError(new IntegrationApiError()
-                {
-                    Code = "InstructionalEvent.SectionMeeting.Id.NotFound",
-                    Message = "The section meeting GUID is not valid for this meeting instance."
-                });
-                throw ex;
+                IntegrationApiExceptionAddError(ex.Message, "Validation.Exception");
             }
+
+            if (entity != null)
+            {
+                int entityPos = 0;
+                try
+                {
+                    entityPos = section.Meetings.IndexOf(section.Meetings.Where(m => m.Guid == entity.Guid).FirstOrDefault());
+
+                    var existingMeeting = section.Meetings.ElementAt(entityPos);
+
+                    bool updateMeeting = false;
+
+                    var dayListExisting = existingMeeting.Days; dayListExisting.Sort();
+                    var dayListNew = entity.Days; dayListNew.Sort();
+                    if (dayListExisting.ToString() != dayListNew.ToString()) { updateMeeting = true; }
+                    if ((existingMeeting.Days.Count != entity.Days.Count) ||
+                        (existingMeeting.Room != entity.Room) ||
+                        (existingMeeting.StartDate != entity.StartDate) ||
+                        (existingMeeting.StartTime != entity.StartTime) ||
+                        (existingMeeting.EndDate != entity.EndDate) ||
+                        (existingMeeting.EndTime != entity.EndTime) ||
+                        (existingMeeting.Frequency != entity.Frequency) ||
+                        (existingMeeting.TotalMeetingMinutes != entity.TotalMeetingMinutes) ||
+                        (existingMeeting.OverrideRoomCapacity != entity.OverrideRoomCapacity) ||
+                        (existingMeeting.OverrideRoomAvailability != entity.OverrideRoomAvailability) ||
+                        (existingMeeting.OverrideFacultyAvailability != entity.OverrideFacultyAvailability) ||
+                        (existingMeeting.OverrideFacultyCapacity != entity.OverrideFacultyCapacity) ||
+                        (existingMeeting.EndTime != entity.EndTime))
+                    {
+                        updateMeeting = true;
+                    }
+
+                    if (updateMeeting)
+                    {
+                        section.RemoveSectionMeeting(existingMeeting);
+                        section.AddSectionMeeting(entity);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError("The section meeting GUID is not valid for this meeting instance." + ex.Message, "Validation.Exception");
+                }
+            }
+
             return section;
         }
 
@@ -12121,22 +12385,39 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="meeting"></param>
         /// <returns></returns>
-        private int CalculateMeetingMinutes4(Dtos.InstructionalEvent4 meeting)
+        private int CalculateMeetingMinutes4(Dtos.Recurrence3 meetingRecurrence)
         {
-            if (meeting.Recurrence.TimePeriod.StartOn == null || meeting.Recurrence.TimePeriod.EndOn == null)
+            if ((meetingRecurrence == null) || (meetingRecurrence.TimePeriod == null || meetingRecurrence.TimePeriod.StartOn == null || meetingRecurrence.TimePeriod.EndOn == null))
             {
                 return 0;
             }
 
             // Calculate all the meeting dates of the section
-            var campusCalendarId = defaultConfiguration.CampusCalendarId;
+            var campusCalendarId = defaultConfiguration != null ? defaultConfiguration.CampusCalendarId : null;
+            if (string.IsNullOrEmpty(campusCalendarId))
+            {
+                IntegrationApiExceptionAddError("Unable to retrieve campus calendar.", "Validation.Exception");
+                return 0;
+            }
+
             var campusCalendar = _eventRepository.GetCalendar(campusCalendarId);
-            var frequencyType = ConvertFrequencyType2EnumDtoToFrequencyTypeDomainEnum(meeting.Recurrence.RepeatRule.Type);
 
-            var meetingDates = Ellucian.Colleague.Coordination.Base.RecurrenceUtility.GetRecurrenceDates(meeting.Recurrence, frequencyType, campusCalendar);
-            //var meetingDates = RoomAvailabilityService.BuildDateList(meeting.Recurrence.TimePeriod.StartOn.Date, meeting.Recurrence.TimePeriod.EndOn.Date, frequencyType, meeting.Recurrence.RepeatRule.Interval, meeting.Recurrence.RepeatRule.Days, campusCalendar.SpecialDays, campusCalendar.BookPastNumberOfDays);
+            if (campusCalendar == null)
+            {
+                IntegrationApiExceptionAddError("Unable to retrieve campus calendar.", "Validation.Exception");
+                return 0;
+            }
 
-            var meetingTime = meeting.Recurrence.TimePeriod.EndOn.Value.ToLocalTime().TimeOfDay - meeting.Recurrence.TimePeriod.StartOn.Value.ToLocalTime().TimeOfDay;
+            var frequencyType = ConvertFrequencyType2EnumDtoToFrequencyTypeDomainEnum(meetingRecurrence.RepeatRule.Type);
+
+            var meetingDates = Ellucian.Colleague.Coordination.Base.RecurrenceUtility.GetRecurrenceDates(meetingRecurrence, frequencyType, campusCalendar);
+
+            if (meetingDates == null)
+            {
+                return 0;
+            }
+
+            var meetingTime = meetingRecurrence.TimePeriod.EndOn.Value.ToLocalTime().TimeOfDay - meetingRecurrence.TimePeriod.StartOn.Value.ToLocalTime().TimeOfDay;
 
             return ((meetingTime.Hours * 60) + meetingTime.Minutes) * meetingDates.Count();
         }

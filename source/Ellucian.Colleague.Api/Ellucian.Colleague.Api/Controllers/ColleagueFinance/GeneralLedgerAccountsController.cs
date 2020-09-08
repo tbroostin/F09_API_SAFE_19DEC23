@@ -41,7 +41,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         }
 
         /// <summary>
-        /// Retrieves the list of expense GL account DTOs for which the user has access.
+        /// Retrieves the list of active expense GL account DTOs for which the user has access.
         /// </summary>
         /// <param name="glClass">Optional: null for all the user GL accounts, expense for only the expense type GL accounts.</param>
         /// <returns>A collection of expense GL account DTOs for the user.</returns>

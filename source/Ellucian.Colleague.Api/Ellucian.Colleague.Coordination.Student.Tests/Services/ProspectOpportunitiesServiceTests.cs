@@ -1,4 +1,4 @@
-﻿//Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -68,6 +68,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         private List<Domain.Student.Entities.AcademicProgram> academicPrograms;
         private List<Domain.Student.Entities.AdmissionPopulation> admissionPopulations;
         private List<Domain.Base.Entities.Location> locations;
+        private List<Domain.Student.Entities.CareerGoal> careerGoals;
+        private List<Domain.Student.Entities.EducationGoals> educationalGoals;
 
         private Dictionary<string, string> studentProgramsDict;
 
@@ -153,6 +155,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             _referenceDataRepositoryMock.Setup(rd => rd.GetPersonFiltersAsync(It.IsAny<bool>())).ReturnsAsync(new List<Domain.Base.Entities.PersonFilter>() { filter });
             _referenceDataRepositoryMock.Setup(rd => rd.GetLocationsGuidAsync(It.IsAny<string>())).ReturnsAsync("64510e64-29fa-440c-8cf4-670ec3d3e095");
             _referenceDataRepositoryMock.Setup(rd => rd.GetLocationsAsync(It.IsAny<bool>())).ReturnsAsync(locations);
+            _studentReferenceDataRepositoryMock.Setup(rd => rd.GetEducationGoalGuidAsync(It.IsAny<string>())).ReturnsAsync("12310e64-29fa-440c-8cf4-670ec3d3e095");
+            _studentReferenceDataRepositoryMock.Setup(rd => rd.GetEducationGoalsAsync(It.IsAny<bool>())).ReturnsAsync(educationalGoals);
+            _studentReferenceDataRepositoryMock.Setup(rd => rd.GetCareerGoalGuidAsync(It.IsAny<string>())).ReturnsAsync("67810e64-29fa-440c-8cf4-670ec3d3e095");
+            _studentReferenceDataRepositoryMock.Setup(rd => rd.GetCareerGoalsAsync(It.IsAny<bool>())).ReturnsAsync(careerGoals);
 
             // student reference data repo
             _studentReferenceDataRepositoryMock.Setup(rd => rd.GetAdmissionPopulationsGuidAsync(It.IsAny<string>())).ReturnsAsync("0ccfab36-eb32-4e94-9180-457e7096785c");
@@ -177,7 +183,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 EntryAcademicPeriod = "2019/FA",
                 AdmissionPopulation = "FRESH",
                 Site = "CAMPUS1",
-                StudentAcadProgId = "MATH.BS"
+                StudentAcadProgId = "MATH.BS",
+                EducationalGoal = "BS",
+                CareerGoals = new List<string>() { "AUTO", "PARA" }
             };
 
             prospectOpp2 = new ProspectOpportunity("6518d26e-ab8d-4aa0-95f0-f415fa7c0002", "APP002")
@@ -186,7 +194,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 EntryAcademicPeriod = "2019/FA",
                 AdmissionPopulation = "FRESH",
                 Site = "CAMPUS1",
-                StudentAcadProgId = "BIOL.BS"
+                StudentAcadProgId = "BIOL.BS",
+                EducationalGoal = "BS",
+                CareerGoals = new List<string>() { "AUTO", "PARA" }
             };
             prospectOpp3 = new ProspectOpportunity("6518d26e-ab8d-4aa0-95f0-f415fa7c0003", "APP003")
             {
@@ -194,7 +204,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 EntryAcademicPeriod = "2019/FA",
                 AdmissionPopulation = "FRESH",
                 Site = "CAMPUS1",
-                StudentAcadProgId = "ART.BA"
+                StudentAcadProgId = "ART.BA",
+                EducationalGoal = "BS",
+                CareerGoals = new List<string>() { "AUTO", "PARA" }
             };
             prospectOpportunityEntities = new List<ProspectOpportunity>() { prospectOpp1, prospectOpp2, prospectOpp3 };
             
@@ -206,10 +218,16 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 EntryAcademicPeriod = new GuidObject2() { Id = "4201e71a-f601-4b3a-9ca9-7b5e43485dbf" },
                 AdmissionPopulation = new GuidObject2() { Id = "0ccfab36-eb32-4e94-9180-457e7096785c" },
                 Site = new GuidObject2() { Id = "64510e64-29fa-440c-8cf4-670ec3d3e095" },
-                RecruitAcademicPrograms = new List<RecruitAcademicProgram> { recruitAcademicProgramSubmission }
+                RecruitAcademicPrograms = new List<RecruitAcademicProgram> { recruitAcademicProgramSubmission },
+                EducationalGoal = new GuidObject2() { Id = "12310e64-29fa-440c-8cf4-670ec3d3e095" },
+                CareerGoals = new List<GuidObject2> {
+                    new GuidObject2() { Id = "67810e64-29fa-440c-8cf4-670ec3d3e095" },
+                    new GuidObject2() { Id = "23410e64-29fa-440c-8cf4-670ec3d3e095" }
+                }
             };
 
             var recruitAcademicProgram = new GuidObject2() { Id = "45ef8c79-a2ed-43b1-810b-b93ea3deaf1d" };
+            //bma add career/education goals
             prospectOppDto1 = new ProspectOpportunities()
             {
                 Id = "6518d26e-ab8d-4aa0-95f0-f415fa7c0001",
@@ -217,7 +235,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 EntryAcademicPeriod = new GuidObject2() { Id = "4201e71a-f601-4b3a-9ca9-7b5e43485dbf" },
                 AdmissionPopulation = new GuidObject2() { Id = "0ccfab36-eb32-4e94-9180-457e7096785c" },
                 Site = new GuidObject2() { Id = "64510e64-29fa-440c-8cf4-670ec3d3e095" },
-                RecruitAcademicPrograms = new List<GuidObject2> { recruitAcademicProgram }
+                RecruitAcademicPrograms = new List<GuidObject2> { recruitAcademicProgram },
+                EducationalGoal = new GuidObject2() { Id = "12310e64-29fa-440c-8cf4-670ec3d3e095" },
+                CareerGoals = new List<GuidObject2> {
+                    new GuidObject2() { Id = "67810e64-29fa-440c-8cf4-670ec3d3e095" },
+                    new GuidObject2() { Id = "23410e64-29fa-440c-8cf4-670ec3d3e095" }
+                }
             };
             
             admissionApplication1 = new Domain.Student.Entities.AdmissionApplication("1668a39c-7716-47e6-ab9d-8c53c2d0f716")
@@ -241,7 +264,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             admissionPopulations = new List<Domain.Student.Entities.AdmissionPopulation>() { admissionPopulation };
 
             var location = new Domain.Base.Entities.Location("64510e64-29fa-440c-8cf4-670ec3d3e095", "CAMPUS1", "Campus One");
-            locations = new List<Domain.Base.Entities.Location>() { location };           
+            locations = new List<Domain.Base.Entities.Location>() { location };
+
+            var educationalGoal = new Domain.Student.Entities.EducationGoals("12310e64-29fa-440c-8cf4-670ec3d3e095", "BS", "Bachelor of Science");
+            educationalGoals = new List<Domain.Student.Entities.EducationGoals>() { educationalGoal };
+            
+            careerGoals = new List<Domain.Student.Entities.CareerGoal>() {
+                new Domain.Student.Entities.CareerGoal("67810e64-29fa-440c-8cf4-670ec3d3e095", "AUTO", "Auto Mechanic"),
+                new Domain.Student.Entities.CareerGoal("23410e64-29fa-440c-8cf4-670ec3d3e095", "PARA", "Paralegal")
+            };
         }
 
 
@@ -477,7 +508,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         {
             _roleUpdate.AddPermission(new Domain.Entities.Permission("UPDATE.PROSPECT.OPPORTUNITY"));
             _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { _roleUpdate });
-            var actual = await _prospectOpportunitiesService.UpdateProspectOpportunitiesSubmissionsAsync(prospectOppSubmissionDto1);
+            var actual = await _prospectOpportunitiesService.UpdateProspectOpportunitiesSubmissionsAsync(prospectOppSubmissionDto1, false);
             var expected = prospectOppDto1;
 
             Assert.IsNotNull(actual);
@@ -488,14 +519,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [ExpectedException(typeof(PermissionsException))]
         public async Task ProspectOpportunitiesService_UpdateProspectOpportunitiesSubmissionsAsync_NoPermissions()
         {
-            var actual = await _prospectOpportunitiesService.UpdateProspectOpportunitiesSubmissionsAsync(prospectOppSubmissionDto1);
+            var actual = await _prospectOpportunitiesService.UpdateProspectOpportunitiesSubmissionsAsync(prospectOppSubmissionDto1, false);
         }
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
         public async Task ProspectOpportunitiesService_UpdateAdmissionApplicationsSubmissionAsync_Validation_Null_Dto()
         {
-            var actual = await _prospectOpportunitiesService.UpdateProspectOpportunitiesSubmissionsAsync(null);
+            var actual = await _prospectOpportunitiesService.UpdateProspectOpportunitiesSubmissionsAsync(null, false);
         }
 
         [TestMethod]
@@ -505,7 +536,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             _roleUpdate.AddPermission(new Domain.Entities.Permission("UPDATE.PROSPECT.OPPORTUNITY"));
             _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { _roleUpdate });
             prospectOppSubmissionDto1.Id = " ";
-            var actual = await _prospectOpportunitiesService.UpdateProspectOpportunitiesSubmissionsAsync(prospectOppSubmissionDto1);
+            var actual = await _prospectOpportunitiesService.UpdateProspectOpportunitiesSubmissionsAsync(prospectOppSubmissionDto1, false);
         }
 
         [TestMethod]
@@ -513,16 +544,38 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public async Task ProspectOpportunitiesService_UpdateAdmissionApplicationsSubmissionAsync_Validation_Applicant_Null()
         {
             prospectOppSubmissionDto1.Prospect = null;
-            var actual = await _prospectOpportunitiesService.UpdateProspectOpportunitiesSubmissionsAsync(prospectOppSubmissionDto1);
+            var actual = await _prospectOpportunitiesService.UpdateProspectOpportunitiesSubmissionsAsync(prospectOppSubmissionDto1, false);
         }
-      
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task ProspectOpportunitiesService_UpdateProspectOpportunitiesSubmissionsAsync_InvalidEducationalGoal()
+        {
+            _roleUpdate.AddPermission(new Domain.Entities.Permission("UPDATE.PROSPECT.OPPORTUNITY"));
+            _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { _roleUpdate });
+            prospectOppSubmissionDto1.EducationalGoal = new GuidObject2() { Id = "xyz" };
+            var actual = await _prospectOpportunitiesService.UpdateProspectOpportunitiesSubmissionsAsync(prospectOppSubmissionDto1, false);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task ProspectOpportunitiesService_UpdateProspectOpportunitiesSubmissionsAsync_InvalidCareerGoal()
+        {
+            _roleUpdate.AddPermission(new Domain.Entities.Permission("UPDATE.PROSPECT.OPPORTUNITY"));
+            _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { _roleUpdate });
+            prospectOppSubmissionDto1.CareerGoals = new List<GuidObject2> {
+                new GuidObject2() { Id = "xyz" }
+            };
+            var actual = await _prospectOpportunitiesService.UpdateProspectOpportunitiesSubmissionsAsync(prospectOppSubmissionDto1, false);
+        }
+
         // POST
         [TestMethod]
         public async Task ProspectOpportunitiesService_CreateProspectOpportunitiesSubmissionsAsync()
         {
             _roleUpdate.AddPermission(new Domain.Entities.Permission("UPDATE.PROSPECT.OPPORTUNITY"));
             _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { _roleUpdate });
-            var actual = await _prospectOpportunitiesService.CreateProspectOpportunitiesSubmissionsAsync(prospectOppSubmissionDto1);
+            var actual = await _prospectOpportunitiesService.CreateProspectOpportunitiesSubmissionsAsync(prospectOppSubmissionDto1, false);
             var expected = prospectOppDto1;
 
             Assert.IsNotNull(actual);
@@ -533,14 +586,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [ExpectedException(typeof(PermissionsException))]
         public async Task ProspectOpportunitiesService_CreateProspectOpportunitiesSubmissionsAsync_NoPermissions()
         {
-            var actual = await _prospectOpportunitiesService.CreateProspectOpportunitiesSubmissionsAsync(prospectOppSubmissionDto1);
+            var actual = await _prospectOpportunitiesService.CreateProspectOpportunitiesSubmissionsAsync(prospectOppSubmissionDto1, false);
         }
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
         public async Task ProspectOpportunitiesService_CreateAdmissionApplicationsSubmissionAsync_Validation_Null_Dto()
         {
-            var actual = await _prospectOpportunitiesService.UpdateProspectOpportunitiesSubmissionsAsync(null);
+            var actual = await _prospectOpportunitiesService.UpdateProspectOpportunitiesSubmissionsAsync(null, false);
         }
 
         [TestMethod]
@@ -550,7 +603,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             _roleUpdate.AddPermission(new Domain.Entities.Permission("UPDATE.PROSPECT.OPPORTUNITY"));
             _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { _roleUpdate });
             prospectOppSubmissionDto1.Id = " ";
-            var actual = await _prospectOpportunitiesService.CreateProspectOpportunitiesSubmissionsAsync(prospectOppSubmissionDto1);
+            var actual = await _prospectOpportunitiesService.CreateProspectOpportunitiesSubmissionsAsync(prospectOppSubmissionDto1, false);
         }
 
         [TestMethod]
@@ -558,9 +611,30 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public async Task ProspectOpportunitiesService_CreateAdmissionApplicationsSubmissionAsync_Validation_Prospect_Null()
         {
             prospectOppSubmissionDto1.Prospect = null;
-            var actual = await _prospectOpportunitiesService.CreateProspectOpportunitiesSubmissionsAsync(prospectOppSubmissionDto1);
+            var actual = await _prospectOpportunitiesService.CreateProspectOpportunitiesSubmissionsAsync(prospectOppSubmissionDto1, false);
         }
-        
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task ProspectOpportunitiesService_CreateProspectOpportunitiesSubmissionsAsync_InvalidEducationalGoal()
+        {
+            _roleUpdate.AddPermission(new Domain.Entities.Permission("UPDATE.PROSPECT.OPPORTUNITY"));
+            _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { _roleUpdate });
+            prospectOppSubmissionDto1.EducationalGoal = new GuidObject2() { Id = "xyz" };
+            var actual = await _prospectOpportunitiesService.CreateProspectOpportunitiesSubmissionsAsync(prospectOppSubmissionDto1, false);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task ProspectOpportunitiesService_CreateProspectOpportunitiesSubmissionsAsync_InvalidCareerGoal()
+        {
+            _roleUpdate.AddPermission(new Domain.Entities.Permission("UPDATE.PROSPECT.OPPORTUNITY"));
+            _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { _roleUpdate });
+            prospectOppSubmissionDto1.CareerGoals = new List<GuidObject2> {
+                new GuidObject2() { Id = "xyz" }
+            };
+            var actual = await _prospectOpportunitiesService.CreateProspectOpportunitiesSubmissionsAsync(prospectOppSubmissionDto1, false);
+        }
         #endregion
     }
 }

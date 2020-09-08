@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -88,9 +88,19 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         public string ApType { get; set; }
 
         /// <summary>
+        /// The purchase order ship to code
+        /// </summary>
+        public string ShipToCode { get; set; }
+
+        /// <summary>
         /// The purchase order ship to code and description
         /// </summary>
         public string ShipToCodeName { get; set; }
+
+        /// <summary>
+        /// Used as the default on the commodity code field of the purchase order line items.
+        /// </summary>
+        public string DefaultCommodityCode { get; set; }
 
         /// <summary>
         /// The purchase order comments
@@ -101,6 +111,16 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// The purchase order internal comments
         /// </summary>
         public string InternalComments { get; set; }
+
+        /// <summary>
+        /// The purchase order default commodity code.
+        /// </summary>
+        public string CommodityCode { get; set; }
+        
+        /// <summary>
+        /// The prepay voucher id
+        /// </summary>
+        public string PrepayVoucherId { get; set; }
 
         /// <summary>
         /// Returns the list of approvers and next approvers for this purchase order
@@ -121,5 +141,10 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// List of items associated to this purchase order
         /// </summary>
         public List<LineItem> LineItems { get; set; }
+        
+        /// <summary>
+        /// List of accepted items id
+        /// </summary>
+        public List<string> AcceptedItems { get; set; }
     }
 }

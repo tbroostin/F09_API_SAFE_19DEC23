@@ -49,20 +49,173 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             roleRepoMock = new Mock<IRoleRepository>();
             roleRepo = roleRepoMock.Object;
             logger = new Mock<ILogger>().Object;
-            colleagueFinanceWebConfigurationsEntity = new Domain.ColleagueFinance.Entities.ColleagueFinanceWebConfiguration() { DefaultEmailType = "PRI", PurchasingDefaults = new PurchasingDefaults { DefaultShipToCode = "MC" } };
+            colleagueFinanceWebConfigurationsEntity = new Domain.ColleagueFinance.Entities.ColleagueFinanceWebConfiguration()
+            {
+                DefaultEmailType = "PRI",
+                CfWebReqAllowMiscVendor = true,
+                CfWebReqDesiredDays = 7,
+                CfWebReqGlRequired = true,
+                DefaultAPTypeCode = "AP",
+                CfWebPoGlRequired = true,
+                CfWebPoAllowMiscVendor = true,
+                DefaultTaxCodes = new List<string> { "PS", "GS" },
+                PurchasingDefaults = new PurchasingDefaults { DefaultShipToCode = "MC" },
+                RequestPaymentDefaults = new VoucherWebConfiguration {
+                    DefaultAPTypeCode = "AP",
+                    AllowMiscVendor = true,
+                    GlRequiredForVoucher= true,
+                    IsInvoiceEntryRequired = true
+                }
+            };
+            var cfWebConfigurationAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.ColleagueFinanceWebConfiguration, Dtos.ColleagueFinance.ColleagueFinanceWebConfiguration>(adapterRegistryMock.Object, logger);
+            adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.ColleagueFinance.Entities.ColleagueFinanceWebConfiguration, Dtos.ColleagueFinance.ColleagueFinanceWebConfiguration>()).Returns(cfWebConfigurationAdapter);
             colleagueFinanceWebConfigurationsRepoMock.Setup(r => r.GetColleagueFinanceWebConfigurations()).Returns(Task.FromResult(colleagueFinanceWebConfigurationsEntity));
             colleagueFinanceWebConfigurationsService = new ColleagueFinanceWebConfigurationsService(colleagueFinanceWebConfigurationsRepo, configurationRepo, adapterRegistry, currentUserFactory, roleRepo, logger);
-
         }
 
         [TestMethod]
         public async Task GetColleagueFinanceWebConfigurations_ValidResult()
         {
-            var result = await colleagueFinanceWebConfigurationsRepo.GetColleagueFinanceWebConfigurations();
+            var result = await colleagueFinanceWebConfigurationsService.GetColleagueFinanceWebConfigurationsAsync();
             Assert.IsNotNull(result);
             Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.DefaultEmailType, result.DefaultEmailType);
+            Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.CfWebReqDesiredDays, result.CfWebReqDesiredDays);
+            Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.CfWebReqAllowMiscVendor, result.CfWebReqAllowMiscVendor);
+            Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.CfWebReqGlRequired, result.CfWebReqGlRequired);
+            Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.DefaultTaxCodes.Count(), result.DefaultTaxCodes.Count());
+            Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.DefaultAPTypeCode, result.DefaultAPTypeCode);
             Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.PurchasingDefaults.DefaultShipToCode, result.PurchasingDefaults.DefaultShipToCode);
         }
 
+        [TestMethod]
+        public async Task GetColleagueFinanceWebConfigurations_DefaultShipToCode_NotSet()
+        {
+            colleagueFinanceWebConfigurationsEntity.PurchasingDefaults.DefaultShipToCode = null;
+            colleagueFinanceWebConfigurationsRepoMock.Setup(r => r.GetColleagueFinanceWebConfigurations()).Returns(Task.FromResult(colleagueFinanceWebConfigurationsEntity));
+            var result = await colleagueFinanceWebConfigurationsService.GetColleagueFinanceWebConfigurationsAsync();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(null, result.PurchasingDefaults.DefaultShipToCode);
+        }
+        [TestMethod]
+        public async Task GetColleagueFinanceWebConfigurations_DefaultAPTypeCode_NotSet()
+        {
+            colleagueFinanceWebConfigurationsEntity.DefaultAPTypeCode = null;
+            colleagueFinanceWebConfigurationsRepoMock.Setup(r => r.GetColleagueFinanceWebConfigurations()).Returns(Task.FromResult(colleagueFinanceWebConfigurationsEntity));
+            var result = await colleagueFinanceWebConfigurationsService.GetColleagueFinanceWebConfigurationsAsync();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(null, result.DefaultAPTypeCode);
+        }
+
+        [TestMethod]
+        public async Task GetColleagueFinanceWebConfigurations_DefaultTaxCodes_NotSet()
+        {
+            colleagueFinanceWebConfigurationsEntity.DefaultTaxCodes = null;
+            colleagueFinanceWebConfigurationsRepoMock.Setup(r => r.GetColleagueFinanceWebConfigurations()).Returns(Task.FromResult(colleagueFinanceWebConfigurationsEntity));
+            var result = await colleagueFinanceWebConfigurationsService.GetColleagueFinanceWebConfigurationsAsync();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(0, result.DefaultTaxCodes.Count());
+        }
+
+        [TestMethod]
+        public async Task GetColleagueFinanceWebConfigurations_CfWebReqGlRequired_False()
+        {
+            colleagueFinanceWebConfigurationsEntity.CfWebReqGlRequired = false;
+            colleagueFinanceWebConfigurationsRepoMock.Setup(r => r.GetColleagueFinanceWebConfigurations()).Returns(Task.FromResult(colleagueFinanceWebConfigurationsEntity));
+            var result = await colleagueFinanceWebConfigurationsService.GetColleagueFinanceWebConfigurationsAsync();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.CfWebReqGlRequired, result.CfWebReqGlRequired);
+        }
+
+
+        [TestMethod]
+        public async Task GetColleagueFinanceWebConfigurations_CfWebReqDesiredDays_NotSet()
+        {
+            colleagueFinanceWebConfigurationsEntity.CfWebReqDesiredDays = null;
+            colleagueFinanceWebConfigurationsRepoMock.Setup(r => r.GetColleagueFinanceWebConfigurations()).Returns(Task.FromResult(colleagueFinanceWebConfigurationsEntity));
+            var result = await colleagueFinanceWebConfigurationsService.GetColleagueFinanceWebConfigurationsAsync();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(null, result.CfWebReqDesiredDays);
+        }
+
+
+        [TestMethod]
+        public async Task GetColleagueFinanceWebConfigurations_CfWebReqDesiredDays_Zero()
+        {
+            colleagueFinanceWebConfigurationsEntity.CfWebReqDesiredDays = 0;
+            colleagueFinanceWebConfigurationsRepoMock.Setup(r => r.GetColleagueFinanceWebConfigurations()).Returns(Task.FromResult(colleagueFinanceWebConfigurationsEntity));
+            var result = await colleagueFinanceWebConfigurationsService.GetColleagueFinanceWebConfigurationsAsync();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.CfWebReqDesiredDays, result.CfWebReqDesiredDays);
+        }
+
+        [TestMethod]
+        public async Task GetColleagueFinanceWebConfigurations_CfWebReqAllowMiscVendor_False()
+        {
+            colleagueFinanceWebConfigurationsEntity.CfWebReqAllowMiscVendor = false;
+            colleagueFinanceWebConfigurationsRepoMock.Setup(r => r.GetColleagueFinanceWebConfigurations()).Returns(Task.FromResult(colleagueFinanceWebConfigurationsEntity));
+            var result = await colleagueFinanceWebConfigurationsService.GetColleagueFinanceWebConfigurationsAsync();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.CfWebReqAllowMiscVendor, result.CfWebReqAllowMiscVendor);
+        }
+
+        [TestMethod]
+        public async Task GetColleagueFinanceWebConfigurations_CfWebPoGlRequired_False()
+        {
+            colleagueFinanceWebConfigurationsEntity.CfWebReqGlRequired = false;
+            colleagueFinanceWebConfigurationsRepoMock.Setup(r => r.GetColleagueFinanceWebConfigurations()).Returns(Task.FromResult(colleagueFinanceWebConfigurationsEntity));
+            var result = await colleagueFinanceWebConfigurationsService.GetColleagueFinanceWebConfigurationsAsync();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.CfWebReqGlRequired, result.CfWebReqGlRequired);
+        }
+
+        [TestMethod]
+        public async Task GetColleagueFinanceWebConfigurations_CfWebPoAllowMiscVendor_False()
+        {
+            colleagueFinanceWebConfigurationsEntity.CfWebPoAllowMiscVendor = false;
+            colleagueFinanceWebConfigurationsRepoMock.Setup(r => r.GetColleagueFinanceWebConfigurations()).Returns(Task.FromResult(colleagueFinanceWebConfigurationsEntity));
+            var result = await colleagueFinanceWebConfigurationsService.GetColleagueFinanceWebConfigurationsAsync();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.CfWebPoAllowMiscVendor, result.CfWebPoAllowMiscVendor);
+        }
+
+        [TestMethod]
+        public async Task GetColleagueFinanceWebConfigurations_RequestPaymentDefaults_GlRequiredForVoucher_False()
+        {
+            colleagueFinanceWebConfigurationsEntity.RequestPaymentDefaults.GlRequiredForVoucher = false;
+            colleagueFinanceWebConfigurationsRepoMock.Setup(r => r.GetColleagueFinanceWebConfigurations()).Returns(Task.FromResult(colleagueFinanceWebConfigurationsEntity));
+            var result = await colleagueFinanceWebConfigurationsService.GetColleagueFinanceWebConfigurationsAsync();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.RequestPaymentDefaults.GlRequiredForVoucher, result.RequestPaymentDefaults.GlRequiredForVoucher);
+        }
+
+        [TestMethod]
+        public async Task GetColleagueFinanceWebConfigurations_RequestPaymentDefaults_AllowMiscVendor_False()
+        {
+            colleagueFinanceWebConfigurationsEntity.RequestPaymentDefaults.AllowMiscVendor = false;
+            colleagueFinanceWebConfigurationsRepoMock.Setup(r => r.GetColleagueFinanceWebConfigurations()).Returns(Task.FromResult(colleagueFinanceWebConfigurationsEntity));
+            var result = await colleagueFinanceWebConfigurationsService.GetColleagueFinanceWebConfigurationsAsync();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.RequestPaymentDefaults.AllowMiscVendor, result.RequestPaymentDefaults.AllowMiscVendor);
+        }
+
+        [TestMethod]
+        public async Task GetColleagueFinanceWebConfigurations_RequestPaymentDefaults_DefaultVoucherAPTypeCode_NotSet()
+        {
+            colleagueFinanceWebConfigurationsEntity.RequestPaymentDefaults.DefaultAPTypeCode = null;
+            colleagueFinanceWebConfigurationsRepoMock.Setup(r => r.GetColleagueFinanceWebConfigurations()).Returns(Task.FromResult(colleagueFinanceWebConfigurationsEntity));
+            var result = await colleagueFinanceWebConfigurationsService.GetColleagueFinanceWebConfigurationsAsync();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(null, result.RequestPaymentDefaults.DefaultAPTypeCode);
+        }
+
+        [TestMethod]
+        public async Task GetColleagueFinanceWebConfigurations_RequestPaymentDefaults_IsInvoiceEntryRequired_False()
+        {
+            colleagueFinanceWebConfigurationsEntity.RequestPaymentDefaults.IsInvoiceEntryRequired = false;
+            colleagueFinanceWebConfigurationsRepoMock.Setup(r => r.GetColleagueFinanceWebConfigurations()).Returns(Task.FromResult(colleagueFinanceWebConfigurationsEntity));
+            var result = await colleagueFinanceWebConfigurationsService.GetColleagueFinanceWebConfigurationsAsync();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.RequestPaymentDefaults.IsInvoiceEntryRequired, result.RequestPaymentDefaults.IsInvoiceEntryRequired);
+        }
     }
 }

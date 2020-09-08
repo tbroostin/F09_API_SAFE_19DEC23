@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.Base;
@@ -135,6 +135,56 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             // return the attachment metadata and content
             return new Tuple<Attachment, string, AttachmentEncryption>(attachmentDto, tempAttachmentPath,
                 GetAttachmentEncryptionMetadata(attachment));
+        }
+
+        /// <summary>
+        /// Query attachments
+        /// </summary>
+        /// <param name="criteria">Criteria to query attachments by</param>
+        /// <returns>List of <see cref="Attachment">Attachments matching the query criteria</see></returns>
+        public async Task<IEnumerable<Attachment>> QueryAttachmentsAsync(AttachmentSearchCriteria criteria)
+        {
+            if (criteria == null)
+                throw new ArgumentNullException("criteria");
+            if (criteria.CollectionIds == null || !criteria.CollectionIds.Any())
+                throw new ArgumentException("Collection ID(s) are required to query attachments");
+            if (!criteria.ModifiedStartDate.HasValue || !criteria.ModifiedEndDate.HasValue)
+                throw new ArgumentException("Start and end date are required to query attachments");
+            if (DateTime.Compare(criteria.ModifiedStartDate.Value, criteria.ModifiedEndDate.Value) > 0)
+                throw new ArgumentOutOfRangeException("criteria", "Attachment query start date cannot be later than end date");
+
+            var attachmentDtos = new List<Attachment>();
+
+            // get the collections to remove any invalid ones
+            var attachmentCollections = await _attachmentCollectionRepository.GetAttachmentCollectionsByIdAsync(
+                criteria.CollectionIds.ToList().Distinct());
+            if (attachmentCollections != null && attachmentCollections.Any())
+            {
+                // get a distinct list of the collection IDs for active collections only
+                var validAttachmentCollectionIds = attachmentCollections.Where(a => a.Status == Domain.Base.Entities.AttachmentCollectionStatus.Active)
+                    .Select(a => a.Id).ToList().Distinct();
+
+                // get attachments by query
+                var attachments = await _attachmentRepository.QueryAttachmentsAsync(criteria.IncludeActiveAttachmentsOnly, criteria.Owner,
+                    criteria.ModifiedStartDate, criteria.ModifiedEndDate, validAttachmentCollectionIds);
+                if (attachments != null && attachments.Any())
+                {
+                    // get attachments this user can view
+                    var viewableAttachments = await GetActionableAttachmentsAsync(attachments, Domain.Base.Entities.AttachmentAction.View);
+                    if (viewableAttachments != null && viewableAttachments.Any())
+                    {
+                        // convert collection entities to DTOs
+                        var adapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.Attachment, Attachment>();
+                        viewableAttachments.ToList().ForEach(a => attachmentDtos.Add(adapter.MapToType(a)));
+                    }
+                }
+            }
+            else
+            {
+                throw new ArgumentException("No existing active Collection ID(s) were provided to query attachments");
+            }
+
+            return attachmentDtos;
         }
 
         /// <summary>

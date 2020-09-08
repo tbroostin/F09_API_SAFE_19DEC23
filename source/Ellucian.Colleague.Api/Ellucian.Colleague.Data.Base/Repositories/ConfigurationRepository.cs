@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,6 +29,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         private readonly string colleagueTimeZone;
         private readonly string orgIndicator;
         private IColleagueTransactionInvoker anonymousTransactionInvoker;
+        char _VM = Convert.ToChar(DynamicArray.VM);
+        char _SM = Convert.ToChar(DynamicArray.SM);
+        char _TM = Convert.ToChar(DynamicArray.TM);
+        char _XM = Convert.ToChar(250);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConfigurationRepository"/> class.
@@ -126,11 +130,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="resourceVersionNumber">version number of ther resource</param>
         /// <param name="extendedSchemaResourceId">extended schema identifier</param>
         /// <returns> extended configuration if available. Returns null if none available or none configured</returns>
-        public async Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId)
+        public async Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, bool bypassCache = false)
         {
             try
             {
-                var extendConfigData = (await GetEthosExtensibilityConfiguration()).ToList();
+                var extendConfigData = (await GetEthosExtensibilityConfiguration(bypassCache)).ToList();
 
                 // Look for version specific configuration first
                 var matchingExtendedConfigData = extendConfigData.FirstOrDefault(e =>
@@ -238,7 +242,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>List with all of the extended data if aavailable. Returns an empty list if none available or none configured</returns>
         public async Task<IEnumerable<EthosExtensibleData>> GetExtendedEthosDataByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, IEnumerable<string> resourceIds, bool bypassCache = false)
         {
-            char _VM = Convert.ToChar(DynamicArray.VM);
             var extendConfigData = (await GetEthosExtensibilityConfiguration(bypassCache)).ToList();
 
             // Look for version specific configuration first
@@ -306,141 +309,173 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 return retConfigData;
             }
 
-            //get the filenames from the config data, extended data can come from any file keyed to the main entity
-            var fileNameStrList = matchingExtendedConfigData.EdmvColumnsEntityAssociation.Select(e => e.EdmvFileNameAssocMember).ToList().Distinct();
-
             var allColumnData = new Dictionary<string, Dictionary<string, string>>();
-            var colleagueFileAndKeys = new Dictionary<string, List<string>>();
             var colleagueSecondaryKeys = new Dictionary<string, string>();
-            foreach (var guidLkup in idDict)
+
+            // For now, the use of the CTX is still experimental though most likely
+            // it will continue to be used.  However, if we don't support virtual fields
+            // then we won't necessarily need the CTX.  We would however need to add
+            // reads of all secondary data columns/files using the pointers defined.
+            // So, for now (as of 04/14/2020 SRM) we will leave in the old code and
+            // force it to use the CTX.
+
+            bool useCtx = true;
+            if (useCtx)
             {
-                // Found in some cases, the guid lookup fails to return a GUID record causing object reference error.
-                if (guidLkup.Value != null && !string.IsNullOrEmpty(guidLkup.Value.Entity) && !string.IsNullOrEmpty(guidLkup.Value.PrimaryKey))
+                var request = new GetEthosExtendedDataRequest()
                 {
-                    if (colleagueFileAndKeys.ContainsKey(guidLkup.Value.Entity))
+                    Guids = resourceIds.ToList(),
+                    ResourceName = resourceName,
+                    Version = resourceVersionNumber
+                };
+                try
+                {
+                    var response = await transactionInvoker.ExecuteAsync<GetEthosExtendedDataRequest, GetEthosExtendedDataResponse>(request);
+                    if (response.Error || (response.GetEthosExtendDataErrors != null && response.GetEthosExtendDataErrors.Any()))
                     {
-                        colleagueFileAndKeys[guidLkup.Value.Entity].Add(guidLkup.Value.PrimaryKey);
-                    }
-                    else //key didn't exist yet so just add the guid as the key with the current column data set
-                    {
-                        colleagueFileAndKeys.Add(guidLkup.Value.Entity, new List<string>() { guidLkup.Value.PrimaryKey });
-                    }
-                    if (!string.IsNullOrEmpty(guidLkup.Value.SecondaryKey))
-                    {
-                        if (!colleagueSecondaryKeys.ContainsKey(guidLkup.Key))
+                        logger.Error(string.Format("Extensibility configuration errors for resource '{0}' version number '{1}'", resourceName, resourceVersionNumber));
+                        foreach (var error in response.GetEthosExtendDataErrors)
                         {
-                            colleagueSecondaryKeys.Add(guidLkup.Key, guidLkup.Value.SecondaryKey);
+                            logger.Error(string.Concat(error.ErrorCodes, " - ", error.ErrorMessages));
+                        }
+                        return retConfigData;
+                    }
+
+                    foreach (var resp in response.ResourceDataObject)
+                    {
+                        if (resp.ColumnNames != null && resp.PropertyValues != null)
+                        {
+                            var columnNames = resp.ColumnNames.Split(_SM).ToList();
+                            var columnValues = resp.PropertyValues.Split(_SM).ToList();
+                            Dictionary<string, string> columnDataItem = new Dictionary<string, string>();
+                            var index = 0;
+                            foreach (var columnName in columnNames)
+                            {
+                                columnDataItem.Add(columnName, columnValues.ElementAt(index).Replace(_TM, _VM).Replace(_XM, _SM));
+                                index++;
+                            }
+                            if (!string.IsNullOrEmpty(resp.ResourceSecondaryKeys))
+                            {
+                                if (!colleagueSecondaryKeys.ContainsKey(resp.ResourceGuids))
+                                {
+                                    colleagueSecondaryKeys.Add(resp.ResourceGuids, resp.ResourceSecondaryKeys);
+                                }
+                            }
+                            //if the allColumndata contains the key column data has already been added for this record 
+                            //so the new column data must be combined with the existing column data
+                            if (allColumnData.ContainsKey(resp.ResourceGuids))
+                            {
+                                var currentColumnDictionary = allColumnData[resp.ResourceGuids];
+                                var unionOfResults = currentColumnDictionary.Union(columnDataItem)
+                                    .ToDictionary(k => k.Key, v => v.Value);
+                                allColumnData[resp.ResourceGuids] = unionOfResults;
+                            }
+                            else //key didn't exist yet so just add the guid as the key with the current column data set
+                            {
+                                allColumnData.Add(resp.ResourceGuids, columnDataItem);
+                            }
                         }
                     }
                 }
-            }
-
-            var fileSuiteInstance = string.Empty;
-            foreach (var fileAndKeys in colleagueFileAndKeys)
-            {
-                fileSuiteInstance = await GetEthosFileSuiteInstance(fileAndKeys.Key);
-                //get the extended colum data from each file and put into single dictionary
-                foreach (var fileName in fileNameStrList)
+                catch (Exception ex)
                 {
-                    //don't process empty file name
-                    if (string.IsNullOrEmpty(fileName))
+                    logger.Error(string.Concat(ex.Message));
+                    return retConfigData;
+                }
+            }
+            else
+            {
+                //get the filenames from the config data, extended data can come from any file keyed to the main entity
+                var fileNameStrList = matchingExtendedConfigData.EdmvColumnsEntityAssociation.Select(e => e.EdmvFileNameAssocMember).ToList().Distinct();
+                var colleagueFileAndKeys = new Dictionary<string, List<string>>();
+
+                foreach (var guidLkup in idDict)
+                {
+                    // Found in some cases, the guid lookup fails to return a GUID record causing object reference error.
+                    if (guidLkup.Value != null && !string.IsNullOrEmpty(guidLkup.Value.Entity) && !string.IsNullOrEmpty(guidLkup.Value.PrimaryKey))
                     {
-                        logger.Error(string.Concat("Extensibility config does not have a filename for resource ", resourceName, " version number ", resourceVersionNumber));
-                        continue;
-                    }
-                    //get the column names for the file we are going to get the data from
-                    var fileColumns = matchingExtendedConfigData.EdmvColumnsEntityAssociation
-                        .Where(e => e.EdmvFileNameAssocMember.Equals(fileName, StringComparison.OrdinalIgnoreCase)
-                        && !e.EdmvDatabaseUsageTypeAssocMember.Equals("K", StringComparison.OrdinalIgnoreCase))
-                        .Select(e => e.EdmvColumnNameAssocMember).Distinct().ToList();
-
-                    //get the Key column names for the file we are going to get the data from
-                    var keyColumns = matchingExtendedConfigData.EdmvColumnsEntityAssociation
-                        .Where(e => e.EdmvFileNameAssocMember.Equals(fileName, StringComparison.OrdinalIgnoreCase)
-                        && e.EdmvDatabaseUsageTypeAssocMember.Equals("K", StringComparison.OrdinalIgnoreCase))
-                        .Select(e => e.EdmvColumnNameAssocMember).Distinct().ToList();
-
-                    var additionalColumns = matchingExtendedConfigData.EdmvColumnsEntityAssociation
-                        .Where(e => e.EdmvFileNameAssocMember.Equals(fileName, StringComparison.OrdinalIgnoreCase)
-                        && !string.IsNullOrEmpty(e.EdmvAssociationControllerAssocMember))
-                        .Select(e => e.EdmvAssociationControllerAssocMember).Distinct().ToList();
-
-                    fileColumns.AddRange(additionalColumns);
-                    var fileColumnNames = fileColumns.Distinct().ToArray();
-
-                    //var fileSuiteFileName = await GetEthosFileSuiteFileNameAsync(fileSuiteYear, fileName);
-                    var physicalFileName = fileName;
-                    if (!string.IsNullOrEmpty(fileSuiteInstance) && await IsEthosFileSuiteTemplateFile(fileName))
-                    {
-                        physicalFileName = await GetEthosFileSuiteFileNameAsync(fileName, fileSuiteInstance);
-                    }
-                    var collIdsByFileName = fileAndKeys.Value.Distinct().ToArray();
-
-                    //get the colleague keys from the select data - This will handle if they are co-files (temp fix until the "primary" file can be identified)
-                    var colleagueKeys = idDict.Where(id => id.Value != null).Select(i => i.Value.PrimaryKey).Distinct().ToArray();
-
-                    var colleagueIdsToQueryWith = collIdsByFileName.Any() ? collIdsByFileName : colleagueKeys;
-
-                    //We may have only key columns and no actual data columns.
-                    if (fileColumnNames != null && fileColumnNames.Any())
-                    {
-                        //data for the columns matching to the file for the set of keys
-                        var currentFileColumnData = await DataReader.BatchReadRecordColumnsAsync(physicalFileName, colleagueIdsToQueryWith, fileColumnNames);
-
-                        //go through each columndata result to add the key and column data to the single collection
-                        foreach (var columnDataItem in currentFileColumnData)
+                        if (colleagueFileAndKeys.ContainsKey(guidLkup.Value.Entity))
                         {
-                            //get the guidlookupresult for the colleague key and primary filename
-                            //there can be multiple guids for the same colleague id when there are multiple primary files involved on the API
-                            var guidForColumnData = idDict.Where(i => i.Value != null && i.Value.PrimaryKey.Equals(columnDataItem.Key) &&
-                                i.Value.Entity.Equals(physicalFileName, StringComparison.OrdinalIgnoreCase));
-
-                            if (guidForColumnData == null || !guidForColumnData.Any())
+                            colleagueFileAndKeys[guidLkup.Value.Entity].Add(guidLkup.Value.PrimaryKey);
+                        }
+                        else //key didn't exist yet so just add the guid as the key with the current column data set
+                        {
+                            colleagueFileAndKeys.Add(guidLkup.Value.Entity, new List<string>() { guidLkup.Value.PrimaryKey });
+                        }
+                        if (!string.IsNullOrEmpty(guidLkup.Value.SecondaryKey))
+                        {
+                            if (!colleagueSecondaryKeys.ContainsKey(guidLkup.Key))
                             {
-                                //get the guids for the colleague key, there can be multiple guids for the same colleague id
-                                guidForColumnData = idDict.Where(i => i.Value != null && i.Value.PrimaryKey.Equals(columnDataItem.Key)).ToList();
-                            }
-
-                            if (guidForColumnData.Any())
-                            {
-                                foreach (var collIdKeyPair in guidForColumnData)
-                                {
-                                    //if the allColumndata contains the key column data has already been added for this record 
-                                    //so it the new column data must be combined with the existing column data
-                                    if (allColumnData.ContainsKey(collIdKeyPair.Key))
-                                    {
-                                        var currentColumnDictionary = allColumnData[collIdKeyPair.Key];
-                                        var unionOfResults = currentColumnDictionary.Union(columnDataItem.Value)
-                                            .ToDictionary(k => k.Key, v => v.Value);
-                                        allColumnData[collIdKeyPair.Key] = unionOfResults;
-                                    }
-                                    else //key didn't exist yet so just add the guid as the key with the current column data set
-                                    {
-                                        allColumnData.Add(collIdKeyPair.Key, columnDataItem.Value);
-                                    }
-                                }
+                                colleagueSecondaryKeys.Add(guidLkup.Key, guidLkup.Value.SecondaryKey);
                             }
                         }
                     }
+                }
 
-                    // Add all data coming from the Colleague record keys to the allColumnData dictionary.
-                    if (keyColumns != null && keyColumns.Any())
+                var fileSuiteInstance = string.Empty;
+                foreach (var fileAndKeys in colleagueFileAndKeys)
+                {
+                    fileSuiteInstance = await GetEthosFileSuiteInstance(fileAndKeys.Key);
+                    //get the extended colum data from each file and put into single dictionary
+                    foreach (var fileName in fileNameStrList)
                     {
-                        foreach (var keyColumnName in keyColumns)
+                        //don't process empty file name
+                        if (string.IsNullOrEmpty(fileName))
                         {
-                            foreach (var collId in colleagueIdsToQueryWith)
+                            logger.Error(string.Concat("Extensibility config does not have a filename for resource ", resourceName, " version number ", resourceVersionNumber));
+                            continue;
+                        }
+                        //get the column names for the file we are going to get the data from
+                        var fileColumns = matchingExtendedConfigData.EdmvColumnsEntityAssociation
+                            .Where(e => e.EdmvFileNameAssocMember.Equals(fileName, StringComparison.OrdinalIgnoreCase)
+                            && !e.EdmvDatabaseUsageTypeAssocMember.Equals("K", StringComparison.OrdinalIgnoreCase))
+                            .Select(e => e.EdmvColumnNameAssocMember).Distinct().ToList();
+
+                        //get the Key column names for the file we are going to get the data from
+                        var keyColumns = matchingExtendedConfigData.EdmvColumnsEntityAssociation
+                            .Where(e => e.EdmvFileNameAssocMember.Equals(fileName, StringComparison.OrdinalIgnoreCase)
+                            && e.EdmvDatabaseUsageTypeAssocMember.Equals("K", StringComparison.OrdinalIgnoreCase))
+                            .Select(e => e.EdmvColumnNameAssocMember).Distinct().ToList();
+
+                        var additionalColumns = matchingExtendedConfigData.EdmvColumnsEntityAssociation
+                            .Where(e => e.EdmvFileNameAssocMember.Equals(fileName, StringComparison.OrdinalIgnoreCase)
+                            && !string.IsNullOrEmpty(e.EdmvAssociationControllerAssocMember))
+                            .Select(e => e.EdmvAssociationControllerAssocMember).Distinct().ToList();
+
+                        fileColumns.AddRange(additionalColumns);
+                        var fileColumnNames = fileColumns.Distinct().ToArray();
+
+                        //var fileSuiteFileName = await GetEthosFileSuiteFileNameAsync(fileSuiteYear, fileName);
+                        var physicalFileName = fileName;
+                        if (!string.IsNullOrEmpty(fileSuiteInstance) && await IsEthosFileSuiteTemplateFile(fileName))
+                        {
+                            physicalFileName = await GetEthosFileSuiteFileNameAsync(fileName, fileSuiteInstance);
+                        }
+                        var collIdsByFileName = fileAndKeys.Value.Distinct().ToArray();
+
+                        //get the colleague keys from the select data - This will handle if they are co-files (temp fix until the "primary" file can be identified)
+                        var colleagueKeys = idDict.Where(id => id.Value != null).Select(i => i.Value.PrimaryKey).Distinct().ToArray();
+
+                        var colleagueIdsToQueryWith = collIdsByFileName.Any() ? collIdsByFileName : colleagueKeys;
+
+                        //We may have only key columns and no actual data columns.
+                        if (fileColumnNames != null && fileColumnNames.Any())
+                        {
+                            //data for the columns matching to the file for the set of keys
+                            var currentFileColumnData = await DataReader.BatchReadRecordColumnsAsync(physicalFileName, colleagueIdsToQueryWith, fileColumnNames);
+
+                            //go through each columndata result to add the key and column data to the single collection
+                            foreach (var columnDataItem in currentFileColumnData)
                             {
-                                var keyDict = new Dictionary<string, string>();
-                                keyDict.Add(keyColumnName, collId);
                                 //get the guidlookupresult for the colleague key and primary filename
                                 //there can be multiple guids for the same colleague id when there are multiple primary files involved on the API
-                                var guidForColumnData = idDict.Where(i => i.Value != null && i.Value.PrimaryKey.Equals(collId) &&
+                                var guidForColumnData = idDict.Where(i => i.Value != null && i.Value.PrimaryKey.Equals(columnDataItem.Key) &&
                                     i.Value.Entity.Equals(physicalFileName, StringComparison.OrdinalIgnoreCase));
 
                                 if (guidForColumnData == null || !guidForColumnData.Any())
                                 {
                                     //get the guids for the colleague key, there can be multiple guids for the same colleague id
-                                    guidForColumnData = idDict.Where(i => i.Value != null && i.Value.PrimaryKey.Equals(collId)).ToList();
+                                    guidForColumnData = idDict.Where(i => i.Value != null && i.Value.PrimaryKey.Equals(columnDataItem.Key)).ToList();
                                 }
 
                                 if (guidForColumnData.Any())
@@ -452,13 +487,56 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                         if (allColumnData.ContainsKey(collIdKeyPair.Key))
                                         {
                                             var currentColumnDictionary = allColumnData[collIdKeyPair.Key];
-                                            var unionOfResults = currentColumnDictionary.Union(keyDict)
+                                            var unionOfResults = currentColumnDictionary.Union(columnDataItem.Value)
                                                 .ToDictionary(k => k.Key, v => v.Value);
                                             allColumnData[collIdKeyPair.Key] = unionOfResults;
                                         }
                                         else //key didn't exist yet so just add the guid as the key with the current column data set
                                         {
-                                            allColumnData.Add(collIdKeyPair.Key, keyDict);
+                                            allColumnData.Add(collIdKeyPair.Key, columnDataItem.Value);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Add all data coming from the Colleague record keys to the allColumnData dictionary.
+                        if (keyColumns != null && keyColumns.Any())
+                        {
+                            foreach (var keyColumnName in keyColumns)
+                            {
+                                foreach (var collId in colleagueIdsToQueryWith)
+                                {
+                                    var keyDict = new Dictionary<string, string>();
+                                    keyDict.Add(keyColumnName, collId);
+                                    //get the guidlookupresult for the colleague key and primary filename
+                                    //there can be multiple guids for the same colleague id when there are multiple primary files involved on the API
+                                    var guidForColumnData = idDict.Where(i => i.Value != null && i.Value.PrimaryKey.Equals(collId) &&
+                                        i.Value.Entity.Equals(physicalFileName, StringComparison.OrdinalIgnoreCase));
+
+                                    if (guidForColumnData == null || !guidForColumnData.Any())
+                                    {
+                                        //get the guids for the colleague key, there can be multiple guids for the same colleague id
+                                        guidForColumnData = idDict.Where(i => i.Value != null && i.Value.PrimaryKey.Equals(collId)).ToList();
+                                    }
+
+                                    if (guidForColumnData.Any())
+                                    {
+                                        foreach (var collIdKeyPair in guidForColumnData)
+                                        {
+                                            //if the allColumndata contains the key column data has already been added for this record 
+                                            //so it the new column data must be combined with the existing column data
+                                            if (allColumnData.ContainsKey(collIdKeyPair.Key))
+                                            {
+                                                var currentColumnDictionary = allColumnData[collIdKeyPair.Key];
+                                                var unionOfResults = currentColumnDictionary.Union(keyDict)
+                                                    .ToDictionary(k => k.Key, v => v.Value);
+                                                allColumnData[collIdKeyPair.Key] = unionOfResults;
+                                            }
+                                            else //key didn't exist yet so just add the guid as the key with the current column data set
+                                            {
+                                                allColumnData.Add(collIdKeyPair.Key, keyDict);
+                                            }
                                         }
                                     }
                                 }
@@ -503,24 +581,31 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         // If we are dealing with a Valcode table, we need to find the guid key and
                         // compare that to the resource key to find the associated value in a multi-valued
                         // associated data element.
-                        var secondaryKeyList = cData.Value.FirstOrDefault(cdv => cdv.Key == columnConfigDetails.EdmvAssociationControllerAssocMember).Value.Split(_VM);
-                        var secondaryKey = colleagueSecondaryKeys.FirstOrDefault(rk => rk.Key == cData.Key).Value;
-                        if (secondaryKeyList != null && secondaryKey != null)
+                        var secondaryKeyValue = cData.Value.FirstOrDefault(cdv => cdv.Key == columnConfigDetails.EdmvAssociationControllerAssocMember);
+                        if (secondaryKeyValue.Key != null && secondaryKeyValue.Value != null && !string.IsNullOrEmpty(secondaryKeyValue.Value))
                         {
-                            for (var i = 0; i < secondaryKeyList.Count(); i++)
+                            var secondaryKeyList = secondaryKeyValue.Value.Split(_VM);
+                            var colleagueSecondaryKey = colleagueSecondaryKeys.FirstOrDefault(rk => rk.Key == cData.Key);
+                            if (colleagueSecondaryKey.Key != null && colleagueSecondaryKey.Value != null && !string.IsNullOrEmpty(colleagueSecondaryKey.Value))
                             {
-                                if (secondaryKeyList[i] == secondaryKey)
+                                var secondaryKey = colleagueSecondaryKey.Value;
+                                if (secondaryKeyList != null && secondaryKey != null)
                                 {
-                                    var newValue = colleagueValue.Split(_VM);
-                                    if (i < newValue.Count()) colleagueValue = newValue[i];
-                                    else colleagueValue = string.Empty;
+                                    for (var i = 0; i < secondaryKeyList.Count(); i++)
+                                    {
+                                        if (secondaryKeyList[i] == secondaryKey)
+                                        {
+                                            var newValue = colleagueValue.Split(_VM);
+                                            if (i < newValue.Count()) colleagueValue = newValue[i];
+                                            else colleagueValue = string.Empty;
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                     else
                     {
-                        // We don't yet support multi-valued fields outside of Valcodes
                         // If we have comments or text, then convert value mark to spaces.
                         if (colleagueValue.Contains(_VM))
                         {
@@ -535,8 +620,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             }
                             else
                             {
-                                // Strip off just the first value until we support arrays.
-                                colleagueValue = colKeyValuePair.Value.Split(_VM)[0];
+                                colleagueValue = colKeyValuePair.Value;
                             }
                         }
                     }
@@ -569,13 +653,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                     else //else this is just a single value column
                     {
-                        var row = new EthosExtensibleDataRow(columnConfigDetails.EdmvColumnNameAssocMember, columnConfigDetails.EdmvFileNameAssocMember, columnConfigDetails.EdmvJsonLabelAssocMember, columnConfigDetails.EdmvJsonPathAssocMember,
-                            columnConfigDetails.EdmvJsonPropertyTypeAssocMember, ConvertColleagueValueToExtensibleStringValue(columnConfigDetails, colleagueValue));
+                        var row = new EthosExtensibleDataRow(columnConfigDetails.EdmvColumnNameAssocMember, columnConfigDetails.EdmvFileNameAssocMember,
+                            columnConfigDetails.EdmvJsonLabelAssocMember, columnConfigDetails.EdmvJsonPathAssocMember,
+                            columnConfigDetails.EdmvJsonPropertyTypeAssocMember, colleagueValue);
 
                         newEthosThing.AddItemToExtendedData(row);
                     }
                 }
-
                 try
                 {
                     var datetimeExtensions = ConvertColleageDateAndTimeValues(linkedColumnsTuple, linkedColumnDetails);
@@ -975,53 +1059,52 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     continue;
                 }
 
-                int intDateValue, intTimeValue;
+                var dateValues = dateTuple.Item4.Split(_VM);
+                var timeValues = timeTuple.Item4.Split(_VM);
+                var maxDateTime = dateValues.Count();
+                if (timeValues.Count() > maxDateTime)
+                    maxDateTime = timeValues.Count();
+                var utcDateTimeStringValues = string.Empty;
 
-                if (timeTuple != null && int.TryParse(dateTuple.Item4, out intDateValue) && int.TryParse(timeTuple.Item4, out intTimeValue))
+                for (int valIdx = 0; valIdx < maxDateTime; valIdx++)
                 {
-                    var date = Dmi.Runtime.DmiString.PickDateToDateTime(intDateValue);
-                    var time = Dmi.Runtime.DmiString.PickTimeToDateTime(intTimeValue);
+                    int intDateValue, intTimeValue;
 
-                    var convertedDateTime = new DateTime(date.Year, date.Month, date.Day, time.Hours, time.Minutes, time.Seconds, DateTimeKind.Local);
-
-                    var utcDateTimeString = convertedDateTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
-
-                    if (string.IsNullOrEmpty(utcDateTimeString))
-                    {
-                        continue;
-                    }
-
-                    var returnEthosDataRow = new EthosExtensibleDataRow(dateColumnConfig.EdmvColumnNameAssocMember,
-                        dateColumnConfig.EdmvFileNameAssocMember, dateColumnConfig.EdmvJsonLabelAssocMember,
-                        dateColumnConfig.EdmvJsonPathAssocMember, dateColumnConfig.EdmvJsonPropertyTypeAssocMember,
-                        utcDateTimeString);
-
-                    returnList.Add(returnEthosDataRow);
-                }
-                else
-                {
-                    // We only have a Date and not a time.
-                    if (int.TryParse(dateTuple.Item4, out intDateValue))
+                    var dateValue = valIdx < dateValues.Count() ? dateValues[valIdx] : string.Empty;
+                    var timeValue = valIdx < timeValues.Count() ? timeValues[valIdx] : string.Empty;
+                    if (!string.IsNullOrEmpty(timeValue) && int.TryParse(dateValue, out intDateValue) && int.TryParse(timeValue, out intTimeValue))
                     {
                         var date = Dmi.Runtime.DmiString.PickDateToDateTime(intDateValue);
+                        var time = Dmi.Runtime.DmiString.PickTimeToDateTime(intTimeValue);
 
-                        var convertedDateTime = new DateTime(date.Year, date.Month, date.Day, 0, 0, 0, DateTimeKind.Local);
+                        var convertedDateTime = new DateTime(date.Year, date.Month, date.Day, time.Hours, time.Minutes, time.Seconds, DateTimeKind.Local);
 
                         var utcDateTimeString = convertedDateTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
 
-                        if (string.IsNullOrEmpty(utcDateTimeString))
+                        utcDateTimeStringValues = string.Concat(utcDateTimeStringValues, _VM, utcDateTimeString);
+                    }
+                    else
+                    {
+                        // We only have a Date and not a time.
+                        if (int.TryParse(dateValue, out intDateValue))
                         {
-                            continue;
+                            var date = Dmi.Runtime.DmiString.PickDateToDateTime(intDateValue);
+
+                            var convertedDateTime = new DateTime(date.Year, date.Month, date.Day, 0, 0, 0, DateTimeKind.Local);
+
+                            var utcDateTimeString = convertedDateTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
+
+                            utcDateTimeStringValues = string.Concat(utcDateTimeStringValues, _VM, utcDateTimeString);
                         }
-
-                        var returnEthosDataRow = new EthosExtensibleDataRow(dateColumnConfig.EdmvColumnNameAssocMember,
-                            dateColumnConfig.EdmvFileNameAssocMember, dateColumnConfig.EdmvJsonLabelAssocMember,
-                            dateColumnConfig.EdmvJsonPathAssocMember, dateColumnConfig.EdmvJsonPropertyTypeAssocMember,
-                            utcDateTimeString);
-
-                        returnList.Add(returnEthosDataRow);
                     }
                 }
+
+                var returnEthosDataRow = new EthosExtensibleDataRow(dateColumnConfig.EdmvColumnNameAssocMember,
+                    dateColumnConfig.EdmvFileNameAssocMember, dateColumnConfig.EdmvJsonLabelAssocMember,
+                    dateColumnConfig.EdmvJsonPathAssocMember, dateColumnConfig.EdmvJsonPropertyTypeAssocMember,
+                    utcDateTimeStringValues.TrimStart(_VM));
+
+                returnList.Add(returnEthosDataRow);
             }
 
             return returnList;
@@ -1856,8 +1939,18 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>Required document configuration</returns>
         public async Task<RequiredDocumentConfiguration> GetRequiredDocumentConfigurationAsync()
         {
-            RequiredDocumentConfiguration configuration = null;
-
+            RequiredDocumentConfiguration configuration = new RequiredDocumentConfiguration();
+            // Get OFFICE.COLLECTION.MAP
+            OfficeCollectionMap officeCollectionMap = null;
+            try
+            {
+                officeCollectionMap = await GetOfficeCollectionMapAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.Info(ex, "Error retrieving OFFICE.COLLECTION.MAP from CORE.PARMS.");
+            }
+            // Get COREWEB.DEFAULTS
             CorewebDefaults corewebDefaultsRecord = null;
             try
             {
@@ -1866,18 +1959,42 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             catch (Exception e)
             {
                 logger.Info(e, "Error retrieving COREWEB.DEFAULTS record");
-                return configuration;
+                // To be consistent with earlier versions of this endpoint - when the mapping was not included - 
+                // return a null object when it cannot read COREWEB.DEFAULTS.
+                return null;
             }
+
             if (corewebDefaultsRecord != null)
             {
-                configuration = new RequiredDocumentConfiguration(
-                    string.Equals(corewebDefaultsRecord.CorewebSuppressInstance, "Y", StringComparison.OrdinalIgnoreCase),
-                    ConvertCodeToWebSortField(corewebDefaultsRecord.CorewebDocumentsSort1, WebSortField.Status),
-                    ConvertCodeToWebSortField(corewebDefaultsRecord.CorewebDocumentsSort2, WebSortField.OfficeDescription),
-                    corewebDefaultsRecord.CorewebBlankStatusText,
-                    corewebDefaultsRecord.CorewebBlankDueDateText
-                    );
+                configuration.SuppressInstance = string.Equals(corewebDefaultsRecord.CorewebSuppressInstance, "Y", StringComparison.OrdinalIgnoreCase);
+                configuration.PrimarySortField = ConvertCodeToWebSortField(corewebDefaultsRecord.CorewebDocumentsSort1, WebSortField.Status);
+                configuration.SecondarySortField = ConvertCodeToWebSortField(corewebDefaultsRecord.CorewebDocumentsSort2, WebSortField.OfficeDescription);
+                configuration.TextForBlankStatus = corewebDefaultsRecord.CorewebBlankStatusText;
+                configuration.TextForBlankDueDate = corewebDefaultsRecord.CorewebBlankDueDateText;
             }
+            if (officeCollectionMap != null)
+            {
+                RequiredDocumentCollectionMapping mapping = new RequiredDocumentCollectionMapping();
+                mapping.RequestsWithoutOfficeCodeCollection = officeCollectionMap.OfcoDefaultCollection;
+                mapping.UnmappedOfficeCodeCollection = officeCollectionMap.OfcoDfltOfficeCollection;
+                if (officeCollectionMap.OfcomapEntityAssociation != null && officeCollectionMap.OfcomapEntityAssociation.Any())
+                {
+                    foreach (var oa in officeCollectionMap.OfcomapEntityAssociation)
+                    {
+                        try
+                        {
+                            var officeCodeAttachmentCollection = new OfficeCodeAttachmentCollection(oa.OfcoOfficeCodesAssocMember, oa.OfcoCollectionIdsAssocMember);
+                            mapping.AddOfficeCodeAttachment(officeCodeAttachmentCollection);
+                        }
+                        catch (Exception ae)
+                        {
+                            logger.Info(ae, "Not able to add to office code collection mapping - either duplicate or missing info: OfficeCode = " + oa.OfcoOfficeCodesAssocMember + " Collection = " + oa.OfcoCollectionIdsAssocMember);
+                        }   
+                    }
+                }
+                configuration.RequiredDocumentCollectionMapping = mapping;
+            }
+
             return configuration;
         }
 
@@ -2378,6 +2495,26 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     logger.Info("Null CorewebDefaults record returned from database");
                     return new CorewebDefaults();
+                }
+            });
+        }
+        /// <summary>
+        /// Gets an OfficeCollectionMapp data contract
+        /// </summary>
+        /// <returns>OfficeCollectionMapps data contract object</returns>
+        private async Task<OfficeCollectionMap> GetOfficeCollectionMapAsync()
+        {
+            return await GetOrAddToCacheAsync<OfficeCollectionMap>("OfficeCollectionMap", async () =>
+            {
+                var officeCollectionMap = await DataReader.ReadRecordAsync<OfficeCollectionMap>("CORE.PARMS", "OFFICE.COLLECTION.MAP");
+                if (officeCollectionMap != null)
+                {
+                    return officeCollectionMap;
+                }
+                else
+                {
+                    logger.Info("Null OfficeCollectionMap record returned from database");
+                    return new OfficeCollectionMap();
                 }
             });
         }

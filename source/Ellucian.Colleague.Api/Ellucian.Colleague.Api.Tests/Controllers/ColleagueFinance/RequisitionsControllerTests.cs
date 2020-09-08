@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -414,7 +414,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             Assert.IsNotNull(actuals);
 
             Assert.AreEqual(requisitionsCollection.Count, actuals.Count());
-        }        
+        }
 
         [TestMethod]
         public async Task RequisitionsController_GetRequisitionsByGuidAsync_ValidateFields()
@@ -660,54 +660,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             Assert.IsNotNull(result);
         }
 
-        [TestMethod]
-        public async Task RequisitionsController_GetRequisitionsSummaryByPersonIdAsync()
-        {
-            var expected = requisitionsSummaryCollection.AsEnumerable();
-            requisitionsServiceMock.Setup(r => r.GetRequisitionsSummaryByPersonIdAsync(It.IsAny<string>())).ReturnsAsync(expected);
-            var requisitions = await requisitionsController.GetRequisitionsSummaryByPersonIdAsync(personId);
-            Assert.AreEqual(requisitions.ToList().Count, expected.Count());
-        }
 
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task RequisitionsController_GetRequisitionsSummaryByPersonIdAsync_PersonId_Null()
-        {
-            await requisitionsController.GetRequisitionsSummaryByPersonIdAsync(null);
-        }
 
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task RequisitionsController_GetRequisitionsSummaryByPersonIdAsync_ArgumentNullException()
-        {
-            requisitionsServiceMock.Setup(r => r.GetRequisitionsSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentNullException());
-            await requisitionsController.GetRequisitionsSummaryByPersonIdAsync(personId);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task RequisitionsController_GetRequisitionsSummaryByPersonIdAsync_Exception()
-        {
-            requisitionsServiceMock.Setup(r => r.GetRequisitionsSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
-            await requisitionsController.GetRequisitionsSummaryByPersonIdAsync(personId);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task RequisitionsController_GetRequisitionsSummaryByPersonIdAsync_KeyNotFoundException()
-        {
-            requisitionsServiceMock.Setup(r => r.GetRequisitionsSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
-            await requisitionsController.GetRequisitionsSummaryByPersonIdAsync(personId);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task RequisitionsController_GetRequisitionsSummaryByPersonIdAsync_ApplicationException()
-        {
-            requisitionsServiceMock.Setup(r => r.GetRequisitionsSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new ApplicationException());
-            await requisitionsController.GetRequisitionsSummaryByPersonIdAsync(personId);
-        }
-        
         #endregion
 
         #region Delete
@@ -715,7 +669,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         [TestMethod]
         public async Task RequisitionsController_DeleteRequisitionsAsync()
         {
-            System.Net.Http.HttpResponseMessage httpResponseMessage = new HttpResponseMessage() {StatusCode = System.Net.HttpStatusCode.OK };
+            System.Net.Http.HttpResponseMessage httpResponseMessage = new HttpResponseMessage() { StatusCode = System.Net.HttpStatusCode.OK };
             requisitionsServiceMock.Setup(x => x.DeleteRequisitionAsync("1234")).Returns(Task.FromResult(httpResponseMessage));
             await requisitionsController.DeleteRequisitionsAsync("1234");
         }
@@ -962,5 +916,514 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         }
 
         #endregion
+
+        #region DELETE
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_DeleteRequisitionAsync_ArgumentNullException()
+        {
+            requisitionsServiceMock.Setup(r => r.DeleteRequisitionsAsync(It.IsAny<RequisitionDeleteRequest>())).ThrowsAsync(new ArgumentNullException());
+
+            await requisitionsController.DeleteRequisitionAsync(null);
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_DeleteRequisitionAsync_ArgumentNull()
+        {
+            RequisitionDeleteRequest request = new RequisitionDeleteRequest()
+            {
+                PersonId = "0000123",
+                RequisitionId = "REQ00001",
+                ConfirmationEmailAddresses = "abc@mail.com"
+            };
+            requisitionsServiceMock.Setup(r => r.DeleteRequisitionsAsync(It.IsAny<RequisitionDeleteRequest>())).ThrowsAsync(new ArgumentNullException());
+
+            await requisitionsController.DeleteRequisitionAsync(request);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_DeleteRequisitionAsync_KeyNotFoundException()
+        {
+            RequisitionDeleteRequest request = new RequisitionDeleteRequest()
+            {
+                PersonId = "0000123",
+                RequisitionId = "REQ00001",
+                ConfirmationEmailAddresses = "abc@mail.com"
+            };
+            requisitionsServiceMock.Setup(r => r.DeleteRequisitionsAsync(It.IsAny<RequisitionDeleteRequest>())).ThrowsAsync(new KeyNotFoundException());
+
+            await requisitionsController.DeleteRequisitionAsync(request);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_DeleteRequisitionAsync_Exception()
+        {
+            RequisitionDeleteRequest request = new RequisitionDeleteRequest()
+            {
+                PersonId = "0000123",
+                RequisitionId = "REQ00001",
+                ConfirmationEmailAddresses = "abc@mail.com"
+            };
+            requisitionsServiceMock.Setup(r => r.DeleteRequisitionsAsync(It.IsAny<RequisitionDeleteRequest>())).ThrowsAsync(new Exception());
+
+            await requisitionsController.DeleteRequisitionAsync(request);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_DeleteRequisitionAsync_PermissionException()
+        {
+            RequisitionDeleteRequest request = new RequisitionDeleteRequest()
+            {
+                PersonId = "0000123",
+                RequisitionId = "REQ00001",
+                ConfirmationEmailAddresses = "abc@mail.com"
+            };
+            requisitionsServiceMock.Setup(r => r.DeleteRequisitionsAsync(It.IsAny<RequisitionDeleteRequest>())).ThrowsAsync(new PermissionsException());
+
+            await requisitionsController.DeleteRequisitionAsync(request);
+        }
+
+        [TestMethod]
+        public async Task RequisitionsController_DeleteRequisitionAsync()
+        {
+            RequisitionDeleteRequest request = new RequisitionDeleteRequest()
+            {
+                PersonId = "0000123",
+                RequisitionId = "00001",
+                ConfirmationEmailAddresses = "abc@mail.com"
+            };
+
+            RequisitionDeleteResponse response = new RequisitionDeleteResponse()
+            {
+                RequisitionId = "00001",
+                RequisitionNumber = "REQ00001",
+                ErrorOccured = false,
+                ErrorMessages = null,
+                WarningOccured = false,
+                WarningMessages = null
+            };
+
+            requisitionsServiceMock.Setup(r => r.DeleteRequisitionsAsync(It.IsAny<RequisitionDeleteRequest>())).ReturnsAsync(response);
+            var result = await requisitionsController.DeleteRequisitionAsync(request);
+
+            Assert.IsNotNull(result);
+        }
+
+        #endregion
     }
+
+    #region GetRequisitionsSummaryByPersonIdAsync Tests
+
+    [TestClass]
+    public class GetRequisitionsSummaryByPersonIdAsyncTests
+    {
+        /// <summary>
+        ///Gets or sets the test context which provides
+        ///information about and functionality for the current test run.
+        ///</summary>
+        public TestContext TestContext { get; set; }
+
+        private Mock<IRequisitionService> requisitionsServiceMock;
+        private Mock<ILogger> loggerMock;
+        private RequisitionsController requisitionsController;
+        private List<RequisitionSummary> requisitionsSummaryCollection;
+        private Tuple<IEnumerable<Dtos.Requisitions>, int> requisiotionsCollectionTuple;
+        private string personId = "0000100";
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.DeploymentDirectory, "App_Data"));
+
+            requisitionsServiceMock = new Mock<IRequisitionService>();
+            loggerMock = new Mock<ILogger>();
+
+            requisitionsSummaryCollection = new List<RequisitionSummary>();
+
+            BuildRequisitionSummaryData();
+
+            requisitionsController = new RequisitionsController(requisitionsServiceMock.Object, loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+        }
+
+
+
+        private void BuildRequisitionSummaryData()
+        {
+            requisitionsSummaryCollection = new List<RequisitionSummary>()
+            {
+                new RequisitionSummary()
+                {
+                   Id = "1",
+                   Date = DateTime.Today.AddDays(2),
+                   InitiatorName = "Test User",
+                   RequestorName = "Test User",
+                   Status = RequisitionStatus.InProgress,
+                   StatusDate = DateTime.Today.AddDays(2),
+                   VendorId = "0000190",
+                   VendorName = "Basic Office Supply",
+                   Amount = 10.00m,
+                   Number = "0000001",
+                   PurchaseOrders = new List<PurchaseOrderLinkSummary>()
+                   {
+                       new PurchaseOrderLinkSummary()
+                       {
+                           Id = "1",
+                           Number = "0000001"
+                       }
+                   }
+
+                },
+                new RequisitionSummary()
+                {
+                     Id = "2",
+                   Date = DateTime.Today.AddDays(2),
+                   InitiatorName = "Test User",
+                   RequestorName = "Test User",
+                   Status = RequisitionStatus.InProgress,
+                   StatusDate = DateTime.Today.AddDays(2),
+                   VendorId = "0000190",
+                   VendorName = "Basic Office Supply",
+                   Amount = 10.00m,
+                   Number = "0000002",
+                   PurchaseOrders = new List<PurchaseOrderLinkSummary>()
+                   {
+                       new PurchaseOrderLinkSummary()
+                       {
+                           Id = "2",
+                           Number = "0000002"
+                       }
+                   }
+                }
+
+            };
+            requisitionsServiceMock.Setup(r => r.GetRequisitionsSummaryByPersonIdAsync(It.IsAny<string>())).ReturnsAsync(requisitionsSummaryCollection);
+
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            requisitionsController = null;
+            loggerMock = null;
+            requisitionsServiceMock = null;
+        }
+
+        [TestMethod]
+        public async Task RequisitionsController_GetRequisitionsSummaryByPersonIdAsync()
+        {
+            var expected = requisitionsSummaryCollection.AsEnumerable();
+            requisitionsServiceMock.Setup(r => r.GetRequisitionsSummaryByPersonIdAsync(It.IsAny<string>())).ReturnsAsync(expected);
+            var requisitions = await requisitionsController.GetRequisitionsSummaryByPersonIdAsync(personId);
+            Assert.AreEqual(requisitions.ToList().Count, expected.Count());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionsSummaryByPersonIdAsync_PersonId_Null()
+        {
+            await requisitionsController.GetRequisitionsSummaryByPersonIdAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionsSummaryByPersonIdAsync_ArgumentNullException()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionsSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentNullException());
+            await requisitionsController.GetRequisitionsSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionsSummaryByPersonIdAsync_Exception()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionsSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
+            await requisitionsController.GetRequisitionsSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionsSummaryByPersonIdAsync_KeyNotFoundException()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionsSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
+            await requisitionsController.GetRequisitionsSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionsSummaryByPersonIdAsync_ApplicationException()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionsSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new ApplicationException());
+            await requisitionsController.GetRequisitionsSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionForModifyWithLineItemDefaultsAsync_Id_Null()
+        {
+            await requisitionsController.GetRequisitionForModifyWithLineItemDefaultsAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionForModifyWithLineItemDefaultsAsync_ArgumentNullException()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionForModifyWithLineItemDefaultsAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentNullException());
+            await requisitionsController.GetRequisitionForModifyWithLineItemDefaultsAsync("1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionForModifyWithLineItemDefaultsAsync_Exception()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionForModifyWithLineItemDefaultsAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
+            await requisitionsController.GetRequisitionForModifyWithLineItemDefaultsAsync("1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionForModifyWithLineItemDefaultsAsync_KeyNotFoundException()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionForModifyWithLineItemDefaultsAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
+            await requisitionsController.GetRequisitionForModifyWithLineItemDefaultsAsync("1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionForModifyWithLineItemDefaultsAsync_PermissionException()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionForModifyWithLineItemDefaultsAsync(It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+            await requisitionsController.GetRequisitionForModifyWithLineItemDefaultsAsync("1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionForModifyWithLineItemDefaultsAsync_ApplicationException()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionForModifyWithLineItemDefaultsAsync(It.IsAny<string>())).ThrowsAsync(new ApplicationException());
+            await requisitionsController.GetRequisitionForModifyWithLineItemDefaultsAsync("1");
+        }
+
+        [TestMethod]
+        public async Task RequisitionsController_GetRequisitionForModifyWithLineItemDefaultsAsync_By_RequisitionId()
+        {
+            var modifyRequisitionDto = new Dtos.ColleagueFinance.ModifyRequisition();
+            modifyRequisitionDto.Requisition = new Requisition() { Id = "1" };
+            modifyRequisitionDto.DefaultLineItemAdditionalDetails = new NewLineItemDefaultAdditionalInformation();
+            requisitionsServiceMock.Setup(r => r.GetRequisitionForModifyWithLineItemDefaultsAsync(It.IsAny<string>())).ReturnsAsync(modifyRequisitionDto);
+            var result = await requisitionsController.GetRequisitionForModifyWithLineItemDefaultsAsync("1");
+
+            Assert.IsNotNull(result);
+        }
+
+    }
+
+    #endregion
+
+    #region GetRequisitionForModifyWithLineItemDefaultsAsync Tests
+
+    [TestClass]
+    public class GetRequisitionForModifyWithLineItemDefaultsAsyncTests
+    {
+        /// <summary>
+        ///Gets or sets the test context which provides
+        ///information about and functionality for the current test run.
+        ///</summary>
+        public TestContext TestContext { get; set; }
+
+        private Mock<IRequisitionService> requisitionsServiceMock;
+        private Mock<ILogger> loggerMock;
+        private RequisitionsController requisitionsController;
+        private Tuple<IEnumerable<Dtos.Requisitions>, int> requisiotionsCollectionTuple;
+        private Dtos.ColleagueFinance.ModifyRequisition modifyRequisitionDto;
+        [TestInitialize]
+        public void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.DeploymentDirectory, "App_Data"));
+
+            requisitionsServiceMock = new Mock<IRequisitionService>();
+            loggerMock = new Mock<ILogger>();
+            modifyRequisitionDto = new Dtos.ColleagueFinance.ModifyRequisition();
+            modifyRequisitionDto.Requisition = new Requisition() { Id = "1" };
+            modifyRequisitionDto.DefaultLineItemAdditionalDetails = new NewLineItemDefaultAdditionalInformation();
+
+            requisitionsController = new RequisitionsController(requisitionsServiceMock.Object, loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+        }
+
+
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            requisitionsController = null;
+            loggerMock = null;
+            requisitionsServiceMock = null;
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionForModifyWithLineItemDefaultsAsync_Id_Null()
+        {
+            await requisitionsController.GetRequisitionForModifyWithLineItemDefaultsAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionForModifyWithLineItemDefaultsAsync_ArgumentNullException()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionForModifyWithLineItemDefaultsAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentNullException());
+            await requisitionsController.GetRequisitionForModifyWithLineItemDefaultsAsync("1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionForModifyWithLineItemDefaultsAsync_Exception()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionForModifyWithLineItemDefaultsAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
+            await requisitionsController.GetRequisitionForModifyWithLineItemDefaultsAsync("1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionForModifyWithLineItemDefaultsAsync_KeyNotFoundException()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionForModifyWithLineItemDefaultsAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
+            await requisitionsController.GetRequisitionForModifyWithLineItemDefaultsAsync("1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionForModifyWithLineItemDefaultsAsync_ApplicationException()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionForModifyWithLineItemDefaultsAsync(It.IsAny<string>())).ThrowsAsync(new ApplicationException());
+            await requisitionsController.GetRequisitionForModifyWithLineItemDefaultsAsync("1");
+        }
+
+        [TestMethod]
+        public async Task RequisitionsController_GetRequisitionForModifyWithLineItemDefaultsAsync_By_RequisitionId()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionForModifyWithLineItemDefaultsAsync(It.IsAny<string>())).ReturnsAsync(modifyRequisitionDto);
+            var result = await requisitionsController.GetRequisitionForModifyWithLineItemDefaultsAsync("1");
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.Requisition);
+            Assert.IsNotNull(result.DefaultLineItemAdditionalDetails);
+            Assert.AreEqual(modifyRequisitionDto.Requisition.Id, result.Requisition.Id);
+        }
+
+    }
+
+    #endregion
+
+    #region PostRequisitionAsync Tests
+
+    [TestClass]
+    public class PostRequisitionAsyncAsyncTests
+    {
+        /// <summary>
+        ///Gets or sets the test context which provides
+        ///information about and functionality for the current test run.
+        ///</summary>
+        public TestContext TestContext { get; set; }
+
+        private Mock<IRequisitionService> requisitionsServiceMock;
+        private Mock<ILogger> loggerMock;
+        private RequisitionsController requisitionsController;
+        private Tuple<IEnumerable<Dtos.Requisitions>, int> requisiotionsCollectionTuple;
+        private Dtos.ColleagueFinance.RequisitionCreateUpdateRequest createUpdateRequisitionDto;
+        private RequisitionCreateUpdateResponse responseDto;
+        [TestInitialize]
+        public void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.DeploymentDirectory, "App_Data"));
+
+            requisitionsServiceMock = new Mock<IRequisitionService>();
+            loggerMock = new Mock<ILogger>();
+            createUpdateRequisitionDto = new RequisitionCreateUpdateRequest();
+            createUpdateRequisitionDto.Requisition = new Requisition() { Id = "1" };
+            createUpdateRequisitionDto.PersonId = "0000100";
+
+            responseDto = new RequisitionCreateUpdateResponse() { RequisitionId = "1", RequisitionDate = DateTime.Now.Date };
+            requisitionsController = new RequisitionsController(requisitionsServiceMock.Object, loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+        }
+
+
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            requisitionsController = null;
+            loggerMock = null;
+            requisitionsServiceMock = null;
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_PostRequisitionAsync_Dto_Null()
+        {
+            await requisitionsController.PostRequisitionAsync(null);
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_PostRequisitionsAsync_PermissionsException()
+        {
+            requisitionsServiceMock.Setup(r => r.CreateUpdateRequisitionAsync(It.IsAny<RequisitionCreateUpdateRequest>())).ThrowsAsync(new PermissionsException());
+            await requisitionsController.PostRequisitionAsync(createUpdateRequisitionDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_PostRequisitionAsync_Exception()
+        {
+            requisitionsServiceMock.Setup(r => r.CreateUpdateRequisitionAsync(It.IsAny<RequisitionCreateUpdateRequest>())).ThrowsAsync(new Exception());
+            await requisitionsController.PostRequisitionAsync(createUpdateRequisitionDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_PostRequisitionAsync_ArgumentNullException()
+        {
+            requisitionsServiceMock.Setup(r => r.CreateUpdateRequisitionAsync(It.IsAny<RequisitionCreateUpdateRequest>())).ThrowsAsync(new ArgumentNullException());
+            await requisitionsController.PostRequisitionAsync(createUpdateRequisitionDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_PostRequisitionAsync_KeyNotFoundException()
+        {
+            requisitionsServiceMock.Setup(r => r.CreateUpdateRequisitionAsync(It.IsAny<RequisitionCreateUpdateRequest>())).ThrowsAsync(new KeyNotFoundException());
+            await requisitionsController.PostRequisitionAsync(createUpdateRequisitionDto);
+        }
+
+        [TestMethod]
+        public async Task RequisitionsController_PostRequisitionAsync()
+        {
+            requisitionsServiceMock.Setup(r => r.CreateUpdateRequisitionAsync(It.IsAny<RequisitionCreateUpdateRequest>())).ReturnsAsync(responseDto);
+            var result = await requisitionsController.PostRequisitionAsync(createUpdateRequisitionDto);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(result.RequisitionId, createUpdateRequisitionDto.Requisition.Id);
+        }
+
+    }
+
+    #endregion
 }

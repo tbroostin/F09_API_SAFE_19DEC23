@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -104,6 +104,16 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// The override description associated with the charge.
         /// </summary>
         public string OverrideDescription { get; set; }
+
+        /// <summary>
+        /// The start date of the activity associated with the charge.
+        /// </summary>
+        public DateTime? BillingStartDate { get; set; }
+
+        /// <summary>
+        /// he end date of the activity associated with the charge.
+        /// </summary>
+        public DateTime? BillingEndDate { get; set; }
 
         /// <summary>
         /// Constructor initializes the StudentCharges transaction object.

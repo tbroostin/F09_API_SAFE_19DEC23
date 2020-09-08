@@ -13,10 +13,10 @@
   
   FGU-dev
       purpose..............: matches build that is currently deployed to PROJDB18
-      Colleague.Api Version: 1.26.0.8
-      deployed date........: 07/30/20
+      Colleague.Api Version: 1.28.1.5
+      deployed date........: 09/05/20
       deployed commit......: see server for actual commit (this is inside source control)
-      zipped code..........: C:\Program Files (x86)\Ellucian\projdb18_1.24\F09ColleagueApi\FGU-WebApi-master.zip
+      zipped code..........: C:\Program Files (x86)\Ellucian\test18_1.26\F09ColleagueApi\FGU-WebApi-FGU-dev.zip
 
   master
       purpose..............: matches build that is currently deployed to PRODUCTION
@@ -30,7 +30,8 @@
 **-----------------------------------------------------------------
   02/03/20 PROJDB18 v1.26.0.8 65a5571451e0a6070f7ef8b5ad319af52bf9cddc -upgrade API to v1.26
   02/26/20 LIVE     v1.26.0.8 65a5571451e0a6070f7ef8b5ad319af52bf9cddc -upgrade API to v1.26
-  07/30/20 TEST18   v1.26.0.8                                          -Student Evals Project
+  07/30/20 TEST18   v1.26.0.8 118526a29b19d7e66b250d5e175486165538124d -Student Evals Project
+  09/05/20 TEST18   v1.28.1.5 (see server)                             -upgrade API to v1.28
 
 **-----------------------------------------------------------------
           Summary of Custom CTX Transactions

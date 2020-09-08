@@ -71,6 +71,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>The requisition create update response DTO.</returns>
         Task<Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionCreateUpdateResponse> CreateUpdateRequisitionAsync(Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionCreateUpdateRequest requisitionCreateUpdateRequest);
 
+        /// <summary>
+        /// Get Requisition details with lineitem defaults for modify
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         Task<Ellucian.Colleague.Dtos.ColleagueFinance.ModifyRequisition> GetRequisitionForModifyWithLineItemDefaultsAsync(string id);
+
+        /// <summary>
+        /// Delete a requisition.
+        /// </summary>
+        /// <param name="requisitionDeleteRequest">The requisition delete request DTO.</param>        
+        /// <returns>The requisition delete response DTO.</returns>
+        Task<Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteResponse> DeleteRequisitionsAsync(Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteRequest requisitionDeleteRequest);
     }
 }

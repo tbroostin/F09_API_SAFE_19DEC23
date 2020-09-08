@@ -1,4 +1,4 @@
-﻿//Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -352,7 +352,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task ProspectOpportunitiesController_PutProspectOpportunitiesSubmissions_PermissionsException()
         {
-            prospectOpportunitiesServiceMock.Setup(x => x.UpdateProspectOpportunitiesSubmissionsAsync(prospectOpportunitiesSubmissionsCollection.FirstOrDefault()))
+            prospectOpportunitiesServiceMock.Setup(x => x.UpdateProspectOpportunitiesSubmissionsAsync(prospectOpportunitiesSubmissionsCollection.FirstOrDefault(), false))
                 .Throws<PermissionsException>();
             await prospectOpportunitiesController.PutProspectOpportunitiesSubmissionsAsync(expectedGuid, prospectOpportunitiesSubmissionsCollection.FirstOrDefault());
         }
@@ -361,7 +361,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task ProspectOpportunitiesController_PutProspectOpportunitiesSubmissionsAsync_Exception()
         {
-            prospectOpportunitiesServiceMock.Setup(x => x.UpdateProspectOpportunitiesSubmissionsAsync(prospectOpportunitiesSubmissionsCollection.FirstOrDefault()))
+            prospectOpportunitiesServiceMock.Setup(x => x.UpdateProspectOpportunitiesSubmissionsAsync(prospectOpportunitiesSubmissionsCollection.FirstOrDefault(), false))
                 .Throws<Exception>();
             var sourceContext = prospectOpportunitiesSubmissionsCollection.FirstOrDefault();
             await prospectOpportunitiesController.PutProspectOpportunitiesSubmissionsAsync(sourceContext.Id, sourceContext);

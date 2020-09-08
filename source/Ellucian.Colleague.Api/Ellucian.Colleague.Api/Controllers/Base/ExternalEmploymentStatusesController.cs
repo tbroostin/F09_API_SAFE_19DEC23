@@ -1,4 +1,4 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -19,6 +19,7 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
+using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -47,8 +48,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <summary>
         /// Return all externalEmploymentStatuses
         /// </summary>
-                /// <returns>List of ExternalEmploymentStatuses <see cref="Dtos.ExternalEmploymentStatuses"/> objects representing matching externalEmploymentStatuses</returns>
-        [HttpGet]
+        /// <returns>List of ExternalEmploymentStatuses <see cref="Dtos.ExternalEmploymentStatuses"/> objects representing matching externalEmploymentStatuses</returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.ExternalEmploymentStatuses>> GetExternalEmploymentStatusesAsync()
                 {
@@ -61,8 +62,18 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 }
             }
             try
-            {                    return await _externalEmploymentStatusesService.GetExternalEmploymentStatusesAsync(bypassCache);
-                            }
+            {
+                var externalEmploymentStatuses = await _externalEmploymentStatusesService.GetExternalEmploymentStatusesAsync(bypassCache);
+
+                if (externalEmploymentStatuses != null && externalEmploymentStatuses.Any())
+                {
+                    AddEthosContextProperties(await _externalEmploymentStatusesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _externalEmploymentStatusesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              externalEmploymentStatuses.Select(a => a.Id).ToList()));
+                }
+
+                return externalEmploymentStatuses;
+            }
             catch (KeyNotFoundException e)
             {
                 _logger.Error(e.ToString());
@@ -110,6 +121,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
+                AddEthosContextProperties(
+                    await _externalEmploymentStatusesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _externalEmploymentStatusesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { guid }));
                 return await _externalEmploymentStatusesService.GetExternalEmploymentStatusesByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)

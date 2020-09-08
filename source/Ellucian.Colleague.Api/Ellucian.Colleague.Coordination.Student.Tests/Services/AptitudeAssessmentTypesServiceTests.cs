@@ -5,9 +5,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Student.Services;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
@@ -24,11 +28,20 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         private Mock<ILogger> _loggerMock;
         private Mock<IStudentReferenceDataRepository> _referenceRepositoryMock;
 
+        private Mock<IAdapterRegistry> _adapterRegistryMock;
+        private Mock<ICurrentUserFactory> _currentUserFactoryMock;
+        private Mock<IRoleRepository> _roleRepositoryMock;
+        private Mock<IConfigurationRepository> _configurationRepoMock;
+
         [TestInitialize]
         public async void Initialize()
         {
             _referenceRepositoryMock = new Mock<IStudentReferenceDataRepository>();
             _loggerMock = new Mock<ILogger>();
+            _adapterRegistryMock = new Mock<IAdapterRegistry>();
+            _currentUserFactoryMock = new Mock<ICurrentUserFactory>();
+            _roleRepositoryMock = new Mock<IRoleRepository>();
+            _configurationRepoMock = new Mock<IConfigurationRepository>();
 
             _nonCourseCategoriesCollection = new List<NonCourseCategories>()
             {
@@ -41,7 +54,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             _referenceRepositoryMock.Setup(repo => repo.GetNonCourseCategoriesAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_nonCourseCategoriesCollection);
 
-            _aptitudeAssessmentTypesService = new AptitudeAssessmentTypesService(_referenceRepositoryMock.Object, _loggerMock.Object);
+            _aptitudeAssessmentTypesService = new AptitudeAssessmentTypesService(_referenceRepositoryMock.Object,
+                _adapterRegistryMock.Object, _currentUserFactoryMock.Object,
+                _roleRepositoryMock.Object, _configurationRepoMock.Object, _loggerMock.Object);
         }
 
         [TestCleanup]

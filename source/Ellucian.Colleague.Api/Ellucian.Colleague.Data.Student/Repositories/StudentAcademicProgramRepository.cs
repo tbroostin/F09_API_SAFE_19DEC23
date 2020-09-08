@@ -113,6 +113,36 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     throw new KeyNotFoundException("Invalid Student Programs ID: " + studentProgramsId);
                 }
+                // Make sure that we have a valid record by insuring that it is properly linked in either STUDENTS
+                // or in the APPLICATIONS table.
+                var acadProgramIds = new List<string>();
+                var personId = studentProgramsId.Split('*')[0];
+                var studentRecord = await DataReader.ReadRecordColumnsAsync("STUDENTS", personId, new string[] { "STU.ACAD.PROGRAMS" });
+                if (studentRecord != null)
+                {
+                    acadProgramIds.AddRange(studentRecord.SelectMany(prog => prog.Value.Split(_VM).Select(ab => string.Concat(personId, "*", ab))));
+                }
+
+                if (!acadProgramIds.Contains(studentProgramsId))
+                {
+                    var applRecord = await DataReader.ReadRecordColumnsAsync("APPLICANTS", personId, new string[] { "APP.APPLICATIONS" });
+                    if (applRecord != null)
+                    {
+                        var subList = applRecord.SelectMany(appls => appls.Value.Split(_VM));
+                        var applicationRecords = await DataReader.BatchReadRecordColumnsAsync("APPLICATIONS", subList.ToArray(), new string[] { "APPL.ACAD.PROGRAM" });
+                        if (applicationRecords != null)
+                        {
+                            acadProgramIds.AddRange(applicationRecords.Select(a => string.Concat(personId, "*", a.Value["APPL.ACAD.PROGRAM"])));
+                        }
+                    }
+                    if (!acadProgramIds.Contains(studentProgramsId))
+                    {
+                        var exception = new RepositoryException();
+                        exception.AddError(new RepositoryError("Bad.Data", string.Concat("No Student Academic Program was found for guid '", id, "'. ")));
+                        throw exception;
+                    }
+                }
+
                 var studentProg = new Collection<StudentPrograms>() { stuprog };
                 var acadCredData = new Collection<AcadCredentials>();
                 if (includeAcadCredentials)
@@ -320,7 +350,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 Dept = stuAcadProg.DepartmentCode,                
                 AntCmplTerm = stuAcadProg.AnticipatedCompletionTerm,
                 AntCmplDate = stuAcadProg.AnticipatedCompletionDate,
-                AdmitStatus = stuAcadProg.AdmitStatus
+                AdmitStatus = stuAcadProg.AdmitStatus,
+                StuProgToReplace = stuAcadProg.StudentProgramToReplace
             };
             //add majors info to the CTX
             if ((stuAcadProg.StudentProgramMajorsTuple != null) && (stuAcadProg.StudentProgramMajorsTuple.Any()))
@@ -471,6 +502,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         acadCredLimitingKeys.AddRange(instAttendRecord.InstaAcadCredentials);
                 }
                 #endregion
+
                 #region student program data items filter
                 //if there is program and catalog in the filter, we can use an index to create a limiting list.
                 if ((!string.IsNullOrEmpty(program)) && (!string.IsNullOrEmpty(catalog)))
@@ -540,6 +572,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     criteria = oldCriteria;
                 }
                 #endregion
+
                 #region student program CC filter
                 //this is a CC
                 if (!string.IsNullOrEmpty(startDate))
@@ -577,6 +610,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
 
                 #endregion
+
                 #region acad cred filter
                 if (!string.IsNullOrEmpty(graduatedOn) || !string.IsNullOrEmpty(graduatedAcademicPeriod))
                 {
@@ -706,6 +740,16 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     //}
 
                 }
+                #endregion
+
+                #region Default Selection Criteria
+                // Failed Inst Enrollment (WINR) leaves behind orphaned items.  Some items are invalid because
+                // the person record doesn't exist and other items are invalid because the key is invalid (missing program)
+                // This default criteria is set to insure we only select valid STUDENT.PROGRAMS records.
+                if (string.IsNullOrEmpty(criteria))
+                    criteria = "WITH STPR.ACAD.PROGRAM NE '' AND WITH STPR.STUDENT.LAST.NAME NE ''";
+                else
+                    criteria += " AND WITH STPR.ACAD.PROGRAM NE '' AND WITH STPR.STUDENT.LAST.NAME NE ''";
                 #endregion
 
                 if (!stuProgsLimitingKeys.Any())
@@ -1046,7 +1090,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
                     }
                     //at this point if stuProgsLimitingKeys is empty then we can return empty set
-                    if (!stuProgsLimitingKeys.Any())
+                    if (stuProgsLimitingKeys == null || !stuProgsLimitingKeys.Any())
                         return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
 
                 }
@@ -1072,12 +1116,16 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 acadProgLimitingKeys.Add(program);
                         }
                     }
-                    var prgCriteria = "WITH STU.PGM.INDEX EQ '" + program + catalog + "'";
-                    stuProgsLimitingKeys = (await DataReader.SelectAsync("STUDENT.PROGRAMS", stuProgsLimitingKeys != null && stuProgsLimitingKeys.Any() ? stuProgsLimitingKeys.ToArray() : null, prgCriteria)).ToList();
-                    if (stuProgsLimitingKeys == null || !stuProgsLimitingKeys.Any())
-                    {
-                        return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                    }
+                    //var prgCriteria = "WITH STU.PGM.INDEX EQ '" + program + catalog + "'"; 
+                    if (string.IsNullOrEmpty(criteria))
+                        criteria = "WITH STU.PGM.INDEX EQ '" + program + catalog + "'";
+                    else
+                        criteria += " AND WITH STU.PGM.INDEX EQ '" + program + catalog + "'";
+                    //stuProgsLimitingKeys = (await DataReader.SelectAsync("STUDENT.PROGRAMS", stuProgsLimitingKeys != null && stuProgsLimitingKeys.Any() ? stuProgsLimitingKeys.ToArray() : null, prgCriteria)).ToList();
+                    //if (stuProgsLimitingKeys == null || !stuProgsLimitingKeys.Any())
+                    //{
+                    //    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                    //}
                 }
                 else
                 {
@@ -1123,15 +1171,15 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     else
                         criteria += " AND WITH STPR.LOCATION EQ '" + site + "'";
                 }
-                if (criteria != string.Empty) //oldCriteria)
-                {
-                    stuProgsLimitingKeys = (await DataReader.SelectAsync("STUDENT.PROGRAMS", stuProgsLimitingKeys != null && stuProgsLimitingKeys.Any() ? stuProgsLimitingKeys.ToArray() : null, criteria)).ToList();
-                    if (stuProgsLimitingKeys == null || !stuProgsLimitingKeys.Any())
-                    {
-                        return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                    }
-                    criteria = string.Empty; // oldCriteria;
-                }
+                //if (criteria != string.Empty) //oldCriteria)
+                //{
+                //    stuProgsLimitingKeys = (await DataReader.SelectAsync("STUDENT.PROGRAMS", stuProgsLimitingKeys != null && stuProgsLimitingKeys.Any() ? stuProgsLimitingKeys.ToArray() : null, criteria)).ToList();
+                //    if (stuProgsLimitingKeys == null || !stuProgsLimitingKeys.Any())
+                //    {
+                //        return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                //    }
+                //    criteria = string.Empty; // oldCriteria;
+                //}
                 #endregion
 
                 #region student program CC filter
@@ -1172,15 +1220,15 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     //    acadProgCriteria += "AND WITH ACPG.ACAD.LEVEL EQ '" + academicLevel + "'";
                 }
 
-                if (criteria != string.Empty) //oldCriteria)
-                {
-                    stuProgsLimitingKeys = (await DataReader.SelectAsync("STUDENT.PROGRAMS", stuProgsLimitingKeys != null && stuProgsLimitingKeys.Any() ? stuProgsLimitingKeys.ToArray() : null, criteria)).ToList();
-                    if (stuProgsLimitingKeys == null || !stuProgsLimitingKeys.Any())
-                    {
-                        return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                    }
-                    criteria = string.Empty; // oldCriteria;
-                }
+                //if (criteria != string.Empty) //oldCriteria)
+                //{
+                //    stuProgsLimitingKeys = (await DataReader.SelectAsync("STUDENT.PROGRAMS", stuProgsLimitingKeys != null && stuProgsLimitingKeys.Any() ? stuProgsLimitingKeys.ToArray() : null, criteria)).ToList();
+                //    if (stuProgsLimitingKeys == null || !stuProgsLimitingKeys.Any())
+                //    {
+                //        return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                //    }
+                //    criteria = string.Empty; // oldCriteria;
+                //}
 
                 #endregion
 
@@ -1249,7 +1297,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 //merge it with existing list of student academic programs.
                                 if (acadCredStuProgIds != null && acadCredStuProgIds.Any())
                                 {
-                                    if (stuProgsLimitingKeys != null && stuProgsLimitingKeys.Any())
+                                    if (stuProgsLimitingKeys == null || !stuProgsLimitingKeys.Any())
                                     {
                                         stuProgsLimitingKeys = acadCredStuProgIds;
                                         if (stuProgsLimitingKeys == null || !stuProgsLimitingKeys.Any())
@@ -1272,12 +1320,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 #region degree & ccd filter
                 if ((ccdCredentials != null && ccdCredentials.Any()) || (degreeCredentials != null && degreeCredentials.Any()))
                 {
-                    var credStuProgIds = await ApplyCredentialsFilter2(program, degreeCredentials, ccdCredentials, stuProgsLimitingKeys, acadCredLimitingKeys, completeStatus, includeAcademicCredentials);
+                    var ccdCreds = ccdCredentials != null && ccdCredentials.Any() ? ccdCredentials.Distinct().ToList() : null;
+                    var degrCreds = degreeCredentials != null && degreeCredentials.Any() ? degreeCredentials.Distinct().ToList() : null;
+                    var credStuProgIds = await ApplyCredentialsFilter2(program, degrCreds, ccdCreds, stuProgsLimitingKeys, acadCredLimitingKeys, completeStatus, includeAcademicCredentials);
                     //merge it with existing list of student academic programs.
                     //if this returns the list of student programs then that becomes our list. 
                     if (credStuProgIds != null && credStuProgIds.Any())
                     {
-                        if (stuProgsLimitingKeys != null && stuProgsLimitingKeys.Any())
+                        if (stuProgsLimitingKeys == null || !stuProgsLimitingKeys.Any())
                         {
                             stuProgsLimitingKeys = credStuProgIds;
                             if (stuProgsLimitingKeys == null || !stuProgsLimitingKeys.Any())
@@ -1309,16 +1359,24 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         else
                             criteria += " AND WITH STPR.START.DATE NE ''";
 
-                        var codeAssoc = (await GetStudentProgramStatusesAsync()).ValsEntityAssociation.FirstOrDefault(v => v.ValActionCode1AssocMember == "3");
-                        //matriculated - Select any STUDENT.PROGRAMS records where the START.DATE is populated and the STPR.CURRENT.STATUS is not one w/ a special processing code of 3.
-                        if (curriculumObjective == CurriculumObjectiveCategory.Matriculated)
+                        var codeAssocs = (await GetStudentProgramStatusesAsync()).ValsEntityAssociation.Where(v => v.ValActionCode1AssocMember == "3");
+                        int index = 0;
+                        foreach (var codeAssoc in codeAssocs)
                         {
-                            criteria += " AND WITH STPR.CURRENT.STATUS NE " + codeAssoc.ValInternalCodeAssocMember;
-                        }
-                        //outcome - Select any STUDENT.PROGRAMS records where the START.DATE is populated and the STPR.CURRENT.STATUS is a code w/ a special processing code of 3.
-                        else
-                        {
-                            criteria += " AND WITH STPR.CURRENT.STATUS EQ " + codeAssoc.ValInternalCodeAssocMember;
+                            //matriculated - Select any STUDENT.PROGRAMS records where the START.DATE is populated and the STPR.CURRENT.STATUS is not one w/ a special processing code of 3.
+                            if (curriculumObjective == CurriculumObjectiveCategory.Matriculated)
+                            {
+                                criteria += " AND WITH STPR.CURRENT.STATUS NE '" + codeAssoc.ValInternalCodeAssocMember + "'" ;
+                            }
+                            //outcome - Select any STUDENT.PROGRAMS records where the START.DATE is populated and the STPR.CURRENT.STATUS is a code w/ a special processing code of 3.
+                            else
+                            {
+                                if (index == 0)
+                                    criteria += " AND WITH STPR.CURRENT.STATUS EQ '" + codeAssoc.ValInternalCodeAssocMember + "'";
+                                else
+                                    criteria += "'" + codeAssoc.ValInternalCodeAssocMember + "'";
+                            }
+                            index++;
                         }
                     }
                     #endregion
@@ -1326,11 +1384,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     #region recruiter/applied
                     if ((curriculumObjective == CurriculumObjectiveCategory.Recruited) || (curriculumObjective == CurriculumObjectiveCategory.Applied))
                     {
-                        //select any STUDENT.PROGRAMS records where STPR.START.DATE is null.
+                        //select any STUDENT.PROGRAMS records where every STPR.START.DATE is null.
                         if (string.IsNullOrEmpty(criteria))
-                            criteria = "WITH STPR.START.DATE EQ ''";
+                            criteria = "WITH EVERY STPR.START.DATE EQ ''";
                         else
-                            criteria += " AND WITH STPR.START.DATE EQ ''";
+                            criteria += " AND WITH EVERY STPR.START.DATE EQ ''";
 
                         var allApplicationStatuses = await GetApplicationStatusesAsync();
                         if (allApplicationStatuses == null)
@@ -1385,7 +1443,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             appliedApplStudentProgramIds = appliedApplStudentProgramIds.Distinct().ToArray();
 
                             // we have to get the entire list of student.programs (using the initial list of limiting keys) to determine which ones do not have an application record.
-                            var allStudentProgramIDs = (await DataReader.SelectAsync("STUDENT.PROGRAMS", initialStuProgsLimitingKeys != null && initialStuProgsLimitingKeys.Any() ? initialStuProgsLimitingKeys.Distinct().ToArray() : null, criteria)).ToList();
+                            var allStudentProgramIDs = (await DataReader.SelectAsync("STUDENT.PROGRAMS", initialStuProgsLimitingKeys != null && initialStuProgsLimitingKeys.Any() ? initialStuProgsLimitingKeys.Distinct().ToArray() : null, criteria + " AND WITH STPR.VALID.PROGRAM NE ''")).ToList();
 
                             var studentProgramsWithoutApplications = allStudentProgramIDs.Except(appliedApplStudentProgramIds);
 
@@ -1404,6 +1462,16 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 #endregion
 
+                #region Default Selection Criteria
+                // Failed Inst Enrollment (WINR) leaves behind orphaned items.  Some items are invalid because
+                // the person record doesn't exist and other items are invalid because the key is invalid (missing program)
+                // This default criteria is set to insure we only select valid STUDENT.PROGRAMS records.
+                if (string.IsNullOrEmpty(criteria))
+                    criteria = "WITH STPR.VALID.PROGRAM NE ''";
+                else
+                    criteria += " AND WITH STPR.VALID.PROGRAM NE ''";
+                #endregion
+
                 return new CacheSupport.KeyCacheRequirements()
                 {
                     limitingKeys = stuProgsLimitingKeys,
@@ -1418,8 +1486,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 throw e;
             }
-        }
-       
+        }      
+
 
         /// <summary>
         /// GetStudentAcademicProgramsPersonFilter.
@@ -1808,17 +1876,27 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         acadProgCriteria += " AND WITH ACPG.CCDS EQ '" + ccdCredential + "'";
                     }
 
-                    if (string.IsNullOrEmpty(acadCredCriteria))
+                    if (includeAcademicCredentials)
                     {
-                        acadCredCriteria += "WITH ACAD.CCD EQ '" + ccdCredential + "'";
-                    }
-                    else
-                    {
-                        acadCredCriteria += " AND WITH ACAD.CCD EQ '" + ccdCredential + "'";
+                        if (string.IsNullOrEmpty(acadCredCriteria))
+                        {
+                            acadCredCriteria += "WITH ACAD.CCD EQ '" + ccdCredential + "'";
+                        }
+                        else
+                        {
+                            acadCredCriteria += " AND WITH ACAD.CCD EQ '" + ccdCredential + "'";
+                        }
                     }
                     if (string.IsNullOrEmpty(ccdCriteria))
                     {
-                        ccdCriteria += string.Concat(progCriteria, " AND WITH STPR.CURRENT.ADDNL.CCDS EQ '" + ccdCredential + "'");
+                        if (includeAcademicCredentials)
+                        {
+                            ccdCriteria += string.Concat(progCriteria, " AND WITH STPR.CURRENT.ADDNL.CCDS EQ '" + ccdCredential + "'");
+                        }
+                        else
+                        {
+                            ccdCriteria += "WITH STPR.CURRENT.ADDNL.CCDS EQ '" + ccdCredential + "'";
+                        }
                     }
                     else
                     {
@@ -1839,13 +1917,16 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         acadProgCriteria += " AND WITH ACPG.DEGREE EQ '" + degreeCredential + "'";
                     }
 
-                    if (includeAcademicCredentials && string.IsNullOrEmpty(acadCredCriteria))
+                    if (includeAcademicCredentials)
                     {
-                        acadCredCriteria += "WITH ACAD.DEGREE EQ '" + degreeCredential + "'";
-                    }
-                    else
-                    {
-                        acadCredCriteria += " AND WITH ACAD.DEGREE EQ '" + degreeCredential + "'";
+                        if (string.IsNullOrEmpty(acadCredCriteria))
+                        {
+                            acadCredCriteria += "WITH ACAD.DEGREE EQ '" + degreeCredential + "'";
+                        }
+                        else
+                        {
+                            acadCredCriteria += " AND WITH ACAD.DEGREE EQ '" + degreeCredential + "'";
+                        }
                     }
                 }
             }
@@ -1889,7 +1970,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                         // Concatenate the list of attributes in the specified range
                         dataToQuery = filteredElements.Aggregate(dataToQuery, (current, element) => current + string.Concat("'", element, "'"));
-                        stuprogQuery = string.Concat(progCriteria, " AND WITH STPR.ACAD.PROGRAM EQ  ", dataToQuery);
+                        if (includeAcademicCredentials)
+                        {
+                            stuprogQuery = string.Concat(progCriteria, " AND WITH STPR.ACAD.PROGRAM EQ  ", dataToQuery);
+                        }
+                        else
+                        {
+                            stuprogQuery = string.Concat("WITH STPR.ACAD.PROGRAM EQ  ", dataToQuery);
+                        }
                         if ((studentProgramIds == null) || (!studentProgramIds.Any()))
                             studentProgramIds = await DataReader.SelectAsync("STUDENT.PROGRAMS", stuProgsLimitingKeys.ToArray(), stuprogQuery);
                         else
@@ -2469,7 +2557,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         // Add ccds 
                         if (stuProg.StprCcdListEntityAssociation != null && stuProg.StprCcdListEntityAssociation.Any())
                         {
-                            foreach (var ccd in stuProg.StprCcdListEntityAssociation)
+                            var stprCCDList = stuProg.StprCcdListEntityAssociation
+                                             .Where(l => l.StprCcdsStartDateAssocMember.HasValue && (!l.StprCcdsEndDateAssocMember.HasValue ||
+                                                        (l.StprCcdsEndDateAssocMember.HasValue && l.StprCcdsEndDateAssocMember.Value >= DateTime.Today)));
+                            foreach (var ccd in stprCCDList)
                             {
                                 studentAcadProgEntity.AddCcds(ccd.StprCcdsAssocMember);
                             }
@@ -2542,14 +2633,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     //throw new RepositoryException(string.Format("Could not build program {0} for student {1}", stuProg.Recordkey.Split('*')[1], stuProg.Recordkey.Split('*')[0]));
                     exception.AddError(
-                       new RepositoryError("Data.Access.Error", ex.Message)
+                       new RepositoryError("Bad.Data", ex.Message)
                        {
                            Id = guid,
                            SourceId = id
                        });
                     //throw new RepositoryException(string.Format("Could not build program {0} for student {1}", stuProg.Recordkey.Split('*')[1], stuProg.Recordkey.Split('*')[0]));
                     exception.AddError(
-                       new RepositoryError("Data.Access.Error", string.Format("Could not build program {0} for student {1}", stuProg.Recordkey.Split('*')[1], stuProg.Recordkey.Split('*')[0]))
+                       new RepositoryError("Bad.Data", string.Format("Could not build program {0} for student {1}", stuProg.Recordkey.Split('*')[1], stuProg.Recordkey.Split('*')[0]))
                        {
                            Id = guid,
                            SourceId = id
@@ -2564,6 +2655,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             return stuAcadPrograms;
         }
-       
+
     }
 }

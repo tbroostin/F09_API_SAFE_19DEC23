@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -16,9 +16,7 @@ using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
-using Ellucian.Web.Http;
 using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
@@ -63,8 +61,15 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
-                AddDataPrivacyContextProperty((await _admissionApplicationSupportingItemStatusesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
-                return await _admissionApplicationSupportingItemStatusesService.GetAdmissionApplicationSupportingItemStatusesAsync(bypassCache);
+                var admissionApplicationSupportingItemStatuses = await _admissionApplicationSupportingItemStatusesService.GetAdmissionApplicationSupportingItemStatusesAsync(bypassCache);
+
+                if (admissionApplicationSupportingItemStatuses != null && admissionApplicationSupportingItemStatuses.Any())
+                {
+                    AddEthosContextProperties(await _admissionApplicationSupportingItemStatusesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _admissionApplicationSupportingItemStatusesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              admissionApplicationSupportingItemStatuses.Select(a => a.Id).ToList()));
+                }
+                return admissionApplicationSupportingItemStatuses;
             }
             catch (KeyNotFoundException e)
             {
@@ -121,7 +126,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
-                AddDataPrivacyContextProperty((await _admissionApplicationSupportingItemStatusesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
+                AddEthosContextProperties(
+                   await _admissionApplicationSupportingItemStatusesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                   await _admissionApplicationSupportingItemStatusesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { guid }));
                 return await _admissionApplicationSupportingItemStatusesService.GetAdmissionApplicationSupportingItemStatusByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)

@@ -47,9 +47,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 effectivePersonId = CurrentUser.PersonId;
             }
-            //To view other's info, logged in user must be a proxy or admin
+
+            //To view other's info, logged in user must be a proxy or admin or leave approver
             else if (!CurrentUser.IsPerson(effectivePersonId) && !(HasProxyAccessForPerson(effectivePersonId, Domain.Base.Entities.ProxyWorkflowConstants.TimeManagementTimeApproval)
-                       || HasPermission(HumanResourcesPermissionCodes.ViewAllTimeHistory)))
+                               || HasPermission(HumanResourcesPermissionCodes.ViewAllTimeHistory) || HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest)))
             {
                 throw new PermissionsException("User does not have permission to view person employment status information");
             }
@@ -58,6 +59,23 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             if (HasPermission(HumanResourcesPermissionCodes.ViewSuperviseeData))
             {
                 var subordinateIds = (await supervisorsRepository.GetSuperviseesBySupervisorAsync(effectivePersonId)).ToList();
+
+                if (subordinateIds == null)
+                {
+                    var message = "Unexpected null person id list returned from supervisors repository";
+                    logger.Error(message);
+                    throw new ApplicationException(message);
+                }
+                if (subordinateIds.Any())
+                {
+                    userAndSubordinateIds = userAndSubordinateIds.Concat(subordinateIds).ToList();
+                }
+            }
+
+            // Supervisees for leave approver
+            if (HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest))
+            {
+                var subordinateIds = (await supervisorsRepository.GetSuperviseesByPrimaryPositionForSupervisorAsync(effectivePersonId)).ToList();
 
                 if (subordinateIds == null)
                 {

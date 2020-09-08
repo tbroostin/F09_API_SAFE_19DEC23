@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -89,5 +89,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public List<ApplicationDiscipline> ApplicationDisciplines { get; set; }
         public List<string> ApplicationCredentials { get; set; }
         public string ApplicationProgramOwner { get; set; }
+        public string EducationalGoal { get; set; }
+        public List<string> CareerGoals { get; set; }
+        public List<string> Influences { get; set; }
     }
 }

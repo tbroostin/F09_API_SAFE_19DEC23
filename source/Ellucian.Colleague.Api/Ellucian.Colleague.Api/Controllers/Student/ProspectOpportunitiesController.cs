@@ -1,4 +1,4 @@
-//Copyright 2019 Ellucian Company L.P. and its affiliates.
+//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -235,6 +235,15 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.ProspectOpportunities> PostProspectOpportunitiesSubmissionsAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.ProspectOpportunitiesSubmissions prospectOpportunities)
         {
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
             if (prospectOpportunities == null)
             {
                 throw CreateHttpResponseException(new IntegrationApiException("Null prospectOpportunities argument",
@@ -250,7 +259,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 var dpList = await _prospectOpportunitiesService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
                 await _prospectOpportunitiesService.ImportExtendedEthosData(await ExtractExtendedData(await _prospectOpportunitiesService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
-                var prospectOpportunitiesReturn = await _prospectOpportunitiesService.CreateProspectOpportunitiesSubmissionsAsync(prospectOpportunities);
+                var prospectOpportunitiesReturn = await _prospectOpportunitiesService.CreateProspectOpportunitiesSubmissionsAsync(prospectOpportunities, bypassCache);
 
                 AddEthosContextProperties(dpList,
                     await _prospectOpportunitiesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { prospectOpportunitiesReturn.Id }));
@@ -305,6 +314,15 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.ProspectOpportunities> PutProspectOpportunitiesSubmissionsAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.ProspectOpportunitiesSubmissions prospectOpportunities)
         {
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
             if (string.IsNullOrEmpty(guid))
             {
                 throw CreateHttpResponseException(new IntegrationApiException("Null guid argument",
@@ -335,7 +353,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
                 var prospectOpportunitiesReturn = await _prospectOpportunitiesService.UpdateProspectOpportunitiesSubmissionsAsync(
                   await PerformPartialPayloadMerge(prospectOpportunities, async () => await _prospectOpportunitiesService.GetProspectOpportunitiesSubmissionsByGuidAsync(guid, true),
-                  dpList, _logger));
+                  dpList, _logger), bypassCache);
 
                 AddEthosContextProperties(dpList,
                     await _prospectOpportunitiesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { guid }));

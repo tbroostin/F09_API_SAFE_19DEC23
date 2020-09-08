@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -48,12 +48,14 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             _logger = logger;
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Retrieves all email types.
         /// </summary>
         /// <returns>All <see cref="Dtos.EmailType">EmailType</see> objects.</returns>
-        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        /// 
+        [HttpGet]
+        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true), EedmResponseFilter]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.EmailType>> GetEmailTypesAsync()
         {
             bool bypassCache = false;
@@ -66,7 +68,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
-                return await _emailTypeService.GetEmailTypesAsync(bypassCache);
+                var emailTypes = await _emailTypeService.GetEmailTypesAsync(bypassCache);
+
+                if (emailTypes != null && emailTypes.Any())
+                {
+                    AddEthosContextProperties(await _emailTypeService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _emailTypeService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              emailTypes.Select(a => a.Id).ToList()));
+                }
+                return emailTypes;
+
             }
             catch (Exception ex)
             {
@@ -75,15 +86,22 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Retrieves an email type by GUID.
         /// </summary>
         /// <returns>An <see cref="Dtos.EmailType">EmailType</see> object.</returns>
+        /// 
+        [HttpGet]
+        [EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.EmailType> GetEmailTypeByIdAsync(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                   await _emailTypeService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                   await _emailTypeService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { id }));
                 return await _emailTypeService.GetEmailTypeByGuidAsync(id);
             }
             catch (Exception ex)

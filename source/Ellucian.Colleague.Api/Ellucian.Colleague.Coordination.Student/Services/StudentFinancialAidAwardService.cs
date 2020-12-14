@@ -421,7 +421,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             try
             {
                 // Get the student financial aid awards domain entity from the repository
-                var studentFinancialAidAwardDomainTuple = await _studentFinancialAidAwardRepository.Get2Async(offset, limit, bypassCache, restricted, unrestrictedFunds, aidYears, criteriaEntity, personFilterIds);
+                var studentFinancialAidAwardDomainTuple = await _studentFinancialAidAwardRepository.Get2Async(offset, limit, bypassCache, restricted, unrestrictedFunds, aidYears, criteriaEntity, personFilterIds, personFilter);
                 studentFinancialAidAwardDomainEntities = studentFinancialAidAwardDomainTuple.Item1;
                 totalRecords = studentFinancialAidAwardDomainTuple.Item2;
             }

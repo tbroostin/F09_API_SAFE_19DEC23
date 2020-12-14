@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -439,6 +439,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             else
                             {
                                 stncTest.StatusCodeSpProcessing = statusCodeAssoc.ValActionCode1AssocMember;
+                                stncTest.StatusCodeSpProcessing2 = statusCodeAssoc.ValActionCode2AssocMember;
                             }
                         }
                         stncTest.StatusDate = stncData.StncStatusDate;

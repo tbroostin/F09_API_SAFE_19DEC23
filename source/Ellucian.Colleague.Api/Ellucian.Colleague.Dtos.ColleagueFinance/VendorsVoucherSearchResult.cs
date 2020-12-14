@@ -52,6 +52,11 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         public string Country { get; set; }
 
         /// <summary>
+        /// Vendor Country Code
+        /// </summary>
+        public string CountryCode { get; set; }
+
+        /// <summary>
         /// Formatted Address
         /// </summary>
         public string FormattedAddress { get; set; }
@@ -75,6 +80,21 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// Flag to differentiate us/canada and non-us/canada address
         /// </summary>
         public bool IsInternationalAddress { get; set; }
+
+        /// <summary>
+        /// Vendor default tax form.
+        /// </summary>
+        public string TaxForm { get; set; }
+
+        /// <summary>
+        /// Vendor default tax form code.
+        /// </summary>
+        public string TaxFormCode { get; set; }
+
+        /// <summary>
+        /// Vendor default tax form location.
+        /// </summary>
+        public string TaxFormLocation { get; set; }
 
     }
 }

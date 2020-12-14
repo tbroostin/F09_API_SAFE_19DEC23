@@ -25,6 +25,7 @@ using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
 using System.Web.Http.Routing;
+using System.Linq;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 {
@@ -629,7 +630,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         public class GetSuperviseesByPrimaryPositionForSupervisorAsyncTests : EmployeeLeaveRequestControllerTests
         {
             private IEnumerable<HumanResourceDemographics> supervisees;
-            
+
             [TestInitialize]
             public void Initialize()
             {
@@ -637,8 +638,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
                 EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
                 loggerMock = new Mock<ILogger>();
                 employeeLeaveRequestServiceMock = new Mock<IEmployeeLeaveRequestService>();
-              
-           
+
+
                 #region Data_SetUp
                 supervisees = new List<HumanResourceDemographics>()
                 {
@@ -659,9 +660,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
                         PreferredName = "Ms. Diya Hulekal"
                     }
                 };
-               
+
                 employeeLeaveRequestServiceMock.Setup(s => s.GetSuperviseesByPrimaryPositionForSupervisorAsync()).ReturnsAsync(new List<Dtos.HumanResources.HumanResourceDemographics>());
-                              
+
                 #endregion
 
                 controllerUnderTest = new EmployeeLeaveRequestController(employeeLeaveRequestServiceMock.Object, loggerMock.Object);
@@ -697,6 +698,88 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             {
                 loggerMock = null;
                 supervisees = null;
+                employeeLeaveRequestServiceMock = null;
+                controllerUnderTest = null;
+            }
+        }
+
+        [TestClass]
+        public class GetLeaveRequestsForTimeEntryAsyncTests : EmployeeLeaveRequestControllerTests
+        {
+            private IEnumerable<LeaveRequest> leaveRequests;
+            DateTime startDate = DateTime.Today;
+            DateTime enddate = DateTime.Today.AddDays(4);
+            string employeeId = "0011560";
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+                loggerMock = new Mock<ILogger>();
+                employeeLeaveRequestServiceMock = new Mock<IEmployeeLeaveRequestService>();
+
+                #region Data_SetUp
+                leaveRequests = new List<LeaveRequest>()
+                {
+
+                        new LeaveRequest() {
+                        Id = "14",
+                        PerLeaveId ="698",
+                        EmployeeId ="0011560",
+                        ApproverId ="0010351",
+                        ApproverName ="Hadrian O. Racz",
+                        StartDate = DateTime.Today,
+                        EndDate = DateTime.Today.AddDays(1),
+                        Status = LeaveStatusAction.Approved,
+                        LeaveRequestDetails = new List<LeaveRequestDetail>()
+                        {
+                            new LeaveRequestDetail() { Id = "39", LeaveDate = DateTime.Today, LeaveHours = 4.00m, LeaveRequestId = "14"},
+                            new LeaveRequestDetail() { Id = "40", LeaveDate = DateTime.Today.AddDays(1), LeaveHours = 8.00m, LeaveRequestId = "14"}
+                        }
+                    }
+                };
+
+
+
+                employeeLeaveRequestServiceMock.Setup(elrs => elrs.GetLeaveRequestsForTimeEntryAsync(startDate, enddate, employeeId)).ReturnsAsync(leaveRequests);
+                employeeLeaveRequestServiceMock.Setup(elrs => elrs.GetLeaveRequestsForTimeEntryAsync(startDate, enddate, "0012458")).Throws(new PermissionsException());
+                employeeLeaveRequestServiceMock.Setup(elrs => elrs.GetLeaveRequestsForTimeEntryAsync(startDate, enddate, "test")).Throws(new Exception());
+                #endregion
+
+                controllerUnderTest = new EmployeeLeaveRequestController(employeeLeaveRequestServiceMock.Object, loggerMock.Object);
+            }
+
+
+            [TestMethod]
+            public async Task GetLeaveRequestsForTimeEntryAsync_MethodExecutesWithoutErrors()
+            {
+
+                var result = await controllerUnderTest.GetLeaveRequestsForTimeEntryAsync(startDate, enddate, employeeId);
+                Assert.IsInstanceOfType(result, typeof(List<LeaveRequest>));
+                Assert.IsNotNull(result);
+                Assert.IsTrue(result.Any());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetLeaveRequestsForTimeEntryAsync_PermissionException()
+            {
+                var result = await controllerUnderTest.GetLeaveRequestsForTimeEntryAsync(startDate, enddate, "0012458");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetLeaveRequestsForTimeEntryAsync_Exception()
+            {
+                var result = await controllerUnderTest.GetLeaveRequestsForTimeEntryAsync(startDate, enddate, "test");
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                loggerMock = null;
+                leaveRequests = null;
                 employeeLeaveRequestServiceMock = null;
                 controllerUnderTest = null;
             }

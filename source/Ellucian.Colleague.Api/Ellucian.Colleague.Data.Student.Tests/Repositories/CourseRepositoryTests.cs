@@ -53,7 +53,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             transInvokerMock = new Mock<IColleagueTransactionInvoker>();
 
             // Build Courses responses used for mocking
-            allCourses =await  new TestCourseRepository().GetAsync();
+            allCourses = await new TestCourseRepository().GetAsync();
             // Build courses dict, response from cache
             allCoursesDict = new Dictionary<string, Course>();
             foreach (var crs in allCourses)
@@ -89,11 +89,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             dataAccessorMock.Setup(acc => acc.ReadRecordAsync<Courses>(It.IsAny<string>(), It.IsAny<bool>())).Returns<string, bool>(
                 (id, repl) => Task.FromResult(coursesResponseData.FirstOrDefault(c => c.Recordkey == id)));
             dataAccessorMock.Setup(acc => acc.ReadRecordAsync<Courses>("COURSES", It.IsAny<string>(), true)).Returns<string>(
-                id => Task.FromResult( coursesResponseData.FirstOrDefault(c => c.Recordkey == id)));
+                id => Task.FromResult(coursesResponseData.FirstOrDefault(c => c.Recordkey == id)));
 
         }
 
-      
+
 
         [TestCleanup]
         public void Cleanup()
@@ -109,7 +109,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         [TestMethod]
         public async Task CourseRepository_GetNonCacheAsync()
-        { 
+        {
             string empty = string.Empty;
             var actuals = await courseRepo.GetNonCacheAsync(empty, empty, empty, empty, empty, empty, empty, empty, empty, empty);
 
@@ -145,10 +145,10 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         public async Task CourseRepository_GetAsync_WithCriteria()
         {
             string empty = string.Empty;
-            string[] ids = coursesResponseData.Where(i => i.CrsSubject.Equals("HIST")).Select(c =>  c.Recordkey).ToArray();
+            string[] ids = coursesResponseData.Where(i => i.CrsSubject.Equals("HIST")).Select(c => c.Recordkey).ToArray();
             var courseList = coursesResponseData.Where(i => i.CrsSubject.Equals("HIST", StringComparison.OrdinalIgnoreCase)).ToList();
             System.Collections.ObjectModel.Collection<Courses> courses = new Collection<Courses>(courseList);
-            
+
             dataAccessorMock.Setup(acc => acc.SelectAsync("COURSES", "WITH CRS.SUBJECT EQ 'HIST'")).Returns(Task.FromResult(ids));
             dataAccessorMock.Setup<Task<Collection<Courses>>>(acc => acc.BulkReadRecordAsync<Courses>("COURSES", ids, true)).Returns(Task.FromResult(courses));
 
@@ -204,7 +204,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         [TestMethod]
         public async Task CourseRepository_Get_All_ReturnsAllCourses()
-       {
+        {
 
             var courses = await courseRepo.GetAsync();
             Assert.IsTrue(courses.Count() > 40);
@@ -363,7 +363,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Course course = await courseRepo.GetAsync(courseId);
             Course checkCourse = allCourses.Where(c => c.Id == courseId).First();
             Assert.AreEqual(checkCourse.EndDate, course.EndDate);
-        }      
+        }
 
         [TestMethod]
         public async Task CourseRepository_Get_Requisites()
@@ -492,7 +492,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(rest.SessionCycle, courseRestriction.SessionCycle);
                 Assert.AreEqual(rest.YearlyCycle, courseRestriction.YearlyCycle);
             }
-            
+
         }
 
         [TestMethod]
@@ -530,7 +530,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Assert.IsTrue(courses.Count() >= 40);
 
             // Verify that the course2 item was added to the cache after it was read from the repository
-            cacheProviderMock.Verify(m => m.Add(cacheKey, It.IsAny<Dictionary<string, Course>>(), It.IsAny<CacheItemPolicy>(), null),Times.Never);
+            cacheProviderMock.Verify(m => m.Add(cacheKey, It.IsAny<Dictionary<string, Course>>(), It.IsAny<CacheItemPolicy>(), null), Times.Never);
         }
 
         [TestMethod]
@@ -549,7 +549,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             var courses = await courseRepo.GetAsync();
             Assert.IsTrue(courses.Count() >= 40);
             // Verify that Get was called to get the courses from cache
-           cacheProviderMock.Verify(m => m.Get(cacheKey, null));
+            cacheProviderMock.Verify(m => m.Get(cacheKey, null));
         }
 
 
@@ -754,7 +754,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         {
             // One course (MATH 350) has two course equates, but the courses it is equated to do not have same equate codes so they are not equates
             // Arrange--Arrange response from the repository
-            var allCourses =await  new TestCourseRepository().GetAsync();
+            var allCourses = await new TestCourseRepository().GetAsync();
             var coursesResponse = BuildCoursesResponse(allCourses);
             dataAccessorMock.Setup(acc => acc.SelectAsync("COURSES", "")).Returns(Task.FromResult(coursesResponse.Select(c => c.Recordkey).ToArray()));
             dataAccessorMock.Setup<Task<Collection<Courses>>>(acc => acc.BulkReadRecordAsync<Courses>("COURSES", It.IsAny<string[]>(), true)).Returns(Task.FromResult(coursesResponse));
@@ -774,7 +774,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         {
             // MATH 491 is an equate for one other course (MATH 371), but MATH 371 has two equates so they are not equates
             // Arrange--Set up response from the repository
-            var allCourses =await  new TestCourseRepository().GetAsync();
+            var allCourses = await new TestCourseRepository().GetAsync();
             var coursesResponse = BuildCoursesResponse(allCourses);
             dataAccessorMock.Setup(acc => acc.SelectAsync("COURSES", "")).Returns(Task.FromResult(coursesResponse.Select(c => c.Recordkey).ToArray()));
             dataAccessorMock.Setup<Task<Collection<Courses>>>(acc => acc.BulkReadRecordAsync<Courses>("COURSES", It.IsAny<string[]>(), true)).Returns(Task.FromResult(coursesResponse));
@@ -837,7 +837,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         {
             Collection<Courses> emptyResponse = new Collection<Courses>();
             dataAccessorMock.Setup<Task<Collection<Courses>>>(acc => acc.BulkReadRecordAsync<Courses>("COURSES", It.IsAny<string[]>(), true)).Returns(Task.FromResult(emptyResponse));
-            var courses = await courseRepo.GetCoursesByIdAsync(new List<string>() {"Junk1","Junk2"});
+            var courses = await courseRepo.GetCoursesByIdAsync(new List<string>() { "Junk1", "Junk2" });
             Assert.AreEqual(0, courses.Count());
         }
 
@@ -851,20 +851,16 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         #region CourseContstructorExceptionTests
         // Removed constructor throw for now, was breaking self service.  Will
         // revisit with 1.25 error standards.
-
         // Test to prove the constructor throw is gone:
-
         [TestMethod]
-        public async Task CourseRepository_GetCoursesWithBadCourseAsync_Success()
-        {
-            var courses = await courseRepo.GetAsync();
-            var course99 = courses.FirstOrDefault(c => c.Id == "7439");
-            var course100 = courses.FirstOrDefault(c => c.Id == "7440");
-            Assert.IsNotNull(course99);
-            Assert.IsNull(course100);
-        }
-
-
+        //public async Task CourseRepository_GetCoursesWithBadCourseAsync_Success()
+        //{
+        //    var courses = await courseRepo.GetAsync();
+        //    var course99 = courses.FirstOrDefault(c => c.Id == "7439");
+        //    var course100 = courses.FirstOrDefault(c => c.Id == "7440");
+        //    Assert.IsNotNull(course99);
+        //    Assert.IsNull(course100);
+        //}
         //[TestMethod]
         //[ExpectedException(typeof(RepositoryException))]
         //public async Task CourseRepository_Get_Bad_date()
@@ -1035,7 +1031,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             // Set up repo response for related requisite requirements
             dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<AcadReqmts>("ACAD.REQMTS", It.IsAny<string[]>(), true)).Returns(Task.FromResult(new Collection<AcadReqmts>()));
-            
+
             // Set up course equates response
             var courseEquatesResponse = BuildCourseEquateCodesResponse();
             dataAccessorMock.Setup<Task<Collection<CourseEquateCodes>>>(acc => acc.BulkReadRecordAsync<CourseEquateCodes>("COURSE.EQUATE.CODES", "", true)).Returns(Task.FromResult(courseEquatesResponse));
@@ -1054,14 +1050,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             // Construct course repository
             courseRepo = new CourseRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettingsMock);
 
-           
+
 
             return courseRepo;
         }
 
         private CourseRepository BuildInvalidCourseRepository()
         {
-           // var transFactoryMock = new Mock<IColleagueTransactionFactory>();
+            // var transFactoryMock = new Mock<IColleagueTransactionFactory>();
             apiSettingsMock = new ApiSettings("null");
 
             // Set up data accessor for mocking 
@@ -1075,7 +1071,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             // Set up repo response for "all" courses requests
             Exception expectedFailure = new Exception("fail");
             dataAccessorMock.Setup<Task<Collection<Courses>>>(acc => acc.BulkReadRecordAsync<Courses>("COURSES", It.IsAny<string[]>(), true)).Throws(expectedFailure);
-          //  dataAccessorMock.Setup<Task<Collection<Courses>>>(acc => acc.BulkReadRecordAsync<Courses>("COURSES", It.IsAny<string[]>(), true)).Throws<Exception>();
+            //  dataAccessorMock.Setup<Task<Collection<Courses>>>(acc => acc.BulkReadRecordAsync<Courses>("COURSES", It.IsAny<string[]>(), true)).Throws<Exception>();
             // Cache Mock
             var localCacheMock = new Mock<ObjectCache>();
             // Cache Provider Mock
@@ -1142,7 +1138,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                         switch (course.Id)
                         {
                             case "186":
-                                repoCrs.ApprovalStatusEntityAssociation.Add(new CoursesApprovalStatus() { CrsApprovalAgencyIdsAssocMember= ca.ApprovingPersonId });
+                                repoCrs.ApprovalStatusEntityAssociation.Add(new CoursesApprovalStatus() { CrsApprovalAgencyIdsAssocMember = ca.ApprovingPersonId });
                                 break;
                             default:
                                 repoCrs.ApprovalStatusEntityAssociation.Add(new CoursesApprovalStatus(ca.StatusCode, ca.ApprovingPersonId, ca.ApprovingAgencyId, ca.Date, ca.StatusDate));
@@ -1206,7 +1202,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 if (course.Requisites != null)
                 {
                     var coreqs = course.Requisites.Where(r => r.CompletionOrder == Domain.Student.Entities.RequisiteCompletionOrder.Concurrent);
-                   
+
                     repoCrs.CourseCoreqsEntityAssociation = new List<CoursesCourseCoreqs>();
                     foreach (var coreq in coreqs)
                     {
@@ -1231,7 +1227,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // local credit type
                 repoCrs.CrsCredType = course.LocalCreditType;
-                
+
                 // Location Cycle restrictions - Course 46 has this in the TestCourseRepository
                 repoCrs.CourseLocationCyclesEntityAssociation = new List<CoursesCourseLocationCycles>();
                 foreach (var clc in course.LocationCycleRestrictions)
@@ -1386,7 +1382,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             loggerMock = new Mock<ILogger>();
 
             // Build Courses responses used for mocking
-            allCourses =await  new TestCourseRepository().GetAsync();
+            allCourses = await new TestCourseRepository().GetAsync();
             // Build courses dict, response from cache
             allCoursesDict = new Dictionary<string, Course>();
             foreach (var crs in allCourses)
@@ -1473,7 +1469,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             var course = await convertedCourseRepo.GetAsync("87");
             Assert.AreEqual(0, course.Requisites.Count());
         }
-        
+
         /// <summary>
         /// The following method builds the same course repository but is assuming the requisites in Colleague
         /// are in the new format (have been converted) and there are requirements that match up.
@@ -1568,7 +1564,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 repoCrs.CrsStartDate = course.StartDate;
                 repoCrs.CrsEndDate = course.EndDate;
                 repoCrs.CrsBillingCred = course.BillingCredits;
-                
+
                 repoCrs.CrsReqs = new List<string>();
                 if (course.Requisites.Count() > 0)
                 {

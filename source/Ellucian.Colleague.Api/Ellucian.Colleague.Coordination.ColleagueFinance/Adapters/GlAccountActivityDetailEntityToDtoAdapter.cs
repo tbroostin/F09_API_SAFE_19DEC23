@@ -44,6 +44,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
             glAccountDto.MemoActuals = Source.MemoActualsAmount;
             glAccountDto.EstimatedOpeningBalance = Source.EstimatedOpeningBalance;
             glAccountDto.ClosingYearAmount = Source.ClosingYearAmount;
+            glAccountDto.JustificationNotes = Source.JustificationNotes;
+            glAccountDto.ShowJustificationNotes = Source.ShowJustificationNotes;
             
             // Copy all of the GL transactions
             var glTransactionAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.GlTransaction, Dtos.ColleagueFinance.GlTransaction>(adapterRegistry, logger);

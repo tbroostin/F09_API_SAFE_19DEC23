@@ -86,6 +86,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             private readonly int offset = 0;
             private readonly int limit = 100;
 
+            private Mock<IPersonRepository> _personRepositoryMock;
             private Mock<IReferenceDataRepository> _referenceRepositoryMock;
             private Mock<ILogger> _loggerMock;
             private Mock<IAdapterRegistry> _adapterRegistryMock;
@@ -101,6 +102,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 _personExternalEducationCredentialsRepoMock = new Mock<IPersonExternalEducationCredentialsRepository>();
                 _institutionsRepoMock = new Mock<IInstitutionRepository>();
+                _personRepositoryMock = new Mock<IPersonRepository>();
                 _referenceRepositoryMock = new Mock<IReferenceDataRepository>();
                 _adapterRegistryMock = new Mock<IAdapterRegistry>();
                 _loggerMock = new Mock<ILogger>();
@@ -160,7 +162,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     }
                 };
 
-                _personExternalEducationCredentialsRepoMock.Setup(repo => repo.GetExternalEducationCredentialsAsync(offset, limit, It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>()))
+                _personExternalEducationCredentialsRepoMock.Setup(repo => repo.GetExternalEducationCredentialsAsync(offset, limit, It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<string>(),  It.IsAny<string>(), It.IsAny<bool>()))
                     .ReturnsAsync(new Tuple<IEnumerable<Domain.Base.Entities.ExternalEducation>, int>(_personExternalEducationCredentialsCollection, 3));
 
                 _personExternalEducationCredentialsRepoMock.Setup(repo => repo.GetExternalEducationCredentialsByGuidAsync(It.IsAny<string>()))
@@ -174,6 +176,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     new Domain.Base.Entities.OtherHonor("f138e083-00eb-49e9-a329-4e9be6789354","HD","With High Distinction")
                 };
                 _referenceRepositoryMock.Setup(repo => repo.GetOtherHonorsAsync(It.IsAny<bool>())).ReturnsAsync(_academicHonors);
+
+                foreach (var honor in _academicHonors)
+                {
+                    _referenceRepositoryMock.Setup(repo => repo.GetOtherHonorsGuidAsync(honor.Code)).ReturnsAsync(honor.Guid);
+                }
+
 
                 _otherCertifications = new List<Domain.Base.Entities.OtherCcd>()
                 {
@@ -209,7 +217,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 #endregion
 
                 _personExternalEducationCredentialsService = new PersonExternalEducationCredentialsService(_personExternalEducationCredentialsRepoMock.Object,
-                    _institutionsRepoMock.Object, _referenceRepositoryMock.Object, _adapterRegistryMock.Object, currentUserFactory,
+                    _institutionsRepoMock.Object, _referenceRepositoryMock.Object, _personRepositoryMock.Object, _adapterRegistryMock.Object, currentUserFactory,
                     _roleRepositoryMock.Object, _configurationRepoMock.Object, _loggerMock.Object);
             }
 
@@ -228,7 +236,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task PersonExternalEducationCredentialsService_GetPersonExternalEducationCredentialsAsync()
             {
-                var results = await _personExternalEducationCredentialsService.GetPersonExternalEducationCredentialsAsync(offset, limit, string.Empty, true);
+                var results = await _personExternalEducationCredentialsService.GetPersonExternalEducationCredentialsAsync(offset, limit, string.Empty, null, "", true);
                 Assert.IsTrue(results.Item1 is IEnumerable<Dtos.PersonExternalEducationCredentials>);
                 Assert.AreEqual(results.Item2, 3);
                 Assert.IsNotNull(results);
@@ -237,7 +245,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task PersonExternalEducationCredentialsSaervice_GetPersonExternalEducationCredentialsAsync_Count()
             {
-                var results = await _personExternalEducationCredentialsService.GetPersonExternalEducationCredentialsAsync(offset, limit, string.Empty, true);
+                var results = await _personExternalEducationCredentialsService.GetPersonExternalEducationCredentialsAsync(offset, limit, string.Empty, null, "", true);
                 Assert.AreEqual(results.Item2, 3);
             }
 
@@ -245,7 +253,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             public async Task PersonExternalEducationCredentialsService_GetPersonExternalEducationCredentialsAsync_Properties()
             {
                 var result =
-                    (await _personExternalEducationCredentialsService.GetPersonExternalEducationCredentialsAsync(offset, limit, string.Empty, true)).Item1.FirstOrDefault(x => x.Id == personExternalEducationCredentialsGuid);
+                    (await _personExternalEducationCredentialsService.GetPersonExternalEducationCredentialsAsync(offset, limit, string.Empty,null, "", true)).Item1.FirstOrDefault(x => x.Id == personExternalEducationCredentialsGuid);
 
                 Assert.IsNotNull(result.Id);
                 Assert.IsNotNull(result.Credential);
@@ -256,7 +264,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 var expectedResults = _personExternalEducationCredentialsCollection.FirstOrDefault(c => c.Guid == personExternalEducationCredentialsGuid);
                 var actualResult =
-                    (await _personExternalEducationCredentialsService.GetPersonExternalEducationCredentialsAsync(offset, limit, string.Empty, true)).Item1.FirstOrDefault(x => x.Id == personExternalEducationCredentialsGuid);
+                    (await _personExternalEducationCredentialsService.GetPersonExternalEducationCredentialsAsync(offset, limit, string.Empty, null, "", true)).Item1.FirstOrDefault(x => x.Id == personExternalEducationCredentialsGuid);
 
                 Assert.AreEqual(expectedResults.Guid, actualResult.Id);
                 Assert.AreEqual(expectedResults.AcadRankPercent, actualResult.ClassPercentile);
@@ -335,6 +343,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             private readonly int limit = 100;
 
             private Mock<IReferenceDataRepository> _referenceRepositoryMock;
+            private Mock<IPersonRepository> _personRepositoryMock;
             private Mock<ILogger> _loggerMock;
             private Mock<IAdapterRegistry> _adapterRegistryMock;
             private ICurrentUserFactory currentUserFactory;
@@ -350,6 +359,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 _personExternalEducationCredentialsRepoMock = new Mock<IPersonExternalEducationCredentialsRepository>();
                 _institutionsRepoMock = new Mock<IInstitutionRepository>();
+                _personRepositoryMock = new Mock<IPersonRepository>();
                 _referenceRepositoryMock = new Mock<IReferenceDataRepository>();
                 _adapterRegistryMock = new Mock<IAdapterRegistry>();
                 _loggerMock = new Mock<ILogger>();
@@ -417,7 +427,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 _personExternalEducationCredentialsRepoMock.Setup(repo => repo.GetExternalEducationCredentialsIdFromGuidAsync(It.IsAny<string>()))
                     .ReturnsAsync("1");
 
-                _personExternalEducationCredentialsRepoMock.Setup(repo => repo.GetExternalEducationCredentialsAsync(offset, limit, It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>()))
+                _personExternalEducationCredentialsRepoMock.Setup(repo => repo.GetExternalEducationCredentialsAsync(offset, limit, It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
                     .ReturnsAsync(new Tuple<IEnumerable<Domain.Base.Entities.ExternalEducation>, int>(_personExternalEducationCredentialsCollection, 3));
 
                 _personExternalEducationCredentialsRepoMock.Setup(repo => repo.GetExternalEducationCredentialsByGuidAsync(It.IsAny<string>()))
@@ -437,6 +447,11 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     new Domain.Base.Entities.OtherHonor("f138e083-00eb-49e9-a329-4e9be6789354","HD","With High Distinction")
                 };
                 _referenceRepositoryMock.Setup(repo => repo.GetOtherHonorsAsync(It.IsAny<bool>())).ReturnsAsync(_academicHonors);
+                foreach (var honor in _academicHonors)
+                {
+                    _referenceRepositoryMock.Setup(repo => repo.GetOtherHonorsGuidAsync(honor.Code)).ReturnsAsync(honor.Guid);
+                }
+
 
                 _otherCertifications = new List<Domain.Base.Entities.OtherCcd>()
                 {
@@ -445,6 +460,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     new Domain.Base.Entities.OtherCcd("3ba3fe5c-6410-4d08-bee4-2c2609646230","GED","High School Equivalency") { CredentialTypeID = "1" }
                 };
                 _referenceRepositoryMock.Setup(repo => repo.GetOtherCcdsAsync(It.IsAny<bool>())).ReturnsAsync(_otherCertifications);
+                
+                foreach (var cert in _otherCertifications)
+                {
+                    _referenceRepositoryMock.Setup(repo => repo.GetOtherCcdsGuidAsync(cert.Code)).ReturnsAsync(cert.Guid);
+                }
+
+
 
                 _ccdTypes = new List<Domain.Base.Entities.CcdType>()
                 {
@@ -476,7 +498,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 #endregion
 
                 _personExternalEducationCredentialsService = new PersonExternalEducationCredentialsService(_personExternalEducationCredentialsRepoMock.Object,
-                    _institutionsRepoMock.Object, _referenceRepositoryMock.Object, _adapterRegistryMock.Object, currentUserFactory,
+                    _institutionsRepoMock.Object, _referenceRepositoryMock.Object, _personRepositoryMock.Object, _adapterRegistryMock.Object, currentUserFactory,
                     _roleRepositoryMock.Object, _configurationRepoMock.Object, _loggerMock.Object);
             }
 
@@ -536,6 +558,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 currentUserFactory = null;
                 _roleRepositoryMock = null;
                 _configurationRepoMock = null;
+                _personRepositoryMock = null;
             }
 
             [TestMethod]
@@ -597,7 +620,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 _institution = new Domain.Base.Entities.Institution("0000043", Domain.Base.Entities.InstType.HighSchool);
                 _institutionsRepoMock.Setup(repo => repo.GetInstitutionAsync(It.IsAny<string>())).ReturnsAsync(_institution);                
                 _personExternalEducationCredentialsService = new PersonExternalEducationCredentialsService(_personExternalEducationCredentialsRepoMock.Object,
-                    _institutionsRepoMock.Object, _referenceRepositoryMock.Object, _adapterRegistryMock.Object, currentUserFactory,
+                    _institutionsRepoMock.Object, _referenceRepositoryMock.Object, _personRepositoryMock.Object, _adapterRegistryMock.Object, currentUserFactory,
                     _roleRepositoryMock.Object, _configurationRepoMock.Object, _loggerMock.Object);
 
                 var personExternalEducationCredential = _personExternalEducationCredentialsDtos.FirstOrDefault(x => x.Id == personExternalEducationCredentialsGuid);

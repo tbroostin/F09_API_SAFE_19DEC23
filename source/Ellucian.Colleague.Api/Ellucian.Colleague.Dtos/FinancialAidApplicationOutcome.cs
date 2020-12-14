@@ -1,4 +1,4 @@
-﻿// Copyright 2017=2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017=2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
@@ -36,12 +36,15 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>
 
         [DataMember(Name = "methodology", EmitDefaultValue = false)]
+        [FilterProperty("criteria")]
         public FinancialAidApplicationsMethodology Methodology { get; set; }
 
         /// <summary>
         /// The financial aid application.
         /// </summary>
         [JsonProperty("application", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
+        [JsonConverter(typeof(GuidObject2FilterConverter))]
         public GuidObject2 Application { get; set; }
 
         /// <summary>

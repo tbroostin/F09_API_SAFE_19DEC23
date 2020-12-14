@@ -27,6 +27,10 @@ using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.EthosExtend;
+using Ellucian.Web.Http.Filters;
+using System.Web.Http.Controllers;
+using System.Web.Routing;
+using System.Web.Http.Routing;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 {
@@ -55,7 +59,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             private const string BulkRepresentation = "application/vnd.hedtech.integration.bulk-requests.v1+json";
 
             ILogger _logger = new Mock<ILogger>().Object;
-
+            QueryStringFilter _queryStringFilter;
+            QueryStringFilterFilter _queryStringFilterFilter;
 
             #region Test Context
 
@@ -84,6 +89,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             {
                 LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
                 EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                _queryStringFilterFilter = new QueryStringFilterFilter("criteria", typeof(Dtos.BulkLoadGet));
+                _queryStringFilter = new QueryStringFilter("criteria", "{'requestorTrackingId':'" +
+                    BulkLoadRequestGuid + "'}");
 
                 _bulkLoadRequestServiceMock = new Mock<IBulkLoadRequestService>();
                 _bulkLoadRequestService = _bulkLoadRequestServiceMock.Object;
@@ -138,7 +147,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 
                 
                 _bulkLoadRequestServiceMock.Setup(s => s.CreateBulkLoadRequestAsync(_bulkLoadRequestDtoFirstCall, "permissionCode")).ReturnsAsync(_bulkLoadRequestGoodReturn);
-                _bulkLoadRequestServiceMock.Setup(s => s.GetBulkLoadRequestStatus(BulkLoadRequestGuid)).ReturnsAsync(_bulkLoadGet);
+                _bulkLoadRequestServiceMock.Setup(s => s.GetBulkLoadRequestStatus(It.IsAny<string>(), BulkLoadRequestGuid, It.IsAny<string>())).ReturnsAsync(_bulkLoadGet);
 
                 _bulkLoadRequestController = new BulkLoadRequestController(_bulkLoadRequestService, _logger)
                 {
@@ -146,12 +155,40 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 };
                 _bulkLoadRequestController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
 
+                
+
+               
+
             }
 
             [TestMethod]
             public async Task GetBulkStatus()
             {
-                var bulkRequestReturn = await _bulkLoadRequestController.GetBulkLoadRequestStatusAsync(BulkLoadRequestGuid);
+                var controllerContext = _bulkLoadRequestController.ControllerContext;
+                var actionDescriptor = _bulkLoadRequestController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object; 
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+
+                _context.ActionArguments.Add("criteria", "{'requestorTrackingId':'" + BulkLoadRequestGuid + "'}");
+
+                await _queryStringFilterFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _bulkLoadRequestController.Request.Properties.Add(
+                    string.Format("FilterObject{0}", "criteria"),
+                    new Dtos.BulkLoadGet{ RequestorTrackingId = BulkLoadRequestGuid });
+
+                //controller = "BulkLoadRequest", action = "GetBulkLoadRequestStatusAsync", permissionCode = "VIEW.LEDGER.ACTIVITIES",
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary();
+                routeValueDict.Add("controller", "BulkLoadRequest");
+                routeValueDict.Add("action", "GetBulkLoadRequestStatusAsync");
+                routeValueDict.Add("permissionCode", "VIEW.LEDGER.ACTIVITIES");
+
+                HttpRoute route = new HttpRoute("ledger-activities/{guid}", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+
+                _bulkLoadRequestController.Request.SetRouteData(data);
+
+               var bulkRequestReturn = await _bulkLoadRequestController.GetBulkLoadRequestStatusAsync(_queryStringFilter);
                 Assert.AreEqual(bulkRequestReturn, _bulkLoadGet);
             }
 
@@ -159,56 +196,56 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             [ExpectedException(typeof(HttpResponseException))]
             public async Task StudentTranscriptGradesController_GetStudentTranscriptGradesByGuidAsync_Exception()
             {
-                _bulkLoadRequestServiceMock.Setup(x => x.GetBulkLoadRequestStatus(It.IsAny<string>())).Throws<Exception>();
-                await _bulkLoadRequestController.GetBulkLoadRequestStatusAsync(string.Empty);
+                _bulkLoadRequestServiceMock.Setup(x => x.GetBulkLoadRequestStatus(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Throws<Exception>();
+                await _bulkLoadRequestController.GetBulkLoadRequestStatusAsync(_queryStringFilter);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task StudentTranscriptGradesController_GetStudentTranscriptGradesByGuid_KeyNotFoundException()
             {
-                _bulkLoadRequestServiceMock.Setup(x => x.GetBulkLoadRequestStatus(It.IsAny<string>())).Throws<KeyNotFoundException>();
-                await _bulkLoadRequestController.GetBulkLoadRequestStatusAsync(BulkLoadRequestGuid);
+                _bulkLoadRequestServiceMock.Setup(x => x.GetBulkLoadRequestStatus(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Throws<KeyNotFoundException>();
+                await _bulkLoadRequestController.GetBulkLoadRequestStatusAsync(_queryStringFilter);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task StudentTranscriptGradesController_GetStudentTranscriptGradesByGuid_PermissionsException()
             {
-                _bulkLoadRequestServiceMock.Setup(x => x.GetBulkLoadRequestStatus(It.IsAny<string>())).Throws<PermissionsException>();
-                await _bulkLoadRequestController.GetBulkLoadRequestStatusAsync(BulkLoadRequestGuid);
+                _bulkLoadRequestServiceMock.Setup(x => x.GetBulkLoadRequestStatus(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Throws<PermissionsException>();
+                await _bulkLoadRequestController.GetBulkLoadRequestStatusAsync(_queryStringFilter);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task StudentTranscriptGradesController_GetStudentTranscriptGradesByGuid_ArgumentException()
             {
-                _bulkLoadRequestServiceMock.Setup(x => x.GetBulkLoadRequestStatus(It.IsAny<string>())).Throws<ArgumentException>();
-                await _bulkLoadRequestController.GetBulkLoadRequestStatusAsync(BulkLoadRequestGuid);
+                _bulkLoadRequestServiceMock.Setup(x => x.GetBulkLoadRequestStatus(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Throws<ArgumentException>();
+                await _bulkLoadRequestController.GetBulkLoadRequestStatusAsync(_queryStringFilter);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task StudentTranscriptGradesController_GetStudentTranscriptGradesByGuid_RepositoryException()
             {
-                _bulkLoadRequestServiceMock.Setup(x => x.GetBulkLoadRequestStatus(It.IsAny<string>())).Throws<RepositoryException>();
-                await _bulkLoadRequestController.GetBulkLoadRequestStatusAsync(BulkLoadRequestGuid);
+                _bulkLoadRequestServiceMock.Setup(x => x.GetBulkLoadRequestStatus(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Throws<RepositoryException>();
+                await _bulkLoadRequestController.GetBulkLoadRequestStatusAsync(_queryStringFilter);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task StudentTranscriptGradesController_GetStudentTranscriptGradesByGuid_IntegrationApiException()
             {
-                _bulkLoadRequestServiceMock.Setup(x => x.GetBulkLoadRequestStatus(It.IsAny<string>())).Throws<IntegrationApiException>();
-                await _bulkLoadRequestController.GetBulkLoadRequestStatusAsync(BulkLoadRequestGuid);
+                _bulkLoadRequestServiceMock.Setup(x => x.GetBulkLoadRequestStatus(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Throws<IntegrationApiException>();
+                await _bulkLoadRequestController.GetBulkLoadRequestStatusAsync(_queryStringFilter);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task StudentTranscriptGradesController_GetStudentTranscriptGradesByGuid_Exception()
             {
-                _bulkLoadRequestServiceMock.Setup(x => x.GetBulkLoadRequestStatus(It.IsAny<string>())).Throws<Exception>();
-                await _bulkLoadRequestController.GetBulkLoadRequestStatusAsync(BulkLoadRequestGuid);
+                _bulkLoadRequestServiceMock.Setup(x => x.GetBulkLoadRequestStatus(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Throws<Exception>();
+                await _bulkLoadRequestController.GetBulkLoadRequestStatusAsync(_queryStringFilter);
             }
 
             [TestCleanup]

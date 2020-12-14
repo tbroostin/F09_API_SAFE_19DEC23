@@ -1,4 +1,4 @@
-﻿//Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using System;
 using System.Collections.Generic;
@@ -19,11 +19,23 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 CfWebReqAllowMiscVendor = true,
                 CfWebReqDesiredDays = 7,
                 CfWebReqGlRequired = true,
+                CfWebPoAllowMiscVendor = true,
+                CfWebPoGlRequired = true,
                 DefaultAPTypeCode = "AP",
+                RequestPaymentDefaults= new VoucherWebConfiguration()
+                {
+                    AllowMiscVendor = true,
+                    DefaultAPTypeCode = "AP2",
+                    GlRequiredForVoucher = true,
+                    IsInvoiceEntryRequired = false,
+                    IsVoucherApprovalNeeded = true
+                },
                 DefaultTaxCodes = new List<string> {"GS" ,"PS", "FL1"},
                 PurchasingDefaults = new PurchasingDefaults()
                    {
-                       DefaultShipToCode= "MC"
+                       DefaultShipToCode= "MC",
+                       IsPOApprovalNeeded = true,
+                       IsRequisitionApprovalNeeded = false
                    }
                 });
 

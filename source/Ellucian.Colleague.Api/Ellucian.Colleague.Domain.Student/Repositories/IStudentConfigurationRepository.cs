@@ -1,5 +1,6 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Student.Entities;
+using Ellucian.Colleague.Domain.Student.Entities.InstantEnrollment;
 using System;
 using System.Threading.Tasks;
 
@@ -62,5 +63,22 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// Retrieves the student profile configurations asynchronously
         /// </summary>
         Task<StudentProfileConfiguration> GetStudentProfileConfigurationAsync();
+
+        /// <summary>
+        /// Retrieves the configuration information needed for Colleague Self-Service instant enrollment
+        /// </summary>
+        Task<InstantEnrollmentConfiguration> GetInstantEnrollmentConfigurationAsync();
+
+        /// <summary>
+        /// Retrieves the course catalog configuration asynchronously
+        /// </summary>
+        /// <returns>CourseCatalogConfiguration entity</returns>
+        Task<CourseCatalogConfiguration> GetCourseCatalogConfiguration3Async();
+
+        /// <summary>
+        /// Gets the unofficial transcript configuration asynchronously.
+        /// </summary>
+        /// <returns>UnofficialTranscriptConfiguration entity</returns>
+        Task<UnofficialTranscriptConfiguration> GetUnofficialTranscriptConfigurationAsync();
     }
 }

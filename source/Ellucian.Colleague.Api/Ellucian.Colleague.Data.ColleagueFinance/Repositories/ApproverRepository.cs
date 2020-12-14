@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Threading.Tasks;
@@ -6,16 +6,20 @@ using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Data.Colleague;
-using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
 using System.Linq;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
+using Ellucian.Colleague.Data.Base.Repositories;
+using Ellucian.Web.Http.Configuration;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
-    public class ApproverRepository : BaseColleagueRepository, IApproverRepository
+    public class ApproverRepository : PersonBaseRepository, IApproverRepository
     {
         /// <summary>
         /// This constructor instantiates an approver repository object.
@@ -23,8 +27,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <param name="cacheProvider">Pass in an ICacheProvider object.</param>
         /// <param name="transactionFactory">Pass in an IColleagueTransactionFactory object.</param>
         /// <param name="logger">Pass in an ILogger object.</param>
-        public ApproverRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
-            : base(cacheProvider, transactionFactory, logger)
+        public ApproverRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger,ApiSettings settings)
+            : base(cacheProvider, transactionFactory, logger, settings)
         {
         }
 
@@ -241,5 +245,158 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             return approverName;
         }
+
+        /// <summary>
+        /// Get the list of NextApprover based on keyword search.
+        /// </summary>
+        /// <param name="searchCriteria"> The search criteria containing keyword for NextApprover search.</param>
+        /// <returns> The NextApprover search results</returns> 
+        public async Task<IEnumerable<NextApprover>> QueryNextApproverByKeywordAsync(string searchCriteria)
+        {
+            List<NextApprover> nextApproverEntities = new List<NextApprover>();
+            if (string.IsNullOrEmpty(searchCriteria))
+                throw new ArgumentNullException("searchCriteria", "search criteria required to query");
+
+            // Remove extra blank spaces
+            var tempString = searchCriteria.Trim();
+            Regex regEx = new Regex(@"\s+");
+            searchCriteria = regEx.Replace(tempString, @" ");
+
+            List<string> filteredNextApprover = new List<string>();
+
+            filteredNextApprover = await ApplyFilterCriteria(searchCriteria, filteredNextApprover);
+
+            if (!filteredNextApprover.Any())
+                return null;
+
+            filteredNextApprover = filteredNextApprover.Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+
+            var approverData = await DataReader.BulkReadRecordAsync<Approvals>("APPROVALS", filteredNextApprover.ToArray());
+            
+
+            if (approverData != null && approverData.Any()) { 
+            
+                foreach (var id in filteredNextApprover)
+                {
+                    Approvals approvalsDataContact = approverData.FirstOrDefault(sd => sd.Recordkey == id);
+                    
+
+                    try
+                    {
+                        string initiatorName = string.Empty;
+                        NextApprover approver = new NextApprover(approvalsDataContact.Recordkey);
+                        string approverName = await GetApproverNameForIdAsync(approver.NextApproverId);
+                        approver.NextApproverPersonId = await GetApproverPersonIdForIdAsync(approver.NextApproverId);
+                        approver.SetNextApproverName(approverName);
+                        nextApproverEntities.Add(approver);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex.Message);
+                    }
+                }
+
+            }
+
+            return nextApproverEntities.AsEnumerable();
+        }
+
+        private async Task<List<string>> ApplyFilterCriteria(string searchKey, List<string> filteredNextApprover)
+        {
+            long personId = 0;
+            string nextApproverIdQuery = "";
+            string opersIdQuery = "";
+            List<string> filteredOpers = new List<string>();
+
+            // serach criteria is number
+            if (long.TryParse(searchKey, out personId))
+            {
+                if (searchKey.Count() > 1)
+                {
+                    opersIdQuery = string.Format("WITH SYS.PERSON.ID LIKE ..." + searchKey + "...");
+                    filteredOpers = await ExecuteQueryStatement("UT.OPERS", filteredNextApprover, opersIdQuery);
+
+                    if (filteredOpers != null && filteredOpers.Any())
+                    {
+                        var approvalsQueryCriteria = string.Join(" ", filteredOpers.Select( x => string.Format("'{0}'",x)));
+                        approvalsQueryCriteria = "WITH APPROVALS.ID EQ " + approvalsQueryCriteria;
+
+                        filteredNextApprover = await ExecuteQueryStatement("APPROVALS", filteredNextApprover, approvalsQueryCriteria);
+                    }
+                }
+            }
+            else
+            {
+                // try to fetch next approver from next Approver Id if search key does not have "," or whitespace
+                if (!(searchKey.Contains(",") || searchKey.Contains(" ")))
+                {
+                    // As Approval Ids are always in Uppercase , make searchkey to upper case
+                    nextApproverIdQuery = string.Format("WITH APPROVALS.ID EQ '" + searchKey.ToUpper() + "'");
+                    filteredNextApprover = await ExecuteQueryStatement("APPROVALS", filteredNextApprover, nextApproverIdQuery);
+                }
+
+                // If there is no result in approval then checck in person file
+                if (filteredNextApprover == null || !(filteredNextApprover.Any()))
+                {
+                    // Otherwise, we are doing a name search of initiator - parse the search string into name parts
+                    List<string> names = CommentsUtility.FormatStringToNames(searchKey);
+                    filteredNextApprover = await GetNextApprovalIdsFromPerson(names[0], names[1], names[2]);
+                }
+            }
+
+            return filteredNextApprover;
+        }
+
+        private async Task<List<string>> GetNextApprovalIdsFromPerson(string lastName, string firstName, string middleName)
+        {
+            List<string> filteredNextApprover = new List<string>();
+
+            var filteredPersonIds = await SearchByNameAsync(lastName, firstName, middleName);
+            
+            var personQueryCriteria = string.Join(" ", filteredPersonIds.Select(x => string.Format("'{0}'", x)));
+            personQueryCriteria = "WITH SYS.PERSON.ID EQ " + personQueryCriteria;
+
+            if (filteredPersonIds != null && filteredPersonIds.Any())
+                filteredNextApprover = await ExecuteQueryStatement("UT.OPERS", new List<string>(), personQueryCriteria);
+            return filteredNextApprover;
+        }
+
+        private async Task<List<string>> ExecuteQueryStatement(string FileName, List<string> filteredApprovers, string queryCriteria)
+        {
+            string[] filteredByQueryCriteria = null;
+            if (string.IsNullOrEmpty(queryCriteria))
+                return null;
+            if (filteredApprovers != null && filteredApprovers.Any())
+            {
+                filteredByQueryCriteria = await DataReader.SelectAsync(FileName, filteredApprovers.ToArray(), queryCriteria);
+            }
+            else
+            {
+                filteredByQueryCriteria = await DataReader.SelectAsync(FileName, queryCriteria);
+            }
+            return filteredByQueryCriteria.ToList();
+        }
+
+        /// <summary>
+        /// Get an approver person id for given an approver ID.
+        /// </summary>
+        /// <param name="approverId">The approver ID.</param>
+        /// <returns>An approver person id or empty string.</returns>
+        private async Task<String> GetApproverPersonIdForIdAsync(string approverId)
+        {
+            string approverPersonId = string.Empty;
+            // Obtain the person id for the approver ID. In Colleague it comes from OPERS.
+            var opersContract = await DataReader.ReadRecordAsync<Opers>("UT.OPERS", approverId);
+            if (opersContract != null)
+            {
+                if (!string.IsNullOrEmpty(opersContract.SysPersonId))
+                {
+                    approverPersonId = opersContract.SysPersonId;
+                }
+            }
+            return approverPersonId;
+        }
+
+
     }
 }

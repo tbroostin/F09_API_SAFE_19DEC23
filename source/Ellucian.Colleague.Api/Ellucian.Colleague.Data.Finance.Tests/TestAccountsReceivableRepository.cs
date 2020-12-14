@@ -1,4 +1,5 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Domain.Finance.Repositories;
 using System;
 using System.Collections.Generic;
@@ -7,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Finance.Entities;
+using Ellucian.Colleague.Domain.Student.Entities.InstantEnrollment;
 
 namespace Ellucian.Colleague.Domain.Finance.Tests
 {
@@ -235,6 +237,10 @@ namespace Ellucian.Colleague.Domain.Finance.Tests
         {
             throw new NotImplementedException();
         }
+        public Task<IEnumerable<PersonMatchResult>> GetMatchingPersonResultsInstantEnrollmentAsync(PersonMatchCriteriaInstantEnrollment criteria)
+        {
+            throw new NotImplementedException();
+        }
 
         public Task<IEnumerable<string>> GetMatchingPersonsAsync(Person person)
         {
@@ -361,6 +367,11 @@ namespace Ellucian.Colleague.Domain.Finance.Tests
             throw new NotImplementedException();
         }
 
+        public Task<IEnumerable<PersonUserName>> GetPersonUserNamesAsync(string[] personIds)
+        {
+            throw new NotImplementedException();
+        }
+
         public ReceivableInvoice GetReceivableInvoice(string id)
         {
             throw new NotImplementedException();
@@ -455,6 +466,11 @@ namespace Ellucian.Colleague.Domain.Finance.Tests
         }
 
         public Task<Tuple<IEnumerable<string>, int>> GetFilteredPerson3GuidsAsync(int offset, int limit, bool bypassCache, PersonFilterCriteria personFilterCriteria, string personFilter)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetPersonIdForNonCorpOnly(string personGuid)
         {
             throw new NotImplementedException();
         }

@@ -280,7 +280,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup<FaSysParams>(acc => acc.ReadRecord<FaSysParams>("ST.PARMS", "FA.SYS.PARAMS", true)).Returns(faSystemParamsResponseData);
                 
                 var faSuiteYears = new List<string>() { year };
-                var tuple = await actualRepository.GetAsync(0, 1, false, null, null, faSuiteYears);
+                var tuple = await actualRepository.GetAsync(0, 1, false, null, null, null, null, faSuiteYears);
 
                 Assert.IsNotNull(tuple);
                 var fafsa = tuple.Item1.ToList();
@@ -414,7 +414,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
 
                 var faSuiteYears = new List<string>() { year };
-                var tuple = await actualRepository.GetAsync(0, 1, false, null, null, faSuiteYears);
+                var tuple = await actualRepository.GetAsync(0, 1, false, null, null, null, null, faSuiteYears);
 
                 Assert.IsNotNull(tuple);
                 var fafsa = tuple.Item1.ToList();
@@ -527,7 +527,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
 
                 var faSuiteYears = new List<string>() { year };
-                var tuple = await actualRepository.GetAsync(0, 1, false, null, null, faSuiteYears);
+                var tuple = await actualRepository.GetAsync(0, 1, false, null, null, null, null, faSuiteYears);
 
                 Assert.IsNotNull(tuple);
                 var fafsa = tuple.Item1.ToList();
@@ -617,7 +617,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
 
                 var faSuiteYears = new List<string>() { year };
-                await actualRepository.GetAsync(0, 1, false, null, null, faSuiteYears);
+                await actualRepository.GetAsync(0, 1, false, null, null, null, null, faSuiteYears);
 
             }
 
@@ -721,7 +721,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>())).ReturnsAsync(null);
 
                 var faSuiteYears = new List<string>() { year };
-                var tuple = await actualRepository.GetAsync(0, 1, false, null, null, faSuiteYears);
+                var tuple = await actualRepository.GetAsync(0, 1, false, null, null, null, null, faSuiteYears);
 
                 Assert.IsNotNull(tuple);
                 var fafsa = tuple.Item1.ToList();
@@ -848,7 +848,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup<FaSysParams>(acc => acc.ReadRecord<FaSysParams>("ST.PARMS", "FA.SYS.PARAMS", true)).Returns(faSystemParamsResponseData);
 
                 var faSuiteYears = new List<string>() { year };
-                var tuple = await actualRepository.GetAsync(0, 1, false, null, "2017", faSuiteYears);
+                var tuple = await actualRepository.GetAsync(0, 1, false, null, "2017", null, null, faSuiteYears);
 
                 Assert.IsNotNull(tuple);
                 var fafsa = tuple.Item1.ToList();
@@ -941,7 +941,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup<FaSysParams>(acc => acc.ReadRecord<FaSysParams>("ST.PARMS", "FA.SYS.PARAMS", true)).Returns(faSystemParamsResponseData);
 
                 var faSuiteYears = new List<string>() { year };
-                var tuple = await actualRepository.GetAsync(0, 1, false, null, "2014", faSuiteYears);
+                var tuple = await actualRepository.GetAsync(0, 1, false, null, "2014", null, null, faSuiteYears);
                 
                 var count = tuple.Item2;                
                 Assert.AreEqual(0, count);
@@ -1033,7 +1033,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup<FaSysParams>(acc => acc.ReadRecord<FaSysParams>("ST.PARMS", "FA.SYS.PARAMS", true)).Returns(faSystemParamsResponseData);
 
                 var faSuiteYears = new List<string>() { year };
-                var tuple = await actualRepository.GetAsync(0, 1, false, "0002020", null, faSuiteYears);
+                var tuple = await actualRepository.GetAsync(0, 1, false, "0002020", null, null, null, faSuiteYears);
                 
                 Assert.IsNotNull(tuple);
                 var fafsa = tuple.Item1.ToList();
@@ -1156,7 +1156,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
 
                 var faSuiteYears = new List<string>() { year };
-                var tuple = await actualRepository.GetAsync(0, 1, false, "0000001", null, faSuiteYears);
+                var tuple = await actualRepository.GetAsync(0, 1, false, "0000001", null, null, null, faSuiteYears);
 
                 var count = tuple.Item2;
                 Assert.AreEqual(0, count);
@@ -1247,7 +1247,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup<FaSysParams>(acc => acc.ReadRecord<FaSysParams>("ST.PARMS", "FA.SYS.PARAMS", true)).Returns(faSystemParamsResponseData);
 
                 var faSuiteYears = new List<string>() { year };
-                var tuple = await actualRepository.GetAsync(0, 1, false, null, null, faSuiteYears);
+                var tuple = await actualRepository.GetAsync(0, 1, false, null, null, null, null, faSuiteYears);
             }
         }
     }

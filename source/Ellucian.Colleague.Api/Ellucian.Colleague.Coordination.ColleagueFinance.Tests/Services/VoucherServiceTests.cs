@@ -1536,6 +1536,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 WarningOccured = false
             };
             mockVoucherRepository.Setup(r => r.CreateVoucherAsync(voucherCreateUpdateRequestEntity)).ReturnsAsync(voucherCreateUpdateResponse);
+
+
+
         }
         #endregion
 
@@ -1644,6 +1647,84 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var voidVoucherDtos = await service2.VoidVoucherAsync(abc);
 
             Assert.IsNotNull(voidVoucherDtos);
+        }
+
+        #endregion
+
+        #region "GetVouchersByVendorAndInvoiceNoAsync"
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetVouchersByVendorAndInvoiceNoAsync_ArgumentNullException()
+        {
+            await service2.GetVouchersByVendorAndInvoiceNoAsync(null, null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetVouchersByVendorAndInvoiceNoAsync_VendorisNull_ArgumentNullException()
+        {
+            await service2.GetVouchersByVendorAndInvoiceNoAsync(null, "1234");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetVouchersByVendorAndInvoiceNoAsync_InvoicNoIsNull_ArgumentNullException()
+        {
+            await service2.GetVouchersByVendorAndInvoiceNoAsync("0001234", null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetVouchersByVendorAndInvoiceNoAsync_EmptyCriteria_ArgumentNullException()
+        {
+            await service2.GetVouchersByVendorAndInvoiceNoAsync(string.Empty, string.Empty);
+        }
+        
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetVouchersByVendorAndInvoiceNoAsync_PermissionsException()
+        {
+            List<Domain.Entities.Role> roles = new List<Domain.Entities.Role>()
+                    {
+                        new Domain.Entities.Role(1,"VIEW.REQ")
+                    };
+
+            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(roles);
+
+            var invoiceNumber = "IN12345";
+            var vendorId = "0001234";
+            await service2.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNumber);
+        }
+
+        [TestMethod]
+        public async Task GetVouchersByVendorAndInvoiceNoAsync_RepositoryReturnsNull()
+        {
+            var invoiceNumber = "1234567";
+            var vendorId = "0000111";
+
+            GeneralLedgerAccountStructure accountStructure = await testGeneralLedgerConfigurationRepository.GetAccountStructureAsync();
+            this.mockGlConfigurationRepository.Setup(repo => repo.GetAccountStructureAsync()).Returns(Task.FromResult(accountStructure));
+
+            this.mockVoucherRepository.Setup(repo => repo.GetVouchersByVendorAndInvoiceNoAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
+
+
+            var voucher2Dtos = await service2.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNumber);
+
+            Assert.IsNotNull(voucher2Dtos);
+            Assert.IsTrue(voucher2Dtos.ToList().Count == 0);
+        }
+
+        [TestMethod]
+        public async Task GetVouchersByVendorAndInvoiceNoAsync_Success()
+        {
+            var invoiceNumber = "IN12345";
+            var vendorId = "0001234";
+
+            var voucher2Dtos = await service.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNumber);
+
+            Assert.IsNotNull(voucher2Dtos);
+            Assert.IsTrue(voucher2Dtos.ToList().Count > 0);
         }
 
         #endregion

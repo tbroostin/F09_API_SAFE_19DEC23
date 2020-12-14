@@ -2,9 +2,11 @@
 using Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance;
+using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -17,7 +19,7 @@ using System.Threading.Tasks;
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 {
     [TestClass]
-    public class LedgerActivityServiceTests_V10
+    public class LedgerActivityServiceTests_V11
     {
         [TestClass]
         public class LedgerActivityServiceTests_GET : GeneralLedgerCurrentUser
@@ -33,7 +35,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             private Mock<ILogger> loggerMock;
             private Mock<IAdapterRegistry> adapterRegistryMock;
             private Mock<IConfigurationRepository> configurationRepositoryMock;
-
+         
             private GeneralLedgerUserAllAccounts currentUserFactory;
 
             private LedgerActivityService ledgerActivityService;
@@ -62,6 +64,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             public void Initialize()
             {
                 ledgerActivityRepositoryMock = new Mock<ILedgerActivityRepository>();
+                
                 generalLedgerConfigurationRepositoryMock = new Mock<IGeneralLedgerConfigurationRepository>();
                 referenceDataRepositoryMock = new Mock<IColleagueFinanceReferenceDataRepository>();
                 roleRepositoryMock = new Mock<IRoleRepository>();
@@ -70,7 +73,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 configurationRepositoryMock = new Mock<IConfigurationRepository>();
                 currentUserFactory = new GeneralLedgerCurrentUser.GeneralLedgerUserAllAccounts();
 
-                ledgerActivityService = new LedgerActivityService(ledgerActivityRepositoryMock.Object, generalLedgerConfigurationRepositoryMock.Object,
+                ledgerActivityService = new LedgerActivityService(ledgerActivityRepositoryMock.Object,
+                     generalLedgerConfigurationRepositoryMock.Object,
                     referenceDataRepositoryMock.Object, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
 
                 InitializeTestData();
@@ -95,7 +99,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             private void InitializeTestData()
             {
-                ledgerActivity = new Domain.ColleagueFinance.Entities.GeneralLedgerActivity(guid, "1*2", "desc", DateTime.Today, new DateTime(2016, 8, 20), 100, 1000)
+                ledgerActivity = new Domain.ColleagueFinance.Entities.GeneralLedgerActivity(guid, "11_00_01_00_00000_10110*2", "desc", DateTime.Today, new DateTime(2016, 8, 20), 0, 1000)
                 {
                     GlaSource = "AB*2",
                     HostCountry = "USA",
@@ -149,7 +153,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                         GlaAccountId = guid,
                         GlaCorpFlag = "Y"
                     },
-                    new Domain.ColleagueFinance.Entities.GeneralLedgerActivity("1a59eed8-5fe7-4120-b1cf-f23266b9e876", "3", "desc", DateTime.Today, new DateTime(2015, 9, 20), 100, 1000)
+                    new Domain.ColleagueFinance.Entities.GeneralLedgerActivity("1a59eed8-5fe7-4120-b1cf-f23266b9e876", "3", "desc", DateTime.Today, new DateTime(2015, 9, 20), null, 1000)
                     {
                         GlaSource = "AA*3",
                         HostCountry = "UK",
@@ -202,16 +206,34 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 ledgerActivityRepositoryMock.Setup(l => l.GetGlaFyrAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), 
                     It.IsAny<string>())).ReturnsAsync(tupleResult);
                 generalLedgerConfigurationRepositoryMock.Setup(g => g.GetAccountStructureAsync()).ReturnsAsync(accountStructure);
+
+                generalLedgerConfigurationRepositoryMock.Setup(g => g.GetClassConfigurationAsync()).ReturnsAsync(
+                    new Domain.ColleagueFinance.Entities.GeneralLedgerClassConfiguration("GL.CLASS",
+                    new List<string> { "5"}, new List<string> { "2" }, new  List<string> { "1" },  new List<string> { "4"},
+                            new List<string> { "3"} )
+                    { 
+                        GlClassLength = 1, GlClassStartPosition = 18
+                    });
+
             }
 
             #endregion
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task LedgerActivitiesService_GetLedgerActivitiesAsync_PermissionsException()
             {
-                roleRepositoryMock.Setup(r => r.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
-                await ledgerActivityService.GetLedgerActivitiesAsync(0, 2, "", "", "", "");
+                try
+                {
+                    roleRepositoryMock.Setup(r => r.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
+                    await ledgerActivityService.GetLedgerActivitiesAsync(0, 2, "", "", "", "");
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, ex.Errors[0].StatusCode);
+                    throw;
+                }
             }
 
             [TestMethod]
@@ -265,25 +287,27 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
             public async Task LedgerActivitiesService_GetLedgerActivitiesAsync_FiscalYears_With_Empty_FiscalStartMonth()
             {
                 fiscalYears = new List<Domain.ColleagueFinance.Entities.FiscalYear>() { new Domain.ColleagueFinance.Entities.FiscalYear(guid, "2015") { } };
 
                 InitializeMock(true);
 
-                await ledgerActivityService.GetLedgerActivitiesAsync(0, 2, "", "", "", "2017-08-27", true);
+                var result = await ledgerActivityService.GetLedgerActivitiesAsync(0, 2, "", "", "", "2017-08-27", true);
+                Assert.IsNotNull(result);
+                Assert.AreEqual(result.Item2, 0);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
             public async Task LedgerActivitiesService_GetLedgerActivitiesAsync_FiscalYears_With_Empty_FiscalYear()
             {
                 fiscalYears = new List<Domain.ColleagueFinance.Entities.FiscalYear>() { new Domain.ColleagueFinance.Entities.FiscalYear(guid, "2015") { FiscalStartMonth = 8 } };
 
                 InitializeMock(true);
 
-                await ledgerActivityService.GetLedgerActivitiesAsync(0, 2, "", "", "", "2015-08-27", true);
+                var result = await ledgerActivityService.GetLedgerActivitiesAsync(0, 2, "", "", "", "2015-08-27", true);
+                Assert.IsNotNull(result);
+                Assert.AreEqual(result.Item2, 0);
             }
 
 
@@ -302,7 +326,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetLedgerActivitiesAsync_EntityToDto_Invalid_LedgerCategoryEnum()
             {
                 domainLedgerActivities.FirstOrDefault().GlaSource = "AB*5";
@@ -310,7 +334,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetLedgerActivitiesAsync_EntityToDto_Invalid_DocumentType()
             {
                 domainLedgerActivities.FirstOrDefault().GlaSource = "BB*2";
@@ -318,7 +342,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetLedgerActivitiesAsync_EntityToDto_TransactionDate_Null()
             {
                 domainLedgerActivities.FirstOrDefault().TransactionDate = null;
@@ -344,15 +368,24 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task LedgerActivitiesService_GetLedgerActivityByGuidAsync_PermissionException()
             {
-                roleRepositoryMock.Setup(r => r.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
-                await ledgerActivityService.GetLedgerActivityByGuidAsync(guid);
+                try
+                {
+                    roleRepositoryMock.Setup(r => r.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
+                    await ledgerActivityService.GetLedgerActivityByGuidAsync(guid);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, ex.Errors[0].StatusCode);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetLedgerActivityByGuidAsync_PermissionException_From_Repository()
             {
                 ledgerActivityRepositoryMock.Setup(l => l.GetGlaFyrByIdAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
@@ -360,8 +393,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
-            public async Task GetLedgerActivityByGuidAsync_InvalidOperationException_From_Repository()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task GetLedgerActivityByGuidAsync_IntegrationApiException_From_Repository()
             {
                 ledgerActivityRepositoryMock.Setup(l => l.GetGlaFyrByIdAsync(It.IsAny<string>())).ThrowsAsync(new InvalidOperationException());
                 await ledgerActivityService.GetLedgerActivityByGuidAsync(guid);
@@ -374,7 +407,97 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 Assert.IsNotNull(result);
                 Assert.AreEqual(result.Id, guid);
+                Assert.AreEqual(result.LedgerType, Dtos.EnumProperties.LedgerActivityLedgerType.General);
             }
+
+
+            [TestMethod]
+            public async Task LedgerActivitiesService_GetLedgerActivityByGuidAsync_LedgerActivityLedgerType_General_Assett()
+            {
+                var ledgerActivity2 = new Domain.ColleagueFinance.Entities.GeneralLedgerActivity(guid,
+                 "11_00_01_00_00000_10110", "desc", DateTime.Today, new DateTime(2016, 8, 20), null, 1000)
+                {
+                    GlaSource = "AB*2",
+                    HostCountry = "USA",
+                    GlaAccountId = guid
+                };
+
+               // entity = await _ledgerActivityRepository.GetGlaFyrByIdAsync(guid);
+                ledgerActivityRepositoryMock.Setup(l => l.GetGlaFyrByIdAsync(It.IsAny<string>())).ReturnsAsync(ledgerActivity2);
+
+                
+                
+                var result = await ledgerActivityService.GetLedgerActivityByGuidAsync(guid);
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(result.Id, guid);
+                Assert.AreEqual(result.LedgerType, Dtos.EnumProperties.LedgerActivityLedgerType.General);
+            }
+
+            [TestMethod]
+            public async Task LedgerActivitiesService_GetLedgerActivityByGuidAsync_LedgerActivityLedgerType_General_Liability()
+            {
+                var ledgerActivity2 = new Domain.ColleagueFinance.Entities.GeneralLedgerActivity(guid,
+                 "11_00_01_00_00000_40110", "desc", DateTime.Today, new DateTime(2016, 8, 20), null, 1000)
+                {
+                    GlaSource = "AB*2",
+                    HostCountry = "USA",
+                    GlaAccountId = guid
+                };
+
+                ledgerActivityRepositoryMock.Setup(l => l.GetGlaFyrByIdAsync(It.IsAny<string>())).ReturnsAsync(ledgerActivity2);
+
+                var result = await ledgerActivityService.GetLedgerActivityByGuidAsync(guid);
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(result.Id, guid);
+                Assert.AreEqual(result.LedgerType, Dtos.EnumProperties.LedgerActivityLedgerType.General);
+            }
+            [TestMethod]
+            public async Task LedgerActivitiesService_GetLedgerActivityByGuidAsync_LedgerActivityLedgerType_Operating_Revenue()
+            {
+               var  ledgerActivity2 = new Domain.ColleagueFinance.Entities.GeneralLedgerActivity(guid, 
+                   "11_00_01_00_00000_20110", "desc", DateTime.Today, new DateTime(2016, 8, 20), 0, 1000)
+                {
+                    GlaSource = "AB*2",
+                    HostCountry = "USA",
+                    GlaAccountId = guid
+                };
+
+                ledgerActivityRepositoryMock.Setup(l => l.GetGlaFyrByIdAsync(It.IsAny<string>())).ReturnsAsync(ledgerActivity2);
+
+                var result = await ledgerActivityService.GetLedgerActivityByGuidAsync(guid);
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(result.Id, guid);
+                Assert.AreEqual(result.LedgerType, Dtos.EnumProperties.LedgerActivityLedgerType.Operating);
+                Assert.AreEqual(result.Amount.Value, 1000);
+                Assert.AreEqual(result.Type, Dtos.EnumProperties.LedgerActivityType.Credit);
+
+            }
+
+            [TestMethod]
+            public async Task LedgerActivitiesService_GetLedgerActivityByGuidAsync_LedgerActivityLedgerType_Operating_Expense()
+            {
+                var ledgerActivity2 = new Domain.ColleagueFinance.Entities.GeneralLedgerActivity(guid,
+                    "11_00_01_00_00000_50110", "desc", DateTime.Today, new DateTime(2016, 8, 20), 0, 1000)
+                {
+                    GlaSource = "AB*2",
+                    HostCountry = "USA",
+                    GlaAccountId = guid
+                };
+
+                ledgerActivityRepositoryMock.Setup(l => l.GetGlaFyrByIdAsync(It.IsAny<string>())).ReturnsAsync(ledgerActivity2);
+
+                var result = await ledgerActivityService.GetLedgerActivityByGuidAsync(guid);
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(result.Id, guid);
+                Assert.AreEqual(result.LedgerType, Dtos.EnumProperties.LedgerActivityLedgerType.Operating);
+                Assert.AreEqual(result.Amount.Value, 1000);
+                Assert.AreEqual(result.Type, Dtos.EnumProperties.LedgerActivityType.Credit);
+            }
+
         }
     }
 }

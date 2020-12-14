@@ -17,7 +17,7 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
             IEnumerable<string> awardYears, Domain.Student.Entities.StudentFinancialAidAward criteriaEntity = null);
 
         Task<Tuple<IEnumerable<StudentFinancialAidAward>, int>> Get2Async(int offset, int limit, bool bypassCache, bool restricted, IEnumerable<string> unrestrictedFunds,
-           IEnumerable<string> awardYears, Domain.Student.Entities.StudentFinancialAidAward criteriaEntity = null, IEnumerable<string> personFilterKeys = null);
+           IEnumerable<string> awardYears, Domain.Student.Entities.StudentFinancialAidAward criteriaEntity = null, IEnumerable<string> personFilterKeys = null, string personFilter = null);
 
         Task<IEnumerable<string>> GetNotAwardedCategoriesAsync();
     }

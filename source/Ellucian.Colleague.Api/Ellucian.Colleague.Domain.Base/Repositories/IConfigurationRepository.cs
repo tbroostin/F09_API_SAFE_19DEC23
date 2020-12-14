@@ -1,4 +1,5 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Entities;
 using System;
@@ -30,20 +31,6 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="integrationConfigurationId">Integration Configuration ID</param>
         /// <returns>An <see cref="IntegrationConfiguration">integration configuration</see></returns>
         Task<IntegrationConfiguration> GetIntegrationConfiguration(string integrationConfigurationId);
-
-        /// <summary>
-        /// Gets the configuration consent paragraphs for tax forms.
-        /// </summary>
-        /// <param name="taxFormId">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
-        /// <returns><see cref="TaxFormConfiguration"/>Cconsent and withheld paragraphs for the tax form</see></returns>
-        Task<TaxFormConfiguration> GetTaxFormConsentConfigurationAsync(TaxForms taxFormId);
-
-        /// <summary>
-        /// Gets the configuration availability dates for tax forms.
-        /// </summary>
-        /// <param name="taxFormId">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
-        /// <returns>Availability dates for the tax form</returns>
-        Task<TaxFormConfiguration> GetTaxFormAvailabilityConfigurationAsync(TaxForms taxFormId);
 
         /// <summary>
         /// Gets the User profile configuration.
@@ -103,8 +90,18 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="resourceVersionNumber">version number of ther resource</param>
         /// <param name="extendedSchemaResourceId">extended schema identifier</param>
         /// <param name="resournceIds">IEnumerable of the ids for the resources in guid form</param>
+        /// <param name="reportEthosApiErrors">Flag to determine if we should throw an exception on Extended Errors.</param>
+        /// <param name="bypassCache">Flag to indicate if we should bypass the cache and read directly from disk.</param>
         /// <returns>List with all of the extended data if aavailable. Returns an empty list if none available or none configured</returns>
-        Task<IEnumerable<EthosExtensibleData>> GetExtendedEthosDataByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, IEnumerable<string> resournceIds, bool bypassCache = false);
+        Task<IEnumerable<EthosExtensibleData>> GetExtendedEthosDataByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, IEnumerable<string> resournceIds, bool reportEthosApiErrors = false, bool bypassCache = false);
+
+        ///// <summary>
+        ///// Gets all of the Ethos Extensiblity settings stored on EDM.EXT.VERSIONS
+        ///// </summary>
+        ///// <param name="bypassCache">bool to determine if cache should be bypassed</param>
+        ///// <returns>List of DataContracts.EdmExtVersions</returns>
+        //Task<IEnumerable<EdmExtVersions>> GetEthosExtensibilityConfiguration(bool bypassCache = false);
+
 
         /// <summary>
         /// Gets the extended configuration available on a resource, returns null if there are none
@@ -116,13 +113,37 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, bool bypassCache = false);
 
         /// <summary>
+        /// Return the default version for an extension used in Stand Alone API builder.
+        /// </summary>
+        /// <param name="resourceName"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        Task<string> GetEthosExtensibilityResourceDefaultVersion(string resourceName, bool bypassCache = false);
+
+        /// <summary>
+        /// Gets the extended configuration available on a resource, returns null if there are none
+        /// </summary>
+        /// <param name="resourceName">name of the resource (api) </param>
+        /// <returns> extended configuration if available. Returns null if none available or none configured</returns>
+        Task<EthosApiConfiguration> GetEthosApiConfigurationByResource(string resourceName, bool bypassCache = false);
+
+
+        /// <summary>
+        /// Gets all of the Ethos Extensiblity settings stored on EDM.EXT.VERSIONS
+        /// </summary>
+        /// <param name="bypassCache">bool to determine if cache should be bypassed</param>
+        /// <returns>List of Domain.Base.Entities.EthosExtensibleData</returns>
+        Task<IEnumerable<Domain.Base.Entities.EthosExtensibleData>> GetEthosExtensibilityConfigurationEntities(bool customOnly = true, bool bypassCache = false);
+
+
+        /// <summary>
         /// Checks if the user making the API call is the EMA user based on the user settings on the EMA configuration
         /// </summary>
         /// <param name="userName"></param>
         /// <param name="bypassCache"></param>
         /// <returns>True if EMA user, false if not</returns>
         Task<bool> IsThisTheEmaUser(string userName, bool bypassCache);
-        
+
         /// <summary>
         /// Add/submit a new backup configuration record to the Colleague DB
         /// </summary>
@@ -163,5 +184,53 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// </summary>
         /// <returns>Session Configuration entity</returns>
         Task<SessionConfiguration> GetSessionConfigurationAsync();
+
+
+        ///////////////////////////////////////////////////////////////////////////////////
+        ///                                                                             ///
+        ///                               CF Team                                       ///                                                                             
+        ///                         TAX INFORMATION VIEWS                               ///
+        ///           TAX FORMS CONFIGURATION, CONSENTs, STATEMENTs, PDFs               ///
+        ///                                                                             ///
+        ///////////////////////////////////////////////////////////////////////////////////
+
+        #region CF Views
+
+        /// <summary>
+        /// Gets the configuration consent paragraphs for tax forms.
+        /// </summary>
+        /// <param name="taxForm">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
+        /// <returns><see cref="TaxFormConfiguration2"/>Cconsent and withheld paragraphs for the tax form</see></returns>
+        Task<TaxFormConfiguration2> GetTaxFormConsentConfiguration2Async(string taxForm);
+
+        /// <summary>
+        /// Gets the configuration availability dates for tax forms.
+        /// </summary>
+        /// <param name="taxForm">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
+        /// <returns>Availability dates for the tax form</returns>
+        Task<TaxFormConfiguration2> GetTaxFormAvailabilityConfiguration2Async(string taxForm);
+
+
+        #region OBSOLETE METHODS
+
+        /// <summary>
+        /// Gets the configuration consent paragraphs for tax forms.
+        /// </summary>
+        /// <param name="taxFormId">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
+        /// <returns><see cref="TaxFormConfiguration"/>Cconsent and withheld paragraphs for the tax form</see></returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use GetTaxFormConsentConfiguration2Async instead.")]
+        Task<TaxFormConfiguration> GetTaxFormConsentConfigurationAsync(TaxForms taxFormId);
+
+        /// <summary>
+        /// Gets the configuration availability dates for tax forms.
+        /// </summary>
+        /// <param name="taxFormId">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
+        /// <returns>Availability dates for the tax form</returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use GetTaxFormAvailabilityConfiguration2Async instead.")]
+        Task<TaxFormConfiguration> GetTaxFormAvailabilityConfigurationAsync(TaxForms taxFormId);
+
+        #endregion
+
+        #endregion
     }
 }

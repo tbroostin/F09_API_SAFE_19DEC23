@@ -25,7 +25,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 {  "4",     "BA.PSYC plan",              "0000896", "1"},
                 {  "5",     "MATH.BS plan",              "0000896", "1"},
                 {"802",     "MATH.BS plan",             "00004002", "16"},
-                {"808",     "MATH.BS plan",             "00004008", "96"}
+                {"808",     "MATH.BS plan",             "00004008", "96"},
+                {"809",     "lang   plan",             "0016301", "1"}
                 };
 
             for (int i = 0; i < planData.Length / 4; i++)
@@ -63,19 +64,22 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                                    {"808","2009/S1"},
                                    {"808","2009/FA"},
                                    {"808","2010/SP"},
-                                   {"808","2010/S1"}
+                                   {"808","2010/S1"},
+
+                                   {"809","2015/FA" },//This will match with student 0016301 in teststudentrepo
 
                                   };
 
             for (int i = 0; i < planTerms.Length / 2; i++)
             {
-                var planId = Int32.Parse(planTerms[i, 0]);
-                var termId = planTerms[i, 1];
-                var degreePlan = degreePlans.Where(d => d.Id == planId).FirstOrDefault();
-                if (degreePlan != null)
-                {
-                    degreePlan.AddTerm(termId);
-                }
+                    var planId = Int32.Parse(planTerms[i, 0]);
+                    var termId = planTerms[i, 1];
+                    var degreePlan = degreePlans.Where(d => d.Id == planId).FirstOrDefault();
+                    if (degreePlan != null)
+                    {
+                        degreePlan.AddTerm(termId);
+                    }
+              
             }
 
             // Add same set of courses to each plan's terms.
@@ -100,71 +104,81 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                                        
                                        {"808","2008/FA", "46", "", "3.0", "G", "", "N"},  // MATH-100
                                        {"808","2008/FA","139", "", "3.0", "G", "", "N"},  // HIST-100
-                                       {"808","2008/FA","139", "", "3.0", "G", "", "N"}   // HIST-100 (planned twice)
+                                       {"808","2008/FA","139", "", "3.0", "G", "", "N"} ,  // HIST-100 (planned twice)
+
+                                        {"809","2015/FA","7444","","3.0","G","","N" }, //GERM-100
+                                        {"809","2015/FA","7442","","3.0","G","","N" },//ARTH-100
                                     };
-
-            for (int i = 0; i < planCourses.Length / 8; i++)
+            try
             {
-                var planId = Int32.Parse(planCourses[i, 0]);
-                var termId = planCourses[i, 1];
-                var courseId = planCourses[i, 2];
-                var sectionId = planCourses[i, 3] == "" ? null : planCourses[i, 3];
-                decimal? credits = null;
-                if (!string.IsNullOrEmpty(planCourses[i, 4]))
+                for (int i = 0; i < planCourses.Length / 8; i++)
                 {
-                    credits = decimal.Parse(planCourses[i, 4]);
-                }
-                var gradingType = planCourses[i, 5];
-                var waitlistStatus = planCourses[i, 6];
-                var isProtected = planCourses[i, 7] == "Y" ? true : false;
-                var degreePlan = degreePlans.Where(d => d.Id == planId).FirstOrDefault();
-                if (degreePlan != null)
-                {
-                    Student.Entities.GradingType gt = Student.Entities.GradingType.Graded;
-                    if (gradingType == "A")
+
+                    var planId = Int32.Parse(planCourses[i, 0]);
+                    var termId = planCourses[i, 1];
+                    var courseId = planCourses[i, 2];
+                    var sectionId = planCourses[i, 3] == "" ? null : planCourses[i, 3];
+                    decimal? credits = null;
+                    if (!string.IsNullOrEmpty(planCourses[i, 4]))
                     {
-                        gt = Student.Entities.GradingType.Audit;
+                        credits = decimal.Parse(planCourses[i, 4]);
                     }
-                    if (gradingType == "P")
+                    var gradingType = planCourses[i, 5];
+                    var waitlistStatus = planCourses[i, 6];
+                    var isProtected = planCourses[i, 7] == "Y" ? true : false;
+                    var degreePlan = degreePlans.Where(d => d.Id == planId).FirstOrDefault();
+                    if (degreePlan != null)
                     {
-                        gt = Student.Entities.GradingType.PassFail;
+                        Student.Entities.GradingType gt = Student.Entities.GradingType.Graded;
+                        if (gradingType == "A")
+                        {
+                            gt = Student.Entities.GradingType.Audit;
+                        }
+                        if (gradingType == "P")
+                        {
+                            gt = Student.Entities.GradingType.PassFail;
+                        }
+                        Domain.Student.Entities.DegreePlans.WaitlistStatus wlstat = Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted;
+                        if (waitlistStatus == "A")
+                        {
+                            wlstat = Student.Entities.DegreePlans.WaitlistStatus.Active;
+                        }
+                        PlannedCourse pc = new PlannedCourse(courseId, sectionId, gt, wlstat, null, null) { Credits = credits, IsProtected = isProtected };
+                        // Add a unmet requisite warning to one of the planned courses on the plan
+                        if (courseId == "117")
+                        {
+                            var requisite = new Requisite("PREREQ1", true, RequisiteCompletionOrder.Previous, false);
+                            pc.AddWarning(new PlannedCourseWarning(PlannedCourseWarningType.UnmetRequisite) { Requisite = requisite });
+                        }
+                        degreePlan.AddCourse(pc, termId);
                     }
-                    Domain.Student.Entities.DegreePlans.WaitlistStatus wlstat = Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted;
-                    if (waitlistStatus == "A")
-                    {
-                        wlstat = Student.Entities.DegreePlans.WaitlistStatus.Active;
-                    }
-                    PlannedCourse pc = new PlannedCourse(courseId, sectionId, gt, wlstat, null, null) { Credits = credits, IsProtected = isProtected };
-                    // Add a unmet requisite warning to one of the planned courses on the plan
-                    if (courseId == "117")
-                    {
-                        var requisite = new Requisite("PREREQ1", true, RequisiteCompletionOrder.Previous, false);
-                        pc.AddWarning(new PlannedCourseWarning(PlannedCourseWarningType.UnmetRequisite) { Requisite = requisite });
-                    }
-                    degreePlan.AddCourse(pc, termId);
+
                 }
 
+                // Add a nonterm course to plan 3.
+                var degreePlan3 = degreePlans.Where(d => d.Id == 3).FirstOrDefault();
+                var nonTermPlannedCourse = new PlannedCourse("444", "111");
+                var ncwRequisite = new Requisite("444", false);
+                var pcWarning = new PlannedCourseWarning(PlannedCourseWarningType.UnmetRequisite) { Requisite = ncwRequisite };
+                nonTermPlannedCourse.AddWarning(pcWarning);
+                degreePlan3.AddCourse(nonTermPlannedCourse, null);
+
+                // Add approvals for two of the planned courses on 2.
+                var degreePlan2 = degreePlans.Where(d => d.Id == 2).FirstOrDefault();
+                var approvals = new List<DegreePlanApproval>();
+                approvals.Add(new DegreePlanApproval("00004001", DegreePlanApprovalStatus.Approved, new DateTime(2008, 06, 01, 10, 0, 0), "130", "2008/FA"));
+                approvals.Add(new DegreePlanApproval("00004002", DegreePlanApprovalStatus.Denied, new DateTime(2008, 06, 03, 8, 30, 0), "143", "2008/FA"));
+                degreePlan2.Approvals = approvals;
+
+                // Add approvals for two of the planned courses on 3.
+                degreePlan3.Approvals = approvals;
+
+                return degreePlans;
             }
-
-            // Add a nonterm course to plan 3.
-            var degreePlan3 = degreePlans.Where(d => d.Id == 3).FirstOrDefault();
-            var nonTermPlannedCourse = new PlannedCourse("444", "111");
-            var ncwRequisite = new Requisite("444", false);
-            var pcWarning = new PlannedCourseWarning(PlannedCourseWarningType.UnmetRequisite) { Requisite = ncwRequisite };
-            nonTermPlannedCourse.AddWarning(pcWarning);
-            degreePlan3.AddCourse(nonTermPlannedCourse, null);
-
-            // Add approvals for two of the planned courses on 2.
-            var degreePlan2 = degreePlans.Where(d => d.Id == 2).FirstOrDefault();
-            var approvals = new List<DegreePlanApproval>();
-            approvals.Add(new DegreePlanApproval("00004001", DegreePlanApprovalStatus.Approved, new DateTime(2008, 06, 01, 10, 0, 0), "130", "2008/FA"));
-            approvals.Add(new DegreePlanApproval("00004002", DegreePlanApprovalStatus.Denied, new DateTime(2008, 06, 03, 8, 30, 0), "143", "2008/FA"));
-            degreePlan2.Approvals = approvals;
-
-            // Add approvals for two of the planned courses on 3.
-            degreePlan3.Approvals = approvals;
-
-            return degreePlans;
+            catch(Exception ex)
+            {
+                throw ex;
+            }
         }
 
         public async Task<IEnumerable<DegreePlan>> GetAsync()  //Get all plans

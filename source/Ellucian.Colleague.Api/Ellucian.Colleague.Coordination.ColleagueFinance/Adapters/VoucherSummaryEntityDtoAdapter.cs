@@ -22,6 +22,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
         {
             AddMappingDependency<Domain.ColleagueFinance.Entities.VoucherStatus, Dtos.ColleagueFinance.VoucherStatus>();
             AddMappingDependency<Domain.ColleagueFinance.Entities.PurchaseOrderSummary, Dtos.ColleagueFinance.PurchaseOrderLinkSummary>();
+            AddMappingDependency<Domain.ColleagueFinance.Entities.Approver, Dtos.ColleagueFinance.Approver>();
         }
     }
 }

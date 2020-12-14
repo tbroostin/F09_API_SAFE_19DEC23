@@ -581,6 +581,61 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         }
 
         /// <summary>
+        /// Get a collection of FxaTransferFlags
+        /// </summary>
+        /// <param name="ignoreCache">Bypass cache flag</param>
+        /// <returns>Collection of FxaTransferFlags</returns>
+        public async Task<IEnumerable<FxaTransferFlags>> GetFxaTransferFlagsAsync(bool ignoreCache)
+        {
+            return await GetGuidValcodeAsync<FxaTransferFlags>("CF", "FXA.TRANSFER.FLAGS",
+                (cl, g) => new FxaTransferFlags(g, cl.ValInternalCodeAssocMember, (string.IsNullOrEmpty(cl.ValExternalRepresentationAssocMember)
+                    ? cl.ValInternalCodeAssocMember : cl.ValExternalRepresentationAssocMember)), bypassCache: ignoreCache);
+        }
+
+
+        /// <summary>
+        /// Get guid for FxaTransferFlag
+        /// </summary>
+        /// <param name="code">FxaTransferFlag code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetFxaTransferFlagGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetFxaTransferFlagsAsync(false);
+            FxaTransferFlags codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetFxaTransferFlagsAsync(true);
+                if (allCodesNoCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'CF.VALCODES - FXA.TRANSFER.FLAGS', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'CF.VALCODES - FXA.TRANSFER.FLAGS', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'CF.VALCODES - FXA.TRANSFER.FLAGS', Record ID:'", code, "'"));
+            }
+            return guid;
+        }
+
+        /// <summary>
         /// Gets FreeOnBoardType
         /// </summary>
         /// <param name="ignoreCache"></param>
@@ -1264,7 +1319,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                    fxaFlag => new FixedAssetsFlag(fxaFlag.ValInternalCodeAssocMember, fxaFlag.ValExternalRepresentationAssocMember));
             });
         }
-
+        
         /// <summary>
         /// Gets CommodityUnitTypes
         /// </summary>
@@ -2367,8 +2422,16 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             #region transactionStatus, status
             if (!string.IsNullOrEmpty(status))
             {
-                glcriteria = "WITH GL.INACTIVE EQ 'A'";
-                prCriteria = "WITH PRJ.CURRENT.STATUS EQ 'A'";
+                if (status.Equals("active", StringComparison.OrdinalIgnoreCase))
+                {
+                    glcriteria = "WITH GL.CURRENT.STATUS EQ 'A'";
+                    prCriteria = "WITH PRJ.CURRENT.STATUS EQ 'A'";
+                }
+                else
+                {
+                    glcriteria = "WITH GL.CURRENT.STATUS EQ 'I'";
+                    prCriteria = "WITH PRJ.CURRENT.STATUS NE 'A'";
+                }
                 glLimitingKeys = await DataReader.SelectAsync("GL.ACCTS", glLimitingKeys, glcriteria);
                 prLimitingKeys = await DataReader.SelectAsync("PROJECTS", prLimitingKeys, prCriteria);
                 //If both collections are empty then return empty set.
@@ -2672,39 +2735,44 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 var fiscalYearStatus = glAccount.MemosEntityAssociation.FirstOrDefault(x => x.AvailFundsControllerAssocMember == fiscalYearDataContract.CfCurrentFiscalYear);
                 if (fiscalYearStatus == null)
                 {
-                    RepositoryException exception = new RepositoryException();
-                    exception.AddError(new RepositoryError("avail.funds.controller.NotFoundInFiscalYear", string.Format("The record associated to the accounting string component value contains an invalid element. guid: '{0}'", glAccount.RecordGuid)));
-                    throw exception;
+                    newASCV.Status = "unavailable";
                 }
-                string glFFA = fiscalYearStatus.GlFreezeFlagsAssocMember;
-
-                /*
-                    Prior to v15, this logic was in the transactionStatus property. Move the logic to 'status' and check that it included GL.INACTIVE = blank (which is valid but wasn't 
-                    mentioned in the transactionStatus logic). GL accounts, 
-                    IF GL.INACTIVE = "A" or "", then
-                    If any value of GL.FREEZE.FLAGS is "O" or "A", then return "available", else return "unavailable".
-                    Else (GL.INACTIVE = "I"), return "unavailable".
-                    The accounting strings must exist in an open or authorized fiscal year to be considered "available" as long as the account is neither inactive or frozen.
-                */
-                if (string.IsNullOrEmpty(glAccount.GlInactive)  || glAccount.GlInactive.Equals("A"))
+                else
                 {
-                    if (glFFA.Equals("A", StringComparison.OrdinalIgnoreCase) || glFFA.Equals("O", StringComparison.OrdinalIgnoreCase))
+                    string glFFA = fiscalYearStatus.GlFreezeFlagsAssocMember;
+
+                    /*
+                        Prior to v15, this logic was in the transactionStatus property. Move the logic to 'status' and check that it included GL.INACTIVE = blank (which is valid but wasn't 
+                        mentioned in the transactionStatus logic). GL accounts, 
+                        IF GL.INACTIVE = "A" or "", then
+                        If any value of GL.FREEZE.FLAGS is "O" or "A", then return "available", else return "unavailable".
+                        Else (GL.INACTIVE = "I"), return "unavailable".
+                        The accounting strings must exist in an open or authorized fiscal year to be considered "available" as long as the account is neither inactive or frozen.
+                    */
+                    if (string.IsNullOrEmpty(glAccount.GlInactive) || glAccount.GlInactive.Equals("A"))
                     {
-                        newASCV.Status = "available";
+                        if (glFFA.Equals("A", StringComparison.OrdinalIgnoreCase) || glFFA.Equals("O", StringComparison.OrdinalIgnoreCase))
+                        {
+                            newASCV.Status = "available";
+                        }
+                        else
+                        {
+                            newASCV.Status = "unavailable";
+                        }
+                    }
+                    else if (glAccount.GlInactive.Equals("I", StringComparison.OrdinalIgnoreCase))
+                    {
+                        newASCV.Status = "unavailable";
                     }
                     else
                     {
                         newASCV.Status = "unavailable";
                     }
                 }
-                else if (glAccount.GlInactive.Equals("I", StringComparison.OrdinalIgnoreCase))
-                {
-                    newASCV.Status = "unavailable";
-                }
-                else
-                {
-                    newASCV.Status = "unavailable";
-                }
+            }
+            else
+            {
+                newASCV.Status = "unavailable";
             }
 
             if (glClassDef.GlClassLocation != null)

@@ -546,13 +546,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 {
                     if (statusEnum == Dtos.EnumProperties.Status.Active)
                     {
-                        status = "available";
+                        status = "active";
                     }
                     else if (statusEnum == Dtos.EnumProperties.Status.Inactive)
                     {
+                        status = "inactive";
                         //Colleague always returns 'available'. So if they query for 'available', return all records / ignore the filter. 
                         //If they query for 'unavailable', return an empty set.
-                        return new Tuple<IEnumerable<Dtos.AccountingStringComponentValues3>, int>(new List<Ellucian.Colleague.Dtos.AccountingStringComponentValues3>(), 0);
+                        //return new Tuple<IEnumerable<Dtos.AccountingStringComponentValues3>, int>(new List<Ellucian.Colleague.Dtos.AccountingStringComponentValues3>(), 0);
                     }
                 }
                 

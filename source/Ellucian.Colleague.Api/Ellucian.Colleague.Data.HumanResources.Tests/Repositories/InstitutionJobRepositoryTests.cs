@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2017 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.HumanResources.Repositories;
@@ -32,6 +32,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         private Collection<Perstat> perstatCollDataList;
         private Collection<Perben> perbenCollDataList;
         private Collection<Hrper> hrperCollDataList;
+        Dictionary<string, string> ldmGuidCollection = new Dictionary<string, string>();
 
         string guid = "4f937f08-f6a0-4a1c-8d55-9f2a6dd6be46";
 
@@ -65,6 +66,14 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<Perpos>("PERPOS", It.IsAny<string>(), It.IsAny<bool>()))
                 .ReturnsAsync(perposCollDataList[0]);
+
+            Dictionary<string, RecordKeyLookupResult> recLookResults = new Dictionary<string, RecordKeyLookupResult>();
+            foreach( var item in perposCollDataList )
+            {
+                var recKeyLookupReult = new RecordKeyLookupResult() { Guid = item.RecordGuid, ModelName = "PERPOS" };
+                recLookResults.Add( string.Concat( "PERPOS", "+", item.Recordkey), recKeyLookupReult );
+            }
+            dataReaderMock.Setup( repo => repo.SelectAsync( It.IsAny<RecordKeyLookup[]>() ) ).ReturnsAsync( recLookResults );
 
             dataReaderMock.Setup(repo => repo.SelectAsync("PERPOSWG", It.IsAny<string>(),
                         It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(personIdList.ToArray());
@@ -407,6 +416,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 
         private void InitializeTestMock()
         {
+            Dictionary<string, RecordKeyLookupResult> recLookResults = new Dictionary<string, RecordKeyLookupResult>();
+            var recKeyLookupReult = new RecordKeyLookupResult() { Guid = guid, ModelName = "PERPOS" };
+            recLookResults.Add( string.Concat( "PERPOS", "+", "1" ), recKeyLookupReult );
+            dataReaderMock.Setup( repo => repo.SelectAsync( It.IsAny<RecordKeyLookup[]>() ) ).ReturnsAsync( recLookResults );
+
             dataReaderMock.Setup(r => r.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dicResult);
             dataReaderMock.Setup(r => r.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new string[] { "1" });
 

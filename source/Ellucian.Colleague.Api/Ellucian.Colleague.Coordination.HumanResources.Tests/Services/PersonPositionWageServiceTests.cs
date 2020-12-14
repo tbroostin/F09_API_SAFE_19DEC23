@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.HumanResources.Adapters;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -24,8 +24,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         public Mock<ISupervisorsRepository> supervisorsRepositoryMock;
         public TestPersonPositionWageRepository testPersonPositionWageRepository;
 
-        public Mock<IHumanResourcesReferenceDataRepository> referenceDataRepositoryMock;
-        //public TestEarningsTypeGroupRepository earningsTypeGroupRepository;
+        public Mock<IHumanResourcesReferenceDataRepository> referenceDataRepositoryMock;        
 
         public PersonPositionWageEntityToDtoAdapter personPositionWageEntityToDtoAdapter;
 
@@ -101,12 +100,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
             personPositionWageEntityToDtoAdapter = new PersonPositionWageEntityToDtoAdapter(adapterRegistryMock.Object, loggerMock.Object);
 
-            personPositionWageRepositoryMock.Setup(r => r.GetPersonPositionWagesAsync(It.IsAny<IEnumerable<string>>()))
-                .Returns<IEnumerable<string>>((ids) => testPersonPositionWageRepository.GetPersonPositionWagesAsync(ids));
+            personPositionWageRepositoryMock.Setup(r => r.GetPersonPositionWagesAsync(It.IsAny<IEnumerable<string>>(), null))
+                .Returns<IEnumerable<string>, DateTime?>((ids, date) => testPersonPositionWageRepository.GetPersonPositionWagesAsync(ids, date));
 
 
             adapterRegistryMock.Setup(r => r.GetAdapter<Domain.HumanResources.Entities.PersonPositionWage, Dtos.HumanResources.PersonPositionWage>())
-                .Returns(() => (ITypeAdapter<Domain.HumanResources.Entities.PersonPositionWage, Dtos.HumanResources.PersonPositionWage>)personPositionWageEntityToDtoAdapter);
+                .Returns(() => personPositionWageEntityToDtoAdapter);
 
             personPositionWageDtoComparer = new FunctionEqualityComparer<PersonPositionWage>(
                 (p1, p2) => p1.Id == p2.Id && p1.PersonId == p2.PersonId && p1.PositionId == p2.PositionId && p1.StartDate == p2.StartDate,
@@ -135,15 +134,16 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             {
                 await actualService.GetPersonPositionWagesAsync();
                 personPositionWageRepositoryMock.Verify(r =>
-                    r.GetPersonPositionWagesAsync(It.Is<IEnumerable<string>>(list => list.Count() == 1 && list.ElementAt(0) == employeeCurrentUserFactory.CurrentUser.PersonId)));
+                    r.GetPersonPositionWagesAsync(It.Is<IEnumerable<string>>(list => list.Count() == 1 && list.ElementAt(0) == employeeCurrentUserFactory.CurrentUser.PersonId),
+                    null));
             }
 
             [TestMethod]
             [ExpectedException(typeof(ApplicationException))]
             public async Task RepositoryReturnsNullTest()
             {
-                personPositionWageRepositoryMock.Setup(r => r.GetPersonPositionWagesAsync(It.IsAny<IEnumerable<string>>()))
-                    .Returns<IEnumerable<string>>((ids) => Task.FromResult<IEnumerable<Domain.HumanResources.Entities.PersonPositionWage>>(null));
+                personPositionWageRepositoryMock.Setup(r => r.GetPersonPositionWagesAsync(It.IsAny<IEnumerable<string>>(), null))
+                    .ReturnsAsync(null);
 
                 try
                 {
@@ -162,7 +162,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 var expected = (await testPersonPositionWageRepository.GetPersonPositionWagesAsync(new List<string>() { employeeCurrentUserFactory.CurrentUser.PersonId }))
                     .Select(ppEntity => personPositionWageEntityToDtoAdapter.MapToType(ppEntity));
 
-                var actual = await actualService.GetPersonPositionWagesAsync();
+                var actual = await actualService.GetPersonPositionWagesAsync(employeeCurrentUserFactory.CurrentUser.PersonId);
 
                 CollectionAssert.AreEqual(expected.ToArray(), actual.ToArray(), personPositionWageDtoComparer);
 
@@ -174,7 +174,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 await proxyActualService.GetPersonPositionWagesAsync("0000001");
                 personPositionWageRepositoryMock.Verify(r =>
                     r.GetPersonPositionWagesAsync(It.Is<IEnumerable<string>>(list =>
-                        list.Count() == 1 && list.ElementAt(0) == "0000001")));
+                        list.Count() == 1 && list.ElementAt(0) == "0000001"), null));
             }
 
             [TestMethod]
@@ -201,7 +201,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 var res=await actualService.GetPersonPositionWagesAsync(UserForAdminPermissionCheck);
                 personPositionWageRepositoryMock.Verify(r =>
                     r.GetPersonPositionWagesAsync(It.Is<IEnumerable<string>>(list =>
-                        list.Count() == 1 && list.ElementAt(0) == UserForAdminPermissionCheck)));
+                        list.Count() == 1 && list.ElementAt(0) == UserForAdminPermissionCheck), null));
             }
 
             [TestMethod]

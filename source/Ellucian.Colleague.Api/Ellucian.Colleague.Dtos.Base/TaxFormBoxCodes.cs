@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 namespace Ellucian.Colleague.Dtos.Base
 {
     /// <summary>
@@ -14,6 +14,10 @@ namespace Ellucian.Colleague.Dtos.Base
         /// tax form box code description
         /// </summary>
         public string Description { get; set; }
-       
+        /// <summary>
+        /// tax form attached to box code
+        /// </summary>
+        public string TaxForm { get; set; }
+
     }
 }

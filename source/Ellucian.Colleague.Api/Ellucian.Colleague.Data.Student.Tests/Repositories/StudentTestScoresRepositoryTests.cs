@@ -371,7 +371,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Assert.AreEqual(result.Source, expected.Source);
             Assert.AreEqual(result.SpecialFactors, expected.SpecialFactors);
             Assert.AreEqual(result.StatusCode, expected.StatusCode);
-            Assert.AreEqual(result.StatusCodeSpProcessing, expected.StatusCodeSpProcessing);
+            Assert.AreEqual(result.StatusCodeSpProcessing, expected.StatusCodeSpProcessing, "StatusCodeSpProcessing");
+            Assert.AreEqual(result.StatusCodeSpProcessing2, expected.StatusCodeSpProcessing2, "StatusCodeSpProcessing2");
             Assert.AreEqual(result.StatusDate, expected.StatusDate);
             Assert.AreEqual(result.StudentId, expected.StudentId);
         }
@@ -480,7 +481,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     SpecialFactors = new List<string>() { "A", "D" },
                     StatusCode = "AC",
                     StatusCodeSpProcessing = "2",
-                    StatusDate = new DateTime(2017, 12, 11)
+                    StatusDate = new DateTime(2017, 12, 11),
+                    StatusCodeSpProcessing2 = "EXP"
                 },
                 new StudentTestScores("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "0003784", "2", "SAT Test", new DateTime(2017, 12, 11))
                 {
@@ -563,7 +565,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     {
                         ValInternalCodeAssocMember = "AC",
                         ValExternalRepresentationAssocMember = "AC",
-                        ValActionCode1AssocMember = "2"
+                        ValActionCode1AssocMember = "2",
+                        ValActionCode2AssocMember = "EXP"
                     },
                     new ApplValcodesVals()
                     {
@@ -631,6 +634,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 record.StncTitle = item.Description;
                 record.StncStatus = item.StatusCode;
                 record.StncStatusDate = item.StatusDate;
+                
                 record.StncCategory = "AD";
                 records.Add(record);
             }

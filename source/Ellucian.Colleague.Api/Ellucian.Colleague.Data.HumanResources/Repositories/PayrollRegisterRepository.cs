@@ -1,4 +1,4 @@
-﻿/*Copyright 2017-2019 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2020 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
@@ -111,7 +111,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 return payrollRegister;
             }
 
-            var criteria = "WITH PTD.EMPLOYEE.ID EQ ? AND PTD.SEQ.NO NE \"\"";
+            var criteria = "WITH PTD.EMPLOYEE.INDEX EQ ? AND PTD.SEQ.NO NE \"\"";
             var values = uncachedEmployeeIds.Select(id => string.Format("\"{0}\"", id)).ToArray();
 
             if (startDate.HasValue)

@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Dtos.HumanResources;
 
 /// <summary>
@@ -71,5 +70,16 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// </summary>
         /// <returns>List of HumanDemographics DTOs containing supervisee information</returns>
         Task<IEnumerable<Dtos.HumanResources.HumanResourceDemographics>> GetSuperviseesByPrimaryPositionForSupervisorAsync();
+
+        /// <summary>
+        /// Gets the Approved Leave Requests for a timecard week based on the date range. 
+        /// </summary>
+        /// <param name="startDate">Start date of timecard week </param>
+        /// <param name="endDate">End date of timecard week</param>
+        /// <param name="effectivePersonId">Optional parameter for passing effective person Id</param>
+        /// <returns>List of Leave Request DTO</returns>
+        Task<IEnumerable<LeaveRequest>> GetLeaveRequestsForTimeEntryAsync(DateTime startDate, DateTime endDate, string effectivePersonId = null);
+
+
     }
 }

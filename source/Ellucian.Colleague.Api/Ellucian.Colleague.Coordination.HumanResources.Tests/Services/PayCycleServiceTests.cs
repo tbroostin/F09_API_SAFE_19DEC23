@@ -1,4 +1,4 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
@@ -60,7 +60,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
             payCycleEntityToDtoAdapter = new AutoMapperAdapter<Domain.HumanResources.Entities.PayCycle, Dtos.HumanResources.PayCycle>(adapterRegistryMock.Object, loggerMock.Object);
 
-            payCycleRepositoryMock.Setup(r => r.GetPayCyclesAsync())
+            payCycleRepositoryMock.Setup(r => r.GetPayCyclesAsync(It.IsAny<DateTime?>()))
                 .Returns<IEnumerable<string>>((p) => testPayCycleRepository.GetPayCyclesAsync());
 
             adapterRegistryMock.Setup(r => r.GetAdapter<Domain.HumanResources.Entities.PayCycle, Dtos.HumanResources.PayCycle>())
@@ -91,15 +91,15 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 await actualService.GetPersonEmploymentStatusesAsync();
                 personEmploymentStatusRepositoryMock.Verify(r =>
                     r.GetPersonEmploymentStatusesAsync(It.Is<IEnumerable<string>>(list =>
-                        list.Count() == 1 && list.ElementAt(0) == employeeCurrentUserFactory.CurrentUser.PersonId)));
+                        list.Count() == 1 && list.ElementAt(0) == employeeCurrentUserFactory.CurrentUser.PersonId), null));
             }
 
             [TestMethod]
             [ExpectedException(typeof(ApplicationException))]
             public async Task RepositoryReturnsNullTest()
             {
-                personEmploymentStatusRepositoryMock.Setup(r => r.GetPersonEmploymentStatusesAsync(It.IsAny<IEnumerable<string>>()))
-                    .Returns<IEnumerable<string>>((ids) => Task.FromResult<IEnumerable<Domain.HumanResources.Entities.PersonEmploymentStatus>>(null));
+                personEmploymentStatusRepositoryMock.Setup(r => r.GetPersonEmploymentStatusesAsync(It.IsAny<IEnumerable<string>>(), null))
+                    .ReturnsAsync(null);
 
                 try
                 {

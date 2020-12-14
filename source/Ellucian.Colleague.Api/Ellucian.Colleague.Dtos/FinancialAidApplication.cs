@@ -1,11 +1,13 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+
+using Ellucian.Colleague.Dtos.Attributes;
+using Ellucian.Colleague.Dtos.Converters;
+using Ellucian.Colleague.Dtos.DtoProperties;
+using Ellucian.Colleague.Dtos.EnumProperties;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
-using Ellucian.Colleague.Dtos.Converters;
-using Ellucian.Colleague.Dtos.EnumProperties;
-using Newtonsoft.Json;
-using Ellucian.Colleague.Dtos.Attributes;
 
 namespace Ellucian.Colleague.Dtos
 {
@@ -42,6 +44,7 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>
 
         [DataMember(Name = "methodology", EmitDefaultValue = false)]
+        [FilterProperty( "criteria" )]
         public FinancialAidApplicationsMethodology Methodology { get; set; }
 
         /// <summary>
@@ -49,6 +52,7 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>
 
         [DataMember(Name = "source", EmitDefaultValue = false)]
+        [FilterProperty( "criteria" )]
         public FinancialAidApplicationsSource Source { get; set; }
 
         /// <summary>
@@ -94,5 +98,42 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>
         [DataMember(Name = "noncustodialParentsIncome", EmitDefaultValue = false)]
         public DtoProperties.FinancialAidApplicationNoncustodialParentsIncomeDtoProperty NoncustodialParentsIncome { get; set; }
+
+        /// <summary>
+        /// The applicant's marital status.
+        /// </summary>
+        [DataMember( Name = "maritalStatus", EmitDefaultValue = false )]
+        public MaritalStatusDtoProperty MaritalStatus { get; set; }
+
+        /// <summary>
+        /// Number of people in the applicant's household (only applicable for an applicant that meets independence criteria).
+        /// </summary>
+        [DataMember( Name = "applicantFamilySize", EmitDefaultValue = false )]
+        public int? ApplicantFamilySize { get; set; }
+
+        /// <summary>
+        /// Number of people in the applicant’s parents’ household.
+        /// </summary>
+        [DataMember( Name = "parentFamilySize", EmitDefaultValue = false )]
+        public int? ParentFamilySize { get; set; }
+
+        /// <summary>
+        /// Number of people in applicant’s household that will be in college during the academic year (only applicable for an applicant that meets independence criteria).
+        /// </summary>
+        [DataMember( Name = "applicantNumberInCollege", EmitDefaultValue = false )]
+        public int? ApplicantNumberInCollege { get; set; }
+
+        /// <summary>
+        /// Number of people in applicant’s parents’ household that will be in college during the academic year.
+        /// </summary>
+        [DataMember( Name = "parentNumberInCollege", EmitDefaultValue = false )]
+        public int? ParentNumberInCollege { get; set; }
+
+        /// <summary>
+        /// The highest education level completed by the applicant's parents.
+        /// </summary>
+        [DataMember( Name = "parentsEducationLevel", EmitDefaultValue = false )]
+        public FinancialAidEducationLevelDtoProperty ParentsEducationLevel { get; set; }
+
     }
 }

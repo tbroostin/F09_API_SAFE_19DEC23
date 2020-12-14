@@ -26,7 +26,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             public class GrantsRepositoryTests_GETALL_GETBYID : BaseRepositorySetup
             {
                 #region DECLARATIONS
-                
+
                 Collection<ProjectsCf> projectscf;
 
                 Collection<DataContracts.Projects> projects;
@@ -52,7 +52,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 [TestInitialize]
                 public void Initialize()
                 {
-                    
+
 
                     MockInitialize();
 
@@ -69,7 +69,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     MockCleanup();
 
                     grantsRepository = null;
-                    
+
                 }
 
                 private void InitializeTestData() {
@@ -115,7 +115,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     dataReaderMock.Setup(d => d.ReadRecordAsync<LdmDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(ldmDefaults);
                     dataReaderMock.Setup(d => d.ReadRecordAsync<ProjectsCf>(It.IsAny<string>(),true)).ReturnsAsync(projectscf.FirstOrDefault());
                     dataReaderMock.Setup(d => d.ReadRecordAsync<DataContracts.Projects>(It.IsAny<string>(), true)).ReturnsAsync(projects.FirstOrDefault());
-                    
+
                 }
 
                 #endregion
@@ -129,7 +129,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     Assert.IsNotNull(result);
                     Assert.AreEqual(result.Item2, 2);
                 }
-                
+
                 [TestMethod]
                 public async Task GrantsRepository_GetGrantsAsync_ReportingSeg()
                 {

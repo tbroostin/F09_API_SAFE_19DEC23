@@ -44,5 +44,12 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <param name="code">AcademicPeriods guid</param>
         /// <returns>code</returns>
         Task<string> GetAcademicPeriodsCodeFromGuidAsync(string guid);
+
+        /// <summary>
+        /// Using a collection of  ids, get a dictionary collection of associated guids
+        /// </summary>
+        /// <param name="ids">collection of  ids</param>
+        /// <returns>Dictionary consisting of a ids (key) and guids (value)</returns>
+        Task<Dictionary<string, string>> GetGuidsCollectionAsync( IEnumerable<string> ids );
     }
 }

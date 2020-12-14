@@ -355,48 +355,18 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 suppItemsCacheTimeout,
                 async () =>
                 {
-                    string[] applStatusesNoSpCodeIds;
-                    criteria = "WITH APPL.STATUS.DATE NE '' AND WITH APPL.STATUS.TIME NE '' AND WITH APPL.STATUS EQ '?'";
-                    applStatusesNoSpCodeIds = await DataReader.SelectAsync("APPLICATION.STATUSES", "WITH APPS.SPECIAL.PROCESSING.CODE NE ''");
+                    var applStatusesNoSpCodeIds = await DataReader.SelectAsync("APPLICATION.STATUSES", "WITH APPS.SPECIAL.PROCESSING.CODE NE ''");
 
-                    var applicationIds = await DataReader.SelectAsync("APPLICATIONS", criteria, applStatusesNoSpCodeIds, "?");
+                    var paragraph = new List<string>();
+                    
+                    paragraph.Add("MIOSEL APPLICATIONS WITH APPL.STATUS.DATE NE '' AND WITH APPL.STATUS.TIME NE '' AND WITH APPL.STATUS = '" 
+                            + (string.Join(" ", applStatusesNoSpCodeIds.Distinct())).Replace(" ", "' '") + "' AND WITH APPL.APPLICANT NE '' SAVING UNIQUE APPL.APPLICANT");
+                    
+                    paragraph.Add("MIOSEL MAILING WITH MAILING.ADM.APP.SI.IDX NE '' BY.EXP MAILING.ADM.APP.SI.IDX SAVING MAILING.ADM.APP.SI.IDX REQUIRE.SELECT");
 
-                    if (applicationIds == null || !applicationIds.Any())
-                    {
-                        return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                    }
-                    criteria = "WITH APPL.APPLICANT NE '' SAVING UNIQUE APPL.APPLICANT";
-                    var applicantIds = await DataReader.SelectAsync("APPLICATIONS", applicationIds, criteria);
-                    if (applicantIds == null || !applicantIds.Any())
-                    {
-                        return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                    }
-                    criteria = "WITH MAILING.ADM.APP.SI.IDX NE '' BY.EXP MAILING.ADM.APP.SI.IDX SAVING MAILING.ADM.APP.SI.IDX";
-                    var supportingItemIds = await DataReader.SelectAsync("MAILING", applicantIds, criteria);
-                    if (supportingItemIds == null || !supportingItemIds.Any())
-                    {
-                        return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                    }
-                    // In Unidata, we get the mailing ID, @VM, supporting Item Idx
-                    var supportingItemIds2 = new List<string>();
-                    foreach (var supportingItemId in supportingItemIds)
-                    {
-                        var supportingItemKey = supportingItemId;
-                        if (supportingItemId.Contains(_VM))
-                            supportingItemKey = supportingItemId.Split(_VM)[1];
-                        supportingItemIds2.Add(supportingItemKey);
-                    }
-
-                    suppItemIds = supportingItemIds2.Where(ab => applicationIds.Contains(ab.Split('*')[0])).Distinct().ToArray();
-                    if (suppItemIds == null || !suppItemIds.Any())
-                    {
-                        return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                    }
-                    // Array.Sort(suppItemIds);
                     return new CacheSupport.KeyCacheRequirements()
                     {
-                        limitingKeys = suppItemIds.ToList(),
-                        criteria = ""
+                        paragraph = paragraph,
                     };
                 }
             );
@@ -407,10 +377,19 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
 
             subList = keyCache.Sublist.ToArray();
-
             totalCount = keyCache.TotalCount.Value;
 
-            var applIds = subList.Select(ab => ab.Split('*')[0]).Distinct().ToArray();
+            // In Unidata, we get the mailing ID, @VM, supporting Item Idx
+            var validSupportingItemIds = new List<string>();
+            foreach (var supportingItemId in subList)
+            {
+                var supportingItemKey = supportingItemId;
+                if (supportingItemId.Contains(_VM))
+                    supportingItemKey = supportingItemId.Split(_VM)[1];
+                validSupportingItemIds.Add(supportingItemKey);
+            }
+
+            var applIds = validSupportingItemIds.Select(ab => ab.Split('*')[0]).Distinct().ToArray();
             if (!applIds.Any())
             {
                 return new Tuple<IEnumerable<Domain.Student.Entities.AdmissionApplicationSupportingItem>, int>(null, 0);
@@ -707,7 +686,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 CorrespondenceInstanceName = admissionApplicationSupportingItemEntity.Instance,
                 CorrespondenceStatus = admissionApplicationSupportingItemEntity.Status,
                 CorrespondenceActionDate = admissionApplicationSupportingItemEntity.ActionDate,
-                CorrespondenceReceivedDate = admissionApplicationSupportingItemEntity.ReceivedDate,
+                CorrespondenceReceivedDate = !string.IsNullOrEmpty(admissionApplicationSupportingItemEntity.Status) ? admissionApplicationSupportingItemEntity.ReceivedDate : null,
                 CorrespondenceComment = admissionApplicationSupportingItemEntity.Comment
             };
 

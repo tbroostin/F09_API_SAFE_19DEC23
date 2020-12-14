@@ -127,5 +127,10 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// </summary>
         public List<LineItem> LineItems { get; set; }
 
+        /// <summary>
+        /// List of email addresses - confirmation email notifications would be sent to these email addresses on create / update .
+        /// </summary>
+        public List<string> ConfirmationEmailAddresses { get; set; }
+
     }
 }

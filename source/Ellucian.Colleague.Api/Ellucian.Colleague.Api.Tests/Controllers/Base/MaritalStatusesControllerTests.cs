@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,8 +12,10 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Base.Tests;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
@@ -107,19 +109,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 Assert.AreEqual(maritalStatuses.Count(), allMaritalStatusEntities.Count());
             }
 
-            [TestMethod]
-            public async Task GetMaritalStatusesByGuidAsync_Validate()
-            {
-                var thisMaritalStatus = MaritalStatusList.Where(m => m.Id == maritalStatusesGuid).FirstOrDefault();
-
-                demographicsServiceMock.Setup(x => x.GetMaritalStatusById2Async(It.IsAny<string>())).ReturnsAsync(thisMaritalStatus);
-
-                var maritalStatus = await MaritalStatusesController.GetMaritalStatusById2Async(maritalStatusesGuid);
-                Assert.AreEqual(thisMaritalStatus.Id, maritalStatus.Id);
-                Assert.AreEqual(thisMaritalStatus.Code, maritalStatus.Code);
-                Assert.AreEqual(thisMaritalStatus.Description, maritalStatus.Description);
-                Assert.AreEqual(thisMaritalStatus.StatusType, maritalStatus.StatusType);
-            }
 
             [TestMethod]
             public async Task MaritalStatusesController_GetHedmAsync()
@@ -209,6 +198,54 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             }
 
             [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task MaritalStatusesController_GetMaritalStatuses_KeyNotFoundException()
+            {
+                demographicsServiceMock.Setup(x => x.GetMaritalStatuses2Async(false))
+                    .Throws<KeyNotFoundException>();
+                await MaritalStatusesController.GetMaritalStatuses2Async();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task MaritalStatusesController_GetMaritalStatuses_PermissionsException()
+            {
+
+                demographicsServiceMock.Setup(x => x.GetMaritalStatuses2Async(false))
+                    .Throws<PermissionsException>();
+                await MaritalStatusesController.GetMaritalStatuses2Async();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task MaritalStatusesController_GetMaritalStatuses_ArgumentException()
+            {
+
+                demographicsServiceMock.Setup(x => x.GetMaritalStatuses2Async(false))
+                    .Throws<ArgumentException>();
+                await MaritalStatusesController.GetMaritalStatuses2Async();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task MaritalStatusesController_GetMaritalStatuses_RepositoryException()
+            {
+
+                demographicsServiceMock.Setup(x => x.GetMaritalStatuses2Async(false))
+                    .Throws<RepositoryException>();
+                await MaritalStatusesController.GetMaritalStatuses2Async();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task MaritalStatusesController_GetThrowsIntAppiExc()
+            {
+                demographicsServiceMock.Setup(gc => gc.GetMaritalStatuses2Async(It.IsAny<bool>())).Throws<Exception>();
+
+                await MaritalStatusesController.GetMaritalStatuses2Async();
+            }
+
+            [TestMethod]
             public async Task MaritalStatusesController_GetByIdHedmAsync()
             {
                 var thisMaritalStatus = MaritalStatusList.Where(m => m.Id == "87ec6f69-9b16-4ed5-8954-59067f0318ec").FirstOrDefault();
@@ -222,12 +259,17 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             }
 
             [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task MaritalStatusesController_GetThrowsIntAppiExc()
+            public async Task GetMaritalStatusesByGuidAsync_Validate()
             {
-                demographicsServiceMock.Setup(gc => gc.GetMaritalStatuses2Async(It.IsAny<bool>())).Throws<Exception>();
+                var thisMaritalStatus = MaritalStatusList.Where(m => m.Id == maritalStatusesGuid).FirstOrDefault();
 
-                await MaritalStatusesController.GetMaritalStatuses2Async();
+                demographicsServiceMock.Setup(x => x.GetMaritalStatusById2Async(It.IsAny<string>())).ReturnsAsync(thisMaritalStatus);
+
+                var maritalStatus = await MaritalStatusesController.GetMaritalStatusById2Async(maritalStatusesGuid);
+                Assert.AreEqual(thisMaritalStatus.Id, maritalStatus.Id);
+                Assert.AreEqual(thisMaritalStatus.Code, maritalStatus.Code);
+                Assert.AreEqual(thisMaritalStatus.Description, maritalStatus.Description);
+                Assert.AreEqual(thisMaritalStatus.StatusType, maritalStatus.StatusType);
             }
 
             [TestMethod]
@@ -237,6 +279,38 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 demographicsServiceMock.Setup(gc => gc.GetMaritalStatusById2Async(It.IsAny<string>())).Throws<Exception>();
 
                 await MaritalStatusesController.GetMaritalStatusById2Async("sdjfh");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task MaritalStatusesController_GetMaritalStatusesByGuid_KeyNotFoundException()
+            {
+                demographicsServiceMock.Setup(x => x.GetMaritalStatusById2Async(It.IsAny<string>())).Throws<KeyNotFoundException>();
+                await MaritalStatusesController.GetMaritalStatusById2Async("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task MaritalStatusesController_GetMaritalStatusesByGuid_PermissionsException()
+            {
+                demographicsServiceMock.Setup(x => x.GetMaritalStatusById2Async(It.IsAny<string>())).Throws<PermissionsException>();
+                await MaritalStatusesController.GetMaritalStatusById2Async("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task FixedAssetDesignationsController_GetFixedAssetDesignationsByGuid_ArgumentException()
+            {
+                demographicsServiceMock.Setup(x => x.GetMaritalStatusById2Async(It.IsAny<string>())).Throws<ArgumentException>();
+                await MaritalStatusesController.GetMaritalStatusById2Async("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task FixedAssetDesignationsController_GetFixedAssetDesignationsByGuid_RepositoryException()
+            {
+                demographicsServiceMock.Setup(x => x.GetMaritalStatusById2Async(It.IsAny<string>())).Throws<RepositoryException>();
+                await MaritalStatusesController.GetMaritalStatusById2Async("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc");
             }
 
             [TestMethod]

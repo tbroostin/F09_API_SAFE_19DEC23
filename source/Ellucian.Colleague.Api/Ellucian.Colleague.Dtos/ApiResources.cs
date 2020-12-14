@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Newtonsoft.Json;
@@ -52,7 +52,7 @@ namespace Ellucian.Colleague.Dtos
         /// <summary>
         /// Array of any supported get all patterns, paging and batch.
         /// </summary>
-        [JsonProperty("getAllPatterns ", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [JsonProperty("getAllPatterns", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
         public List<GetAllPattern> GetAllPatterns { get; set; }
 
         /// <summary>
@@ -66,6 +66,21 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>
         [JsonProperty("deprecationNotice", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
         public DeprecationNotice DeprecationNotice { get; set; }
+
+        /*
+        /// <summary>
+        /// PageSize - Used for doc generation only.  Uncomment as needed.
+        /// </summary>
+         [JsonProperty("pageSize", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
+         public int? PageSize { get; set; }
+         */
+
+        /// <summary>
+        /// Used by the resources controller to determine which versionless route is most current.  Does not appear in output
+        /// </summary>
+        [JsonIgnore]
+        public string VersionNumber { get; set; }
+
     }
 
     /// <summary>

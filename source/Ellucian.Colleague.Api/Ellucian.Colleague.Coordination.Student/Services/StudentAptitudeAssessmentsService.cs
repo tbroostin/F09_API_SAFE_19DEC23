@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -1166,21 +1166,30 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 if (!string.IsNullOrEmpty(studentTestScoreEntity.StatusCode))
                 {
-                    switch (studentTestScoreEntity.StatusCodeSpProcessing)
+                    // clients are to set special processing code 2 to EXP on the status that ETSU should use when a student's noncourse expires.
+                    if (string.IsNullOrEmpty(studentTestScoreEntity.StatusCodeSpProcessing) &&
+                            studentTestScoreEntity.StatusCodeSpProcessing2.Equals("EXP", StringComparison.OrdinalIgnoreCase))
                     {
-                        case "1":
-                            studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Inactive;
-                            break;
-                        case "2":
-                            studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Active;
-                            studentAptitudeAssessmentDto.Preference = StudentAptitudeAssessmentsPreference.Primary;
-                            break;
-                        case "3":
-                            studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Notational;
-                            break;
-                        default:
-                            studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Active;
-                            break;
+                        studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Inactive;
+                    }
+                    else
+                    {
+                        switch (studentTestScoreEntity.StatusCodeSpProcessing)
+                        {
+                            case "1":
+                                studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Inactive;
+                                break;
+                            case "2":
+                                studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Active;
+                                studentAptitudeAssessmentDto.Preference = StudentAptitudeAssessmentsPreference.Primary;
+                                break;
+                            case "3":
+                                studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Notational;
+                                break;
+                            default:
+                                studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Active;
+                                break;
+                        }
                     }
                 }
                 else
@@ -1346,21 +1355,30 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 
                 if (!string.IsNullOrEmpty(studentTestScoreEntity.StatusCode))
                 {
-                    switch (studentTestScoreEntity.StatusCodeSpProcessing)
+                    //clients are to set special processing code 2 to EXP on the status that ETSU should use when a student's noncourse expires
+                    if (string.IsNullOrEmpty(studentTestScoreEntity.StatusCodeSpProcessing)
+                        && studentTestScoreEntity.StatusCodeSpProcessing2.Equals("EXP", StringComparison.OrdinalIgnoreCase))
                     {
-                        case "1":
-                            studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Inactive;
-                            break;
-                        case "2":
-                            studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Active;
-                            studentAptitudeAssessmentDto.Preference = StudentAptitudeAssessmentsPreference.Primary;
-                            break;
-                        case "3":
-                            studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Inactive;
-                            break;
-                        default:
-                            studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Active;
-                            break;
+                        studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Inactive;
+                    }
+                    else
+                    {
+                        switch (studentTestScoreEntity.StatusCodeSpProcessing)
+                        {
+                            case "1":
+                                studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Inactive;
+                                break;
+                            case "2":
+                                studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Active;
+                                studentAptitudeAssessmentDto.Preference = StudentAptitudeAssessmentsPreference.Primary;
+                                break;
+                            case "3":
+                                studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Inactive;
+                                break;
+                            default:
+                                studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Active;
+                                break;
+                        }
                     }
                 }
                 else
@@ -1511,21 +1529,30 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 if (!string.IsNullOrEmpty(studentTestScoreEntity.StatusCode))
                 {
-                    switch (studentTestScoreEntity.StatusCodeSpProcessing)
+                    // clients are to set special processing code 2 to EXP on the status that ETSU should use when a student's noncourse expires.
+                    if (string.IsNullOrEmpty(studentTestScoreEntity.StatusCodeSpProcessing) &&
+                            studentTestScoreEntity.StatusCodeSpProcessing2.Equals("EXP", StringComparison.OrdinalIgnoreCase))
                     {
-                        case "1":
-                            studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Inactive;
-                            break;
-                        case "2":
-                            studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Active;
-                            studentAptitudeAssessmentDto.Preference = StudentAptitudeAssessmentsPreference.Primary;
-                            break;
-                        case "3":
-                            studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Notational;
-                            break;
-                        default:
-                            studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Active;
-                            break;
+                        studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Inactive;
+                    }
+                    else
+                    {
+                        switch (studentTestScoreEntity.StatusCodeSpProcessing)
+                        {
+                            case "1":
+                                studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Inactive;
+                                break;
+                            case "2":
+                                studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Active;
+                                studentAptitudeAssessmentDto.Preference = StudentAptitudeAssessmentsPreference.Primary;
+                                break;
+                            case "3":
+                                studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Notational;
+                                break;
+                            default:
+                                studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Active;
+                                break;
+                        }
                     }
                 }
                 else

@@ -1344,6 +1344,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 }
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<Depts>("DEPTS", It.IsAny<GuidLookup[]>(), It.IsAny<bool>())).ReturnsAsync(records);
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<Depts>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(records);
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<Depts>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(records);
 
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                  x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))

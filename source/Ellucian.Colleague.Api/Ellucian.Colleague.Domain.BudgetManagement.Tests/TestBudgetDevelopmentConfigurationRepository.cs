@@ -63,7 +63,7 @@ namespace Ellucian.Colleague.Domain.BudgetManagement.Tests
             BudDevBudget = "FY2021"
         };
 
-        public Budget BudgetContract = new Budget()
+        public Data.BudgetManagement.DataContracts.Budget BudgetContract = new Data.BudgetManagement.DataContracts.Budget()
         {
             Recordkey = "FY2021",
             BuTitle = "Working Budget",

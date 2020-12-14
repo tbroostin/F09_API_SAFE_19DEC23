@@ -178,6 +178,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 //no results
                 return new Tuple<IEnumerable<Dtos.InstitutionJobs>, int>(new List<Dtos.InstitutionJobs>(), 0);
             }
+            catch( PermissionsException e )
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 throw new ArgumentException(e.Message);
@@ -325,6 +329,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 }
                 //no results
                 return new Tuple<IEnumerable<Dtos.InstitutionJobs2>, int>(new List<Dtos.InstitutionJobs2>(), 0);
+            }
+            catch( PermissionsException e )
+            {
+                throw;
             }
             catch (Exception e)
             {
@@ -498,6 +506,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 //no results
                 return new Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>(new List<Dtos.InstitutionJobs3>(), 0);
             }
+            catch( PermissionsException e )
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 throw new ArgumentException(e.Message);
@@ -525,6 +537,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 }
                 return await ConvertInstitutionJobsEntityToDtoAsync(institutionJobsEntity);
             }
+            catch( PermissionsException e )
+            {
+                throw;
+            }
             catch (KeyNotFoundException)
             {
                 throw new KeyNotFoundException("Institution Job not found for GUID " + guid);
@@ -551,6 +567,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     throw new KeyNotFoundException("Institution Job not found for GUID " + guid);
                 }
                 return await ConvertInstitutionJobsEntityToDto2Async(institutionJobsEntity);
+            }
+            catch( PermissionsException e )
+            {
+                throw;
             }
             catch (KeyNotFoundException)
             {
@@ -581,6 +601,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 var ids = new List<string>() { institutionJobsEntity.PersonId, institutionJobsEntity.Employer, institutionJobsEntity.SupervisorId, institutionJobsEntity.AlternateSupervisorId };
                 var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(ids);
                 return await ConvertInstitutionJobsEntityToDto3Async(institutionJobsEntity, personGuidCollection, bypassCache);
+            }
+            catch( PermissionsException e )
+            {
+                throw;
             }
             catch (KeyNotFoundException)
             {
@@ -630,6 +654,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     return await ConvertInstitutionJobsEntityToDto3Async(updatedInstitutionJobsEntity, personGuidCollection, false);
 
                 }
+                catch( PermissionsException e )
+                {
+                    throw;
+                }
                 catch (RepositoryException ex)
                 {
                     throw ex;
@@ -675,6 +703,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(ids);
                 return await ConvertInstitutionJobsEntityToDto3Async(newEntity, personGuidCollection, false);
 
+            }
+            catch( PermissionsException e )
+            {
+                throw;
             }
             catch (RepositoryException ex)
             {
@@ -2073,9 +2105,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
         private void CheckGetInstitutionJobsPermission()
         {
-            var hasPermission = HasPermission(HumanResourcesPermissionCodes.ViewInstitutionJob);
-
-            if (!hasPermission)
+            if ( !HasPermission( HumanResourcesPermissionCodes.ViewInstitutionJob ) && !HasPermission( HumanResourcesPermissionCodes.CreateInstitutionJob ) )
             {
                 throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view Institution Jobs.");
             }
@@ -2087,9 +2117,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
         private void CheckCreateInstitutionJobsPermission()
         {
-            var hasPermission = HasPermission(HumanResourcesPermissionCodes.CreateInstitutionJob);
-
-            if (!hasPermission)
+            if ( !HasPermission( HumanResourcesPermissionCodes.CreateInstitutionJob ) )
             {
                 throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to create or update Institution Jobs.");
             }

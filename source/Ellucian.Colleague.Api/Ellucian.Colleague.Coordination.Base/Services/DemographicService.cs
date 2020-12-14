@@ -551,7 +551,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             return maritalStatusCollection;
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HEDM Version 4</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN HEDM Version 6</remarks>
         /// <summary>
         /// Get a marital status from its ID
         /// </summary>
@@ -564,11 +564,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (InvalidOperationException ex)
             {
-                throw new KeyNotFoundException("Marital Status not found for ID " + id, ex);
+                throw new KeyNotFoundException("No marital status was found for GUID " + id, ex);
             }
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HEDM Version 4</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN HEDM Version 6</remarks>
         /// <summary>
         /// Gets all Marital Statuses
         /// </summary>
@@ -640,7 +640,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             ethnicity.Code = source.Code;
             ethnicity.Title = source.Description;
             ethnicity.Description = null;
-            ethnicity.EthnicityReporting = ConvertEthnicityType2DomainToEthnicityReporting(source.Type);
+            if (source.Type != null)
+            {
+                ethnicity.EthnicityReporting = ConvertEthnicityType2DomainToEthnicityReporting(source.Type);
+            }
             return ethnicity;
         }
 
@@ -649,7 +652,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// </summary>
         /// <param name="ethnicityType"></param>
         /// <returns></returns>
-        private List<EthnicityReporting> ConvertEthnicityType2DomainToEthnicityReporting(Domain.Base.Entities.EthnicityType ethnicityType)
+        private List<EthnicityReporting> ConvertEthnicityType2DomainToEthnicityReporting(Domain.Base.Entities.EthnicityType? ethnicityType)
         {
             List<EthnicityReporting> ethnicityReportingList = new List<EthnicityReporting>() 
             {
@@ -1022,15 +1025,16 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// </summary>
         /// <param name="source">EthnicityType domain enumeration value</param>
         /// <returns>EthnicityType DTO enumeration value</returns>
-        private Ellucian.Colleague.Dtos.EthnicityType2 ConvertEthnicityType2DomainEnumToEthnicityDtoEnum(Ellucian.Colleague.Domain.Base.Entities.EthnicityType source)
+        private Ellucian.Colleague.Dtos.EthnicityType2? ConvertEthnicityType2DomainEnumToEthnicityDtoEnum(Ellucian.Colleague.Domain.Base.Entities.EthnicityType? source)
         {
             switch (source)
             {
                 case Domain.Base.Entities.EthnicityType.Hispanic:
                     return Dtos.EthnicityType2.Hispanic;
                 case Domain.Base.Entities.EthnicityType.NonHispanic:
-                default:
                     return Dtos.EthnicityType2.Nonhispanic;
+                default:
+                    return null;
             }
         }
 
@@ -1197,8 +1201,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     return Dtos.MaritalStatusType2.Widowed;
                 case Domain.Base.Entities.MaritalStatusType.Single:
                     return Dtos.MaritalStatusType2.Single;
+                case Domain.Base.Entities.MaritalStatusType.Other:
+                    return Dtos.MaritalStatusType2.Other;
                 default:
-                    return Dtos.MaritalStatusType2.Single;
+                    return Dtos.MaritalStatusType2.Other;
             }
         }
     }

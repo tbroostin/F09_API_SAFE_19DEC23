@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -141,6 +141,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="criteria"></param>
         /// <param name="academicPeriod"></param>
         /// <param name="sectionInstructor"></param>
+        /// <param name="registrationStatusesByAcademicPeriod"></param>
         /// <returns></returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
@@ -148,9 +149,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         [QueryStringFilterFilter("criteria", typeof(Dtos.SectionRegistration4))]
         [QueryStringFilterFilter("academicPeriod", typeof(Dtos.Filters.AcademicPeriodNamedQueryFilter))]
         [QueryStringFilterFilter("sectionInstructor", typeof(Dtos.Filters.SectionInstructorQueryFilter))]
+        [QueryStringFilterFilter("registrationStatusesByAcademicPeriod", typeof(Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
         public async Task<IHttpActionResult> GetSectionRegistrations3Async(Paging page, QueryStringFilter criteria, QueryStringFilter academicPeriod, 
-            QueryStringFilter sectionInstructor)
+            QueryStringFilter sectionInstructor, QueryStringFilter registrationStatusesByAcademicPeriod)
         {
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
@@ -187,11 +189,13 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                     sectionInstructorFilterValue = sectionInstructorFilterObj.SectionInstructorId.Id != null ? sectionInstructorFilterObj.SectionInstructorId.Id : null;
                 }
 
+                var registrationStatusesByAcademicPeriodObj = GetFilterObject<Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter>(_logger, "registrationStatusesByAcademicPeriod");
+
                 if (CheckForEmptyFilterParameters())
                     return new PagedHttpActionResult<IEnumerable<Dtos.SectionRegistration4>>(new List<Dtos.SectionRegistration4>(), page, 0, this.Request);
 
                 var pageOfItems = await _sectionRegistrationService.GetSectionRegistrations3Async(page.Offset, page.Limit, criteriaObj, academicPeriodFilterValue, 
-                                        sectionInstructorFilterValue, bypassCache);
+                                        sectionInstructorFilterValue, registrationStatusesByAcademicPeriodObj, bypassCache);
 
                 AddEthosContextProperties(await _sectionRegistrationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                                   await _sectionRegistrationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),

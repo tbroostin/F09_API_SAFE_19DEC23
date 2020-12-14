@@ -632,41 +632,15 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         private async Task<IEnumerable<PayCycle2>> BuildAllPayCycles()
         {
             var payCycleEntities = new List<PayCycle2>();
-            // exclude any LDM.GUID entries that contain a secondary key and/or index
-            string criteria = "WITH LDM.GUID.ENTITY EQ 'PAYCYCLE' AND LDM.GUID.SECONDARY.KEY EQ '' ";
 
-            //retrive string array of applicable guids
-            var ldmGuidPayCycle = await DataReader.SelectAsync("LDM.GUID", criteria);
-            if ((ldmGuidPayCycle != null) && (ldmGuidPayCycle.Any()))
+            // BulkReadRecord to get a collection of Paycycle data contracts. 
+            var payCycleRecords = await DataReader.BulkReadRecordAsync<Paycycle>("PAYCYCLE", "");
+
+            foreach (var payCycleRecord in payCycleRecords)
             {
-                // using the string array of applicable guids, convert this into a guidLookup
-                var guidLookUp = ldmGuidPayCycle.Select(guid => new GuidLookup(guid)).ToArray();
-                if ((guidLookUp == null) || (!guidLookUp.Any()))
-                {
-                    return payCycleEntities;
-                }
-                // BulkReadRecord to get a collection of Paycycle data contracts. The guid returned
-                // in the data contract may not be correct, therefore additional processing is required.
-                var payCycleRecords = await DataReader.BulkReadRecordAsync<Paycycle>("PAYCYCLE", guidLookUp);
-
-                // Perform a guid lookup to get a collection of guids and ids
-                var payCycleDictionary = await DataReader.SelectAsync(guidLookUp);
-
-                if ((payCycleDictionary == null) || (!payCycleDictionary.Any()))
-                {
-                    return payCycleEntities;
-                }
-
-                foreach (var payCycleRecord in payCycleRecords)
-                {
-                    // using the id, retrieve the correct guid from the collection of guids and ids
-                    var ldmGuid = payCycleDictionary.FirstOrDefault(id => id.Value != null && payCycleRecord.Recordkey.Equals(id.Value.PrimaryKey, StringComparison.OrdinalIgnoreCase));
-                    if (!ldmGuid.Equals(new KeyValuePair<string, GuidLookupResult>()))
-                    {
-                        payCycleEntities.Add(new PayCycle2(ldmGuid.Key, payCycleRecord.Recordkey, payCycleRecord.PcyDesc) {});
-                    }
-                }
+                payCycleEntities.Add(new PayCycle2(payCycleRecord.RecordGuid, payCycleRecord.Recordkey, payCycleRecord.PcyDesc) { });
             }
+
             return payCycleEntities;
         }
 

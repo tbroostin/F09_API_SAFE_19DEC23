@@ -29,7 +29,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         Task CheckStudentAccessAsync(string studentId);
 
         //StudentCohort
-        Task<IEnumerable<Dtos.StudentCohort>> GetAllStudentCohortsAsync(bool bypassCache);
+        Task<IEnumerable<Dtos.StudentCohort>> GetAllStudentCohortsAsync( Dtos.Filters.CodeItemFilter criteria = null, bool bypassCache = false);
         Task<Dtos.StudentCohort> GetStudentCohortByGuidAsync(string id, bool bypassCache = false);
 
         //ResidentType

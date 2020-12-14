@@ -1,6 +1,7 @@
 ﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
+using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
 using Ellucian.Colleague.Domain.Base.Transactions;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -35,6 +36,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         StudentGradePointAveragesRepository studentGradePointAveragesRepo;
         IEnumerable<StudentAcademicCredit> allStudentAcademicCredits;
+        Collection<StudentPrograms> studentPrograms;
+        Collection<AcadCredentials> acadCredentials;
 
         public TestStudentGradePointAveragesRepository testDataRepository;
 
@@ -172,6 +175,57 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
                 .ReturnsAsync(resp);
 
+            //Acad credentials
+            BulkReadOutput<AcadCredentials> bulkReadOutPut = new BulkReadOutput<AcadCredentials>();
+            acadCredentials = new Collection<AcadCredentials>()
+            {
+                new AcadCredentials()
+                {
+                    AcadPersonId = "1",
+                    AcadAcadProgram = "abc",
+                    AcadCcdDate = new List<DateTime?>()
+                    {
+                        DateTime.Now.AddDays(-5),
+                        DateTime.Now.AddDays(-10)
+                    },
+                    AcadDegreeDate = DateTime.Now.AddDays(-1),
+                    Recordkey = "1",
+                    RecordGuid = "186048e0-8b83-422b-a3f6-b3cbd2066ce4"
+                },
+                new AcadCredentials()
+                {
+                    AcadPersonId = "2",
+                    AcadAcadProgram = "abc",
+                    AcadCcdDate = new List<DateTime?>()
+                    {
+                        DateTime.Now.AddDays(-5),
+                        DateTime.Now.AddDays(-10)
+                    },
+                    AcadDegreeDate = DateTime.Now.AddDays(-1),
+                    Recordkey = "2",
+                    RecordGuid = "286048e0-8b83-422b-a3f6-b3cbd2066ce4"
+                }
+            };
+            bulkReadOutPut.BulkRecordsRead = acadCredentials;
+            dataReaderMock.Setup( repo => repo.BulkReadRecordWithInvalidKeysAsync<AcadCredentials>( It.IsAny<string[]>(), It.IsAny<bool>() ) ).ReturnsAsync( bulkReadOutPut );
+
+            //Student Programs
+            studentPrograms = new Collection<StudentPrograms>()
+            {
+                new StudentPrograms()
+                {
+                    Recordkey = "1*abc",
+                    RecordGuid = "e425346b-f52c-446c-9ad2-451fe3c6612d"
+                },
+                new StudentPrograms()
+                {
+                    Recordkey = "2*abc",
+                    RecordGuid = "67dadd7b-36c3-41a4-935a-ae7277b08fcb"
+                }
+            };
+            dataReaderMock.Setup( repo => repo.BulkReadRecordAsync<StudentPrograms>( It.IsAny<string[]>(), It.IsAny<bool>() ) ).ReturnsAsync( studentPrograms );
+
+
             // Construct repository
             studentGradePointAveragesRepo = new StudentGradePointAveragesRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
@@ -185,14 +239,80 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         [TestClass]
         public class GetStudentGradePointAveragesTests : StudentGradePointAveragesRepositoryTests
         {
-            [TestInitialize]
-            public void Initialize()
-            {
-                MockInitialize();
-            }
-
             //#region TESTS FOR FUNCTIONALITY
             [TestMethod]
+            public async Task GetStudentCredProgramInfoAsync_Null_Input_Params()
+            {
+                var result = await studentGradePointAveragesRepo.GetStudentCredProgramInfoAsync( new List<string>() { } );
+                Assert.IsNull( result );
+            }
+
+            [TestMethod]
+            public async Task GetStudentCredProgramInfoAsync()
+            {
+                var result = await studentGradePointAveragesRepo.GetStudentCredProgramInfoAsync( new List<string>() { "1", "2" } );
+                Assert.IsNotNull( result );
+            }
+
+            [TestMethod]
+            public async Task GetStudentCredProgramInfoAsync_Null_StProgId_NoMatch()
+            {
+                studentPrograms = new Collection<StudentPrograms>()
+                {
+                    new StudentPrograms()
+                    {
+                        Recordkey = "1*abc",
+                        RecordGuid = "e425346b-f52c-446c-9ad2-451fe3c6612d"
+                    },
+                    new StudentPrograms()
+                    {
+                        Recordkey = "3*abc",
+                        RecordGuid = "67dadd7b-36c3-41a4-935a-ae7277b08fcb"
+                    }
+                };
+                dataReaderMock.Setup( repo => repo.BulkReadRecordAsync<StudentPrograms>( It.IsAny<string[]>(), It.IsAny<bool>() ) ).ReturnsAsync( studentPrograms );
+                var result = await studentGradePointAveragesRepo.GetStudentCredProgramInfoAsync( new List<string>() { "1", "2" } );
+                Assert.AreEqual( 1, result.Count() );
+            }
+
+            [TestMethod]
+            public async Task GetStudentCredProgramInfoAsync_Null_AcadAcadProg()
+            {
+                acadCredentials = new Collection<AcadCredentials>()
+                {
+                    new AcadCredentials()
+                    {
+                        AcadPersonId = "1",
+                        AcadAcadProgram = "abc",
+                        AcadCcdDate = new List<DateTime?>()
+                        {
+                            DateTime.Now.AddDays(-5),
+                            DateTime.Now.AddDays(-10)
+                        },
+                        AcadDegreeDate = DateTime.Now.AddDays(-1),
+                        Recordkey = "1",
+                        RecordGuid = "186048e0-8b83-422b-a3f6-b3cbd2066ce4"
+                    },
+                    new AcadCredentials()
+                    {
+                        AcadPersonId = "2",
+                        AcadAcadProgram = "",
+                        AcadCcdDate = new List<DateTime?>()
+                        {
+                            DateTime.Now.AddDays(-5),
+                            DateTime.Now.AddDays(-10)
+                        },
+                        AcadDegreeDate = DateTime.Now.AddDays(-1),
+                        Recordkey = "2",
+                        RecordGuid = "286048e0-8b83-422b-a3f6-b3cbd2066ce4"
+                    }
+                };
+                dataReaderMock.Setup( repo => repo.BulkReadRecordAsync<AcadCredentials>( It.IsAny<string[]>(), It.IsAny<bool>() ) ).ReturnsAsync( acadCredentials );
+                var result = await studentGradePointAveragesRepo.GetStudentCredProgramInfoAsync( new List<string>() { "1", "2" } );
+                Assert.AreEqual( 2, result.Count() );
+            }
+
+            [ TestMethod]
             public async Task ExpectedEqualsActualStudentGradePointAveragesTest()
             {
                 var expected = await GetExpectedStudentGradePointAverages();

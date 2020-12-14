@@ -36,7 +36,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 });
         }
 
-        public Task<Tuple<IEnumerable<FinancialAidFund>, int>> GetFinancialAidFundsAsync(int offset, int limit, bool bypassCache)
+        public Task<Tuple<IEnumerable<FinancialAidFund>, int>> GetFinancialAidFundsAsync(int offset, int limit, string code, string source, string aidType, List<string> classifications, string categoryId, bool bypassCache)
         {
             throw new NotImplementedException();
         }

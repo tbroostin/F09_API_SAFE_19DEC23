@@ -28,7 +28,7 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<Tuple<IEnumerable<SectionRegistrationResponse>, int>> GetSectionRegistrations2Async(int offset,
             int limit, SectionRegistrationResponse sectReg, string acadPeriod, string sectionInstructor);
         Task<Tuple<IEnumerable<SectionRegistrationResponse>, int>> GetSectionRegistrations3Async(int offset,
-            int limit, SectionRegistrationResponse sectReg, string acadPeriod, string sectionInstructor);
+            int limit, SectionRegistrationResponse sectReg, string acadPeriod, string sectionInstructor, Tuple<string, List<string>> registrationStatusesByAcademicPeriod = null);
         Task<SectionRegistrationResponse> GetSectionRegistrationByIdAsync(string id);
         Task<SectionRegistrationResponse> GetSectionRegistrationById2Async(string id);
         Task<Tuple<IEnumerable<StudentAcadCredCourseSecInfo>, int>> GetSectionRegistrationGradeOptionsAsync(int offset, int limit, StudentAcadCredCourseSecInfo criteria);

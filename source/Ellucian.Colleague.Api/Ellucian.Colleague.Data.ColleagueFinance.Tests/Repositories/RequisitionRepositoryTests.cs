@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -18,6 +18,7 @@ using slf4net;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Base.Transactions;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 {
@@ -48,7 +49,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
         [TestInitialize]
         public void Initialize()
-        {            
+        {
             // Set up a mock data reader
             dataReader = new Mock<IColleagueDataReader>();
 
@@ -836,7 +837,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             InitializeMockMethods();
             var requisition = await requisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Full_Access, expenseAccounts);
             Assert.AreEqual(RequisitionStatus.PoCreated, requisition.Status);
-        }        
+        }
         #endregion
 
         #region Vendor tests
@@ -1326,7 +1327,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             //this.requisitionDataContract.ReqRequestor = "0004437";
             personId = "0004437";
             string requisitionId = "4";
-            this.requisitionDomainEntity = await testRequisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Possible_Access, null);            
+            this.requisitionDomainEntity = await testRequisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Possible_Access, null);
             var expenseAccounts = CalculateExpenseAccountsForUser(requisitionId);
             ConvertDomainEntitiesIntoDataContracts();
             InitializeMockMethods();
@@ -1360,7 +1361,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             //this.requisitionDataContract.ReqRequestor = "0004437";
             personId = "0001687";
             string requisitionId = "4";
-            this.requisitionDomainEntity = await testRequisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Possible_Access, null);            
+            this.requisitionDomainEntity = await testRequisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Possible_Access, null);
             var expenseAccounts = CalculateExpenseAccountsForUser(requisitionId);
             ConvertDomainEntitiesIntoDataContracts();
             InitializeMockMethods();
@@ -1431,8 +1432,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             InitializeMockMethods();
             var requisition = await requisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Possible_Access, expenseAccounts);
             Assert.AreEqual(RequisitionStatus.InProgress, requisition.Status);
-            Assert.AreEqual(0, requisition.LineItems.Count(), "We should not be able to see the requisition line items.");            
-        }        
+            Assert.AreEqual(0, requisition.LineItems.Count(), "We should not be able to see the requisition line items.");
+        }
 
         [TestMethod]
         public async Task GetRequisitionAsync_UStatus_PersonIdIdIsNeitherRequestorNorInitiator_AllLineItemsAvailable()
@@ -1465,7 +1466,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     && x.VendorPart == lineItem.VendorPart));
             }
         }
-        
+
         [TestMethod]
         public async Task GetRequisition_UStatus_PersonIdIdIsNeitherRequestorNorInitiator_UserHasNoAccess()
         {
@@ -1495,25 +1496,28 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Collection<DataContracts.Requisitions> requisitionDataContractList = new Collection<DataContracts.Requisitions>();
             requisitionDataContractList.Add(this.requisitionDataContract);
             dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(requisitionDataContractList);
-            var requisitionSummaryList = await testRequisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
+            var expectedRequisitionSummaryList = await testRequisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
             var actual = await requisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
             Assert.IsNotNull(actual);
             Assert.IsTrue(actual.ToList().Count == 1);
 
-            var actualRequisitionSummary = requisitionSummaryList.Where(x => x.Id == requisitionId).FirstOrDefault();
-            var requisitionSummary = actual.FirstOrDefault();
+            var expectedRequisitionSummary = expectedRequisitionSummaryList.Where(x => x.Id == requisitionId).FirstOrDefault();
+            var actualRequisitionSummary = actual.FirstOrDefault();
 
             //assert on entity properties
-            Assert.AreEqual(actualRequisitionSummary.Id, requisitionSummary.Id);
-            Assert.AreEqual(actualRequisitionSummary.Number, requisitionSummary.Number);
-            Assert.AreEqual(actualRequisitionSummary.Date, requisitionSummary.Date);
-            Assert.AreEqual(actualRequisitionSummary.Status, requisitionSummary.Status);
-            Assert.AreEqual(actualRequisitionSummary.StatusDate, requisitionSummary.StatusDate);
-            Assert.AreEqual(actualRequisitionSummary.InitiatorName, requisitionSummary.InitiatorName);
-            Assert.AreEqual(actualRequisitionSummary.RequestorName, requisitionSummary.RequestorName);
-            Assert.AreEqual(actualRequisitionSummary.VendorId, requisitionSummary.VendorId);
-            Assert.AreEqual(actualRequisitionSummary.VendorName, requisitionSummary.VendorName);
-            Assert.AreEqual(actualRequisitionSummary.Amount, requisitionSummary.Amount);
+            Assert.AreEqual(expectedRequisitionSummary.Id, actualRequisitionSummary.Id);
+            Assert.AreEqual(expectedRequisitionSummary.Number, actualRequisitionSummary.Number);
+            Assert.AreEqual(expectedRequisitionSummary.Date, actualRequisitionSummary.Date);
+            Assert.AreEqual(expectedRequisitionSummary.Status, actualRequisitionSummary.Status);
+            Assert.AreEqual(expectedRequisitionSummary.StatusDate, actualRequisitionSummary.StatusDate);
+            Assert.AreEqual(expectedRequisitionSummary.InitiatorName, actualRequisitionSummary.InitiatorName);
+            Assert.AreEqual(expectedRequisitionSummary.RequestorName, actualRequisitionSummary.RequestorName);
+            Assert.AreEqual(expectedRequisitionSummary.VendorId, actualRequisitionSummary.VendorId);
+            Assert.AreEqual(expectedRequisitionSummary.VendorName, actualRequisitionSummary.VendorName);
+            Assert.AreEqual(expectedRequisitionSummary.Amount, actualRequisitionSummary.Amount);
+            Assert.AreEqual(expectedRequisitionSummary.Approvers.Count, actualRequisitionSummary.Approvers.Count);
+            Assert.AreEqual(expectedRequisitionSummary.Approvers.Where(a => a.ApprovalDate == null).ToList().Count, actualRequisitionSummary.Approvers.Where(a => a.ApprovalDate == null).ToList().Count);
+            Assert.AreEqual(expectedRequisitionSummary.Approvers.Where(a => a.ApprovalDate != null).ToList().Count, actualRequisitionSummary.Approvers.Where(a => a.ApprovalDate != null).ToList().Count);
         }
 
         [TestMethod]
@@ -1530,32 +1534,32 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             {
                 return Task.FromResult(new CfwebDefaults() { CfwebReqStatuses = new List<string> { "0" } });
             });
-            
+
             Collection<DataContracts.Requisitions> requisitionDataContractList = new Collection<DataContracts.Requisitions>();
             requisitionDataContractList.Add(this.requisitionDataContract);
             dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(requisitionDataContractList);
 
-            var requisitionSummaryList = await testRequisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
+            var expectedRequisitionSummaryList = await testRequisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
             var actual = await requisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
             Assert.IsNotNull(actual);
             Assert.IsTrue(actual.ToList().Count == 1);
             dataReader.Verify(x => x.SelectAsync("REQUISITIONS", It.IsAny<string[]>(), It.IsAny<string>()), Times.Once);
             dataReader.Verify(x => x.SelectAsync("REQUISITIONS", It.IsAny<string>()), Times.Once);
 
-            var actualRequisitionSummary = requisitionSummaryList.Where(x => x.Id == requisitionId).FirstOrDefault();
-            var requisitionSummary = actual.FirstOrDefault();
+            var expectedRequisitionSummary = expectedRequisitionSummaryList.Where(x => x.Id == requisitionId).FirstOrDefault();
+            var actualRequisitionSummary = actual.FirstOrDefault();
 
             //assert on entity properties
-            Assert.AreEqual(actualRequisitionSummary.Id, requisitionSummary.Id);
-            Assert.AreEqual(actualRequisitionSummary.Number, requisitionSummary.Number);
-            Assert.AreEqual(actualRequisitionSummary.Date, requisitionSummary.Date);
-            Assert.AreEqual(actualRequisitionSummary.Status, requisitionSummary.Status);
-            Assert.AreEqual(actualRequisitionSummary.StatusDate, requisitionSummary.StatusDate);
-            Assert.AreEqual(actualRequisitionSummary.InitiatorName, requisitionSummary.InitiatorName);
-            Assert.AreEqual(actualRequisitionSummary.RequestorName, requisitionSummary.RequestorName);
-            Assert.AreEqual(actualRequisitionSummary.VendorId, requisitionSummary.VendorId);
-            Assert.AreEqual(actualRequisitionSummary.VendorName, requisitionSummary.VendorName);
-            Assert.AreEqual(actualRequisitionSummary.Amount, requisitionSummary.Amount);
+            Assert.AreEqual(expectedRequisitionSummary.Id, actualRequisitionSummary.Id);
+            Assert.AreEqual(expectedRequisitionSummary.Number, actualRequisitionSummary.Number);
+            Assert.AreEqual(expectedRequisitionSummary.Date, actualRequisitionSummary.Date);
+            Assert.AreEqual(expectedRequisitionSummary.Status, actualRequisitionSummary.Status);
+            Assert.AreEqual(expectedRequisitionSummary.StatusDate, actualRequisitionSummary.StatusDate);
+            Assert.AreEqual(expectedRequisitionSummary.InitiatorName, actualRequisitionSummary.InitiatorName);
+            Assert.AreEqual(expectedRequisitionSummary.RequestorName, actualRequisitionSummary.RequestorName);
+            Assert.AreEqual(expectedRequisitionSummary.VendorId, actualRequisitionSummary.VendorId);
+            Assert.AreEqual(expectedRequisitionSummary.VendorName, actualRequisitionSummary.VendorName);
+            Assert.AreEqual(expectedRequisitionSummary.Amount, actualRequisitionSummary.Amount);
         }
 
         [TestMethod]
@@ -1584,17 +1588,17 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 return Task.FromResult(new CfwebDefaults() { CfwebReqStatuses = new List<string> { "0" } });
             });
             var requisitionSummaryList = await this.requisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
-            Assert.IsNull(requisitionSummaryList);            
+            Assert.IsNull(requisitionSummaryList);
             dataReader.Verify(x => x.SelectAsync("REQUISITIONS", It.IsAny<string>()), Times.Exactly(2));
         }
-        
+
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public async Task GetRequisitionsSummaryByPersonIdAsync_NullPersonId()
         {
             var requisitionSummaryList = await this.requisitionRepository.GetRequisitionsSummaryByPersonIdAsync(null);
         }
-        
+
 
         [TestMethod]
         [ExpectedException(typeof(ApplicationException))]
@@ -1602,15 +1606,18 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         {
             InitDataForRequisitionSummary();
             Collection<DataContracts.Requisitions> requisitionDataContractList = new Collection<DataContracts.Requisitions>();
-            
+
             var requisitionDataContract = new Requisitions()
             {
                 Recordkey = "10",
-                ReqStatus = null
+                ReqNo = "1234",
+                ReqStatus = null,
+                ReqAuthorizations = new List<string> { "0000001", "0000002" },
+                ReqNextApprovalIds = new List<string> { "0000003" }
             };
-            
+
             requisitionDataContractList.Add(requisitionDataContract);
-            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(requisitionDataContractList);            
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(requisitionDataContractList);
             var requisition = await requisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
         }
 
@@ -1624,7 +1631,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var requisitionDataContract = new Requisitions()
             {
                 Recordkey = "10",
-                ReqStatus = new List<string>() { "" }
+                ReqNo = "1234",
+                ReqStatus = new List<string>() { "" },
+                ReqAuthorizations = new List<string> { "0000001", "0000002" },
+                ReqNextApprovalIds = new List<string> { "0000003" }
             };
 
             requisitionDataContractList.Add(requisitionDataContract);
@@ -1643,8 +1653,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var requisitionDataContract = new Requisitions()
             {
                 Recordkey = "10",
+                ReqNo = "1234",
                 ReqStatus = new List<string>() { "P" },
-                ReqStatusDate = new List<DateTime?>() { null }
+                ReqStatusDate = new List<DateTime?>() { null },
+                ReqAuthorizations = new List<string> { "0000001", "0000002" },
+                ReqNextApprovalIds = new List<string> { "0000003" }
             };
 
             requisitionDataContractList.Add(requisitionDataContract);
@@ -1669,7 +1682,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var requisitionDataContract = new Requisitions()
             {
                 Recordkey = "1",
-                ReqStatus = new List<string>() { "Z" }
+                ReqNo = "1234",
+                ReqStatus = new List<string>() { "Z" },
+                ReqAuthorizations = new List<string> { "0000001", "0000002" },
+                ReqNextApprovalIds = new List<string> { "0000003" }
             };
             requisitionDataContractList.Add(requisitionDataContract);
             dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(requisitionDataContractList);
@@ -1686,8 +1702,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var requisitionDataContract = new Requisitions()
             {
                 Recordkey = "10",
+                ReqNo = "1234",
                 ReqStatus = new List<string>() { "P" },
-                ReqStatusDate = null
+                ReqStatusDate = null,
+                ReqAuthorizations = new List<string> { "0000001", "0000002" },
+                ReqNextApprovalIds = new List<string> { "0000003" }
             };
 
             requisitionDataContractList.Add(requisitionDataContract);
@@ -1705,8 +1724,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var requisitionDataContract = new Requisitions()
             {
                 Recordkey = "10",
+                ReqNo = "1234",
                 ReqStatus = new List<string>() { "P" },
-                ReqStatusDate = new List<DateTime?>() { null }
+                ReqStatusDate = new List<DateTime?>() { null },
+                ReqAuthorizations = new List<string> { "0000001", "0000002" },
+                ReqNextApprovalIds = new List<string> { "0000003" }
             };
 
 
@@ -1725,9 +1747,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var requisitionDataContract = new Requisitions()
             {
                 Recordkey = "10",
+                ReqNo = "1234",
                 ReqStatus = new List<string>() { "P" },
                 ReqStatusDate = new List<DateTime?>() { new DateTime(2015, 1, 1) },
-                ReqDate = null
+                ReqDate = null,
+                ReqAuthorizations = new List<string> { "0000001", "0000002" },
+                ReqNextApprovalIds = new List<string> { "0000003" }
             };
 
 
@@ -1735,6 +1760,40 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(requisitionDataContractList);
             var requisition = await requisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
         }
+
+        [TestMethod]
+        public async Task GetRequisitionsSummaryByPersonIdAsync_HasEmptyOrWhiteSpaceRequisitionNumber()
+        {
+            InitDataForRequisitionSummary();
+            Collection<DataContracts.Requisitions> requisitionDataContractList = new Collection<DataContracts.Requisitions>();
+
+            var requisitionEmptyReqNoDataContract = new Requisitions()
+            {
+                Recordkey = "10",
+                ReqNo = "",
+                ReqStatus = new List<string>() { "U" },
+                ReqStatusDate = new List<DateTime?>() { new DateTime(2015, 1, 1) },
+                ReqDate = null,
+                ReqAuthorizations = new List<string> { "0000001", "0000002" },
+                ReqNextApprovalIds = new List<string> { "0000003" }
+            };
+            var requisitionWhiteSpaceyReqNoDataContract = new Requisitions()
+            {
+                Recordkey = "10",
+                ReqNo = "  ",
+                ReqStatus = new List<string>() { "U" },
+                ReqStatusDate = new List<DateTime?>() { new DateTime(2015, 1, 1) },
+                ReqDate = null,
+                ReqAuthorizations = new List<string> { "0000001", "0000002" },
+                ReqNextApprovalIds = new List<string> { "0000003" }
+            };
+            requisitionDataContractList.Add(requisitionEmptyReqNoDataContract);
+            requisitionDataContractList.Add(requisitionWhiteSpaceyReqNoDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(requisitionDataContractList);
+            var requisitions = await requisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
+            Assert.IsTrue(requisitions.Count() == 0);
+        }
+
         #endregion
 
         #region Private methods
@@ -1759,9 +1818,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         {
             // Mock ReadRecord to return a pre-defined requisition data contract
             dataReader.Setup<Task<Requisitions>>(acc => acc.ReadRecordAsync<Requisitions>(It.IsAny<string>(), true)).Returns(() =>
-                {
-                    return Task.FromResult(this.requisitionDataContract);
-                });
+            {
+                return Task.FromResult(this.requisitionDataContract);
+            });
 
             // Mock ReadRecord to return a pre-defined ShipTo data contract.
             dataReader.Setup<Task<ShipToCodes>>(acc => acc.ReadRecordAsync<ShipToCodes>(It.IsAny<string>(), true)).Returns(Task.FromResult(this.shipToCodesDataContract));
@@ -1787,36 +1846,36 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     }
                 };
             dataReader.Setup<Task<Collection<DataContracts.Opers>>>(acc => acc.BulkReadRecordAsync<DataContracts.Opers>("UT.OPERS", It.IsAny<string[]>(), true)).Returns(() =>
-                {
-                    return Task.FromResult(opersResponse);
-                });
+            {
+                return Task.FromResult(opersResponse);
+            });
 
 
             // Mock BulkReadRecord to return a list of Projects data contracts
 
             dataReader.Setup<Task<Collection<DataContracts.Projects>>>(acc => acc.BulkReadRecordAsync<DataContracts.Projects>(It.IsAny<string[]>(), true)).Returns(() =>
-                {
-                    return Task.FromResult(this.projectDataContracts);
-                });
+            {
+                return Task.FromResult(this.projectDataContracts);
+            });
 
             // Mock BulkReadRecord to return a list of ProjectsLineItems data contracts
 
             dataReader.Setup<Task<Collection<DataContracts.ProjectsLineItems>>>(acc => acc.BulkReadRecordAsync<DataContracts.ProjectsLineItems>(It.IsAny<string[]>(), true)).Returns(() =>
-                {
-                    return Task.FromResult(this.projectLineItemDataContracts);
-                });
+            {
+                return Task.FromResult(this.projectLineItemDataContracts);
+            });
 
             // Mock BulkReadRecord to return a list of Items data contracts.
             dataReader.Setup<Task<Collection<Items>>>(acc => acc.BulkReadRecordAsync<Items>(It.IsAny<string[]>(), true)).Returns(() =>
-                {
-                    return Task.FromResult(this.itemsDataContracts);
-                });
+            {
+                return Task.FromResult(this.itemsDataContracts);
+            });
 
             // Mock Execute within the transaction invoker to return a GetHierarchyNamesForIdsResponse object
             transactionInvoker.Setup(tio => tio.Execute<GetHierarchyNamesForIdsRequest, GetHierarchyNamesForIdsResponse>(It.IsAny<GetHierarchyNamesForIdsRequest>())).Returns(() =>
-                {
-                    return this.hierarchyNamesForIdsResponse;
-                });
+            {
+                return this.hierarchyNamesForIdsResponse;
+            });
 
             // Mock Execute within the transaction invoker to return a GetHierarchyNamesForIdsResponse object
             transactionInvoker.Setup(tio => tio.ExecuteAsync<GetHierarchyNamesForIdsRequest, GetHierarchyNamesForIdsResponse>(It.IsAny<GetHierarchyNamesForIdsRequest>())).Returns(Task.FromResult(this.hierarchyNamesForIdsResponse));
@@ -2384,6 +2443,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             private DeleteRequisitionResponse response;
 
             private string guid = "1a49eed8-5fe7-4120-b1cf-f23266b9e874";
+            string[] ids = new string[] { "1", "2" };
 
             #endregion
 
@@ -2434,7 +2494,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                         ItmReqExtPrice = 10,
                         ItmDesiredDeliveryDate = DateTime.Now.AddDays(10),
                         ItemReqEntityAssociation = itemReqEntityAssociation,
-                        ReqGlTaxesEntityAssociation = reqGlTaxesEntityAssociation
+                        ReqGlTaxesEntityAssociation = reqGlTaxesEntityAssociation,
+                        ItmFixedAssetsFlag = "S"
+
                     },
                     new Items()
                     {
@@ -2466,6 +2528,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 {
                     RecordGuid = guid,
                     Recordkey = "1",
+                    ReqIntgType = "PROCUREMENT",
                     ReqStatus = new List<string>() { "O" },
                     ReqStatusDate = new List<DateTime?>() { DateTime.Now },
                     ReqDate = DateTime.Now,
@@ -2501,6 +2564,36 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 };
 
                 response = new DeleteRequisitionResponse() { RequisitionsId = "1a49eed8-5fe7-4120-b1cf-f23266b9e874" };
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllRequisitions",
+                    Entity = "REQUISITIONS",
+                    Sublist = ids.ToList(),
+                    TotalCount = ids.ToList().Count,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                       .ReturnsAsync(resp);
             }
 
             private void InitializeTestMock()
@@ -2569,7 +2662,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task GetRequisitionsByGuidAsync_ApplicationException_When_Requistion_Status_Inprogress()
             {
-                requisition.ReqStatus = new List<string> {"U" };
+                requisition.ReqStatus = new List<string> { "U" };
                 await requisitionRepository.GetRequisitionsByGuidAsync(guid);
             }
 
@@ -2622,11 +2715,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [TestMethod]
             public async Task GetRequisitionsAsync_KeyNotFoundException_When_Requisitions_NotFound_For_Given_Ids()
             {
-                dataReaderMock.Setup(r => r.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new string[] {});
+                dataReaderMock.Setup(r => r.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new string[] { });
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(null);
                 var result = await requisitionRepository.GetRequisitionsAsync(0, 2);
                 Assert.IsNotNull(result);
-                Assert.IsTrue(result.Item2 == 0);
             }
 
             [TestMethod]
@@ -2718,7 +2810,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                         ItmReqExtPrice = 10,
                         ItmDesiredDeliveryDate = DateTime.Now.AddDays(10),
                         ItemReqEntityAssociation = itemReqEntityAssociation,
-                        ReqGlTaxesEntityAssociation = reqGlTaxesEntityAssociation
+                        ReqGlTaxesEntityAssociation = reqGlTaxesEntityAssociation,
+                        ItmFixedAssetsFlag = "S"
                     },
                     new Items()
                     {
@@ -2754,6 +2847,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     ReqStatusDate = new List<DateTime?>() { DateTime.Now },
                     ReqDate = DateTime.Now,
                     ReqNo = "1",
+                    ReqIntgType = "EPROCUREMENT",
                     ReqVendor = "1",
                     ReqDefaultInitiator = "1",
                     ReqMaintGlTranDate = DateTime.Now,
@@ -2791,6 +2885,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     MaintenanceDate = DateTime.Today,
                     DeliveryDate = DateTime.Today,
                     CurrencyCode = "USD",
+                    Type = "PROCUREMENT",
                     Buyer = guid,
                     DefaultInitiator = guid,
                     ShipToCode = guid,
@@ -2893,7 +2988,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             public async Task RequisitionRepository_UpdateRequisitionAsync_Create_Requisition()
             {
                 var firstResult = new Dictionary<string, GuidLookupResult>() { { guid, new GuidLookupResult() { Entity = "REQUISITIONS", PrimaryKey = null } } };
-                dataReaderMock.SetupSequence(r => r.SelectAsync(It.IsAny<GuidLookup[]>())).Returns(Task.FromResult(firstResult)).Returns(Task.FromResult(dicResult));
                 var result = await requisitionRepository.UpdateRequisitionAsync(requisitionEntity);
 
                 Assert.IsNotNull(result);

@@ -1,5 +1,6 @@
 ﻿/* Copyright 2019 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -54,6 +55,17 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
         /// <param name="leaveRequestComment">Leave Request Comment Entity</param>
         /// <returns>Leave Request Comment Domain Entity that contains newly created comment's information </returns>
         Task<LeaveRequestComment> CreateLeaveRequestCommentsAsync(LeaveRequestComment leaveRequestComment);
-      
+
+
+        /// <summary>
+        /// Gets the Approved Leave Requests for a timecard week based on the date range. 
+        /// </summary>
+        /// <param name="startDate">Start date of timecard week</param>
+        /// <param name="endDate">End date of timecard week</param>
+        /// <param name="employeeIds">List of person Id</param>
+        /// <returns>List of Leave Request Domain Entities</returns>
+        Task<IEnumerable<Domain.HumanResources.Entities.LeaveRequest>> GetLeaveRequestsForTimeEntryAsync(DateTime startDate, DateTime endDate, IEnumerable<string> employeeIds);
+
+   
     }
 }

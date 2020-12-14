@@ -19,7 +19,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="limit">Limit for paging results</param>
         /// <param name="bypassCache">Flag to bypass cache</param>
         /// <returns>Collection of <see cref="PersonExternalEducationCredentials">personExternalEducationCredentials</see> objects</returns>          
-         Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials>, int>> GetPersonExternalEducationCredentialsAsync(int offset, int limit, string personFilter, bool bypassCache = false);
+         Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials>, int>> GetPersonExternalEducationCredentialsAsync(int offset, int limit, string personFilter,
+             Dtos.PersonExternalEducationCredentials personExternalEducationCredentialsFilter = null, 
+            string personGuid = "", bool bypassCache = false);
              
         /// <summary>
         /// Get a personExternalEducationCredentials by guid.

@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -28,23 +28,30 @@ namespace Ellucian.Colleague.Domain.Base.Services
                 { typeof(float), (object t) => { return t.ToString(); } },
                 { typeof(double), (object t) => { return t.ToString(); } },
                 { typeof(DateTime), (object t) => { return t.ToString(); } },
+                { typeof(DateTimeOffset), (object t) => { return t.ToString(); } },
                 { typeof(bool), (object t) => { return t.ToString(); } },
                 { typeof(List<string>), (object t) => { return string.Join(",", t as List<string>); } },
                 { typeof(List<int>), (object t) => { return string.Join<int>(",", t as List<int>); } },
                 { typeof(List<float>), (object t) => { return string.Join<float>(",", t as List<float>); } },
                 { typeof(List<double>), (object t) => { return string.Join<double>(",", t as List<double>); } },
                 { typeof(List<DateTime>), (object t) => { return string.Join<DateTime>(",", t as List<DateTime>); } },
+                { typeof(List<DateTimeOffset>), (object t) => { return string.Join<DateTimeOffset>(",", t as List<DateTimeOffset>); } },
                 { typeof(List<bool>), (object t) => { return string.Join<bool>(",", t as List<bool>); } },
                 { typeof(string[]), (object t) => { return string.Join(",", t as string[]); } },
                 { typeof(int[]), (object t) => { return string.Join<int>(",", t as int[]); } },
                 { typeof(float[]), (object t) => { return string.Join<float>(",", t as float[]); } },
                 { typeof(double[]), (object t) => { return string.Join<double>(",", t as double[]); } },
                 { typeof(DateTime[]), (object t) => { return string.Join<DateTime>(",", t as DateTime[]); } },
+                { typeof(DateTimeOffset[]), (object t) => { return string.Join<DateTimeOffset>(",", t as DateTimeOffset[]); } },
                 { typeof(bool[]), (object t) => { return string.Join<bool>(",", t as bool[]); } },
                 { typeof(List<Tuple<string, string>>), (object t) => {
                     List<Tuple<string,string>>list = t as List<Tuple<string, string>>;
                     return string.Join(",", list.Select(x => string.Format("{0}{1}", x.Item1, x.Item2)));
-                } }
+                } },
+                { typeof(Dictionary<string,string>), (object t) => {
+                    Dictionary<string,string> list = t as Dictionary<string, string>;
+                    return string.Join(",", list.Select(x => string.Format("{0}{1}", x.Key, x.Value)));
+                } },
             };
 
             // Build a list of argument strings
@@ -90,6 +97,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
 
         public class KeyCacheRequirements
         {
+            public List<string> paragraph { get; set; }
             public List<string> limitingKeys { get; set; }
             public string criteria { get; set; }
             // When requesting the keys for an entity with no qualifying criteria or limiting keys, the CTX cant not differentiate between a request for all records,
@@ -133,6 +141,31 @@ namespace Ellucian.Colleague.Domain.Base.Services
                     {                     
 
                         int requestSize = selectionCriteria.limitingKeys != null && selectionCriteria.limitingKeys.Any()? selectionCriteria.limitingKeys.Count : 0;
+
+                        //if (selectionCriteria.paragraph != null && selectionCriteria.paragraph.Any())
+                        //{
+                        //    List<KeyCacheInfo> keyCacheInfo = null;
+                        //    int totalCount = 0;
+                        //    var request = new GetCacheApiKeysRequest()
+                        //    {
+                        //        ForceCreate = true,
+                        //        //CacheMode = "CREATE",
+                        //        CacheName = rep.BuildFullCacheKey(cacheName),
+                        //        Entity = entity,
+                        //        LimitList = selectionCriteria.limitingKeys,
+                        //        Criteria = selectionCriteria.criteria,
+                        //        Offset = offset,
+                        //        Limit = limit,
+                        //        //KeyCacheInfo = keyCacheInfo,
+                        //        //TotalCount = totalCount,
+                        //        Statements = selectionCriteria.paragraph
+                        //    };
+                        //    response = await transactionInvoker.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(request);
+
+
+                        //}
+
+                        //else 
                         if (requestSize <= maxKeyListSize)
                         {
                             // make one call
@@ -145,7 +178,10 @@ namespace Ellucian.Colleague.Domain.Base.Services
                                 LimitList = selectionCriteria.limitingKeys,
                                 Criteria = selectionCriteria.criteria,
                                 Offset = offset,
-                                Limit = limit
+                                Limit = limit,
+                                Statements = selectionCriteria.paragraph
+
+
                             };
                             response = await transactionInvoker.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(request);
                         }
@@ -186,7 +222,8 @@ namespace Ellucian.Colleague.Domain.Base.Services
                                     Offset = offset,
                                     Limit = limit,
                                     KeyCacheInfo = keyCacheInfo,
-                                    TotalCount = totalCount
+                                    TotalCount = totalCount,
+                                    Statements = selectionCriteria.paragraph
                                 };
                                 response = await transactionInvoker.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(request);
                                 if (response != null && response.KeyCacheInfo != null && response.TotalCount.HasValue)
@@ -223,7 +260,8 @@ namespace Ellucian.Colleague.Domain.Base.Services
                     Offset = offset,
                     Limit = limit,
                     KeyCacheInfo = (keyParts != null) ? keyParts.ToList() : null,
-                    TotalCount = remoteKeyCache.TotalCount
+                    TotalCount = remoteKeyCache.TotalCount,
+                    Statements = remoteKeyCache.Statements
                 };
                 // call a CTX to get the requested keys
                 remoteKeyCache = await transactionInvoker.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(request);

@@ -12,7 +12,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
     /// </summary>
     public interface IFinancialAidFundsService : IBaseService
     {
-        Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidFunds>, int>> GetFinancialAidFundsAsync(int offset, int limit, bool bypassCache = false);
+        Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidFunds>, int>> GetFinancialAidFundsAsync(int offset, int limit, Dtos.Filters.FinancialAidFundsFilter criteriaFilter, bool bypassCache = false);
         //Task<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidFunds>> GetFinancialAidFundsAsync(bool bypassCache = false);
         Task<Ellucian.Colleague.Dtos.FinancialAidFunds> GetFinancialAidFundsByGuidAsync(string id);
     }

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -42,18 +42,18 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             this.TestPdfDataRepository = new TestStudentTaxFormPdfDataRepository();
 
             mockTaxFormPdfDataRepository = new Mock<IStudentTaxFormPdfDataRepository>();
-            mockTaxFormPdfDataRepository.Setup<Task<Form1098PdfData>>(rep => rep.Get1098PdfAsync(It.IsAny<string>(), It.IsAny<string>())).Returns<string, string>((personId, recordId) =>
+            mockTaxFormPdfDataRepository.Setup<Task<Form1098PdfData>>(rep => rep.Get1098PdfAsync(It.IsAny<string>(), It.IsAny<string>(), false)).Returns<string, string, bool>((personId, recordId, suppressNotification) =>
             {
                 return Task.FromResult(TestPdfDataRepository.Get1098PdfAsync(personId, recordId));
             });
 
-            mockTaxFormPdfDataRepository.Setup<Task<Form1098PdfData>>(rep => rep.Get1098PdfAsync("000002", "2015")).Returns<string, string>((personId, recordId) =>
+            mockTaxFormPdfDataRepository.Setup<Task<Form1098PdfData>>(rep => rep.Get1098PdfAsync("000002", "2015", false)).Returns<string, string, bool>((personId, recordId, suppressNotification) =>
             {
                 return Task.FromResult(new Form1098PdfData("2015", "98-7654321") { StudentId = "0000003" });
             });
 
             // Mock to throw exception
-            mockTaxFormPdfDataRepository.Setup<Task<Form1098PdfData>>(rep => rep.Get1098PdfAsync(It.IsAny<string>(), exceptionString)).Returns<string, string>((personId, recordId) =>
+            mockTaxFormPdfDataRepository.Setup<Task<Form1098PdfData>>(rep => rep.Get1098PdfAsync(It.IsAny<string>(), exceptionString, false)).Returns<string, string, bool>((personId, recordId, suppressNotification) =>
             {
                 throw new Exception("An exception occurred.");
             });

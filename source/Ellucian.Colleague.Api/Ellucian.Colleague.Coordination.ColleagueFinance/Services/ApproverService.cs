@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Threading.Tasks;
@@ -12,6 +12,9 @@ using Ellucian.Web.Security;
 using slf4net;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Adapters;
 using Ellucian.Colleague.Domain.ColleagueFinance;
+using System.Collections.Generic;
+using System.Linq;
+using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 {
@@ -71,6 +74,45 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         }
 
         /// <summary>
+        /// Get the list of next approver based on keyword search.
+        /// </summary>
+        /// <param name="queryKeyword"> The search criteria containing keyword for NextApprover search.</param>
+        /// <returns> The staff search results</returns> 
+        public async Task<IEnumerable<NextApprover>> QueryNextApproverByKeywordAsync(string queryKeyword)
+        {
+            List<NextApprover> nextApproverDtos = new List<NextApprover>();
+
+            if (string.IsNullOrEmpty(queryKeyword))
+            {
+                string message = "query keyword is required to query.";
+                throw new ArgumentNullException(message);
+            }
+
+            // Check the permission code to view next approver information.
+            CheckViewNextApproverPermissions();
+
+            // Get the list of vendor search result domain entity from the repository
+            var nextApproverDomainEntities = await approverRepository.QueryNextApproverByKeywordAsync(queryKeyword.Trim());
+
+            if (nextApproverDomainEntities == null || !nextApproverDomainEntities.Any())
+            {
+                return nextApproverDtos;
+            }
+
+            //sorting
+            nextApproverDomainEntities = nextApproverDomainEntities.OrderBy(item => item.NextApproverName).ThenBy(x => x.NextApproverId);
+
+            // Convert the vendor search result into DTOs
+            var dtoAdapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.NextApprover, NextApprover>();
+            foreach (var nextApproverDomainEntity in nextApproverDomainEntities)
+            {
+                nextApproverDtos.Add(dtoAdapter.MapToType(nextApproverDomainEntity));
+            }
+
+            return nextApproverDtos;
+        }
+
+        /// <summary>
         /// Permission code that allows a CREATE and UPDATE operation
         /// on both a draft budget adjustment and a budget adjutment.
         /// </summary>
@@ -82,6 +124,25 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             if (!hasPermission)
             {
                 var message = string.Format("{0} does not have permission to create or update budget adjustments.", CurrentUser.PersonId);
+                logger.Error(message);
+                throw new PermissionsException(message);
+            }
+        }
+
+        /// <summary>
+        /// Helper method to determine if the user has permission to view Next Approver information.
+        /// </summary>
+        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
+        private void CheckViewNextApproverPermissions()
+        {
+            var hasPermission = (HasPermission(BasePermissionCodes.ViewAnyPerson) ||    
+                                    HasPermission(ColleagueFinancePermissionCodes.CreateUpdateRequisition) ||
+                                    HasPermission(ColleagueFinancePermissionCodes.CreateUpdatePurchaseOrder) || 
+                                    HasPermission(ColleagueFinancePermissionCodes.CreateUpdateVoucher));
+            
+            if (!hasPermission)
+            {
+                var message = string.Format("{0} does not have permission to view next approver information.", CurrentUser.PersonId);
                 logger.Error(message);
                 throw new PermissionsException(message);
             }

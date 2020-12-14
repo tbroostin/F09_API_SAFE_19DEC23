@@ -265,6 +265,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Gets a subset of person credentials.
         /// </summary>
         /// <returns>The requested <see cref="Dtos.PersonCredential3">PersonsCredentials</see></returns>
+        [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
         [HttpGet]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
@@ -311,6 +312,19 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                         }
                     }
                 }
+
+                //Discussed with Vickie & Kelly to add exception similar to alternateCredentials. If only type is provided & value is not provided.
+                if( criteriaObject.Credentials != null && criteriaObject.Credentials.Any() )
+                {
+                    foreach( var cred in criteriaObject.Credentials )
+                    {
+                        if( cred.Type != null && string.IsNullOrEmpty( cred.Value ) )
+                        {
+                            throw new ArgumentException( "credentials.type", string.Concat( "credentials.type.id filter requires credentials.value filter." ) );
+                        }
+                    }
+                }
+
                 //we need to validate the alternative credentials
                 if (criteriaObject.AlternativeCredentials != null && criteriaObject.AlternativeCredentials.Any())
                 {
@@ -335,29 +349,35 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 return new PagedHttpActionResult<IEnumerable<Dtos.PersonCredential3>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
 
             }
-            catch (PermissionsException e)
+            catch( KeyNotFoundException e )
             {
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+                _logger.Error( e.ToString() );
+                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ), HttpStatusCode.NotFound );
             }
-            catch (ArgumentNullException e)
+            catch( PermissionsException e )
             {
-                _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                _logger.Error( e.ToString() );
+                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ), HttpStatusCode.Forbidden );
             }
-            catch (KeyNotFoundException e)
+            catch( ArgumentException e )
             {
-                _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+                _logger.Error( e.ToString() );
+                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ) );
             }
-            catch (RepositoryException rex)
+            catch( RepositoryException e )
             {
-                _logger.Error(rex.Message);
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(rex));
+                _logger.Error( e.ToString() );
+                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ) );
             }
-            catch (Exception e)
+            catch( IntegrationApiException e )
             {
-                _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                _logger.Error( e.ToString() );
+                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ) );
+            }
+            catch( Exception e )
+            {
+                _logger.Error( e.ToString() );
+                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ) );
             }
         }
 
@@ -509,6 +529,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="id">A global identifier of a person.</param>
         /// <returns>The requested <see cref="Dtos.PersonCredential3">PersonsCredentials</see></returns>
+        [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
         [EedmResponseFilter]
         public async Task<Dtos.PersonCredential3> GetPersonCredential4ByGuidAsync(string id)
         {
@@ -537,19 +558,35 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 return credential;
 
             }
-            catch (PermissionsException e)
+            catch( KeyNotFoundException e )
             {
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+                _logger.Error( e.ToString() );
+                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ), HttpStatusCode.NotFound );
             }
-            catch (KeyNotFoundException e)
+            catch( PermissionsException e )
             {
-                _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+                _logger.Error( e.ToString() );
+                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ), HttpStatusCode.Forbidden );
             }
-            catch (Exception ex)
+            catch( ArgumentException e )
             {
-                _logger.Error(ex.ToString());
-                throw CreateNotFoundException("person", id);
+                _logger.Error( e.ToString() );
+                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ) );
+            }
+            catch( RepositoryException e )
+            {
+                _logger.Error( e.ToString() );
+                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ) );
+            }
+            catch( IntegrationApiException e )
+            {
+                _logger.Error( e.ToString() );
+                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ) );
+            }
+            catch( Exception e )
+            {
+                _logger.Error( e.ToString() );
+                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ) );
             }
         }
 
@@ -1458,6 +1495,19 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                         }
                     }
                 }
+
+                //Discussed with Vickie & Kelly to add exception similar to alternateCredentials. If only type is provided & value is not provided.
+                if( criteriaObject.Credentials != null && criteriaObject.Credentials.Any() )
+                {
+                    foreach( var cred in criteriaObject.Credentials )
+                    {
+                        if( cred.Type != null && string.IsNullOrEmpty( cred.Value ) )
+                        {
+                            throw new ArgumentException( "credentials.type", string.Concat( "credentials.type.id filter requires credentials.value filter." ) );
+                        }
+                    }
+                }
+
                 //we need to validate the alternative credentials
                 if (criteriaObject.AlternativeCredentials != null && criteriaObject.AlternativeCredentials.Any())
                 {
@@ -2665,7 +2715,6 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
             }
         }
-
 
         /// <summary>
         /// Retrieves the matching Persons for the ids provided or searches keyword

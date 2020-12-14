@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Linq;
@@ -201,9 +201,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 var tuple = new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(allSectionRegistrations4Dtos, 2);
 
                 sectionRegistrationServiceMock.Setup(s => s.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It
-                    .IsAny<SectionRegistration4>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+                    .IsAny<SectionRegistration4>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RegistrationStatusesByAcademicPeriodFilter>(),
+                    It.IsAny<bool>())).ReturnsAsync(tuple);
 
-                var sectionRegistrations = await sectionRegistrationsController.GetSectionRegistrations3Async(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>());
+                var sectionRegistrations = await sectionRegistrationsController.GetSectionRegistrations3Async(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>());
 
                 var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -257,9 +258,11 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 var tuple = new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(allSectionRegistrations4Dtos, 2);
 
                 sectionRegistrationServiceMock.Setup(s => s.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It
-                    .IsAny<SectionRegistration4>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+                    .IsAny<SectionRegistration4>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RegistrationStatusesByAcademicPeriodFilter>(),
+                     It.IsAny<bool>())).ReturnsAsync(tuple);
 
-                var sectionRegistrations = await sectionRegistrationsController.GetSectionRegistrations3Async(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>());
+                var sectionRegistrations = await sectionRegistrationsController.GetSectionRegistrations3Async(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>(), 
+                    It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>());
 
                 var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -315,10 +318,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             {
                 sectionRegistrationServiceMock
                     .Setup(s => s.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It
-                    .IsAny<SectionRegistration4>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                    .IsAny<SectionRegistration4>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RegistrationStatusesByAcademicPeriodFilter>(), It.IsAny<bool>()))
                     .ThrowsAsync(new PermissionsException());
                 await sectionRegistrationsController.GetSectionRegistrations3Async(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>(), 
-                    It.IsAny<QueryStringFilter>());
+                    It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>());
             }
 
             [TestMethod]
@@ -327,10 +330,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             {
                 sectionRegistrationServiceMock
                     .Setup(s => s.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It
-                    .IsAny<SectionRegistration4>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                    .IsAny<SectionRegistration4>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RegistrationStatusesByAcademicPeriodFilter>(), It.IsAny<bool>()))
                     .ThrowsAsync(new ArgumentNullException());
                 await sectionRegistrationsController.GetSectionRegistrations3Async(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>(),
-                    It.IsAny<QueryStringFilter>());
+                    It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>());
             }
 
             [TestMethod]
@@ -339,10 +342,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             {
                 sectionRegistrationServiceMock
                     .Setup(s => s.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It
-                    .IsAny<SectionRegistration4>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                    .IsAny<SectionRegistration4>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RegistrationStatusesByAcademicPeriodFilter>(), It.IsAny<bool>()))
                     .ThrowsAsync(new Exception());
                 await sectionRegistrationsController.GetSectionRegistrations3Async(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>(),
-                    It.IsAny<QueryStringFilter>());
+                    It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>());
             }
 
             //V16.0.0 GET By Id Exception

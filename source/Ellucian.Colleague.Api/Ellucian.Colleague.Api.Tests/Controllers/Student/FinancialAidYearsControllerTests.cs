@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -8,6 +8,7 @@ using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -85,9 +86,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             financialAidYearsController.Request.Headers.CacheControl =
                  new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
 
-            financialAidYearServiceMock.Setup(x => x.GetFinancialAidYearsAsync(false)).ReturnsAsync(financialAidYearCollection);
+            financialAidYearServiceMock.Setup(x => x.GetFinancialAidYearsAsync(string.Empty, false)).ReturnsAsync(financialAidYearCollection);
 
-            var sourceContexts = (await financialAidYearsController.GetFinancialAidYearsAsync()).ToList();
+            var sourceContexts = (await financialAidYearsController.GetFinancialAidYearsAsync(It.IsAny<QueryStringFilter>()) ).ToList();
             Assert.AreEqual(financialAidYearCollection.Count, sourceContexts.Count);
             for (var i = 0; i < sourceContexts.Count; i++)
             {
@@ -105,9 +106,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             financialAidYearsController.Request.Headers.CacheControl =
                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
 
-            financialAidYearServiceMock.Setup(x => x.GetFinancialAidYearsAsync(true)).ReturnsAsync(financialAidYearCollection);
+            financialAidYearServiceMock.Setup(x => x.GetFinancialAidYearsAsync( string.Empty, true ) ).ReturnsAsync(financialAidYearCollection);
 
-            var sourceContexts = (await financialAidYearsController.GetFinancialAidYearsAsync()).ToList();
+            var sourceContexts = (await financialAidYearsController.GetFinancialAidYearsAsync( It.IsAny<QueryStringFilter>() ) ).ToList();
             Assert.AreEqual(financialAidYearCollection.Count, sourceContexts.Count);
             for (var i = 0; i < sourceContexts.Count; i++)
             {
@@ -116,6 +117,46 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.AreEqual(expected.Id, actual.Id, "Id, Index=" + i.ToString());
                 Assert.AreEqual(expected.Title, actual.Title, "Title, Index=" + i.ToString());
                 Assert.AreEqual(expected.Code, actual.Code, "Code, Index=" + i.ToString());
+            }
+        }
+
+        [TestMethod]
+        public async Task FinancialAidYearController_GetFinancialAidYear2_ValidateFields_Nocache()
+        {
+            financialAidYearsController.Request.Headers.CacheControl =
+                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            financialAidYearServiceMock.Setup( x => x.GetFinancialAidYearsAsync( string.Empty, false ) ).ReturnsAsync( financialAidYearCollection );
+
+            var sourceContexts = ( await financialAidYearsController.GetFinancialAidYearsAsync( It.IsAny<QueryStringFilter>() ) ).ToList();
+            Assert.AreEqual( financialAidYearCollection.Count, sourceContexts.Count );
+            for( var i = 0; i < sourceContexts.Count; i++ )
+            {
+                var expected = financialAidYearCollection[ i ];
+                var actual = sourceContexts[ i ];
+                Assert.AreEqual( expected.Id, actual.Id, "Id, Index=" + i.ToString() );
+                Assert.AreEqual( expected.Title, actual.Title, "Title, Index=" + i.ToString() );
+                Assert.AreEqual( expected.Code, actual.Code, "Code, Index=" + i.ToString() );
+            }
+        }
+
+        [TestMethod]
+        public async Task FinancialAidYearController_GetFinancialAidYear2_ValidateFields_Cache()
+        {
+            financialAidYearsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+
+            financialAidYearServiceMock.Setup( x => x.GetFinancialAidYearsAsync( string.Empty, true ) ).ReturnsAsync( financialAidYearCollection );
+
+            var sourceContexts = ( await financialAidYearsController.GetFinancialAidYearsAsync( It.IsAny<QueryStringFilter>() ) ).ToList();
+            Assert.AreEqual( financialAidYearCollection.Count, sourceContexts.Count );
+            for( var i = 0; i < sourceContexts.Count; i++ )
+            {
+                var expected = financialAidYearCollection[ i ];
+                var actual = sourceContexts[ i ];
+                Assert.AreEqual( expected.Id, actual.Id, "Id, Index=" + i.ToString() );
+                Assert.AreEqual( expected.Title, actual.Title, "Title, Index=" + i.ToString() );
+                Assert.AreEqual( expected.Code, actual.Code, "Code, Index=" + i.ToString() );
             }
         }
 
@@ -139,48 +180,48 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task FinancialAidYearController_GetFinancialAidYear_PermissionsException()
         {
-            financialAidYearServiceMock.Setup(x => x.GetFinancialAidYearsAsync(false)).Throws<PermissionsException>();
-            await financialAidYearsController.GetFinancialAidYearsAsync();
+            financialAidYearServiceMock.Setup(x => x.GetFinancialAidYearsAsync(string.Empty, false)).Throws<PermissionsException>();
+            await financialAidYearsController.GetFinancialAidYearsAsync( It.IsAny<QueryStringFilter>() );
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task FinancialAidYearController_GetFinancialAidYear_KeyNotFoundException()
         {
-            financialAidYearServiceMock.Setup(x => x.GetFinancialAidYearsAsync(false)).Throws<KeyNotFoundException>();
-            await financialAidYearsController.GetFinancialAidYearsAsync();
+            financialAidYearServiceMock.Setup(x => x.GetFinancialAidYearsAsync(string.Empty, false)).Throws<KeyNotFoundException>();
+            await financialAidYearsController.GetFinancialAidYearsAsync( It.IsAny<QueryStringFilter>() );
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task FinancialAidYearController_GetFinancialAidYear_ArgumentNullException()
         {
-            financialAidYearServiceMock.Setup(x => x.GetFinancialAidYearsAsync(false)).Throws<ArgumentNullException>();
-            await financialAidYearsController.GetFinancialAidYearsAsync();
+            financialAidYearServiceMock.Setup(x => x.GetFinancialAidYearsAsync(string.Empty, false)).Throws<ArgumentNullException>();
+            await financialAidYearsController.GetFinancialAidYearsAsync( It.IsAny<QueryStringFilter>() );
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task FinancialAidYearController_GetFinancialAidYear_RepositoryException()
         {
-            financialAidYearServiceMock.Setup(x => x.GetFinancialAidYearsAsync(false)).Throws<RepositoryException>();
-            await financialAidYearsController.GetFinancialAidYearsAsync();
+            financialAidYearServiceMock.Setup(x => x.GetFinancialAidYearsAsync(string.Empty, false)).Throws<RepositoryException>();
+            await financialAidYearsController.GetFinancialAidYearsAsync( It.IsAny<QueryStringFilter>() );
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task FinancialAidYearController_GetFinancialAidYear_IntgApiException()
         {
-            financialAidYearServiceMock.Setup(x => x.GetFinancialAidYearsAsync(false)).Throws<IntegrationApiException>();
-            await financialAidYearsController.GetFinancialAidYearsAsync();
+            financialAidYearServiceMock.Setup(x => x.GetFinancialAidYearsAsync(string.Empty, false)).Throws<IntegrationApiException>();
+            await financialAidYearsController.GetFinancialAidYearsAsync( It.IsAny<QueryStringFilter>() );
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task FinancialAidYearController_GetFinancialAidYear_Exception()
         {
-            financialAidYearServiceMock.Setup(x => x.GetFinancialAidYearsAsync(false)).Throws<Exception>();
-            await financialAidYearsController.GetFinancialAidYearsAsync();
+            financialAidYearServiceMock.Setup(x => x.GetFinancialAidYearsAsync(string.Empty, false)).Throws<Exception>();
+            await financialAidYearsController.GetFinancialAidYearsAsync( It.IsAny<QueryStringFilter>() );
         }
 
         [TestMethod]

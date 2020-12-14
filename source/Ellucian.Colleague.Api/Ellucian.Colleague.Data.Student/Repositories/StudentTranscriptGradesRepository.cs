@@ -48,14 +48,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <param name="bypassCache"></param>
         /// <param name="offset"></param>
         /// <returns>Collection of StudentTranscriptGrades domain entities</returns>
-        public async Task<Tuple<IEnumerable<StudentTranscriptGrades>, int>> GetStudentTranscriptGradesAsync(int offset, int limit, string student = "", bool bypassCache = false)
+        public async Task<Tuple<IEnumerable<StudentTranscriptGrades>, int>> GetStudentTranscriptGradesAsync(int offset, int limit, string student = "", string academicPeriodId = "", bool bypassCache = false)
         {
            var limitingKeys = new List<string>();
             string[] studentAcadCredIds = new string[] { };              
             int totalCount = 0;
             string[] subList = null;
 
-            string studentTranscriptGradesCacheKey = CacheSupport.BuildCacheKey(AllStudentTranscriptGradesCache, student);
+            string studentTranscriptGradesCacheKey = CacheSupport.BuildCacheKey(AllStudentTranscriptGradesCache, student, academicPeriodId);
 
             var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
                 this,
@@ -70,6 +70,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 AllStudentTranscriptGradesCacheTimeout,
                 async () =>
                 {
+                    var tempCriteria = academicCredentialCriteria;
                     if (!string.IsNullOrEmpty(student))
                     {
                         // student filter only
@@ -77,14 +78,17 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         if (personStDataContract == null)
                         {
                             return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                        }
+                        }                        
                         limitingKeys = personStDataContract.PstStudentAcadCred;                        
                     }
-                   
+                    if( !string.IsNullOrWhiteSpace( academicPeriodId ) )
+                    {
+                        tempCriteria = string.Format( "{0} AND STC.TERM EQ '{1}'", tempCriteria, academicPeriodId );
+                    }
                     CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
                     {
                         limitingKeys = limitingKeys != null && limitingKeys.Any() ? limitingKeys.Distinct().ToList() : null,
-                        criteria = academicCredentialCriteria.ToString(),
+                        criteria = tempCriteria,
                     };
 
                     return requirements;
@@ -355,7 +359,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns></returns>
         private async Task<IEnumerable<StudentTranscriptGrades>> BuildStudentTranscriptGradesAsync(string[] studentAcadCredIds, Collection<StudentAcadCred> sources)
         {
-              var studentTranscriptGradesCollection = new List<StudentTranscriptGrades>();
+            var studentTranscriptGradesCollection = new List<StudentTranscriptGrades>();
             var stwebDefaults = await GetStwebDefaultsAsync();
            
             if (stwebDefaults == null)
@@ -450,7 +454,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 throw exception;
             }
-            return studentTranscriptGradesCollection.AsEnumerable();
+            return studentTranscriptGradesCollection;
         }
 
         /// <summary>
@@ -522,7 +526,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     RepeatAcademicCreditIds = source.StcRepeatedAcadCred,
                     VerifiedGradeDate = source.StcVerifiedGradeDate,
                     VerifiedGrade = source.StcVerifiedGrade,
-                    StwebTranAltcumFlag = stwebTranAltcumFlag
+                    StwebTranAltcumFlag = stwebTranAltcumFlag,
+                    //STC.TERM
+                    Term = source.StcTerm
 
                 };
 

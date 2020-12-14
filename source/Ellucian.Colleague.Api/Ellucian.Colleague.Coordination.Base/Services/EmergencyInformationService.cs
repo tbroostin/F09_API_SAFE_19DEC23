@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliatesusing System;
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliatesusing System;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos;
@@ -106,7 +106,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if (!CurrentUser.IsPerson(personId))
             {
                 string message = CurrentUser.PersonId + " requested but cannot view emergency information for person " + personId;
-                logger.Info(message);
+                logger.Error(message);
                 throw new PermissionsException();
             }
 
@@ -138,7 +138,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if (!CurrentUser.IsPerson(personId) && !CanSeeAnyEmergencyInformation())
             {
                 string message = CurrentUser.PersonId + " requested but cannot view emergency information for person " + personId;
-                logger.Info(message);
+                logger.Error(message);
                 throw new PermissionsException();
             }
 
@@ -757,7 +757,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if (!CurrentUser.IsPerson(emergencyInformation.PersonId))
             {
                 string message = CurrentUser.PersonId + " attempted but cannot update emergency information for person " + emergencyInformation.PersonId;
-                logger.Info(message);
+                logger.Error(message);
                 throw new PermissionsException();
             }
 

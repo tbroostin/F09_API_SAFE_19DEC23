@@ -18,6 +18,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
             public string type;
             public string status;
             public string initials;
+            public string loginid;
         }
 
         public class PersonRecord
@@ -33,20 +34,23 @@ namespace Ellucian.Colleague.Domain.Base.Tests
                 recordKey = "0000001",
                 type = "S",
                 status = "C",
-                initials = "STAFFA"
+                initials = "STAFFA",
+                loginid = "STAFFAA"
                 
             },
             new StaffRecord(){
                 recordKey = "0000002",
                 type = "S",
                 status = "F",
-                initials = "STAFFB"
+                initials = "STAFFB",
+                loginid = "STAFFBB"
             },
             new StaffRecord(){
                 recordKey = "0000003",
                 type = "V",
                 status = "C",
-                initials = "STAFFC"
+                initials = "STAFFC",
+                loginid = "STAFFCC"
             }
         };
 

@@ -22,6 +22,7 @@ using System.Collections.ObjectModel;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Data.Colleague;
 using Ellucian.Colleague.Dtos.DtoProperties;
+using Ellucian.Colleague.Domain.Base.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 {
@@ -69,6 +70,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             BuildValidVoucherService();
             versionNumber = 2;
             BuildDto();
+
+
         }
 
 
@@ -98,36 +101,90 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             Collection<Ellucian.Colleague.Domain.Base.Entities.CommerceTaxCode> TaxCodInfo = new Collection<Ellucian.Colleague.Domain.Base.Entities.CommerceTaxCode>() { new Ellucian.Colleague.Domain.Base.Entities.CommerceTaxCode("TaxGuid", "ST", "TestGUIDdesc") };
             mockreferenceDataRepository.Setup(repo => repo.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(TaxCodInfo);
+            foreach (var record in TaxCodInfo)
+            {
+                mockreferenceDataRepository.Setup(repo => repo.GetCommerceTaxCodeGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
 
             Collection<Ellucian.Colleague.Domain.Base.Entities.CommerceTaxCodeRate> TaxCodeRate = new Collection<Ellucian.Colleague.Domain.Base.Entities.CommerceTaxCodeRate>() { new Ellucian.Colleague.Domain.Base.Entities.CommerceTaxCodeRate("TaxRateGuid", "ST", "TestGUIDdesc") };
             TaxCodeRate.FirstOrDefault().ApTaxEffectiveDate = new DateTime(2014, 1, 11);
             mockreferenceDataRepository.Setup(repo => repo.GetCommerceTaxCodeRatesAsync(It.IsAny<bool>())).ReturnsAsync(TaxCodeRate);
+            foreach (var record in TaxCodeRate)
+            {
+                mockreferenceDataRepository.Setup(repo => repo.GetCommerceTaxCodeRateGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
 
             Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityCode> commodityCodes = new Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityCode>() { new Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityCode("CommodityGuid321", "00402", "Test Commodity") };
             mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(commodityCodes);
+            foreach (var record in commodityCodes)
+            {
+                mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetCommodityCodeGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
+
+            Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.FxaTransferFlags> FxaTransferFlags = new Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.FxaTransferFlags>() { new Ellucian.Colleague.Domain.ColleagueFinance.Entities.FxaTransferFlags("FxaTransferFlagsGuid321", "00402", "Test FxaTransferFlags") };
+            mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(FxaTransferFlags);
+            foreach (var record in FxaTransferFlags)
+            {
+                mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetFxaTransferFlagGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
 
             var validApType = new Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableSources("apTypeGuid321", "AP", "Account Payable");
             validApType.Source = "R";
             Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableSources> apTypes = new Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableSources>() { validApType };
             mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetAccountsPayableSourcesAsync(It.IsAny<bool>())).ReturnsAsync(apTypes);
+            foreach (var record in apTypes)
+            {
+                mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetAccountsPayableSourceGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
 
             Collection<VendorTerm> Terms = new Collection<VendorTerm>() { new VendorTerm("TermsGuid321", "02", "02-15 days") };
             mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetVendorTermsAsync(It.IsAny<bool>())).ReturnsAsync(Terms);
+            foreach (var record in Terms)
+            {
+                mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetVendorTermGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
 
             Collection<Ellucian.Colleague.Domain.Base.Entities.BoxCodes>TaxBoxInfo = new Collection<Ellucian.Colleague.Domain.Base.Entities.BoxCodes>() { new Ellucian.Colleague.Domain.Base.Entities.BoxCodes("TaxBoxGuid", "14", "box 14", "1099MI") };
             mockreferenceDataRepository.Setup(repo => repo.GetAllBoxCodesAsync(false)).ReturnsAsync(TaxBoxInfo);
+            foreach (var record in TaxBoxInfo)
+            {
+                mockreferenceDataRepository.Setup(repo => repo.GetBoxCodesGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
 
             Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityUnitType> UnitTypes = new Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityUnitType>() {
                 new Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityUnitType("unitGuid321", "rock", "Rocks"),
                 new Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityUnitType("unitGuid123", "thing", "Things") };
             mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(UnitTypes);
+            foreach (var record in UnitTypes)
+            {
+                mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetCommodityUnitTypeGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
 
             AccountsPayableInvoicesEntity = ConvertVoucherEntityToAPI(voucherDomainEntity);
             AccountsPayableInvoicesEntity.PurchaseOrderId = "PO01";
             mockAccountsPayableInvoices.Setup(repo => repo.GetAccountsPayableInvoicesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(AccountsPayableInvoicesEntity);
             mockvendorsRepository.Setup(repo => repo.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("VendorIDGuid");
             mockaddressRepository.Setup(repo => repo.GetAddressGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("AddressGuid");
-            mockAccountsPayableInvoices.Setup(rep => rep.GetGuidFromID(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync("POGuid");
+            Dictionary<string, string> dict = new Dictionary<string, string>();
+            dict.Add("1", "POGuid");
+            dict.Add("PurchaseOrderGuid-123", "PoGuid2");
+            mockAccountsPayableInvoices.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<string[]>(), "PURCHASE.ORDERS")).ReturnsAsync(dict);
+
+            Dictionary<string, string> dict1 = new Dictionary<string, string>();
+            dict1.Add("1", "BpoGuid");
+            mockAccountsPayableInvoices.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<string[]>(), "BPO")).ReturnsAsync(dict1);
+
+            Dictionary<string, string> dict2 = new Dictionary<string, string>();
+            dict2.Add("1", "VendorIDGuid1");
+            dict2.Add("0001234", "VendorIDGuid");
+            mockvendorsRepository.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(dict2);
+            mockvendorsRepository.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict2);
+
+            Dictionary<string, string> dict3 = new Dictionary<string, string>();
+            dict3.Add("000001", "AddressGuid1");
+            dict3.Add("000002", "AddressGuid");
+            mockPersonRepository.Setup(x => x.GetAddressGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(dict3);
+            mockPersonRepository.Setup(x => x.GetAddressGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict3);
 
 
             var actual = await AccountsPayableInvoicesService.GetAccountsPayableInvoices2ByGuidAsync(guid);
@@ -177,6 +234,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 Assert.AreEqual(entityLi.Description, dtoLi.Description);
                 Assert.AreEqual("CommodityGuid321", dtoLi.CommodityCode.Id);
+                Assert.AreEqual("FxaTransferFlagsGuid321", dtoLi.FixedAssetDesignation.Id);
                 Assert.AreEqual(entityLi.Quantity, dtoLi.Quantity);
                 Assert.AreEqual(null, dtoLi.VendorBilledQuantity);
                 if (entityLi.UnitOfIssue == "rocks")
@@ -243,30 +301,79 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             Collection<Ellucian.Colleague.Domain.Base.Entities.CommerceTaxCode> TaxCodInfo = new Collection<Ellucian.Colleague.Domain.Base.Entities.CommerceTaxCode>() { new Ellucian.Colleague.Domain.Base.Entities.CommerceTaxCode("TaxGuid", "ST", "TestGUIDdesc") };
             mockreferenceDataRepository.Setup(repo => repo.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(TaxCodInfo);
+            foreach (var record in TaxCodInfo)
+            {
+                mockreferenceDataRepository.Setup(repo => repo.GetCommerceTaxCodeGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
 
             Collection<Ellucian.Colleague.Domain.Base.Entities.BoxCodes> TaxBoxInfo = new Collection<Ellucian.Colleague.Domain.Base.Entities.BoxCodes>() { new Ellucian.Colleague.Domain.Base.Entities.BoxCodes("TaxBoxGuid", "14", "box 14", "1099MI") };
             mockreferenceDataRepository.Setup(repo => repo.GetAllBoxCodesAsync(false)).ReturnsAsync(TaxBoxInfo);
+            foreach (var record in TaxBoxInfo)
+            {
+                mockreferenceDataRepository.Setup(repo => repo.GetBoxCodesGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
 
             Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityCode> commodityCodes = new Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityCode>() { new Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityCode("CommodityGuid321", "00402", "Test Commodity") };
             mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(commodityCodes);
+            foreach (var record in commodityCodes)
+            {
+                mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetCommodityCodeGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
+            Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.FxaTransferFlags> FxaTransferFlags = new Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.FxaTransferFlags>() { new Ellucian.Colleague.Domain.ColleagueFinance.Entities.FxaTransferFlags("FxaTransferFlagsGuid321", "00402", "Test FxaTransferFlags") };
+            mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(FxaTransferFlags);
+            foreach (var record in FxaTransferFlags)
+            {
+                mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetFxaTransferFlagGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
 
             Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableSources> apTypes = new Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableSources>() { new Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableSources("apTypeGuid321", "AP", "Account Payable") };
             mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetAccountsPayableSourcesAsync(It.IsAny<bool>())).ReturnsAsync(apTypes);
+            foreach (var record in apTypes)
+            {
+                mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetAccountsPayableSourceGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
 
             Collection<VendorTerm> Terms = new Collection<VendorTerm>() { new VendorTerm("TermsGuid321", "02", "02-15 days") };
             mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetVendorTermsAsync(It.IsAny<bool>())).ReturnsAsync(Terms);
+            foreach (var record in Terms)
+            {
+                mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetVendorTermGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
 
             Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityUnitType> UnitTypes = new Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityUnitType>() {
                 new Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityUnitType("unitGuid321", "rock", "Rocks"),
                 new Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityUnitType("unitGuid123", "thing", "Things") };
             mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(UnitTypes);
+            foreach (var record in UnitTypes)
+            {
+                mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetCommodityUnitTypeGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
 
             AccountsPayableInvoicesEntity = ConvertVoucherEntityToAPI(voucherDomainEntity);
             AccountsPayableInvoicesEntity.BlanketPurchaseOrderId = "BPO01";
             mockAccountsPayableInvoices.Setup(repo => repo.GetAccountsPayableInvoicesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(AccountsPayableInvoicesEntity);
             mockvendorsRepository.Setup(repo => repo.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("VendorIDGuid");
             mockaddressRepository.Setup(repo => repo.GetAddressGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("AddressGuid");
-            mockAccountsPayableInvoices.Setup(rep => rep.GetGuidFromID(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync("POGuid");
+            Dictionary<string, string> dict = new Dictionary<string, string>();
+            dict.Add("1", "POGuid");
+            dict.Add("PurchaseOrderGuid-123", "PoGuid2");
+            mockAccountsPayableInvoices.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<string[]>(), "PURCHASE.ORDERS")).ReturnsAsync(dict);
+
+            Dictionary<string, string> dict1 = new Dictionary<string, string>();
+            dict1.Add("1", "BpoGuid");
+            mockAccountsPayableInvoices.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<string[]>(), "BPO")).ReturnsAsync(dict1);
+
+            Dictionary<string, string> dict2 = new Dictionary<string, string>();
+            dict2.Add("1", "VendorIDGuid1");
+            dict2.Add("0001234", "VendorIDGuid");
+            mockvendorsRepository.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(dict2);
+            mockvendorsRepository.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict2);
+
+            Dictionary<string, string> dict3 = new Dictionary<string, string>();
+            dict3.Add("000001", "AddressGuid");
+            dict3.Add("000002", "AddressGuid");
+            mockPersonRepository.Setup(x => x.GetAddressGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(dict3);
+            mockPersonRepository.Setup(x => x.GetAddressGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict3);
 
 
             var actual = await AccountsPayableInvoicesService.GetAccountsPayableInvoices2ByGuidAsync(guid);
@@ -316,6 +423,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 Assert.AreEqual(entityLi.Description, dtoLi.Description);
                 Assert.AreEqual("CommodityGuid321", dtoLi.CommodityCode.Id);
+                Assert.AreEqual("FxaTransferFlagsGuid321", dtoLi.FixedAssetDesignation.Id);
                 Assert.AreEqual(entityLi.Quantity, dtoLi.Quantity);
                 Assert.AreEqual(null, dtoLi.VendorBilledQuantity);
                 if (entityLi.UnitOfIssue == "rocks")
@@ -391,8 +499,26 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             Tuple<IEnumerable<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableInvoices>, int> GetAPIValues = new Tuple<IEnumerable<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableInvoices>, int>(accountsPayableInvoicesEntities, 4);
             mockAccountsPayableInvoices.Setup(repo => repo.GetAccountsPayableInvoices2Async(0, 100, It.IsAny<string>())).ReturnsAsync(GetAPIValues);
-            mockvendorsRepository.Setup(repo => repo.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("VendorIDGuid");
-            mockaddressRepository.Setup(repo => repo.GetAddressGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("AddressGuid");
+            Dictionary<string, string> dict = new Dictionary<string, string>();
+            dict.Add("1", "POGuid");
+            dict.Add("PurchaseOrderGuid-123", "PoGuid2");
+            mockAccountsPayableInvoices.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<string[]>(), "PURCHASE.ORDERS")).ReturnsAsync(dict);
+
+            Dictionary<string, string> dict1 = new Dictionary<string, string>();
+            dict1.Add("1", "BpoGuid");
+            mockAccountsPayableInvoices.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<string[]>(), "BPO")).ReturnsAsync(dict1);
+
+            Dictionary<string, string> dict2 = new Dictionary<string, string>();
+            dict2.Add("1", "VendorIDGuid1");
+            dict2.Add("0001234", "VendorIDGuid");
+            mockvendorsRepository.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(dict2);
+            mockvendorsRepository.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict2);
+
+            Dictionary<string, string> dict3 = new Dictionary<string, string>();
+            dict3.Add("000001", "AddressGuid1");
+            dict3.Add("000002", "AddressGuid");
+            mockPersonRepository.Setup(x => x.GetAddressGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(dict3);
+            mockPersonRepository.Setup(x => x.GetAddressGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict3);
 
             var actuals = await AccountsPayableInvoicesService.GetAccountsPayableInvoices2Async(0, 100, It.IsAny<AccountsPayableInvoices2>());
             Assert.IsNotNull(actuals.Item1);
@@ -494,7 +620,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [TestMethod]
         public async Task AccountsPayableInvoicesServiceTests_GetAccountsPayableInvoicesAsync_MultipleReferenceDocNumbers()
         {
-
             string voucherId = voucherIds[0];
             guid = guids[0];
             var voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, "00000001", GlAccessLevel.Full_Access, null, versionNumber);
@@ -504,8 +629,28 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             Tuple<IEnumerable<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableInvoices>, int> GetAPIValues = new Tuple<IEnumerable<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableInvoices>, int>(accountsPayableInvoicesEntities, 4);
             mockAccountsPayableInvoices.Setup(repo => repo.GetAccountsPayableInvoices2Async(0, 100, It.IsAny<string>())).ReturnsAsync(GetAPIValues);
-            mockvendorsRepository.Setup(repo => repo.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("VendorIDGuid");
-            mockaddressRepository.Setup(repo => repo.GetAddressGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("AddressGuid");
+            Dictionary<string, string> dict = new Dictionary<string, string>();
+            dict.Add("1", "POGuid");
+            dict.Add("PurchaseOrderGuid-1", "PoGuid2");
+            dict.Add("PurchaseOrderGuid-2", "PoGuid3");
+            dict.Add("PurchaseOrderGuid-10", "PoGuid4");
+            mockAccountsPayableInvoices.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<string[]>(), "PURCHASE.ORDERS")).ReturnsAsync(dict);
+
+            Dictionary<string, string> dict1 = new Dictionary<string, string>();
+            dict1.Add("1", "BpoGuid");
+            mockAccountsPayableInvoices.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<string[]>(), "BPO")).ReturnsAsync(dict1);
+
+            Dictionary<string, string> dict2 = new Dictionary<string, string>();
+            dict2.Add("1", "VendorIDGuid1");
+            dict2.Add("0001234", "VendorIDGuid");
+            mockvendorsRepository.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(dict2);
+            mockvendorsRepository.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict2);
+
+            Dictionary<string, string> dict3 = new Dictionary<string, string>();
+            dict3.Add("000001", "AddressGuid1");
+            dict3.Add("000002", "AddressGuid");
+            mockPersonRepository.Setup(x => x.GetAddressGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(dict3);
+            mockPersonRepository.Setup(x => x.GetAddressGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict3);
 
             var actuals = await AccountsPayableInvoicesService.GetAccountsPayableInvoices2Async(0, 100, It.IsAny<AccountsPayableInvoices2>());
             Assert.IsNotNull(actuals.Item1);
@@ -545,9 +690,26 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             Tuple<IEnumerable<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableInvoices>, int> GetAPIValues = new Tuple<IEnumerable<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableInvoices>, int>(accountsPayableInvoicesEntities, 2);
             mockAccountsPayableInvoices.Setup(repo => repo.GetAccountsPayableInvoices2Async(1, 100, It.IsAny<string>())).ReturnsAsync(GetAPIValues);
-            mockvendorsRepository.Setup(repo => repo.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("VendorIDGuid");
-            mockaddressRepository.Setup(repo => repo.GetAddressGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("AddressGuid");
+            Dictionary<string, string> dict = new Dictionary<string, string>();
+            dict.Add("1", "POGuid");
+            dict.Add("PurchaseOrderGuid-123", "PoGuid2");
+            mockAccountsPayableInvoices.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<string[]>(), "PURCHASE.ORDERS")).ReturnsAsync(dict);
 
+            Dictionary<string, string> dict1 = new Dictionary<string, string>();
+            dict1.Add("1", "BpoGuid");
+            mockAccountsPayableInvoices.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<string[]>(), "BPO")).ReturnsAsync(dict1);
+
+            Dictionary<string, string> dict2 = new Dictionary<string, string>();
+            dict2.Add("1", "VendorIDGuid1");
+            dict2.Add("0001234", "VendorIDGuid");
+            mockvendorsRepository.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(dict2);
+            mockvendorsRepository.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict2);
+
+            Dictionary<string, string> dict3 = new Dictionary<string, string>();
+            dict3.Add("000001", "AddressGuid1");
+            dict3.Add("000002", "AddressGuid");
+            mockPersonRepository.Setup(x => x.GetAddressGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(dict3);
+            mockPersonRepository.Setup(x => x.GetAddressGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict3);
             var actuals = await AccountsPayableInvoicesService.GetAccountsPayableInvoices2Async(1, 100, It.IsAny<AccountsPayableInvoices2>());
             int i = 1;
             foreach (var actual in actuals.Item1)
@@ -574,8 +736,27 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             Tuple<IEnumerable<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableInvoices>, int> GetAPIValues = new Tuple<IEnumerable<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableInvoices>, int>(accountsPayableInvoicesEntities, 2);
             mockAccountsPayableInvoices.Setup(repo => repo.GetAccountsPayableInvoices2Async(1, 100, It.IsAny<string>())).ReturnsAsync(GetAPIValues);
-            mockvendorsRepository.Setup(repo => repo.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("VendorIDGuid");
-            mockaddressRepository.Setup(repo => repo.GetAddressGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("AddressGuid");
+            Dictionary<string, string> dict = new Dictionary<string, string>();
+            dict.Add("1", "POGuid");
+            dict.Add("PurchaseOrderGuid-123", "PoGuid2");
+            mockAccountsPayableInvoices.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<string[]>(), "PURCHASE.ORDERS")).ReturnsAsync(dict);
+
+            Dictionary<string, string> dict1 = new Dictionary<string, string>();
+            dict1.Add("1", "BpoGuid");
+            mockAccountsPayableInvoices.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<string[]>(), "BPO")).ReturnsAsync(dict1);
+
+            Dictionary<string, string> dict2 = new Dictionary<string, string>();
+            dict2.Add("1", "VendorIDGuid1");
+            dict2.Add("0001234", "VendorIDGuid");
+            mockvendorsRepository.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(dict2);
+            mockvendorsRepository.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict2);
+
+            Dictionary<string, string> dict3 = new Dictionary<string, string>();
+            dict3.Add("000001", "AddressGuid1");
+            dict3.Add("000002", "AddressGuid");
+            mockPersonRepository.Setup(x => x.GetAddressGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(dict3);
+            mockPersonRepository.Setup(x => x.GetAddressGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict3);
+
             var criteria = new AccountsPayableInvoices2();
             criteria.InvoiceNumber = "v123456";
             var actuals = await AccountsPayableInvoicesService.GetAccountsPayableInvoices2Async(1, 100, criteria);
@@ -604,8 +785,26 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             Tuple<IEnumerable<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableInvoices>, int> GetAPIValues = new Tuple<IEnumerable<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableInvoices>, int>(accountsPayableInvoicesEntities, 2);
             mockAccountsPayableInvoices.Setup(repo => repo.GetAccountsPayableInvoices2Async(0, 2, It.IsAny<string>())).ReturnsAsync(GetAPIValues);
-            mockvendorsRepository.Setup(repo => repo.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("VendorIDGuid");
-            mockaddressRepository.Setup(repo => repo.GetAddressGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("AddressGuid");
+            Dictionary<string, string> dict = new Dictionary<string, string>();
+            dict.Add("1", "POGuid");
+            dict.Add("PurchaseOrderGuid-123", "PoGuid2");
+            mockAccountsPayableInvoices.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<string[]>(), "PURCHASE.ORDERS")).ReturnsAsync(dict);
+
+            Dictionary<string, string> dict1 = new Dictionary<string, string>();
+            dict1.Add("1", "BpoGuid");
+            mockAccountsPayableInvoices.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<string[]>(), "BPO")).ReturnsAsync(dict1);
+
+            Dictionary<string, string> dict2 = new Dictionary<string, string>();
+            dict2.Add("1", "VendorIDGuid1");
+            dict2.Add("0001234", "VendorIDGuid");
+            mockvendorsRepository.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(dict2);
+            mockvendorsRepository.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict2);
+
+            Dictionary<string, string> dict3 = new Dictionary<string, string>();
+            dict3.Add("000001", "AddressGuid1");
+            dict3.Add("000002", "AddressGuid");
+            mockPersonRepository.Setup(x => x.GetAddressGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(dict3);
+            mockPersonRepository.Setup(x => x.GetAddressGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict3);
 
             var actuals = await AccountsPayableInvoicesService.GetAccountsPayableInvoices2Async(0, 2, It.IsAny<AccountsPayableInvoices2>());
 
@@ -905,6 +1104,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                            },
                          Description = "line item Description",
                          CommodityCode = new GuidObject2("commodity-guid"),
+                         FixedAssetDesignation = new GuidObject2("fixedAssetDesignation-guid"),
                          Quantity = 2m,
                          UnitofMeasure = new GuidObject2("unitguid321"),
                          UnitPrice = new Dtos.DtoProperties.Amount2DtoProperty() {
@@ -980,6 +1180,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             {
                 AccountsPayableInvoicesLineItem newLi = new AccountsPayableInvoicesLineItem(lineItem.Id, lineItem.Description, lineItem.Quantity, lineItem.Price, lineItem.ExtendedPrice);
                 newLi.CommodityCode = "00402";
+                newLi.FixedAssetsFlag = "S";
                 newLi.UnitOfIssue = lineItem.UnitOfIssue;
                 newLi.PurchaseOrderId = "PurchaseOrderGuid-123";
                 foreach (var tax in lineItem.LineItemTaxes)
@@ -1046,6 +1247,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             {
                 AccountsPayableInvoicesLineItem newLi = new AccountsPayableInvoicesLineItem(lineItem.Id, lineItem.Description, lineItem.Quantity, lineItem.Price, lineItem.ExtendedPrice);
                 newLi.CommodityCode = "00402";
+                newLi.FixedAssetsFlag = "S";
                 newLi.UnitOfIssue = lineItem.UnitOfIssue;
                 newLi.PurchaseOrderId = string.Format("PurchaseOrderGuid-{0}", lineItem.Id);
                 foreach (var tax in lineItem.LineItemTaxes)
@@ -1104,6 +1306,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private List<Domain.ColleagueFinance.Entities.AccountsPayableSources> accountsPayableSources;
         private List<Domain.ColleagueFinance.Entities.VendorTerm> vendorTerms;
         private List<Domain.ColleagueFinance.Entities.CommodityCode> commodityCodes;
+        private IEnumerable<Domain.ColleagueFinance.Entities.FxaTransferFlags> fxaFlags;
         private List<Domain.ColleagueFinance.Entities.CommodityUnitType> commodityUnitTypes;
         private List<Domain.Base.Entities.CommerceTaxCode> taxCodes;
         private List<Domain.Base.Entities.BoxCodes> taxBoxes;
@@ -1240,6 +1443,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new Domain.ColleagueFinance.Entities.CommodityCode(guid, "1", "desc")
                 };
 
+            fxaFlags = new List<Domain.ColleagueFinance.Entities.FxaTransferFlags>()
+                {
+                    new Domain.ColleagueFinance.Entities.FxaTransferFlags(guid, "1", "description")
+                };
+
             vendorTerms = new List<VendorTerm>()
                 {
                     new VendorTerm(guid, "1", "desc")
@@ -1318,6 +1526,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                         LineItemNumber = "1",
                         ReferenceDocumentLineItemNumber = "1",
                         CommodityCode = new GuidObject2(guid),
+                        FixedAssetDesignation = new GuidObject2(guid),
                         UnitofMeasure = new GuidObject2(guid),
                         UnitPrice = new Dtos.DtoProperties.Amount2DtoProperty() { Value = 100, Currency = CurrencyIsoCode.USD },
                         VendorBilledUnitPrice = new Dtos.DtoProperties.Amount2DtoProperty() { Value = 105, Currency = CurrencyIsoCode.USD },
@@ -1392,6 +1601,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             lineItem = new AccountsPayableInvoicesLineItem("1", "desc", 10, 1000, 100)
             {
                 CommodityCode = "1",
+                FixedAssetsFlag = "1",
                 UnitOfIssue = "1",
                 CashDiscountAmount = 10,
                 TradeDiscountAmount = 5,
@@ -1432,6 +1642,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetAccountsPayableSourcesAsync(It.IsAny<bool>())).ReturnsAsync(accountsPayableSources);
             colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetVendorTermsAsync(It.IsAny<bool>())).ReturnsAsync(vendorTerms);
             colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(commodityCodes);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(fxaFlags);
             colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(commodityUnitTypes);
             accountsPayableInvoicesMock.Setup(p => p.GetAccountsPayableInvoicesIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
             referenceDataRepositoryMock.Setup(p => p.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
@@ -1728,6 +1939,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task ActPayInvService_POST_Dto_LineItems_CommodityCodeId_Null()
         {
             accountsPayableInvoice.LineItems.FirstOrDefault().CommodityCode.Id = null;
+            await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task ActPayInvService_POST_Dto_LineItems_FixedAssetDesignationId_Null()
+        {
+            accountsPayableInvoice.LineItems.FirstOrDefault().FixedAssetDesignation.Id = null;
             await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
         }
 
@@ -2125,9 +2344,25 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         [TestMethod]
         [ExpectedException(typeof(Exception))]
+        public async Task ActPayInvService_POST_DtoToEntity_Repository_Returns_FixedAssetDesignationId_As_Null()
+        {
+            colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
         public async Task ActPayInvService_POST_DtoToEntity_Repository_Returns_CommodityCodes_As_Empty()
         {
             colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(new List<Domain.ColleagueFinance.Entities.CommodityCode>());
+            await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
+        public async Task ActPayInvService_POST_DtoToEntity_Repository_Returns_FixedAssetDesignationId_As_Empty()
+        {
+            colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(new List<Domain.ColleagueFinance.Entities.FxaTransferFlags>());
             await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
         }
 
@@ -2168,6 +2403,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
+        public async Task ActPayInvService_POST_DtoToEntity_LineItem_FixedAssetDesignationId_NotFound()
+        {
+            accountsPayableInvoice.LineItems.FirstOrDefault().ReferenceDocument.PurchaseOrder = null;
+            accountsPayableInvoice.LineItems.FirstOrDefault().ReferenceDocument.BlanketPurchaseOrder = new GuidObject2(guid);
+            accountsPayableInvoice.LineItems.FirstOrDefault().FixedAssetDesignation.Id = Guid.NewGuid().ToString();
+
+            await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
         public async Task ActPayInvService_POST_DtoToEntity_LineItem_UnitOfMeasure_NotFound()
         {
             accountsPayableInvoice.LineItems.FirstOrDefault().ReferenceDocumentLineItemNumber = null;
@@ -2182,10 +2428,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_POST_EntityToDto_Vendor_NotFound()
         {
-            vendorsRepositoryMock.Setup(p => p.GetVendorGuidFromIdAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
-
+            vendorsRepositoryMock.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(null);
             accountsPayableInvoiceEntity.VoucherMiscName = new List<string>();
-
             await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
         }
 
@@ -2285,6 +2529,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
         }
 
+
         [TestMethod]
         [ExpectedException(typeof(RepositoryException))]
         public async Task ActPayInvService_POST_RepositoryException()
@@ -2305,8 +2550,56 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         {
             var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();
             generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
-            accountsPayableInvoice.LineItems[0].ReferenceDocument = null;
             accountsPayableInvoice.LineItems.FirstOrDefault().AccountDetails.FirstOrDefault().BudgetCheck = AccountsPayableInvoicesAccountBudgetCheck.Override;
+            accountsPayableInvoice.Vendor.ExistingVendor.AlternativeVendorAddress.Id = "addressGuid";
+            Dictionary<string, string> dict2 = new Dictionary<string, string>();
+            dict2.Add("1", "addressGuid");
+            personRepositoryMock.Setup(x => x.GetAddressGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict2);
+            accountsPayableInvoiceEntity.VendorAddressId = "1";
+            accountsPayableInvoice.LineItems.FirstOrDefault().AccountDetails.FirstOrDefault().AccountingString = "123*proj";
+            Dictionary<string, string> proj = new Dictionary<string, string>();
+            proj.Add("1", "proj");
+            accountsPayableInvoicesMock.Setup(x => x.GetProjectIdsFromReferenceNo(It.IsAny<string[]>())).ReturnsAsync(proj);
+            personRepositoryMock.Setup(x => x.GetAddressGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict2);
+            accountsPayableInvoice.LineItems[0].ReferenceDocument.PurchaseOrder = new GuidObject2(guid);
+            accountsPayableInvoice.LineItems[0].ReferenceDocumentLineItemNumber = accountsPayableInvoice.LineItems[0].LineItemNumber;
+            accountsPayableInvoicesMock.Setup(p => p.GetIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(new GuidLookupResult() { Entity = "PURCHASE.ORDERS", PrimaryKey = "1" });
+            accountsPayableInvoiceEntity.PurchaseOrderId = "1";
+            Dictionary<string, string> po = new Dictionary<string, string>();
+            po.Add("1", guid);
+            accountsPayableInvoicesMock.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<string[]>(), "PURCHASE.ORDERS")).ReturnsAsync(po);
+            var result = await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(guid, result.Id);
+        }
+
+        [TestMethod]
+        public async Task ActPayInvService_POST_BPO()
+        {
+            var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();
+            generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
+            accountsPayableInvoice.LineItems.FirstOrDefault().AccountDetails.FirstOrDefault().BudgetCheck = AccountsPayableInvoicesAccountBudgetCheck.Override;
+            accountsPayableInvoice.Vendor.ExistingVendor.AlternativeVendorAddress.Id = "addressGuid";
+            Dictionary<string, string> dict2 = new Dictionary<string, string>();
+            dict2.Add("1", "addressGuid");
+            personRepositoryMock.Setup(x => x.GetAddressGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict2);
+            accountsPayableInvoiceEntity.VendorAddressId = "1";
+            accountsPayableInvoice.LineItems.FirstOrDefault().AccountDetails.FirstOrDefault().AccountingString = "123*proj";
+            Dictionary<string, string> proj = new Dictionary<string, string>();
+            proj.Add("1", "proj");
+            accountsPayableInvoicesMock.Setup(x => x.GetProjectIdsFromReferenceNo(It.IsAny<string[]>())).ReturnsAsync(proj);
+            personRepositoryMock.Setup(x => x.GetAddressGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict2);
+            accountsPayableInvoice.LineItems[0].ReferenceDocument.BlanketPurchaseOrder = new GuidObject2(guid);
+            accountsPayableInvoice.LineItems[0].ReferenceDocument.PurchaseOrder = null;
+            accountsPayableInvoicesMock.Setup(p => p.GetIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(new GuidLookupResult() { Entity = "BPO", PrimaryKey = "1" });
+            accountsPayableInvoiceEntity.PurchaseOrderId = string.Empty;
+            accountsPayableInvoiceEntity.BlanketPurchaseOrderId = "1";
+            accountsPayableInvoice.LineItems[0].ReferenceDocumentLineItemNumber = string.Empty;
+            Dictionary<string, string> po = new Dictionary<string, string>();
+            po.Add("1", guid);
+            accountsPayableInvoicesMock.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<List<string>>(), "BPO")).ReturnsAsync(po);
+            accountsPayableInvoicesMock.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<string[]>(), "BPO")).ReturnsAsync(po);
             var result = await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
 
             Assert.IsNotNull(result);
@@ -2342,6 +2635,23 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();
             generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
             accountsPayableInvoice.LineItems[0].ReferenceDocument = null;
+            await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task ActPayInvService_Post_glConfiguration_null()
+        {
+            generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(null);
+            await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
+        public async Task ActPayInvService_Post_glConfiguration_ConfigurationException()
+        {
+            generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ThrowsAsync(new ConfigurationException());
             await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
         }
     }
@@ -2383,6 +2693,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private List<Domain.ColleagueFinance.Entities.AccountsPayableSources> accountsPayableSources;
         private List<Domain.ColleagueFinance.Entities.VendorTerm> vendorTerms;
         private List<Domain.ColleagueFinance.Entities.CommodityCode> commodityCodes;
+        private IEnumerable<Domain.ColleagueFinance.Entities.FxaTransferFlags> fxaFlags;
         private List<Domain.ColleagueFinance.Entities.CommodityUnitType> commodityUnitTypes;
         private List<Domain.Base.Entities.CommerceTaxCode> taxCodes;
         private List<Domain.Base.Entities.Country> countries;
@@ -2502,6 +2813,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 {
                     new Domain.ColleagueFinance.Entities.CommodityCode(guid, "1", "desc")
                 };
+            fxaFlags = new List<Domain.ColleagueFinance.Entities.FxaTransferFlags>()
+                {
+                    new Domain.ColleagueFinance.Entities.FxaTransferFlags(guid, "1", "description")
+                };
 
             vendorTerms = new List<VendorTerm>()
                 {
@@ -2573,6 +2888,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                         LineItemNumber = "1",
                         ReferenceDocumentLineItemNumber = "1",
                         CommodityCode = new GuidObject2(guid),
+                        FixedAssetDesignation = new GuidObject2(guid),
                         UnitofMeasure = new GuidObject2(guid),
                         UnitPrice = new Dtos.DtoProperties.Amount2DtoProperty() { Value = 100, Currency = CurrencyIsoCode.USD },
                         VendorBilledUnitPrice = new Dtos.DtoProperties.Amount2DtoProperty() { Value = 105, Currency = CurrencyIsoCode.USD },
@@ -2705,6 +3021,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetAccountsPayableSourcesAsync(It.IsAny<bool>())).ReturnsAsync(accountsPayableSources);
             colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetVendorTermsAsync(It.IsAny<bool>())).ReturnsAsync(vendorTerms);
             colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(commodityCodes);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(fxaFlags);
             colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(commodityUnitTypes);
             accountsPayableInvoicesMock.Setup(p => p.GetAccountsPayableInvoicesIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
             referenceDataRepositoryMock.Setup(p => p.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
@@ -2786,6 +3103,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task ActPayInvService_PUT_When_Dto_ProcessState_Is_NotSet()
         {
             accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.NotSet;
+
+            await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task ActPayInvService_PUT_When_Dto_Payment_Source_IsNull()
+        {
+            accountsPayableInvoice.Payment.Source = null;;;
 
             await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
         }
@@ -2947,6 +3273,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task ActPayInvService_PUT_Dto_LineItems_CommodityCodeId_Null()
         {
             accountsPayableInvoice.LineItems.FirstOrDefault().CommodityCode.Id = null;
+            await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task ActPayInvService_PUT_Dto_LineItems_FixedAssetDesignation_Null()
+        {
+            accountsPayableInvoice.LineItems.FirstOrDefault().FixedAssetDesignation.Id = null;
             await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
         }
 
@@ -3264,7 +3598,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(PermissionsException))]
         public async Task ActPayInvService_PUT_PermissionException()
         {
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
@@ -3369,9 +3703,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         [TestMethod]
         [ExpectedException(typeof(Exception))]
-        public async Task ActPayInvService_PUT_DtoToEntity_Repository_Returns_CommodityCodes_As_Empty()
+        public async Task ActPayInvService_PUT_DtoToEntity_Repository_Returns_FxaTransferFlag_As_Null()
         {
-            colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(new List<Domain.ColleagueFinance.Entities.CommodityCode>());
+            colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
+        public async Task ActPayInvService_PUT_DtoToEntity_Repository_Returns_FxaTransferFlag_As_Empty()
+        {
+            colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(new List<Domain.ColleagueFinance.Entities.FxaTransferFlags>());
             await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
         }
 
@@ -3411,6 +3753,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task ActPayInvService_PUT_DtoToEntity_LineItem_FxaTransferFlag_NotFound()
+        {
+            accountsPayableInvoice.LineItems.FirstOrDefault().ReferenceDocument.PurchaseOrder = null;
+            accountsPayableInvoice.LineItems.FirstOrDefault().ReferenceDocument.BlanketPurchaseOrder = new GuidObject2(guid);
+            accountsPayableInvoice.LineItems.FirstOrDefault().FixedAssetDesignation.Id = Guid.NewGuid().ToString();
+
+            await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+        }
+
+        [TestMethod]
         [ExpectedException(typeof(Exception))]
         //  //if there is a BPO, then there cannot be a reference line number
         public async Task ActPayInvService_PUT_DtoToEntity_LineItem_BPO_ReferenceDocumentLineItemNumber()
@@ -3435,6 +3788,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             {
                 LineItemNumber = "1",
                 CommodityCode = new GuidObject2(guid),
+                FixedAssetDesignation = new GuidObject2(guid),
                 UnitofMeasure = new GuidObject2(guid),
                 UnitPrice = new Dtos.DtoProperties.Amount2DtoProperty() { Value = 100, Currency = CurrencyIsoCode.USD },
                 VendorBilledUnitPrice = new Dtos.DtoProperties.Amount2DtoProperty() { Value = 105, Currency = CurrencyIsoCode.USD },
@@ -3471,10 +3825,26 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task ActPayInvService_PUT_glConfiguration_null()
+        {
+            generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(null);
+            await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
+        public async Task ActPayInvService_PUT_glConfiguration_ConfigurationException()
+        {
+            generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ThrowsAsync(new ConfigurationException());
+            await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+        }
+
+        [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_PUT_EntityToDto_Vendor_NotFound()
         {
-            vendorsRepositoryMock.Setup(p => p.GetVendorGuidFromIdAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
+            vendorsRepositoryMock.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(null);
 
             accountsPayableInvoiceEntity.VoucherMiscName = new List<string>();
 
@@ -3560,11 +3930,65 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             accountsPayableInvoice.LineItems[0].ReferenceDocument = null;
             accountsPayableInvoiceEntity.PurchaseOrderId = string.Empty;
             accountsPayableInvoiceEntity.BlanketPurchaseOrderId = "1";
+            accountsPayableInvoiceEntity.VendorAddressId = "1";
+            Dictionary<string, string> dict1 = new Dictionary<string, string>();
+            dict1.Add("1", "BpoGuid");
+            accountsPayableInvoicesMock.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<List<string>>(), "BPO")).ReturnsAsync(dict1);
+            manualVendorDetails.Place.Country.Code = IsoCode.CAN;
 
+            accountsPayableInvoice.Vendor.ManualVendorDetails = manualVendorDetails;
+            accountsPayableInvoice.Vendor.ExistingVendor.AlternativeVendorAddress.Id = "addressGuid";
+            Dictionary<string, string> dict2 = new Dictionary<string, string>();
+            dict2.Add("1", "addressGuid");
+            personRepositoryMock.Setup(x => x.GetAddressGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict2);
+            accountsPayableInvoice.LineItems.FirstOrDefault().AccountDetails.FirstOrDefault().BudgetCheck = AccountsPayableInvoicesAccountBudgetCheck.Override;
+            var result = await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(guid, result.Id);
+        }
+
+        [TestMethod]
+        public async Task ActPayInvService_PUT_LineItem_Project()
+        {
+            var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();
+            generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
+            accountsPayableInvoice.LineItems[0].ReferenceDocument = null;
+            accountsPayableInvoiceEntity.PurchaseOrderId = string.Empty;
+            accountsPayableInvoiceEntity.BlanketPurchaseOrderId = "1";
+            Dictionary<string, string> dict1 = new Dictionary<string, string>();
+            dict1.Add("1", "BpoGuid");
+            accountsPayableInvoicesMock.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<List<string>>(), "BPO")).ReturnsAsync(dict1);
             manualVendorDetails.Place.Country.Code = IsoCode.CAN;
 
             accountsPayableInvoice.Vendor.ManualVendorDetails = manualVendorDetails;
             accountsPayableInvoice.LineItems.FirstOrDefault().AccountDetails.FirstOrDefault().BudgetCheck = AccountsPayableInvoicesAccountBudgetCheck.Override;
+            accountsPayableInvoice.LineItems.FirstOrDefault().AccountDetails.FirstOrDefault().AccountingString = "123*proj";
+            Dictionary<string, string>proj = new Dictionary<string, string>();
+            proj.Add("1", "proj" );
+            accountsPayableInvoicesMock.Setup(x => x.GetProjectIdsFromReferenceNo(It.IsAny<string[]>())).ReturnsAsync(proj);
+            var result = await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(guid, result.Id);
+        }
+
+        [TestMethod]
+        public async Task ActPayInvService_PUT_newRecord_RandomGuid()
+        {
+            var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();
+            generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
+            accountsPayableInvoice.LineItems[0].ReferenceDocument = null;
+            accountsPayableInvoiceEntity.PurchaseOrderId = string.Empty;
+            accountsPayableInvoiceEntity.BlanketPurchaseOrderId = "1";
+            Dictionary<string, string> dict1 = new Dictionary<string, string>();
+            dict1.Add("1", "BpoGuid");
+            accountsPayableInvoicesMock.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<List<string>>(), "BPO")).ReturnsAsync(dict1);
+            manualVendorDetails.Place.Country.Code = IsoCode.CAN;
+
+            accountsPayableInvoice.Vendor.ManualVendorDetails = manualVendorDetails;
+            accountsPayableInvoice.LineItems.FirstOrDefault().AccountDetails.FirstOrDefault().BudgetCheck = AccountsPayableInvoicesAccountBudgetCheck.Override;
+            accountsPayableInvoicesMock.Setup(p => p.GetAccountsPayableInvoicesIdFromGuidAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
             var result = await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
 
             Assert.IsNotNull(result);
@@ -3579,7 +4003,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             accountsPayableInvoice.LineItems[0].ReferenceDocument = null;
             accountsPayableInvoiceEntity.PurchaseOrderId = string.Empty;
             accountsPayableInvoiceEntity.BlanketPurchaseOrderId = "1";
-
+            Dictionary<string, string> dict1 = new Dictionary<string, string>();
+            dict1.Add("1", "BpoGuid");
+            accountsPayableInvoicesMock.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<List<string>>(), "BPO")).ReturnsAsync(dict1);
             manualVendorDetails.Place.Country.Code = IsoCode.CAN;
 
             accountsPayableInvoice.Vendor.ManualVendorDetails = manualVendorDetails;
@@ -3602,7 +4028,33 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             accountsPayableInvoicesMock.Setup(p => p.GetIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(new GuidLookupResult() { Entity = "BPO", PrimaryKey = "1" });
             accountsPayableInvoiceEntity.PurchaseOrderId = string.Empty;
             accountsPayableInvoiceEntity.BlanketPurchaseOrderId = "1";
+            Dictionary<string, string> dict1 = new Dictionary<string, string>();
+            dict1.Add("1", "BpoGuid");
+            accountsPayableInvoicesMock.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<List<string>>(), "BPO")).ReturnsAsync(dict1);
+            manualVendorDetails.Place.Country.Code = IsoCode.CAN;
 
+            accountsPayableInvoice.Vendor.ManualVendorDetails = manualVendorDetails;
+            accountsPayableInvoice.InvoiceNumber = "1";
+            accountsPayableInvoice.LineItems.FirstOrDefault().AccountDetails.FirstOrDefault().BudgetCheck = AccountsPayableInvoicesAccountBudgetCheck.Override;
+            var result = await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(guid, result.Id);
+        }
+
+        [TestMethod]
+        public async Task ActPayInvService_PUT_valid_PO()
+        {
+            var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();
+            generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
+            accountsPayableInvoice.LineItems[0].ReferenceDocument.BlanketPurchaseOrder = null;
+            accountsPayableInvoice.LineItems[0].ReferenceDocument.PurchaseOrder = new GuidObject2(guid);
+            accountsPayableInvoice.LineItems[0].ReferenceDocumentLineItemNumber = accountsPayableInvoice.LineItems[0].LineItemNumber;
+            accountsPayableInvoicesMock.Setup(p => p.GetIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(new GuidLookupResult() { Entity = "PURCHASE.ORDERS", PrimaryKey = "1" });
+            accountsPayableInvoiceEntity.PurchaseOrderId = "1";
+            Dictionary<string, string> dict1 = new Dictionary<string, string>();
+            dict1.Add("1", guid);
+            accountsPayableInvoicesMock.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<string[]>(), "PURCHASE.ORDERS")).ReturnsAsync(dict1);
             manualVendorDetails.Place.Country.Code = IsoCode.CAN;
 
             accountsPayableInvoice.Vendor.ManualVendorDetails = manualVendorDetails;

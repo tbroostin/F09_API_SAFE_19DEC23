@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.ObjectModel;
@@ -8,6 +8,7 @@ using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
+using Ellucian.Colleague.Domain.Base;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -27,7 +28,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         public void Initialize()
         {
             MockInitialize();
-            actualRepository =  new StudentTaxFormStatementRepository(apiSettings, cacheProviderMock.Object,
+            actualRepository = new StudentTaxFormStatementRepository(apiSettings, cacheProviderMock.Object,
                 transFactoryMock.Object, loggerMock.Object);
 
             Build1098contracts();
@@ -63,6 +64,24 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         #endregion
 
         #region Invalid tax form
+
+        [TestMethod]
+        public async Task Get2Async_InvalidTaxFormId()
+        {
+            var expectedParam = "taxform";
+            var actualParam = "";
+            try
+            {
+                await actualRepository.Get2Async("1", TaxFormTypes.Form1095C);
+            }
+            catch (ArgumentException anex)
+            {
+                actualParam = anex.ParamName.ToLower();
+            }
+
+            Assert.AreEqual(expectedParam, actualParam);
+        }
+
         [TestMethod]
         public async Task GetAsync_InvalidTaxFormId()
         {
@@ -70,7 +89,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             var actualParam = "";
             try
             {
-                await actualRepository.GetAsync("1", Domain.Base.Entities.TaxForms.Form1095C);
+                await actualRepository.Get2Async("1", TaxFormTypes.Form1095C);
             }
             catch (ArgumentException anex)
             {
@@ -81,6 +100,234 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
         #endregion
 
+        #region Get2Async for 1098s
+
+        [TestMethod]
+        public async Task Get2Async_1098_NullPersonId()
+        {
+            var expectedParam = "personid";
+            var actualParam = "";
+            try
+            {
+                await actualRepository.Get2Async(null, TaxFormTypes.Form1098);
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName.ToLower();
+            }
+
+            Assert.AreEqual(expectedParam, actualParam);
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1098_EmptyPersonId()
+        {
+            var expectedParam = "personid";
+            var actualParam = "";
+            try
+            {
+                await actualRepository.Get2Async("", TaxFormTypes.Form1098);
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName.ToLower();
+            }
+
+            Assert.AreEqual(expectedParam, actualParam);
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1098_NullParm1098Record()
+        {
+            var expectedMessage = "PARM.1098 cannot be null.";
+            var actualMessage = "";
+            try
+            {
+                parm1098Contract = null;
+                await actualRepository.Get2Async("1", TaxFormTypes.Form1098);
+            }
+            catch (NullReferenceException nrex)
+            {
+                actualMessage = nrex.Message;
+            }
+
+            Assert.AreEqual(expectedMessage, actualMessage);
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1098t_NullTaxForm1098FormsRecord()
+        {
+            form1098contracts[0] = null;
+            var actual1098Entities = await actualRepository.Get2Async("1", TaxFormTypes.Form1098);
+
+            // The null record should be excluded from the returned list.
+            Assert.AreEqual(form1098contracts.Count, actual1098Entities.Count() + 1);
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1098t_NullTaxYear()
+        {
+            form1098contracts[0].Tf98fTaxYear = null;
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.Form1098);
+
+            Assert.AreEqual(form1098contracts.Count - 1, actualStatements.Count());
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1098t_NullRecordKey()
+        {
+            form1098contracts[0].Recordkey = null;
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.Form1098);
+
+            Assert.AreEqual(form1098contracts.Count - 1, actualStatements.Count());
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1098t_EmptyRecordKey()
+        {
+            form1098contracts[0].Recordkey = "";
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.Form1098);
+
+            Assert.AreEqual(form1098contracts.Count - 1, actualStatements.Count());
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1098t_NullStudentId()
+        {
+            form1098contracts[0].Tf98fStudent = null;
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.Form1098);
+
+            Assert.AreEqual(form1098contracts.Count - 1, actualStatements.Count());
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1098t_EmptyStudentId()
+        {
+            form1098contracts[0].Tf98fStudent = "";
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.Form1098);
+
+            Assert.AreEqual(form1098contracts.Count - 1, actualStatements.Count());
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1098t_OneDataContractIsNull()
+        {
+            form1098contracts[0] = null;
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.Form1098);
+
+            Assert.AreEqual(form1098contracts.Count - 1, actualStatements.Count());
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1098t_Success()
+        {
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.Form1098);
+
+            foreach (var dataContract in form1098contracts.Where(x => x.Tf98fTaxForm == "1098T").ToList())
+            {
+                var selectedEntities = actualStatements.Where(x =>
+                    x.PdfRecordId == dataContract.Recordkey
+                    && x.PersonId == dataContract.Tf98fStudent
+                    && x.TaxForm.ToString() == "Form" + dataContract.Tf98fTaxForm
+                    && x.TaxYear == dataContract.Tf98fTaxYear.ToString()).ToList();
+                Assert.AreEqual(1, selectedEntities.Count);
+            }
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1098e_Success()
+        {
+            form1098contracts.All(currentRecord => { currentRecord.Tf98fTaxForm = "1098E"; return true; });
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.Form1098);
+
+            foreach (var dataContract in form1098contracts.Where(x => x.Tf98fTaxForm == "1098E").ToList())
+            {
+                var selectedEntities = actualStatements.Where(x =>
+                    x.PdfRecordId == dataContract.Recordkey
+                    && x.PersonId == dataContract.Tf98fStudent
+                    && x.TaxForm.ToString() == "Form" + dataContract.Tf98fTaxForm
+                    && x.TaxYear == dataContract.Tf98fTaxYear.ToString()).ToList();
+                Assert.AreEqual(1, selectedEntities.Count);
+            }
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1098e_NullTaxForm1098FormsRecord()
+        {
+            parm1098Contract = new Parm1098() { P1098TTaxForm = "1098E" };
+            form1098contracts.All(currentRecord => { currentRecord.Tf98fTaxForm = "1098E"; return true; });
+            form1098contracts[0] = null;
+            var actual1098Entities = await actualRepository.Get2Async("1", TaxFormTypes.Form1098);
+
+            Assert.AreEqual(form1098contracts.Count, actual1098Entities.Count() + 1);
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1098e_NullTaxYear()
+        {
+            parm1098Contract = new Parm1098() { P1098TTaxForm = "1098E" };
+            form1098contracts.All(currentRecord => { currentRecord.Tf98fTaxForm = "1098E"; return true; });
+            form1098contracts[0].Tf98fTaxYear = null;
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.Form1098);
+
+            Assert.AreEqual(form1098contracts.Count - 1, actualStatements.Count());
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1098e_NullRecordKey()
+        {
+            parm1098Contract = new Parm1098() { P1098TTaxForm = "1098E" };
+            form1098contracts.All(currentRecord => { currentRecord.Tf98fTaxForm = "1098E"; return true; });
+            form1098contracts[0].Recordkey = null;
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.Form1098);
+
+            Assert.AreEqual(form1098contracts.Count - 1, actualStatements.Count());
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1098e_EmptyRecordKey()
+        {
+            parm1098Contract = new Parm1098() { P1098TTaxForm = "1098E" };
+            form1098contracts.All(currentRecord => { currentRecord.Tf98fTaxForm = "1098E"; return true; });
+            form1098contracts[0].Recordkey = "";
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.Form1098);
+
+            Assert.AreEqual(form1098contracts.Count - 1, actualStatements.Count());
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1098e_NullStudentId()
+        {
+            parm1098Contract = new Parm1098() { P1098TTaxForm = "1098E" };
+            form1098contracts.All(currentRecord => { currentRecord.Tf98fTaxForm = "1098E"; return true; });
+            form1098contracts[0].Tf98fStudent = null;
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.Form1098);
+
+            Assert.AreEqual(form1098contracts.Count - 1, actualStatements.Count());
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1098e_EmptyStudentId()
+        {
+            parm1098Contract = new Parm1098() { P1098TTaxForm = "1098E" };
+            form1098contracts.All(currentRecord => { currentRecord.Tf98fTaxForm = "1098E"; return true; });
+            form1098contracts[0].Tf98fStudent = "";
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.Form1098);
+
+            Assert.AreEqual(form1098contracts.Count - 1, actualStatements.Count());
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1098e_OneDataContractIsNull()
+        {
+            parm1098Contract = new Parm1098() { P1098TTaxForm = "1098E" };
+            form1098contracts.All(currentRecord => { currentRecord.Tf98fTaxForm = "1098E"; return true; });
+            form1098contracts[0] = null;
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.Form1098);
+
+            Assert.AreEqual(form1098contracts.Count - 1, actualStatements.Count());
+        }
+        #endregion
         #region GetAsync for 1098s
         [TestMethod]
         public async Task GetAsync_1098_NullPersonId()
@@ -309,6 +556,138 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
         #endregion
 
+        #region Get2Async for T2202As
+        [TestMethod]
+        public async Task Get2Async_T2202a_NullPersonId()
+        {
+            var expectedParam = "personid";
+            var actualParam = "";
+            try
+            {
+                await actualRepository.Get2Async(null, TaxFormTypes.FormT2202A);
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName.ToLower();
+            }
+
+            Assert.AreEqual(expectedParam, actualParam);
+        }
+
+        [TestMethod]
+        public async Task Get2Async_T2202a_EmptyPersonId()
+        {
+            var expectedParam = "personid";
+            var actualParam = "";
+            try
+            {
+                await actualRepository.Get2Async("", TaxFormTypes.FormT2202A);
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName.ToLower();
+            }
+
+            Assert.AreEqual(expectedParam, actualParam);
+        }
+
+        [TestMethod]
+        public async Task Get2Async_T2202a_NullCnstRptParmsRecord()
+        {
+            var expectedMessage = "CNST.RPT.PARMS cannot be null.";
+            var actualMessage = "";
+            try
+            {
+                cnstRptParmsContract = null;
+                await actualRepository.Get2Async("1", TaxFormTypes.FormT2202A);
+            }
+            catch (NullReferenceException nrex)
+            {
+                actualMessage = nrex.Message;
+            }
+
+            Assert.AreEqual(expectedMessage, actualMessage);
+        }
+
+        [TestMethod]
+        public async Task Get2Async_T2202a_NullCnstT2202aRepostRecord()
+        {
+            formT2202acontracts[0] = null;
+            var actual1098Entities = await actualRepository.Get2Async("1", TaxFormTypes.FormT2202A);
+
+            // The null record should be excluded from the returned list.
+            Assert.AreEqual(formT2202acontracts.Count, actual1098Entities.Count() + 1);
+        }
+
+        [TestMethod]
+        public async Task Get2Async_T2202a_NullTaxYear()
+        {
+            formT2202acontracts[0].T2ReposYear = null;
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.FormT2202A);
+
+            Assert.AreEqual(formT2202acontracts.Count - 1, actualStatements.Count());
+        }
+
+        [TestMethod]
+        public async Task Get2Async_T2202a_NullRecordKey()
+        {
+            formT2202acontracts[0].Recordkey = null;
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.FormT2202A);
+
+            Assert.AreEqual(formT2202acontracts.Count - 1, actualStatements.Count());
+        }
+
+        [TestMethod]
+        public async Task Get2Async_T2202a_EmptyRecordKey()
+        {
+            formT2202acontracts[0].Recordkey = "";
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.FormT2202A);
+
+            Assert.AreEqual(formT2202acontracts.Count - 1, actualStatements.Count());
+        }
+
+        [TestMethod]
+        public async Task Get2Async_T2202a_NullStudentId()
+        {
+            formT2202acontracts[0].T2ReposStudent = null;
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.FormT2202A);
+
+            Assert.AreEqual(formT2202acontracts.Count - 1, actualStatements.Count());
+        }
+
+        [TestMethod]
+        public async Task Get2Async_T2202a_EmptyStudentId()
+        {
+            formT2202acontracts[0].T2ReposStudent = "";
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.FormT2202A);
+
+            Assert.AreEqual(formT2202acontracts.Count - 1, actualStatements.Count());
+        }
+
+        [TestMethod]
+        public async Task Get2Async_T2202a_OneDataContractIsNull()
+        {
+            formT2202acontracts[0] = null;
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.FormT2202A);
+
+            Assert.AreEqual(formT2202acontracts.Count - 1, actualStatements.Count());
+        }
+
+        [TestMethod]
+        public async Task Get2Async_T2202a_Success()
+        {
+            var actualStatements = await actualRepository.Get2Async("1", TaxFormTypes.FormT2202A);
+
+            foreach (var dataContract in formT2202acontracts.ToList())
+            {
+                var selectedEntities = actualStatements.Where(x =>
+                    x.PdfRecordId == dataContract.Recordkey
+                    && x.PersonId == dataContract.T2ReposStudent
+                    && x.TaxYear == dataContract.T2ReposYear.ToString()).ToList();
+                Assert.AreEqual(1, selectedEntities.Count);
+            }
+        }
+        #endregion
         #region GetAsync for T2202As
         [TestMethod]
         public async Task GetAsync_T2202a_NullPersonId()

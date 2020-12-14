@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.App.Config.Storage.Service.Client;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Dmi.Client;
@@ -10,7 +10,6 @@ using slf4net;
 using System;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Security.Authentication;
 using System.Threading;
 using System.Threading.Tasks;
@@ -197,13 +196,17 @@ namespace Ellucian.Colleague.Api
                         var lastRestoredChecksum = Utilities.GetLastRestoredChecksum();
                         if (!string.IsNullOrWhiteSpace(lastRestoredChecksum) && lastRestoredChecksum == latestConfig.Checksum)
                         {
-                            logger.Info("Latest config found, but it has already been restored previously. This means the last restore performed a merge.");
+                            logger.Info("Latest config found, but it has already been restored previously. This means the last restore performed a merge. Sending a new backup...");
                             // This "latest" backup config has already been restored previously. The fact that this instance's 
                             // current checksum is different than the "latest's" means the last restore performed a merge of
                             // different config data versions, which resulted in a new unique checksum. 
 
                             // So, instead of restoring this obsolete "latest" config data, we will submit the instance's current
                             // config data as the new backup config data, which will serve as the new "latest".
+
+                            // Note: we're NOT processing staging config file here, since it would have been
+                            // already processed and became part of the new config data that's being sent to EACSS below. 
+
                             string username = "Application_Start";
                             try
                             {
@@ -236,6 +239,17 @@ namespace Ellucian.Colleague.Api
                                 // (the merge is due to current config version being higher/different than the backup config version, which results in a new checksum)
                                 // we know not to restore the same backup config again and instead perform a backup.
                                 Utilities.SetLastRestoredChecksum(latestConfig.Checksum);
+
+                                // Once restore/merge is done, process staging config file if it hasn't been done before...
+                                // Apply the staging config file if it is present. The changes from this config file will be saved
+                                // as part of the "merge". On next start up, the config snapshot that includes both the merge and the changes
+                                // from the staging config file will be sent to EACSS as the latest snapshot.
+                                //
+                                // NOTE: this step MUST be done after the restore/merge, or the value from the staging confile file would get
+                                // overwritten by the restore/merge operation.   
+                                logger.Info("Config restore completed. Processing staging config file...");
+                                AppConfigUtility.ApplyStagingConfigFile();
+
                                 atStep = 4;
                                 startMonitorThread = false;
                                 HttpRuntime.UnloadAppDomain();
@@ -245,6 +259,52 @@ namespace Ellucian.Colleague.Api
                                     "New config's version '{0}' is higher than this instance's config version '{1}'. It will not be restored.", 
                                     latestConfig.ConfigVersion, configObject.ConfigVersion));
                             }
+                        }
+                    }
+                    else
+                    {
+                        // no new config returned from EACSS. 
+                        // Process staging config file next.
+                        atStep = 3;
+                        logger.Info("Processing staging config file...");
+                        var changesOccurred = AppConfigUtility.ApplyStagingConfigFile();
+                        if (changesOccurred)
+                        {
+                            // If configs were updated as a result, send a new backup snapshot to EACSS.
+                            // But first, rebuild the config object so that it contains the changes.
+                            logger.Info("Post-staging config object being rebuilt...");
+                            configObject = AppConfigUtility.GetApiConfigurationObject();
+
+                            string username = "Application_Start";
+                            try
+                            {
+                                logger.Info("Post-staging backup being sent to config storage...");
+                                var result = AppConfigUtility.StorageServiceClient.PostConfigurationAsync(
+                                    configObject.Namespace, configObject.ConfigData, username,
+                                    configObject.ConfigVersion, configObject.ProductId, configObject.ProductVersion).GetAwaiter().GetResult();
+                                logger.Info("Post-staging backup sent to config storage. Bouncing app pool...");
+
+                                // In the case where this snapshot we just submitted is slightly different than
+                                // the actual config that forms when this app restarts, due to certain web.config settings
+                                // which don't reflect until a restart:
+                                // Set the lastrestoredchecksum file to the checksum of the snapshot we just sent,
+                                // to force a merge on restart, and ensure those new web.config settings are preserved.
+                                // Otherwise, the snapshot we just sent will get restored and wipe out those updated web.config settings.
+                                var updatedChecksum = Utilities.GetMd5ChecksumString(configObject.ConfigData);
+                                Utilities.SetLastRestoredChecksum(updatedChecksum);
+
+                                atStep = 4;
+                                startMonitorThread = false;
+                                HttpRuntime.UnloadAppDomain(); // restart the app to ensure all changes take effect.
+                            }
+                            catch (Exception e)
+                            {
+                                logger.Error(e, "Post staging backup to config storage service failed.");
+                            }
+                        }
+                        else
+                        {
+                            logger.Info("No staging config changes were made.");
                         }
                     }
                     

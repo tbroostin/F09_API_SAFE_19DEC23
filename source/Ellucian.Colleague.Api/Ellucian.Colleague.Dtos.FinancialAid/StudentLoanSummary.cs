@@ -46,6 +46,11 @@ namespace Ellucian.Colleague.Dtos.FinancialAid
         public int StudentLoanCombinedTotalAmount { get; set; }
 
         /// <summary>
+        /// Flag that denotes whether the Informed Borrower checklist item is completed.
+        /// </summary>
+        public List<InformedBorrowerItem> InformedBorrowerItem { get; set; }
+
+        /// <summary>
         /// A list of loan totals from other schools for this student.
         /// If empty, a student has no loan history
         /// </summary>

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -47,6 +47,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// </summary>
         /// <param name="fiscalYear">General Ledger fiscal year; it can be null.</param>
         /// <returns>List of GL cost center DTOs for the fiscal year.</returns>
+        [Obsolete("Obsolete as of API verson 1.29; use the QueryCostCenters endpoint")]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.CostCenter>> GetAsync(string fiscalYear)
         {
             // The first time the user gets to the cost center view we need to default the fiscal year to
@@ -80,8 +81,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 // We are using the same repository method to get a list of cost centers for the user or the one cost center they selected.
                 // Do not pass a cost center ID so all cost centers are returned.
+
+                CostCenterQueryCriteria criteria = new CostCenterQueryCriteria();
+                // Convert the filter criteria DTO into a domain entity, and pass it into the cost center repository.
+                var costCenterCriteriaAdapter = new CostCenterQueryCriteriaDtoToEntityAdapter(_adapterRegistry, logger);
+                var queryCriteriaEntity = costCenterCriteriaAdapter.MapToType(criteria);
+
                 var costCenters = await costCenterRepository.GetCostCentersAsync(generalLedgerUser, costCenterStructure, glClassConfiguration,
-                    null, fiscalYear, null, CurrentUser.PersonId);
+                    null, fiscalYear, queryCriteriaEntity, CurrentUser.PersonId);
 
                 // Convert the domain entities into DTOs
                 foreach (var entity in costCenters)

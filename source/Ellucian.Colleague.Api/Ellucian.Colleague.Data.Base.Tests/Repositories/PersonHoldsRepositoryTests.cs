@@ -125,7 +125,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                         { RecordGuid = guid2, Recordkey = "2", StrStudent = "1", StrComments = "Comment 2", StrEndDate = DateTime.MaxValue, StrRestriction = "Health", StrStartDate = DateTime.MinValue },
                 };
 
-                GuidLookupResult res = new GuidLookupResult() { Entity = "STUDENT.RESTRICTIONS", PrimaryKey = "1", SecondaryKey = "" };
+                GuidLookupResult res = new GuidLookupResult() { Entity = "PERSON", PrimaryKey = "1", SecondaryKey = "" };
                 Dictionary<string, GuidLookupResult> dict = new Dictionary<string, GuidLookupResult>();
                 dict.Add("1", res);
                 dataReaderMock.Setup(i => i.SelectAsync(It.IsAny<GuidLookup[]>())).Returns<GuidLookup[]>(lookup =>

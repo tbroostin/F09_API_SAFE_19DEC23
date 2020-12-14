@@ -300,6 +300,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         {
                             group.SortSpecificationId = !string.IsNullOrEmpty(groupBlock.AcrbSortMethod) ? groupBlock.AcrbSortMethod : group.SortSpecificationId;
                             group.ExtraCourseDirective = group.SubRequirement.ExtraCourseDirective;
+                            group.InListOrder = string.IsNullOrWhiteSpace(groupBlock.AcrbInListOrder)?false:true;
                             await AddSVToBlockBaseAsync(group, groupBlock, grades, printTextAsEntered);
 
                             // Group Include Low Grades setting. This is in BlockBase but must be set here because

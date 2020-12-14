@@ -1,4 +1,4 @@
-﻿/*Copyright 2019 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2019-2020 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
@@ -161,9 +161,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 }
 
                 var distinctValidEmployeeIds = validEmployeeIds.Distinct();
-                var personPositions = await personPositionRepository.GetPersonPositionsAsync(distinctValidEmployeeIds);
-                var personPositionWages = await personPositionWageRepository.GetPersonPositionWagesAsync(distinctValidEmployeeIds);
-                var personEmploymentStatuses = await personEmploymentStatusRepository.GetPersonEmploymentStatusesAsync(distinctValidEmployeeIds);
+                var personPositions = await personPositionRepository.GetPersonPositionsAsync(distinctValidEmployeeIds, criteria.LookupStartDate);
+                var personPositionWages = await personPositionWageRepository.GetPersonPositionWagesAsync(distinctValidEmployeeIds, criteria.LookupStartDate);
+                var personEmploymentStatuses = await personEmploymentStatusRepository.GetPersonEmploymentStatusesAsync(distinctValidEmployeeIds, criteria.LookupStartDate);
                 var personDemographics = await personBaseRepository.GetPersonsBaseAsync(distinctValidEmployeeIds.Concat(supervisorIds).Distinct(), true);
                 var allPositions = (await positionRepository.GetPositionsAsync()).ToDictionary(p => p.Id);
 
@@ -221,15 +221,15 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     {
                         logger.Error(string.Format("Demographics information missing for employee {0}. Unable to build EmployeeSummary object.", validEmployee));
                     }
-                    else if (personPositionsForEmployee == null)
+                    else if (!personPositionsForEmployee.Any())
                     {
                         logger.Error(string.Format("PersonPosition information missing for employee {0}. Unable to build EmployeeSummary object.", validEmployee));
                     }
-                    else if (personPositionWagesForEmployee == null)
+                    else if (!personPositionWagesForEmployee.Any())
                     {
                         logger.Error(string.Format("PersonPositionWage information missing for employee {0}. Unable to build EmployeeSummary object.", validEmployee));
                     }
-                    else if (personEmploymentStatusesForEmployee == null)
+                    else if (!personEmploymentStatusesForEmployee.Any())
                     {
                         logger.Error(string.Format("PersonStatus information missing for employee {0}. Unable to build EmployeeSummary object.", validEmployee));
                     }

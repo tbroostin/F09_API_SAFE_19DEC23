@@ -29,8 +29,25 @@ namespace Ellucian.Colleague.Dtos.Student
         /// If keyword is not provided, search will determine if specific course Ids or section Ids have been provided.
         /// </summary>
         public IEnumerable<string> CourseIds { get; set; }
+        /// <summary>
+        /// If keyword or course ID are not provided, the course search will determine if there is a RequirementGroup and, if so, will perform the
+        /// search for courses based on the specific requirement code, subrequirement Id and group Id provided in the RequirementGroup.  
+        /// A <see cref="RequirementGroup">RequirementGroup</see> must contain all 3 components: a RequirementCode, a SubRequirementId and a GroupID.
+        /// </summary>
+        public RequirementGroup RequirementGroup { get; set; }
 
+        /// <summary>
+        /// If no keyword, course Ids, or requirement group, the course search will determine if there is a requirement code. If so,
+        /// course search will perform a search using this requirement code and will return a filtered list of all courses meeting any of the subrequirement groups
+        /// within this requirement.
+        /// If requirement code is not provided either, the full catalog of courses is used and the filters will be applied to that.
+        /// </summary>
+        public string RequirementCode { get; set; }
 
+        /// <summary>
+        /// Subject Filter: Used to filter returned results to specific subjects.
+        /// </summary>
+        public IEnumerable<string> Subjects { get; set; }
         /// <summary>
         /// DaysOfWeek Filter: Used to filter returned results to specific days of the week.
         /// </summary>
@@ -60,16 +77,24 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Academic Level Filter: Used to filter returned results based on specific academic levels.
         /// </summary>
         public IEnumerable<string> AcademicLevels { get; set; }
-
         /// <summary>
         /// Earliest Time Filter: Used to filter returned results based on meeting start times.
         /// </summary>
         public int EarliestTime { get; set; }
-
         /// <summary>
         /// Latest Time Filter: Used to filter returned results based on meeting end times.
         /// </summary>
         public int LatestTime { get; set; }
+
+        /// <summary>
+        /// StartsAt Time Filter: Used to filter returned results based on meeting start times on top of EarliestTime.
+        /// </summary>
+        public string StartsAtTime { get; set; }
+
+        /// <summary>
+        /// EndsBy Time Filter: Used to filter returned results based on meeting end times on top of LatestTime.
+        /// </summary>
+        public string EndsByTime { get; set; }
 
         /// <summary>
         /// Course Topic Filter: Used to filter returned results based on course topic codes
@@ -115,5 +140,14 @@ namespace Ellucian.Colleague.Dtos.Student
         /// display sections that are open and waitlisted - have seats available
         /// </summary>
         public bool OpenAndWaitlistSections { get; set; }
+        /// <summary>
+        /// Field to sort on
+        /// </summary>
+        public CatalogSortType SortOn { get; set; }
+        /// <summary>
+        /// Sort Direction
+        /// </summary>
+        public CatalogSortDirection SortDirection { get; set; }
+       
     }
 }

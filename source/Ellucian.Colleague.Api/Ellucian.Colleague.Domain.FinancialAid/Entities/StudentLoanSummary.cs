@@ -44,6 +44,11 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         public DateTime? PlusLoanMpnExpirationDate { get; set; }
 
         /// <summary>
+        /// Flag that denotes whether the Informed Borrower checklist item is completed.
+        /// </summary>
+        public List<InformedBorrowerItem> InformedBorrowerItem { get; set; }
+
+        /// <summary>
         /// Aggregate amount of all student loan debt - this amount can be higher than the sum of all 
         /// StudentLoanHistory amounts
         /// </summary>
@@ -67,6 +72,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
             }
             _StudentId = studentId;
 
+            InformedBorrowerItem = new List<InformedBorrowerItem>();
             studentLoanHistory = new List<StudentLoanHistory>();
             StudentLoanHistory = studentLoanHistory.AsReadOnly();
         }

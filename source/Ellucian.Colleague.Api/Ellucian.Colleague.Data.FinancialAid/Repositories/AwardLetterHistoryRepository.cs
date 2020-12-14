@@ -1061,7 +1061,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
         private string SetAwardRenewableText(string awardId, IEnumerable<Award> allAwards)
         {
             var renewableText = allAwards.FirstOrDefault(a => a.Code == awardId).AwRenewableText;
-            var formattedRenewableText = renewableText.Replace("ý", "");
+            var formattedRenewableText = renewableText.Replace("ý", " ");
             return formattedRenewableText;
         }
 

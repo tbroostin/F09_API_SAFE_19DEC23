@@ -94,13 +94,14 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
         }
 
-        public async Task<BulkRequestDetails> GetBulkRequestDetails(string id)
+        public async Task<BulkRequestDetails> GetBulkRequestDetails(string resourceName, string id)
         {
             try
             {
                 var getBulkRequestStatus = new GetBulkRequestStatusRequest()
                 {
-                    requestorTrackingId = id
+                    requestorTrackingId = id,
+                    resourceName = resourceName
                 };
 
                 var response = await transactionInvoker.ExecuteAsync<GetBulkRequestStatusRequest, GetBulkRequestStatusResponse>(getBulkRequestStatus);

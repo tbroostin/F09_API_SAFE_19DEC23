@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -42,8 +42,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// Get the PersonPositions based on the permissions of the current user/user who has proxy or time history admin
         /// </summary>
         /// <param name="effectivePersonId">Optional parameter for effective personId</param>
+        /// <param name="lookupStartDate">lookup start date, all records with end date before this date will not be retrieved</param>
         /// <returns></returns>
-        public async Task<IEnumerable<PersonPosition>> GetPersonPositionsAsync(string effectivePersonId = null)
+        public async Task<IEnumerable<PersonPosition>> GetPersonPositionsAsync(string effectivePersonId = null, DateTime? lookupStartDate = null)
         {
             if (effectivePersonId == null)
             {
@@ -74,7 +75,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 }
             }
 
-            var personPositionEntities = await personPositionRepository.GetPersonPositionsAsync(userAndSubordinateIds);
+            var personPositionEntities = await personPositionRepository.GetPersonPositionsAsync(userAndSubordinateIds, lookupStartDate);
             if (personPositionEntities == null)
             {
                 var message = "Unexpected null personPositionEntities returned from repository";

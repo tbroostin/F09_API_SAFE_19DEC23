@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -67,6 +67,16 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// Indicates whether or not course section book information should be visible in the course catalog's section detail.
         /// </summary>
         public bool ShowCourseSectionBookInformation { get; set; }
+
+        /// <summary>
+        /// Default Colleague Self-Service search view for Course Catalogs
+        /// </summary>
+        public SelfServiceCourseCatalogSearchView DefaultSelfServiceCourseCatalogSearchView { get; set; }
+
+        /// <summary>
+        /// Default Colleague Self-Service search result view for Course Catalogs
+        /// </summary>
+        public SelfServiceCourseCatalogSearchResultView DefaultSelfServiceCourseCatalogSearchResultView { get; set; }
 
         /// <summary>
         /// Constructor for CourseCatalogConfiguration

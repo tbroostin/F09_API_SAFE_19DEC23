@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
@@ -25,5 +25,13 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         /// <param name="recordId">ID of the record containing the pdf data for a 1099-MISC tax form</param>
         /// <returns>The pdf data for tax form 1099-MISC</returns>
         Task<Form1099MIPdfData> GetForm1099MiPdfDataAsync(string personId, string recordId);
+
+        /// <summary>
+        /// Get the pdf data for tax form 1099-NEC.
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the 1099-NEC.</param>
+        /// <param name="recordId">ID of the record containing the pdf data for a 1099-NEC tax form</param>
+        /// <returns>The pdf data for tax form 1099-NEC</returns>
+        Task<Form1099NecPdfData> GetForm1099NecPdfDataAsync(string personId, string recordId);
     }
 }

@@ -15,5 +15,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
 
         Task<string> GetOrganizatonContactIdFromGuidAsync(string guid);
         Task<Tuple<OrganizationContact, string>> CreateVendorContactInitiationProcessAsync(OrganizationContactInitiationProcess entity);
+
+        Task<IEnumerable<OrganizationContact>> GetVendorContactsForVendorsAsync(string[] vendorIds);
     }
 }

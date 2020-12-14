@@ -146,6 +146,7 @@
     <Compile Include="FinancialAidPersonQueryCriteria.cs" />
     <Compile Include="GroupType.cs" />
     <Compile Include="HousingCode.cs" />
+    <Compile Include="InformedBorrowerItem.cs" />
     <Compile Include="IpedsInstitution.cs" />
     <Compile Include="Link.cs" />
     <Compile Include="LinkTypes.cs" />

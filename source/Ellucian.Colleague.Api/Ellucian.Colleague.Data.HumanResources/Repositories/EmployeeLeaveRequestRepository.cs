@@ -222,6 +222,208 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             return LeaveRequestEntities;
         }
 
+
+        /// <summary>
+        /// Gets the Approved Leave Requests for a timecard week based on the date range. 
+        /// </summary>
+        /// <param name="startDate">Start date of timecard week </param>
+        /// <param name="endDate">End date of timecard week</param>
+        /// <param name="employeeIds">List of person Ids</param>
+        /// <returns>List of Leave Request Domain Entities</returns>
+        public async Task<IEnumerable<Domain.HumanResources.Entities.LeaveRequest>> GetLeaveRequestsForTimeEntryAsync(DateTime startDate, DateTime endDate, IEnumerable<string> employeeIds)
+        {
+          
+            if (employeeIds == null || !employeeIds.Any())
+            {
+                var message = "Employee Ids are required to get approved leave requests for the specified date range";
+                logger.Error(message);
+                throw new ArgumentNullException("employeeIds", message);
+            }
+          
+
+            //Get leave requests of loggedin user and their supervisees.
+            var leaveRequestCriteria = "WITH LR.EMPLOYEE.ID EQ ?";
+            var leaveRequestKeys = await DataReader.SelectAsync("LEAVE.REQUEST", leaveRequestCriteria, employeeIds.Select(id => string.Format("\"{0}\"", id)).ToArray());
+            if (leaveRequestKeys == null)
+            {
+                var message = "Unexpected null returned from LEAVE.REQUEST SelectAsync";
+                logger.Error(message);
+                throw new ApplicationException(message);
+            }
+            if (!leaveRequestKeys.Any())
+            {
+                logger.Info("No LEAVE.REQUEST keys exist for the given employee Ids: " + string.Join(",", employeeIds));
+            }
+
+            //Filter leave requests that are in approved status
+            string leaveRequestStatusCriteria = "WITH LRS.LEAVE.REQUEST.ID EQ ?";
+            var leaveRequestStatusKeys = await DataReader.SelectAsync("LEAVE.REQUEST.STATUS", leaveRequestStatusCriteria, leaveRequestKeys.Select(key => string.Format("\"{0}\"", key)).ToArray());
+            IEnumerable<string> approvedLeaveRequestIds = new List<string>();
+            if (leaveRequestStatusKeys == null)
+            {
+                var message = "Unexpected null returned from LEAVE.REQUEST.STATUS SelectAsyc";
+                logger.Error(message);
+                throw new ApplicationException(message);
+            }
+            if (!leaveRequestStatusKeys.Any())
+            {
+                logger.Info("No LEAVE.REQUEST.STATUS keys exist for the given Leave Request Ids: " + string.Join(",", leaveRequestStatusKeys));
+            }
+
+            //get leave detail data contract records 
+            for (int i = 0; i < leaveRequestStatusKeys.Count(); i += bulkReadSize)
+            {
+                var subList = leaveRequestStatusKeys.Skip(i).Take(bulkReadSize);
+                var leaveRequestStatusRecords = await DataReader.BulkReadRecordAsync<DataContracts.LeaveRequestStatus>(subList.ToArray());
+                if (leaveRequestStatusRecords == null)
+                {
+                    logger.Error(string.Format("No leave status data available for requested date range {0} - {1}", startDate, endDate));
+                }
+                else
+                {
+                    //Identify Latest status, filter "Approved" status records and extract leave request Ids
+                    var latestStatusRecordKeys = leaveRequestStatusRecords.Where(lrs => (leaveRequestStatusRecords.GroupBy(g => g.LrsLeaveRequestId)
+                                                    .Select(x => x.Max(o => int.Parse(o.Recordkey)).ToString()).Contains(lrs.Recordkey)
+                                                      && lrs.LrsActionType.Equals(LeaveStatusAction.Approved.ToString()))).ToList();
+
+
+                    if (latestStatusRecordKeys != null && latestStatusRecordKeys.Any())
+                    {
+                        approvedLeaveRequestIds = latestStatusRecordKeys.Select(x => x.LrsLeaveRequestId);
+                    }
+
+                }
+            }
+            //Holds the final list of leave request to be returned
+            var dbLeaveRequests = new List<DataContracts.LeaveRequest>();
+
+            for (int i = 0; i < approvedLeaveRequestIds.Count(); i += bulkReadSize)
+            {
+                var subList = approvedLeaveRequestIds.Skip(i).Take(bulkReadSize);
+                var records = await DataReader.BulkReadRecordAsync<DataContracts.LeaveRequest>(subList.ToArray());
+                if (records == null)
+                {
+                    logger.Error("Unexpected null from bulk read of Leave Request records");
+                }
+                else
+                {
+                    dbLeaveRequests.AddRange(records);
+                }
+            }
+
+            //Filter leave requests that falls in the range of time week start and end dates.
+            //Either Leave Start Date (or) Leave End Date must be within time week range. 
+            if (dbLeaveRequests != null && dbLeaveRequests.Any())
+            {
+      
+                dbLeaveRequests = dbLeaveRequests.Where(lr => ((lr.LrStartDate >= startDate && lr.LrStartDate <= endDate) ||
+                                            (lr.LrEndDate >= startDate &&   lr.LrEndDate <= endDate))
+                                            ).ToList();
+            }
+            
+            #region Final Leave Requests
+
+            var dbLeaveRequestDetails = new List<DataContracts.LeaveRequestDetail>();
+            var dbleaveRequestStatuses = new List<DataContracts.LeaveRequestStatus>();
+
+            var finalLeaveRequestKeys = dbLeaveRequests.Select(lr => lr.Recordkey);
+
+            /*FINAL LEAVE REQUEST DETAIL RECORDS FETCH*/
+            var finalLeaveRequestDetailCriteria = "WITH LRD.LEAVE.REQUEST.ID EQ ?";
+            var finalLeaveRequestDetailKeys = await DataReader.SelectAsync("LEAVE.REQUEST.DETAIL", finalLeaveRequestDetailCriteria, finalLeaveRequestKeys.Select(key => string.Format("\"{0}\"", key)).ToArray());
+            if (finalLeaveRequestDetailKeys == null)
+            {
+                var message = "Unexpected null returned from LEAVE.REQUEST.DETAIL SelectAsyc";
+                logger.Error(message);
+                throw new ApplicationException(message);
+            }
+            if (!finalLeaveRequestDetailKeys.Any())
+            {
+                logger.Info("No LEAVE.REQUEST.DETAIL keys exist for the given Leave Request Ids: " + string.Join(",", finalLeaveRequestKeys));
+            }
+
+            for (int i = 0; i < finalLeaveRequestDetailKeys.Count(); i += bulkReadSize)
+            {
+                var subList = finalLeaveRequestDetailKeys.Skip(i).Take(bulkReadSize);
+                var records = await DataReader.BulkReadRecordAsync<DataContracts.LeaveRequestDetail>(subList.ToArray());
+                if (records == null)
+                {
+                    logger.Error("Unexpected null from bulk read of Leave Request Detail records");
+                }
+                else
+                {
+                    dbLeaveRequestDetails.AddRange(records);
+                }
+            }
+
+            /*FINAL LEAVE REQUEST STATUS RECORDS FETCH*/
+            var finalLeaveRequestStatusCriteria = "WITH LRS.LEAVE.REQUEST.ID EQ ?";
+            var finalLeaveRequestStatusKeys = await DataReader.SelectAsync("LEAVE.REQUEST.STATUS", finalLeaveRequestStatusCriteria, finalLeaveRequestKeys.Select(key => string.Format("\"{0}\"", key)).ToArray());
+            if (finalLeaveRequestStatusKeys == null)
+            {
+                var message = "Unexpected null returned from LEAVE.REQUEST.STATUS SelectAsyc";
+                logger.Error(message);
+                throw new ApplicationException(message);
+            }
+            if (!finalLeaveRequestStatusKeys.Any())
+            {
+                logger.Info("No LEAVE.REQUEST.STATUS keys exist for the given Leave Request Ids: " + string.Join(",", finalLeaveRequestStatusKeys));
+            }
+
+
+            for (int i = 0; i < finalLeaveRequestStatusKeys.Count(); i += bulkReadSize)
+            {
+                var subList = finalLeaveRequestStatusKeys.Skip(i).Take(bulkReadSize);
+                var records = await DataReader.BulkReadRecordAsync<DataContracts.LeaveRequestStatus>(subList.ToArray());
+                if (records == null)
+                {
+                    logger.Error("Unexpected null from bulk read of Leave Request Status records");
+                }
+                else
+                {
+                    dbleaveRequestStatuses.AddRange(records);
+                }
+            }
+
+            #region DATA MAPPING
+            var LeaveRequestEntities = new List<Domain.HumanResources.Entities.LeaveRequest>();
+            var LeaveRequestDetailEntities = new List<Domain.HumanResources.Entities.LeaveRequestDetail>();
+            var LeaveRequestStatusEntities = new List<Domain.HumanResources.Entities.LeaveRequestStatus>();
+
+
+            var leaveRequestDetailsRecordDict = dbLeaveRequestDetails.ToLookup(lrd => lrd.LrdLeaveRequestId);
+            var leaveRequestStatusRecordDict = dbleaveRequestStatuses.ToLookup(lrs => lrs.LrsLeaveRequestId);
+
+
+            //Loop through each Leave Request Record
+            List<Task<Domain.HumanResources.Entities.LeaveRequest>> BuildLeaveRequestEntitiesTasks = new List<Task<Domain.HumanResources.Entities.LeaveRequest>>();
+            foreach (var leaveRequestRecord in dbLeaveRequests)
+            {
+                //Get all leave request details from dict and build entity
+                if (leaveRequestDetailsRecordDict.Contains(leaveRequestRecord.Recordkey))
+                {
+                    LeaveRequestDetailEntities = BuildLeaveRequestDetailEntities(leaveRequestDetailsRecordDict[leaveRequestRecord.Recordkey].ToList());
+                }
+
+               // Get all leave request statuses from dict and build entity
+                if (leaveRequestStatusRecordDict.Contains(leaveRequestRecord.Recordkey))
+                {
+                    LeaveRequestStatusEntities = BuildLeaveRequestStatusEntities(leaveRequestStatusRecordDict[leaveRequestRecord.Recordkey].ToList());
+                }
+
+
+                //Create a task for each BuildLeaveRequestEntity and add to the list
+                BuildLeaveRequestEntitiesTasks.Add(BuildLeaveRequestEntity(leaveRequestRecord, LeaveRequestDetailEntities, LeaveRequestStatusEntities, null));
+            }
+            //Invoke tasks parallely and collate the results
+            LeaveRequestEntities.AddRange(await Task.WhenAll(BuildLeaveRequestEntitiesTasks));
+
+            #endregion
+
+            #endregion
+
+            return LeaveRequestEntities;
+        }
         /// <summary>
         /// Gets a single LeaveRequest object matching the given id. 
         /// </summary>
@@ -732,7 +934,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
               actionType,
               leaveRequestStatusRecord.LrsActionerId)
             {
-            
+
                 Timestamp = new Timestamp(leaveRequestStatusRecord.LeaveRequestStatusAddopr,
             leaveRequestStatusRecord.LeaveRequestStatusAddtime.ToPointInTimeDateTimeOffset(leaveRequestStatusRecord.LeaveRequestStatusAdddate, colleagueTimeZone).Value,
             leaveRequestStatusRecord.LeaveRequestStatusChgopr,

@@ -16,25 +16,25 @@ namespace Ellucian.Colleague.Dtos
         /// <summary>
         /// A named grouping of grades that can be assigned to students at a given academic level
         /// </summary>
-        [DataMember(Name = "scheme")]
+        [DataMember(Name = "scheme", EmitDefaultValue = false)]
         public GradeSchemeProperty GradeScheme { get; set; }
 
         /// <summary>
         /// The literal value or numeric range of the grade
         /// </summary>
-        [DataMember(Name = "grade")]
+        [DataMember(Name = "grade", EmitDefaultValue = false)]
         public GradeItem GradeItem { get; set; }
 
         /// <summary>
         /// What degree of credit this grade qualifies for.
         /// </summary>
-        [DataMember(Name = "credit")]
+        [DataMember(Name = "credit", EmitDefaultValue = false)]
         public GradeCmplCreditType GradeCmplCreditType { get; set; }
 
         /// <summary>
         /// A grade scheme item in different grade schemes that is the equivalent to this grade scheme item.
         /// </summary>
-        [DataMember(Name = "detail")]
+        [DataMember(Name = "detail", EmitDefaultValue = false)]
         public GuidObject2 Detail { get; set; }
        
     }

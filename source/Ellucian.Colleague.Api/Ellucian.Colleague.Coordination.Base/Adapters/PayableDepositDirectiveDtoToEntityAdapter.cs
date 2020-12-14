@@ -13,7 +13,8 @@ namespace Ellucian.Colleague.Coordination.Base.Adapters
     /// <summary>
     /// Adapter to convert a PayableDepositDirective DTO to a PayableDepositDirective Entity
     /// </summary>
-    public class PayableDepositDirectiveDtoToEntityAdapter : BaseAdapter<Dtos.Base.PayableDepositDirective, Domain.Base.Entities.PayableDepositDirective>
+    public class PayableDepositDirectiveDtoToEntityAdapter 
+        : AutoMapperAdapter<Dtos.Base.PayableDepositDirective, Domain.Base.Entities.PayableDepositDirective>
     {
         /// <summary>
         /// Instantiate a new PayableDepositDirectiveDtoToEntityAdapter
@@ -23,7 +24,8 @@ namespace Ellucian.Colleague.Coordination.Base.Adapters
         public PayableDepositDirectiveDtoToEntityAdapter(IAdapterRegistry adapterRegistry, ILogger logger)
             : base(adapterRegistry, logger)
         {
-
+            AddMappingDependency<Dtos.Base.Timestamp, Domain.Base.Entities.Timestamp>();
+            AddMappingDependency<Dtos.Base.BankAccountType, Domain.Base.Entities.BankAccountType>();
         }
 
         /// <summary>

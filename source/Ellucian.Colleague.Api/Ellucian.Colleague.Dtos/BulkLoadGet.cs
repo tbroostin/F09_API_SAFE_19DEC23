@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Dtos.Attributes;
 using Newtonsoft.Json;
 
 
@@ -32,6 +33,7 @@ namespace Ellucian.Colleague.Dtos
         /// Tracking ID used by the requesting system
         /// </summary>
         [JsonProperty("requestorTrackingId", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
         public string RequestorTrackingId { get; set; }
 
         /// <summary>

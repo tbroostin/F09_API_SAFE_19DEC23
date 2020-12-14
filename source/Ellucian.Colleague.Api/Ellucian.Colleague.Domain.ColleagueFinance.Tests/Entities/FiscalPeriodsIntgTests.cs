@@ -48,7 +48,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests.Entities
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(ArgumentException))]
             public void FiscalPeriodsIntg_GuidNullException()
             {
                 new FiscalPeriodsIntg(null, recordkey);

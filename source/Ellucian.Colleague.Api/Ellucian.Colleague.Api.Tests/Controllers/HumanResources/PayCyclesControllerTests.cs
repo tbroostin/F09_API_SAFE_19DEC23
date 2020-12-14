@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -108,7 +108,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             [ExpectedException(typeof(HttpResponseException))]
             public async Task CatchGenericExceptionTest()
             {
-                payCycleRepositoryMock.Setup(r => r.GetPayCyclesAsync()).Throws(new Exception());
+                payCycleRepositoryMock.Setup(r => r.GetPayCyclesAsync(null)).Throws(new Exception());
                 try
                 {
                     await controllerUnderTest.GetPayCyclesAsync();

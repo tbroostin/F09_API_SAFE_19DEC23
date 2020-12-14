@@ -1,0 +1,717 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Ellucian.Colleague.Configuration</name>
+    </assembly>
+    <members>
+        <member name="T:Ellucian.Colleague.Configuration.AbstractServiceManager">
+            <summary>
+            Abstract class that provides common functionality to Service Manager objects, such as logging properties.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Colleague.Configuration.AbstractServiceManager._loggingProperties">
+            <summary>
+            Private logging properties, such as security credentials and client IP address
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.AbstractServiceManager.LoggingProperties">
+            <summary>
+            Read-only property for logging.
+            </summary>
+            <value>
+            The logging properties.
+            </value>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.AbstractServiceManager.SetLoggingProperties(System.String,System.String,System.String)">
+            <summary>
+            Sets the logging properties for all actions in the scope of this class and derived classes.
+            </summary>
+            <param name="userId">user ID for the current request</param>
+            <param name="securityToken">security token for the current request</param>
+            <param name="controlId">control ID for the current request</param>
+        </member>
+        <member name="T:Ellucian.Colleague.Configuration.ApplicationServerConfigurationManager">
+            <summary>
+            Provides a synchronized interface to the IIS Runtime Cache. In addition, the validation of the Application Server
+            settings is handled here. Centralizing this configuration information simplifies the implementation and provides a single class
+            for future caching needs.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Colleague.Configuration.ApplicationServerConfigurationManager.s_instance">
+            <summary>
+            Singleton instance
+            </summary>
+        </member>
+        <member name="F:Ellucian.Colleague.Configuration.ApplicationServerConfigurationManager.s_updateLock">
+            <summary>
+            Static lock object
+            </summary>
+        </member>
+        <member name="F:Ellucian.Colleague.Configuration.ApplicationServerConfigurationManager._isConfigurationValidated">
+            <summary>
+            Configuration validated flag
+            </summary>
+        </member>
+        <member name="F:Ellucian.Colleague.Configuration.ApplicationServerConfigurationManager.CLIENT_CONFIGURATION_SUFFIX">
+            <summary>
+            Static string used to build the client configuration key.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Colleague.Configuration.ApplicationServerConfigurationManager.SERVER_CONFIGURATION_SUFFIX">
+            <summary>
+            Static string used to build the server configuration key.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ApplicationServerConfigurationManager.ConfigurationValidated">
+            <summary>
+            Read-only property for configuration validation flag
+            </summary>
+            <value>
+            <c>true</c> if [configuration validated]; otherwise, <c>false</c>.
+            </value>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ApplicationServerConfigurationManager.Instance">
+            <summary>
+            Read-only property for singleton instance
+            </summary>
+            <value>
+            The instance.
+            </value>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ApplicationServerConfigurationManager.#ctor">
+            <summary>
+            Private constructor for singleton pattern
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ApplicationServerConfigurationManager.Initialize">
+            <summary>
+            Initialization method for singleton.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ApplicationServerConfigurationManager.GetParameter(System.String)">
+            <summary>
+            This method attempts to retrieve a parameter from the IIS runtime cache. If the object is not found, then a null is returned.
+            </summary>
+            <param name="key">unique identifier</param>
+            <returns>
+            parameter object or null
+            </returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ApplicationServerConfigurationManager.RemoveParameter(System.String)">
+            <summary>
+            Removes the parameter.
+            </summary>
+            <param name="key">The key.</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ApplicationServerConfigurationManager.StoreConfiguration(System.String,System.Object)">
+            <summary>
+            Attempts to store a parameter in the IIS runtime cache. The cache update invokes a lock to synchronize the operation.
+            </summary>
+            <param name="key">unique identifier</param>
+            <param name="parameter">object to store</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ApplicationServerConfigurationManager.StoreSession(System.String,System.Object)">
+            <summary>
+            Attempts to store a parameter in the IIS runtime cache. The cache update invokes a lock to synchronize the operation.
+            </summary>
+            <param name="key">unique identifier</param>
+            <param name="parameter">object to store</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ApplicationServerConfigurationManager.StoreParameter(System.String,System.Object,System.DateTime)">
+            <summary>
+            Stores the parameter.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="parameter">The parameter.</param>
+            <param name="expirationPeriod">The expiration period.</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ApplicationServerConfigurationManager.validateApplicationServerSettings">
+            <summary>
+            This method validates the Application Server settings for the web service application.
+            </summary>
+            <exception cref="T:System.IO.InvalidDataException">Thrown when the Application Server settings are invalid</exception>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ApplicationServerConfigurationManager.validateParameter(System.Configuration.ConfigurationValidatorBase,System.Object,System.String@,System.String)">
+            <summary>
+            This utility method validates an object with a supplied validator. 
+            </summary>
+            <param name="validator">object validator</param>
+            <param name="value">object to be validated</param>
+            <param name="errorMessageAggregator">aggregated error messages</param>
+            <param name="errorMessage">specific error message if validation fails</param>
+        </member>
+        <member name="T:Ellucian.Colleague.Configuration.ColleagueSDKParameters">
+            <summary>
+            Static class for ColleagueSDKParameters with default values 
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ColleagueSDKParameters.DasTimeout">
+            <summary>
+            Gets or Sets the value of DasTimeout
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ColleagueSDKParameters.BatchInitialFetchSize">
+            <summary>
+            Gets or Sets the value of BatchInitialFetchSize
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ColleagueSDKParameters.BatchFetchIncrementAndMaxSize">
+            <summary>
+            Gets or Sets the value of BatchFetchIncrementAndMaxSize
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ColleagueSDKParameters.SelectFetchSize">
+            <summary>
+            Gets or Sets the value of SelectFetchSize
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ColleagueSDKParameters.QueryAttributeLimit">
+            <summary>
+            Gets or Sets the value of QueryAttributeLimit
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ColleagueSDKParameters.LdmGuidSelectSize">
+            <summary>
+            Gets or Sets the value of LdmGuidSelectSize
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ColleagueSDKParameters.#cctor">
+            <summary>
+            Constructor for static class ColleagueSDKParameters
+            </summary>
+        </member>
+        <member name="T:Ellucian.Colleague.Configuration.ColleagueSettings">
+            <summary>
+            Colleague application and DB listeners' connection parameters
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ColleagueSettings.DmiSettings">
+            <summary>
+            Gets or sets the dmi/app listener settings.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ColleagueSettings.DasSettings">
+            <summary>
+            Gets or sets the das/DB listener settings.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ColleagueSettings.GeneralSettings">
+            <summary>
+            Gets or sets the general settings.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Colleague.Configuration.ColleagueConfigAccessor">
+            <summary>
+            Provides access to Colleague settings stored in a config file.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ColleagueConfigAccessor.CreateOrUpdate(Ellucian.Colleague.Configuration.ColleagueSettings)">
+            <summary>
+            Updates the config settings with new data. If any configuration is missing, it will be added.
+            </summary>
+            <param name="newSettings">The new settings.</param>
+        </member>
+        <member name="T:Ellucian.Colleague.Configuration.DasSettings">
+            <summary>
+            Das connection parameters.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.DasSettings.AccountName">
+            <summary>
+            Gets or sets the name of the account.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.DasSettings.IpAddress">
+            <summary>
+            Gets or sets the ip address.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.DasSettings.Port">
+            <summary>
+            Gets or sets the port.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.DasSettings.Secure">
+            <summary>
+            Gets or sets a value indicating whether this <see cref="T:Ellucian.Colleague.Configuration.DasSettings"/> is secure.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.DasSettings.HostNameOverride">
+            <summary>
+            Gets or sets the host name override.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.DasSettings.ConnectionPoolSize">
+            <summary>
+            Gets or sets the size of the connection pool.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.DasSettings.DbLogin">
+            <summary>
+            Gets or sets the database login.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.DasSettings.DbPassword">
+            <summary>
+            Gets or sets the database password.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.DasSettings.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Colleague.Configuration.DasSettings"/> class.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Colleague.Configuration.DmiSettings">
+            <summary>
+            Contains DMI connection parameters.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.DmiSettings.AccountName">
+            <summary>
+            Gets or sets the name of the account.
+            </summary>
+            <value>
+            The name of the account.
+            </value>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.DmiSettings.IpAddress">
+            <summary>
+            Gets or sets the ip address.
+            </summary>
+            <value>
+            The ip address.
+            </value>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.DmiSettings.Port">
+            <summary>
+            Gets/sets the port.
+            </summary>
+            <value>
+            The port.
+            </value>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.DmiSettings.Secure">
+            <summary>
+            Gets/sets a value indicating whether this <see cref="T:Ellucian.Colleague.Configuration.DmiSettings" /> is secure.
+            </summary>
+            <value>
+              <c>true</c> if secure; otherwise, <c>false</c>.
+            </value>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.DmiSettings.HostNameOverride">
+            <summary>
+            Gets/sets the host name override.
+            </summary>
+            <value>
+            The host name override.
+            </value>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.DmiSettings.ConnectionPoolSize">
+            <summary>
+            Gets/sets the size of the connection pool.
+            </summary>
+            <value>
+            The size of the connection pool.
+            </value>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.DmiSettings.SharedSecret">
+            <summary>
+            Gets or sets the shared secret.
+            </summary>
+            <value>
+            The shared secret.
+            </value>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.DmiSettings.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Colleague.Configuration.DmiSettings" /> class.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Colleague.Configuration.ErrorUtility">
+            <summary>
+            This static utility class provides a central mechanism for common error processing.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ErrorUtility.BuildNullResponseString(System.String)">
+            <summary>
+            This static method creates a Null Response error message that is injected with the name of the affected object.
+            </summary>
+            <param name="objectAffected">The object affected.</param>
+            <returns>
+            string stating that an object cannot be null or empty
+            </returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ErrorUtility.BuildColleagueServiceError(System.String,System.String,System.String)">
+            <summary>
+            This static method creates a full ErrorResponse object based on provided arguments.
+            </summary>
+            <param name="code">error code</param>
+            <param name="category">error category</param>
+            <param name="message">error message</param>
+            <returns>
+            error object
+            </returns>
+        </member>
+        <member name="T:Ellucian.Colleague.Configuration.GeneralSettings">
+            <summary>
+            General Colleague settings.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.GeneralSettings.UseDasDatareader">
+            <summary>
+            True to use DAS Data Reader (via DB listener), false to use original Data Reader (via app listener).
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.GeneralSettings.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Colleague.Configuration.GeneralSettings"/> class.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Colleague.Configuration.IApplicationServerConnection">
+            <summary>
+            This interface provides a means of communicating with the Colleague Application Server. This interface extends IDisposable in order to clean
+            up the streams more efficiently.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.IApplicationServerConnection.Connect">
+            <summary>
+            This method establishes the connection to the Colleague Application Server
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.IApplicationServerConnection.ConnectAsync">
+            <summary>
+            This method establishes the connection to the Colleague Application Server as an asynchronous operation
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.IApplicationServerConnection.SendBytes(System.Byte[])">
+            <summary>
+            Sends a DMI request.
+            </summary>
+            <param name="request">Request to send in the format of a Byte array.</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.IApplicationServerConnection.SendBytesAsync(System.Byte[])">
+            <summary>
+            Sends a DMI request as an asynchronous transaction.
+            </summary>
+            <param name="request">Request to send in the format of a Byte array.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.IApplicationServerConnection.SendRequest(System.IO.Stream)">
+            <summary>
+            This method sends a stream of data to the Colleague Application Server
+            </summary>
+            <param name="request">The request.</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.IApplicationServerConnection.SendRequestAsync(System.IO.Stream)">
+            <summary>
+            This method sends a stream of data to the Colleague Application Server as an asynchronous operation
+            </summary>
+            <param name="request">The request.</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.IApplicationServerConnection.ReceiveStringResponse">
+            <summary>
+            Receives the DMI response as a string.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.IApplicationServerConnection.ReceiveStringResponseAsync">
+            <summary>
+            Receives the DMI response as a string as an asynchronous operation.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.IApplicationServerConnection.ReceiveResponse">
+            <summary>
+            This method receive a Colleague Application Server response and converts it to a Stream
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.IApplicationServerConnection.ReceiveResponseAsync">
+            <summary>
+            This method receive a Colleague Application Server response as an asynchronous operation and converts it to a Stream
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.IApplicationServerConnection.Disconnect">
+            <summary>
+            This method destroys the connection to the Colleague Application Server
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.IApplicationServerConnection.DisconnectAsync">
+            <summary>
+            This method destroys the connection to the Colleague Application Server as an asynchronous operation
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.IApplicationServerConnection.DoSendRawBytesAsync(System.Byte[])">
+            <summary>
+            This method writes the byte array as is to the stream
+            </summary>
+            <param name="requestData"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.IApplicationServerConnection.DoReceiveRawBytesAsync(System.Byte[])">
+            <summary>
+            This method read raw bytes from the stream. How much is read is determined by the parameter's size.
+            </summary>
+            <param name="buffer"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.IApplicationServerConnection.WriteStringToStreamAsync(System.String)">
+            <summary>
+            This method writes the string message to the stream.
+            </summary>
+            <param name="message"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.IApplicationServerConnection.ReadStringFromStreamAsync(System.Int64)">
+            <summary>
+            This method reads the bytes as string from the stream. How much is read is determined by the parameter's size.
+            </summary>
+            <param name="bufferSize"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.IApplicationServerConnection.ResetConnection">
+            <summary>
+            This method resets the DMI socket connection
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.IApplicationServerConnection.ResetConnectionAsync">
+            <summary>
+            This method resets the DMI socket connection asynchronously
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.IApplicationServerConnection.TestConnectionAsync">
+            <summary>
+            This method tests the DMI socket connection asynchronously
+            </summary>
+            <returns>True if the test succeded</returns>
+        </member>
+        <member name="T:Ellucian.Colleague.Configuration.Licensing.EllucianLicenseProvider">
+            <summary>
+            Ellucian Colleague license provider.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.Licensing.EllucianLicenseProvider.#cctor">
+            <summary>
+            Static constructor that loads the licensing information for a web application.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.Licensing.EllucianLicenseProvider.RefreshLicense(System.String)">
+            <summary>
+            Refresh the licensing information using a specified path. 
+            </summary>
+            <param name="appPath">folder path containing the license files</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.Licensing.EllucianLicenseProvider.GetLicense(System.ComponentModel.LicenseContext,System.Type,System.Object,System.Boolean)">
+            <summary>
+            When overridden in a derived class, gets a license for an instance or type of component.
+            When given a context and whether the denial of a license, throws an exception.
+            </summary>
+            <param name="context">A <see cref="T:System.ComponentModel.LicenseContext" /> that specifies where you can use the licensed object.</param>
+            <param name="type">A <see cref="T:System.Type" /> that represents the component requesting the license.</param>
+            <param name="instance">An object that is requesting the license.</param>
+            <param name="allowExceptions">true if a <see cref="T:System.ComponentModel.LicenseException" /> should be thrown when the component cannot be granted a license; otherwise, false.</param>
+            <returns>
+            A valid <see cref="T:System.ComponentModel.License" />.
+            </returns>
+            <exception cref="T:System.Exception"></exception>
+            <exception cref="T:Ellucian.Web.License.EllucianLicenseException"></exception>
+        </member>
+        <member name="T:Ellucian.Colleague.Configuration.ServerConfigurationDefinition">
+            <summary>
+            Represents the "applicationServer" section within a web application configuration file (app.config or web.config) under
+            the "datatel" section. This node has all of the required attributes for simplicity and there is currently a 1-to-1 mapping
+            between a web application deployment and the environment. Validation occurs outside of this class so the exceptions can be
+            caught and handled appropriately.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ServerConfigurationDefinition.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ServerConfigurationDefinition.Settings">
+            <summary>
+            Represents the name of the settings stored in Colleague.
+            </summary>
+            <value>
+            The settings.
+            </value>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ServerConfigurationDefinition.Environment">
+            <summary>
+            Represents the name of the Colleague environment.
+            </summary>
+            <value>
+            The environment.
+            </value>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ServerConfigurationDefinition.Address">
+            <summary>
+            Represents the IP address or host name of the Colleague Application Server.
+            </summary>
+            <value>
+            The address.
+            </value>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ServerConfigurationDefinition.Port">
+            <summary>
+            Represents the port number of the Colleague Application Server.
+            </summary>
+            <value>
+            The port.
+            </value>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ServerConfigurationDefinition.Secure">
+            <summary>
+            Read-only boolean property that determines if the secure flag was set in the configuration
+            </summary>
+            <value>
+              <c>true</c> if secure; otherwise, <c>false</c>.
+            </value>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ServerConfigurationDefinition.SecureFlag">
+            <summary>
+            Determines the security setting when connecting to the Colleague Application Server
+            </summary>
+            <value>
+            The secure flag.
+            </value>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ServerConfigurationDefinition.CertificateHostnameOverride">
+            <summary>
+            Represents the certificate host name override the Colleague Application Server. This is useful when the external and
+            internal host names do not match.
+            </summary>
+            <value>
+            The certificate hostname override.
+            </value>
+        </member>
+        <member name="T:Ellucian.Colleague.Configuration.ServerConfigurationException">
+            <summary>
+            Exception related to server configuration issues.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ServerConfigurationException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Colleague.Configuration.ServerConfigurationException"/> class.
+            </summary>
+            <param name="message">The message that describes the error.</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ServerConfigurationException.#ctor(System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Colleague.Configuration.ServerConfigurationException"/> class.
+            </summary>
+            <param name="message">The error message that explains the reason for the exception.</param>
+            <param name="innerException">The exception that is the cause of the current exception, or a null reference if no inner exception is specified.</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ServerConfigurationException.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Colleague.Configuration.ServerConfigurationException"/> class.
+            </summary>
+            <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+            <param name="context">The <see cref="T:System.Runtime.Serialization.StreamingContext" /> that contains contextual information about the source or destination.</param>
+        </member>
+        <member name="T:Ellucian.Colleague.Configuration.ServerConfigurationManager">
+            <summary>
+            Provides a single management object for server system parameters. These settings are isolated
+            from any client configuration settings.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ServerConfigurationManager.ExecuteServerParameterTransaction(Ellucian.Dmi.Runtime.DmiTransaction,Ellucian.Colleague.Configuration.IApplicationServerConnection)">
+            <summary>
+            Executes the system parameters transaction on the Application Server.
+            </summary>
+            <param name="serverParameterTransaction">The server parameter transaction.</param>
+            <param name="serverConnection">Application Server connection</param>
+            <returns>
+            server parameters data model
+            </returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ServerConfigurationManager.ValidateSystemParameterRequest(Ellucian.Colleague.Configuration.RetrieveSystemParametersRequest)">
+            <summary>
+            Validates a system parameters request object.
+            </summary>
+            <param name="systemParameterRequest">system parameters request arguments</param>
+            <exception cref="T:Ellucian.Colleague.Configuration.ServerConfigurationException"></exception>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ServerConfigurationManager.ProcessServerParameterResponse(System.Object[])">
+            <summary>
+            This method parses the system parameter response and builds a system parameter data model.
+            </summary>
+            <param name="systemParameterResponseObjects">System Parameter DMI Transaction response objects</param>
+            <returns>system parameter data model</returns>
+        </member>
+        <member name="T:Ellucian.Colleague.Configuration.RetrieveSystemParametersRequest">
+            <summary>
+            This data contract represents the parameters for Silverlight client and web service system parameters
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.RetrieveSystemParametersRequest.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.RetrieveSystemParametersRequest.ConfigurationName">
+            <summary>
+            Represents the name of a configuration record
+            </summary>
+        </member>
+        <member name="T:Ellucian.Colleague.Configuration.ServerParametersResponse">
+            <summary>
+            This data contract represents the parameters for the web service system parameters
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ServerParametersResponse.#ctor">
+            <summary>
+            Default Constructor.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ServerParametersResponse.Loggers">
+            <summary>
+            Represents the level of debug logging for the web services.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ServerParametersResponse.BaseImageUrl">
+            <summary>
+            Represents the base URL for retrieving images.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ServerParametersResponse.ImageUrlHeaders">
+            <summary>
+            Represents the custom headers for the image requests.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ServerParametersResponse.ImageMimeType">
+            <summary>
+            Represents the image type.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ServerParametersResponse.ImageExtension">
+            <summary>
+            Represents file extension for the image.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Colleague.Configuration.ServerParametersModel">
+            <summary>
+            This data contract represents the parameters for Silverlight client and web service system parameters
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Configuration.ServerParametersModel.#ctor">
+            <summary>
+            Default Constructor.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ServerParametersModel.ServerParameters">
+            <summary>
+            Represents system parameters.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Configuration.ServerParametersModel.Errors">
+            <summary>
+            Represents the errors that occur during retrieval of the system parameters.
+            </summary>
+        </member>
+    </members>
+</doc>

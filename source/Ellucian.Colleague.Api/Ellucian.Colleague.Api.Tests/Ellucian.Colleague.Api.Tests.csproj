@@ -44,26 +44,26 @@
     <Reference Include="AutoMapper">
       <HintPath>..\packages\AutoMapper.2.1.267\lib\net40\AutoMapper.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Configuration, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Colleague.Configuration.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Configuration, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Colleague.Configuration.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Domain, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Colleague.Domain.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Domain, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Colleague.Domain.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Legacy, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Colleague.Legacy.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Legacy, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Colleague.Legacy.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Property, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Colleague.Property.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Property, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Colleague.Property.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Data.Colleague, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Data.Colleague.dll</HintPath>
+    <Reference Include="Ellucian.Data.Colleague, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Data.Colleague.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Dmi.Client, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Dmi.Client.dll</HintPath>
+    <Reference Include="Ellucian.Dmi.Client, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Dmi.Client.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Dmi.Runtime, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Dmi.Runtime.dll</HintPath>
+    <Reference Include="Ellucian.Dmi.Runtime, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Dmi.Runtime.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Logging, Version=1.0.0.1, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
       <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.248\lib\net451\Ellucian.Logging.dll</HintPath>
@@ -89,8 +89,8 @@
     <Reference Include="Ellucian.Web.Utility, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
       <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.184\lib\net451\Ellucian.Web.Utility.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.WebServices.Core.Config.dll</HintPath>
+    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.WebServices.Core.Config.dll</HintPath>
     </Reference>
     <Reference Include="ICSharpCode.SharpZipLib, Version=1.2.0.246, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
       <HintPath>..\packages\SharpZipLib.1.2.0\lib\net45\ICSharpCode.SharpZipLib.dll</HintPath>
@@ -147,10 +147,10 @@
       <HintPath>..\packages\slf4net.0.1.32.1\lib\net35\slf4net.dll</HintPath>
     </Reference>
     <Reference Include="System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\System.dll</HintPath>
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\System.dll</HintPath>
     </Reference>
     <Reference Include="System.ComponentModel.DataAnnotations, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\System.ComponentModel.DataAnnotations.dll</HintPath>
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\System.ComponentModel.DataAnnotations.dll</HintPath>
     </Reference>
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core">
@@ -173,7 +173,7 @@
     <Reference Include="System.Net.Http.WebRequest" />
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Runtime.Serialization, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\System.Runtime.Serialization.dll</HintPath>
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\System.Runtime.Serialization.dll</HintPath>
     </Reference>
     <Reference Include="System.Threading.Tasks.Dataflow, Version=4.5.24.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -246,10 +246,12 @@
     <Compile Include="Bootstrapper.cs" />
     <Compile Include="Controllers\Base\AgreementPeriodsControllerTests.cs" />
     <Compile Include="Controllers\Base\BulkLoadRequestControllerTests.cs" />
+    <Compile Include="Controllers\Base\EthosApiBuilderControllerTests.cs" />
     <Compile Include="Controllers\Base\CompoundConfigurationSettingsControllerTests.cs" />
     <Compile Include="Controllers\Base\CollectionConfigurationSettingsControllerTests.cs" />
     <Compile Include="Controllers\Base\DefaultSettingsControllerTests.cs" />
     <Compile Include="Controllers\Base\MappingSettingsControllerTests.cs" />
+    <Compile Include="Controllers\Base\CountiesControllerTests.cs" />
     <Compile Include="Controllers\Base\PersonAgreementsControllerTests.cs" />
     <Compile Include="Controllers\Base\PersonExternalEducationControllerTests.cs" />
     <Compile Include="Controllers\Base\EmergencyContactPhoneAvailabilitiesControllerTests.cs" />
@@ -282,14 +284,15 @@
     <Compile Include="Controllers\Base\TaxFormComponentsControllerTests.cs" />
     <Compile Include="Controllers\Base\TaxFormConsentsControllerTests.cs" />
     <Compile Include="Controllers\Base\TaxFormsBaseControllerTests.cs" />
+    <Compile Include="Controllers\BudgetManagement\BudgetCodesControllerTests.cs" />
     <Compile Include="Controllers\BudgetManagement\BudgetDevelopmentControllerTests.cs" />
     <Compile Include="Controllers\BudgetManagement\BudgetDevelopmentConfigurationControllerTests.cs" />
+    <Compile Include="Controllers\BudgetManagement\BudgetPhaseLineItemsControllerTests.cs" />
+    <Compile Include="Controllers\BudgetManagement\BudgetPhasesControllerTests.cs" />
     <Compile Include="Controllers\ColleagueFinance\AccountingStringSubcomponentsControllerTests.cs" />
     <Compile Include="Controllers\ColleagueFinance\AccountingStringSubcomponentValuesControllerTests.cs" />
+    <Compile Include="Controllers\ColleagueFinance\ApproversControllerTests.cs" />
     <Compile Include="Controllers\ColleagueFinance\BudgetAdjustmentsControllerTests.cs" />
-    <Compile Include="Controllers\ColleagueFinance\BudgetPhaseLineItemsControllerTests.cs" />
-    <Compile Include="Controllers\ColleagueFinance\BudgetPhasesControllerTests.cs" />
-    <Compile Include="Controllers\ColleagueFinance\BudgetCodesControllerTests.cs" />
     <Compile Include="Controllers\ColleagueFinance\BuyersControllerTests.cs" />
     <Compile Include="Controllers\Base\EmploymentVocationsControllerTests.cs" />
     <Compile Include="Controllers\Base\ExternalEmploymentPositionsControllerTests.cs" />
@@ -308,10 +311,12 @@
     <Compile Include="Controllers\ColleagueFinance\FinancialDocumentTypesControllerTests.cs" />
     <Compile Include="Controllers\ColleagueFinance\FiscalYearsControllerTests.cs" />
     <Compile Include="Controllers\ColleagueFinance\FiscalPeriodsControllerTests.cs" />
+    <Compile Include="Controllers\ColleagueFinance\FixedAssetDesignationsControllerTests.cs" />
     <Compile Include="Controllers\ColleagueFinance\FixedAssetCategoriesControllerTests.cs" />
     <Compile Include="Controllers\ColleagueFinance\FixedAssetTypesControllerTests.cs" />
     <Compile Include="Controllers\ColleagueFinance\GeneralLedgerConfigurationControllerTests.cs" />
     <Compile Include="Controllers\ColleagueFinance\GrantsControllerTests.cs" />
+    <Compile Include="Controllers\ColleagueFinance\InitiatorControllerTests.cs" />
     <Compile Include="Controllers\ColleagueFinance\LedgerActivitiesControllerTests.cs" />
     <Compile Include="Controllers\ColleagueFinance\PaymentTransactionsControllerTests.cs" />
     <Compile Include="Controllers\ColleagueFinance\ProcurementReceiptsControllerTests.cs" />
@@ -350,7 +355,9 @@
     <Compile Include="Controllers\Student\CareerGoalsControllerTests.cs" />
     <Compile Include="Controllers\Student\ApplicationInfluencesControllerTests.cs" />
     <Compile Include="Controllers\Student\AdmissionApplicationSourcesControllerTests.cs" />
+    <Compile Include="Controllers\Student\CipCodesControllerTests.cs" />
     <Compile Include="Controllers\Student\EducationalGoalsControllerTests.cs" />
+    <Compile Include="Controllers\Student\InstantEnrollmentControllerTest.cs" />
     <Compile Include="Controllers\Student\GradeSubschemesControllerTests.cs" />
     <Compile Include="Controllers\Student\ProspectOpportunitiesControllerTests.cs" />
     <Compile Include="Controllers\Student\ProspectOpportunitySourcesControllerTests.cs" />
@@ -361,11 +368,15 @@
     <Compile Include="Controllers\Student\RecruiterControllerTests.cs" />
     <Compile Include="Controllers\Student\SectionRegistrationsGradeOptionsControllerTests.cs" />
     <Compile Include="Controllers\Student\StudentDegreePlansControllerTests.cs" />
+    <Compile Include="Controllers\Student\EducationGoalsControllerTests.cs" />
+    <Compile Include="Controllers\Student\RegistrationReasonsControllerTests.cs" />
+    <Compile Include="Controllers\Student\RegistrationMarketingSourcesControllerTests.cs" />
     <Compile Include="Controllers\Student\StudentCohortAssignmentsControllerTests.cs" />
     <Compile Include="Controllers\Student\StudentGradePointAveragesControllerTests.cs" />
     <Compile Include="Controllers\Student\StudentQuickRegistrationControllerTests.cs" />
     <Compile Include="Controllers\Student\StudentTagAssignmentsControllerTests.cs" />
     <Compile Include="Controllers\Student\StudentTranscriptGradesOptionsControllerTests.cs" />
+    <Compile Include="Controllers\Student\StudentTransferWorkControllerTests.cs" />
     <Compile Include="Controllers\Student\StudentUnverifiedGradesSubmissionsControllerTests.cs" />
     <Compile Include="Controllers\Student\StudentTranscriptGradesControllerTests.cs" />
     <Compile Include="Controllers\Student\FinancialAidAcademicProgressStatusesControllerTests.cs" />

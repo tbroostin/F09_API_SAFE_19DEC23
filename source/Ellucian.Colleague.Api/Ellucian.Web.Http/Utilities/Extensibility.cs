@@ -110,8 +110,9 @@ namespace Ellucian.Web.Http.Utilities
                 var objectToReturn = jsonObjectToExtend;
                 var patcher = new JsonPatcher();
                 var arrayObjects = new Dictionary<string, List<EthosExtensibleDataRow>>();
-                
-                foreach (var extendedData in extendConfig.ExtendedDataList)
+
+                var extendedDataListSorted = extendConfig.ExtendedDataList.OrderBy(ex => ex.FullJsonPath);
+                foreach (var extendedData in extendedDataListSorted)
                 {
                     bool isArrayObject = false;
                     if (extendedData.JsonPath.Contains("[]")) isArrayObject = true;
@@ -120,7 +121,6 @@ namespace Ellucian.Web.Http.Utilities
                         var pathKey = extendedData.JsonPath.Split('[')[0] + "[]/";
                         if (arrayObjects.ContainsKey(pathKey))
                         {
-                            var extendedDataList = arrayObjects[pathKey];
                             arrayObjects[pathKey].Add(extendedData);
                         }
                         else
@@ -179,163 +179,203 @@ namespace Ellucian.Web.Http.Utilities
                 {
                     foreach (var arrayObject in arrayObjects)
                     {
-                        var arrayValues = new JArray();
-                        var arrayPath = arrayObject.Key;
-                        var ethosObjects = arrayObject.Value;
-                        int totalCount = 0;
-                        foreach (var eo in ethosObjects)
+                        try
                         {
-                            if (eo.ExtendedDataValue.Split(_VM).Count() > totalCount)
-                                totalCount = eo.ExtendedDataValue.Split(_VM).Count();
-                        }
-
-                        for (int idx = 0; idx < totalCount; idx++)
-                        {
-                            var objectValues = new JObject();
-                            foreach (var extendedData in ethosObjects)
+                            var arrayValues = new JArray();
+                            var arrayPath = arrayObject.Key;
+                            var ethosObjects = arrayObject.Value;
+                            int totalCount = 0;
+                            foreach (var eo in ethosObjects)
                             {
-                                var dataValues = extendedData.ExtendedDataValue.Split(_VM);
-                                var dataType = extendedData.JsonPropertyType;
-                                var propertyName = extendedData.JsonTitle;
-                                if (dataValues.Count() > idx)
+                                if (eo.ExtendedDataValue.Split(_VM).Count() > totalCount)
+                                    totalCount = eo.ExtendedDataValue.Split(_VM).Count();
+                            }
+
+                            for (int idx = 0; idx < totalCount; idx++)
+                            {
+                                var objectValues = new JObject();
+                                foreach (var extendedData in ethosObjects)
                                 {
-                                    if (extendedData.JsonPath == arrayPath)
-                                    {
-                                        if (dataValues.Count() > idx && !string.IsNullOrEmpty(dataValues[idx]))
+                                    try
+                                    { 
+                                        var dataValues = extendedData.ExtendedDataValue.Split(_VM);
+                                        var dataType = extendedData.JsonPropertyType;
+                                        var propertyName = extendedData.JsonTitle;
+                                        if (dataValues.Count() > idx)
                                         {
-                                            var propertyValue = new JValue(ConvertValueToJValue(dataType, dataValues[idx]));
-                                            if (propertyName.EndsWith("[]"))
+                                            if (extendedData.JsonPath == arrayPath)
                                             {
-                                                var jArray = new JArray();
-                                                var subValues = dataValues[idx].Split(_SM);
-                                                foreach (var subval in subValues)
+                                                if (dataValues.Count() > idx && !string.IsNullOrEmpty(dataValues[idx]))
                                                 {
-                                                    jArray.Add(ConvertValueToJValue(dataType, subval));
+                                                    var propertyValue = new JValue(ConvertValueToJValue(dataType, dataValues[idx]));
+                                                    if (propertyName.EndsWith("[]"))
+                                                    {
+                                                        var jArray = new JArray();
+                                                        var subValues = dataValues[idx].Split(_SM);
+                                                        foreach (var subval in subValues)
+                                                        {
+                                                            jArray.Add(ConvertValueToJValue(dataType, subval));
+                                                        }
+                                                        objectValues.Add(new JProperty(propertyName.TrimEnd(']').TrimEnd('['), jArray));
+                                                    }
+                                                    else
+                                                    {
+                                                        objectValues.Add(new JProperty(propertyName.TrimEnd(']').TrimEnd('['), propertyValue));
+                                                    }
+
                                                 }
-                                                objectValues.Add(new JProperty(propertyName.TrimEnd(']').TrimEnd('['), jArray));
                                             }
                                             else
                                             {
-                                                objectValues.Add(new JProperty(propertyName.TrimEnd(']').TrimEnd('['), propertyValue));
-                                            }
+                                                var pathSplit =
+                                                    extendedData.FullJsonPath.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
 
-                                        }
-                                    }
-                                    else
-                                    {
-                                        var pathSplit =
-                                            extendedData.FullJsonPath.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+                                                if (!pathSplit.Any()) continue;
 
-                                        if (!pathSplit.Any()) continue;
+                                                var pathCount = pathSplit.Count();
+                                                var path = new StringBuilder();
 
-                                        var pathCount = pathSplit.Count();
-                                        var path = new StringBuilder();
-
-                                        path.Append("/");
-                                        var nestedObject = new Dictionary<string,bool>();
-                                        for (int i = 0; i < pathCount; i++)
-                                        {
-                                            path.Append(pathSplit[i]);
-                                            path.Append("/");
-                                            if (path.ToString().StartsWith(arrayPath) && path.ToString() != arrayPath)
-                                            {
-                                                if ( i < pathCount - 1)
+                                                path.Append("/");
+                                                var nestedObject = new Dictionary<string, bool>();
+                                                for (int i = 0; i < pathCount; i++)
                                                 {
-                                                    bool isArray = pathSplit[i].Contains(("[]"));
-                                                    nestedObject.Add(pathSplit[i].TrimEnd(']').TrimEnd('['), isArray);
-                                                }
-                                                else if ( i == pathCount - 1)
-                                                {
-                                                    bool isArray = pathSplit[i].Contains(("[]"));
-                                                    nestedObject.Add(pathSplit[i].TrimEnd(']').TrimEnd('['), isArray);
-                                                }
-                                            }
-                                        }
-                                        if (nestedObject != null && nestedObject.Any())
-                                        {
-                                            if (dataValues.Count() > idx && !string.IsNullOrEmpty(dataValues[idx]))
-                                            {
-                                                var propertyValue = new JValue(ConvertValueToJValue(dataType, dataValues[idx]));
-                                                if (propertyName.EndsWith("[]"))
-                                                {
-                                                    var jArray = new JArray();
-                                                    var subValues = dataValues[idx].Split(_SM);
-                                                    foreach (var subval in subValues)
+                                                    path.Append(pathSplit[i]);
+                                                    path.Append("/");
+                                                    if (path.ToString().StartsWith(arrayPath) && path.ToString() != arrayPath)
                                                     {
-                                                        jArray.Add(ConvertValueToJValue(dataType, subval));
+                                                        if (i < pathCount - 1)
+                                                        {
+                                                            bool isArray = pathSplit[i].Contains(("[]"));
+                                                            nestedObject.Add(pathSplit[i].TrimEnd(']').TrimEnd('['), isArray);
+                                                        }
+                                                        else if (i == pathCount - 1)
+                                                        {
+                                                            bool isArray = pathSplit[i].Contains(("[]"));
+                                                            nestedObject.Add(pathSplit[i].TrimEnd(']').TrimEnd('['), isArray);
+                                                        }
                                                     }
-                                                    propertyValue = new JValue(jArray);
                                                 }
-                                                var nestedCount = nestedObject.Count();
-                                                switch (nestedCount)
+                                                if (nestedObject != null && nestedObject.Any())
                                                 {
-                                                    case 1:
+                                                    if (dataValues.Count() > idx && !string.IsNullOrEmpty(dataValues[idx]))
+                                                    {
+                                                        var propertyValue = new JValue(ConvertValueToJValue(dataType, dataValues[idx]));
+                                                        var nestedCount = nestedObject.Count();
+                                                        var sb = new StringBuilder();
+
+                                                        sb.Append("$");
+
+                                                        for (int i = 0; i < nestedCount; i++)
                                                         {
-                                                            objectValues.Add(new JProperty(nestedObject.ElementAt(0).Key.TrimEnd(']').TrimEnd('['), propertyValue));
-                                                            break;
+                                                            sb.Append(".");
+                                                            sb.Append(nestedObject.ElementAt(i).Key);
+                                                            var fullPath = sb.ToString().Replace('.', '/').TrimStart('$').TrimEnd(']').TrimEnd('[');
+                                                            var selectedToken = objectValues.SelectToken(sb.ToString().TrimStart('$').TrimEnd(']').TrimEnd('['));
+                                                            if (selectedToken == null && i < nestedCount - 1)
+                                                            {
+                                                                selectedToken = objectValues.SelectToken("$");
+                                                                patcher.Patch(ref selectedToken,
+                                                                    new PatchDocument(new AddOperation()
+                                                                    {
+                                                                        Path = new JsonPointer(fullPath),
+                                                                        Value = new JObject()
+                                                                    }));
+                                                            }
+                                                            else if (selectedToken == null && i == nestedCount - 1)
+                                                            {
+                                                                if (propertyName.EndsWith("[]"))
+                                                                {
+                                                                    var jArray = new JArray();
+                                                                    var subValues = dataValues[idx].Split(_SM);
+                                                                    foreach (var subval in subValues)
+                                                                    {
+                                                                        if (!string.IsNullOrEmpty(subval))
+                                                                        {
+                                                                            jArray.Add(ConvertValueToJValue(dataType, subval));
+                                                                        }
+                                                                    }
+                                                                    selectedToken = objectValues.SelectToken("$");
+                                                                    patcher.Patch(ref selectedToken,
+                                                                        new PatchDocument(new AddOperation()
+                                                                        {
+                                                                            Path = new JsonPointer(fullPath),
+                                                                            Value = jArray
+                                                                        }));
+                                                                }
+                                                                else
+                                                                {
+                                                                    selectedToken = objectValues.SelectToken("$");
+                                                                    patcher.Patch(ref selectedToken,
+                                                                        new PatchDocument(new AddOperation()
+                                                                        {
+                                                                            Path = new JsonPointer(fullPath),
+                                                                            Value = propertyValue
+                                                                        }));
+                                                                }
+                                                            }
                                                         }
-                                                    case 2:
-                                                        {
-                                                            objectValues.Add(new JProperty(nestedObject.ElementAt(0).Key.TrimEnd(']').TrimEnd('['),
-                                                                new JObject(new JProperty(nestedObject.ElementAt(1).Key.TrimEnd(']').TrimEnd('['), propertyValue))));
-                                                            break;
-                                                        }
-                                                    case 3:
-                                                        {
-                                                            objectValues.Add(new JProperty(nestedObject.ElementAt(0).Key.TrimEnd(']').TrimEnd('['),
-                                                                new JObject(new JProperty(nestedObject.ElementAt(1).Key.TrimEnd(']').TrimEnd('['),
-                                                                new JObject(new JProperty(nestedObject.ElementAt(2).Key.TrimEnd(']').TrimEnd('['), propertyValue))))));
-                                                            break;
-                                                        }
+                                                    }
                                                 }
                                             }
                                         }
                                     }
+                                    catch (Exception e)
+                                    {
+                                        if (logger == null) continue;
+                                        logger.Error(e, string.Format("Extensiblity failed to apply with this error. {0}", arrayObject.ToString()));
+                                        continue;
+                                    }
                                 }
+                                if (objectValues != null && objectValues.HasValues)
+                                    arrayValues.Add(objectValues);
                             }
-                            if (objectValues != null && objectValues.HasValues)
-                                arrayValues.Add(objectValues);
-                        }
 
-                        if (arrayValues != null && arrayValues.Any())
-                        {
-                            var propSplit =
-                                arrayPath.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
-
-                            if (!propSplit.Any()) continue;
-
-                            var count = propSplit.Count();
-                            var sb = new StringBuilder();
-
-                            sb.Append("$");
-
-                            for (int i = 0; i < count; i++)
+                            if (arrayValues != null && arrayValues.Any())
                             {
-                                sb.Append(".");
-                                sb.Append(propSplit[i]);
+                                var propSplit =
+                                    arrayPath.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
 
-                                var path = sb.ToString().Replace('.', '/').TrimStart('$');
+                                if (!propSplit.Any()) continue;
 
-                                var selectedToken = objectToReturn.SelectToken(sb.ToString().TrimEnd(']').TrimEnd('['));
-                                if (selectedToken == null && i < count - 1)
+                                var count = propSplit.Count();
+                                var sb = new StringBuilder();
+
+                                sb.Append("$");
+
+                                for (int i = 0; i < count; i++)
                                 {
-                                    patcher.Patch(ref objectToReturn,
-                                        new PatchDocument(new AddOperation()
-                                        {
-                                            Path = new JsonPointer(path.TrimEnd(']').TrimEnd('[')),
-                                            Value = new JObject()
-                                        }));
-                                }
-                                else if (selectedToken == null && i == count - 1)
-                                {
-                                    patcher.Patch(ref objectToReturn,
-                                        new PatchDocument(new AddOperation()
-                                        {
-                                            Path = new JsonPointer(path.TrimEnd(']').TrimEnd('[')),
-                                            Value = arrayValues
-                                        }));
+                                    sb.Append(".");
+                                    sb.Append(propSplit[i]);
+
+                                    var path = sb.ToString().Replace('.', '/').TrimStart('$');
+
+                                    var selectedToken = objectToReturn.SelectToken(sb.ToString().TrimEnd(']').TrimEnd('['));
+                                    if (selectedToken == null && i < count - 1)
+                                    {
+                                        patcher.Patch(ref objectToReturn,
+                                            new PatchDocument(new AddOperation()
+                                            {
+                                                Path = new JsonPointer(path.TrimEnd(']').TrimEnd('[')),
+                                                Value = new JObject()
+                                            }));
+                                    }
+                                    else if (selectedToken == null && i == count - 1)
+                                    {
+                                        patcher.Patch(ref objectToReturn,
+                                            new PatchDocument(new AddOperation()
+                                            {
+                                                Path = new JsonPointer(path.TrimEnd(']').TrimEnd('[')),
+                                                Value = arrayValues
+                                            }));
+                                    }
                                 }
                             }
+                        }
+                        catch (Exception e)
+                        {
+                            if (logger == null) continue;
+                            logger.Error(e, string.Format("Extensiblity failed to apply with this error. {0}", arrayObject.ToString()));
+                            continue;
                         }
                     }
                 }
@@ -424,8 +464,9 @@ namespace Ellucian.Web.Http.Utilities
         /// <returns>dictionary of the extended data, keyed by column name and value is the data present</returns>
         public static Dictionary<string, string> ExtractExtendedEthosData(JToken extendedObject, EthosExtensibleData extensibleDataDefinitions, ILogger logger)
         {
-            char _SM = Convert.ToChar(DynamicArray.SM);
-            char _TM = Convert.ToChar(DynamicArray.TM);
+            char _VM = Convert.ToChar(DynamicArray.VM); //253
+            char _SM = Convert.ToChar(DynamicArray.SM); //252
+            char _TM = Convert.ToChar(DynamicArray.TM); //251
             char _XM = Convert.ToChar(250);
 
             var retDictionary = new Dictionary<string, string>();
@@ -443,83 +484,99 @@ namespace Ellucian.Web.Http.Utilities
 
                 //build jsonpath string to search with, don't need to worry about arrays right now so just simple dot notation
                 var jsonPathForProperty = string.Concat("$", ethosExtensibleConfig.FullJsonPath.Replace('/', '.'));
-
-                // No support for array object or array properties yet (04/23/2020 srm)
+              
                 JToken jsonSelectObject = null;
-                //try
-                //{
-                //    jsonSelectObject = extendedObject.SelectToken(jsonPathForProperty, false);
-                //}
-                //catch
-                //{
-                //    continue;
-                //}
+
                 try
                 {
                     if (jsonPathForProperty.Contains("[]"))
                     {
                         var delim = _SM;
-                        if (jsonPathForProperty.Split('[').Count() == 2)
+                        // if (jsonPathForProperty.Split('[').Count() == 2)
+                        // {
+                        //    delim = _TM;
+                        //}
+                        //else if (jsonPathForProperty.Split('[').Count() >= 3)
+                        //{
+                        //    delim = _XM;
+                        //}
+
+                        var rootFromJsonProperty = jsonPathForProperty.Substring(0, jsonPathForProperty.IndexOf("[]"));
+                        var selectedToken = extendedObject.SelectToken(rootFromJsonProperty);
+                        if (selectedToken != null)
                         {
-                            delim = _TM;
-                        }
-                        else if (jsonPathForProperty.Split('[').Count() >= 3)
-                        {
-                            delim = _XM;
-                        }
-                        var arrayValues = GetArrayValues(ethosExtensibleConfig.FullJsonPath, extendedObject);
-                        string values = string.Empty;
-                        foreach (var value in arrayValues)
-                        {
-                            if (ethosExtensibleConfig.JsonPropertyType == JsonPropertyTypeExtensions.DateTime)
+                            var selectedJarray = (JArray)selectedToken;
+
+                            var originalPathWithoutRoot = ethosExtensibleConfig.FullJsonPath.Substring(0, jsonPathForProperty.IndexOf("[]") + 1);
+                            var jsonPath = ethosExtensibleConfig.FullJsonPath.Replace(originalPathWithoutRoot, "");
+
+                            string values = string.Empty;
+                            foreach (var token in selectedJarray.Children())
                             {
-                                try
+
+                                var arrayValues = GetArrayValues(jsonPath, token);
+
+                                foreach (var value in arrayValues)
                                 {
-                                    //have to convert the date from UTC that it is in to the ColleagueTimeZone value
-                                    DateTime utcDateTime = value.Value<DateTime>();
-                                    //convert from utc to colleaguetimezone
-                                    var localDateTime = TimeZoneInfo.ConvertTime(utcDateTime, TimeZoneInfo.Utc, extensibleDataDefinitions.ColleagueTimeZone);
-                                    values = string.Concat(values, localDateTime.ToString(CultureInfo.InvariantCulture), delim);
+                                    if (ethosExtensibleConfig.JsonPropertyType == JsonPropertyTypeExtensions.DateTime)
+                                    {
+                                        try
+                                        {
+                                            //have to convert the date from UTC that it is in to the ColleagueTimeZone value
+                                            DateTime utcDateTime = value.Value<DateTime>();
+                                            //convert from utc to colleaguetimezone
+                                            var localDateTime = TimeZoneInfo.ConvertTime(utcDateTime, TimeZoneInfo.Utc, extensibleDataDefinitions.ColleagueTimeZone);
+                                            values = string.Concat(values, localDateTime.ToString(CultureInfo.InvariantCulture), _XM);
+                                        }
+                                        catch (Exception e)
+                                        {
+                                            logger.Error(e, string.Concat("DateTime property was not in the correct format for extended property : ", ethosExtensibleConfig.FullJsonPath));
+                                            throw new FormatException(string.Concat("DateTime property was not in the correct format for extended property : ", ethosExtensibleConfig.FullJsonPath), e);
+                                        }
+                                    }
+                                    else if (ethosExtensibleConfig.JsonPropertyType == JsonPropertyTypeExtensions.Date)
+                                    {
+                                        try
+                                        {
+                                            //get value out as a datetime
+                                            DateTime justDate = value.Value<DateTime>();
+                                            //take just the date and tostring with invariant culture
+                                            values = string.Concat(values, justDate.ToString("MM/dd/yyyy"), _XM);
+                                        }
+                                        catch (Exception e)
+                                        {
+                                            logger.Error(e, string.Concat("Date property was not in the correct format for extended property : ", ethosExtensibleConfig.FullJsonPath));
+                                            throw new FormatException(string.Concat("Date property was not in the correct format for extended property : ", ethosExtensibleConfig.FullJsonPath), e);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        values = string.Concat(values, value.Value<string>().Replace(_SM, _TM).Replace(_VM, _SM), _XM);
+                                    }
                                 }
-                                catch (Exception e)
+
+                                if (values.EndsWith(_XM.ToString()))
                                 {
-                                    logger.Error(e, string.Concat("DateTime property was not in the correct format for extended property : ", ethosExtensibleConfig.FullJsonPath));
-                                    throw new FormatException(string.Concat("DateTime property was not in the correct format for extended property : ", ethosExtensibleConfig.FullJsonPath), e);
+                                    values = values.Remove(values.Length - 1);
                                 }
+                                values = string.Concat(values, delim);
                             }
-                            else if (ethosExtensibleConfig.JsonPropertyType == JsonPropertyTypeExtensions.Date)
+
+                            //if (!string.IsNullOrEmpty(values.TrimEnd(delim)))
+                            if (values.EndsWith(delim.ToString()) || string.IsNullOrEmpty(values))
                             {
-                                try
-                                {
-                                    //get value out as a datetime
-                                    DateTime justDate = value.Value<DateTime>();
-                                    //take just the date and tostring with invariant culture
-                                    values = string.Concat(values, justDate.ToString("MM/dd/yyyy"), delim);
-                                }
-                                catch (Exception e)
-                                {
-                                    logger.Error(e, string.Concat("Date property was not in the correct format for extended property : ", ethosExtensibleConfig.FullJsonPath));
-                                    throw new FormatException(string.Concat("Date property was not in the correct format for extended property : ", ethosExtensibleConfig.FullJsonPath), e);
-                                }
+                                retDictionary.Add(ethosExtensibleConfig.ColleagueColumnName, string.IsNullOrEmpty(values) ? "": values.Remove(values.Length - 1));
+                                dataAdded = true;
                             }
-                            else
-                            {
-                                values = string.Concat(values, value.Value<string>(), delim);
-                            }
+                            continue;
                         }
-                        if (!string.IsNullOrEmpty(values.TrimEnd(delim)))
-                        {
-                            retDictionary.Add(ethosExtensibleConfig.ColleagueColumnName, values.TrimEnd(delim));
-                            dataAdded = true;
-                        }
-                        continue;
                     }
                     else
                     {
                         jsonSelectObject = extendedObject.SelectToken(jsonPathForProperty, false);
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
                     continue;
                 }
@@ -579,6 +636,12 @@ namespace Ellucian.Web.Http.Utilities
             var pathSplit =
                 fullPath.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
 
+            if (extendedObject.Type == JTokenType.String && !string.IsNullOrEmpty(extendedObject.ToString()))
+            {
+                returnValues.Add(extendedObject.Value<string>()); 
+                return returnValues;
+            }
+
             if (!pathSplit.Any()) return returnValues;
 
             var pathCount = pathSplit.Count();
@@ -589,9 +652,12 @@ namespace Ellucian.Web.Http.Utilities
             for (int i = 0; i < pathCount; i++)
             {
                 sb.Append(".");
-                sb.Append(pathSplit[i]);
+                // sb.Append(pathSplit[i])
+                sb.Append(pathSplit[i].TrimEnd(']').TrimEnd('['));
 
-                var selectedToken = extendedObject.SelectToken(sb.ToString().TrimEnd(']').TrimEnd('['));
+                // var selectedToken = extendedObject.SelectToken(sb.ToString().TrimEnd(']').TrimEnd('['));
+                var selectedToken = extendedObject.SelectToken(sb.ToString());
+
                 if (selectedToken != null && i < pathCount - 1)
                 {
                     if (selectedToken.Type == JTokenType.Array)
@@ -605,14 +671,40 @@ namespace Ellucian.Web.Http.Utilities
                         }
                         foreach (JToken selToken in selectedToken)
                         {
-                            returnValues.AddRange(GetArrayValues(path.ToString(), selToken));
+                            var resp = GetArrayValues(path.ToString(), selToken);
+                            if (resp != null && resp.Any())
+                            {
+                                returnValues.AddRange(resp);
+                            }
                         }
                         i = pathCount;
                     }
                 }
                 else if (selectedToken != null && i == pathCount - 1)
                 {
-                    returnValues.Add(selectedToken.Value<string>());
+                    if (selectedToken.Type == JTokenType.Array)
+                    {
+                        var path = new StringBuilder();
+
+                        for (int idx = i + 1; idx < pathCount; idx++)
+                        {
+                            path.Append("/");
+                            path.Append(pathSplit[idx]);
+                        }
+                        foreach (JToken selToken in selectedToken)
+                        {
+                            var resp = GetArrayValues(path.ToString(), selToken);
+                            if (resp != null && resp.Any())
+                            {
+                                returnValues.AddRange(resp);
+                            }
+                        }
+                        i = pathCount;
+                    }
+                    else
+                    {
+                        returnValues.Add(selectedToken.Value<string>());
+                    }
                 }
             }
             return returnValues;

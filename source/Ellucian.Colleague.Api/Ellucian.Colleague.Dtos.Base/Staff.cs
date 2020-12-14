@@ -29,6 +29,11 @@ namespace Ellucian.Colleague.Dtos.Base
         /// The staff member's initials
         /// </summary>
         public string StaffInitials { get; set; }
+        
+        /// <summary>
+        /// The staff member's loginid
+        /// </summary>
+        public string StaffLoginId { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Staff"/> class.

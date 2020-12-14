@@ -15,6 +15,7 @@ using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
 using Ellucian.Dmi.Runtime;
+using System.Collections.ObjectModel;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
@@ -156,8 +157,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             voucherDomainEntity.InvoiceNumber = voucher.VouDefaultInvoiceNo;
             voucherDomainEntity.InvoiceDate = voucher.VouDefaultInvoiceDate;
             // The voucher status date contains one to many dates
-            var voucherStatusDate = (voucher.VouStatusDate!=null && voucher.VouStatusDate.Any())? voucher.VouStatusDate.First(): null;
-            if(!voucherStatusDate.HasValue)
+            var voucherStatusDate = (voucher.VouStatusDate != null && voucher.VouStatusDate.Any()) ? voucher.VouStatusDate.First() : null;
+            if (!voucherStatusDate.HasValue)
             {
                 throw new ApplicationException("Voucher status date is a required field.");
             }
@@ -176,7 +177,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 voucherDomainEntity.VendorZip = voucher.VouMiscZip;
                 voucherDomainEntity.VendorCountry = voucher.VouMiscCountry;
 
-            } else
+            }
+            else
             {
                 if (!string.IsNullOrEmpty(voucher.VouAltFlag) && voucher.VouAltFlag.Equals("Y"))
                 {
@@ -185,7 +187,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     voucherDomainEntity.VendorState = voucher.VouMiscState;
                     voucherDomainEntity.VendorZip = voucher.VouMiscZip;
                     voucherDomainEntity.VendorCountry = voucher.VouMiscCountry;
-                } else
+                }
+                else
                 {
                     var addressRecord = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Address>(voucher.VouAddressId);
                     if (addressRecord != null)
@@ -197,9 +200,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         voucherDomainEntity.VendorCountry = addressRecord.Country;
                     }
                 }
-                
+
             }
-                            
+
             if (voucher.VouMaintGlTranDate.HasValue)
             {
                 voucherDomainEntity.MaintenanceDate = voucher.VouMaintGlTranDate.Value.Date;
@@ -243,6 +246,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
 
             voucherDomainEntity.Comments = voucher.VouComments;
+
+            voucherDomainEntity.ConfirmationEmailAddresses = voucher.VouConfEmailAddresses;
 
             // Read the OPERS records associated with the approval signatures and next 
             // approvers on the voucher, and build approver objects.
@@ -500,7 +505,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             }
                         }
 
-                        if (hasGlAccess == true )
+                        if (hasGlAccess == true)
                         {
                             // Now apply GL account access security when creating the line items.
                             // Check to see if the user has access to the GL accounts for each line item:
@@ -558,21 +563,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         }
 
         /// <summary>
-        /// Determine whether gl access check can be by passed, based on two conditions Voucher status should be "In-Progress", person id should be either requestor, No Purchase Order should be attached.
-        /// </summary>
-        /// <param name="personId">PersonId</param>
-        /// <param name="voucher">Voucher data contract</param>
-        /// <param name="voucherDomainEntity">Voucher domain entity</param>
-        /// <returns></returns>
-        private static bool CanUserByPassGlAccessCheck(string personId, Vouchers voucher, Voucher voucherDomainEntity)
-        {
-            if (string.IsNullOrEmpty(voucherDomainEntity.PurchaseOrderId))
-                return ((voucherDomainEntity.Status == VoucherStatus.InProgress || voucherDomainEntity.Status == VoucherStatus.Voided) && (voucher.VouRequestor == personId));
-            else
-                return false;
-        }
-
-        /// <summary>
         /// Get a collection of voucher summary domain entity objects
         /// </summary>
         /// <param name="id">Person ID</param>        
@@ -585,8 +575,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 throw new ArgumentNullException("personId");
             }
+            var cfWebDefaults = await DataReader.ReadRecordAsync<CfwebDefaults>("CF.PARMS", "CFWEB.DEFAULTS");
 
-            filteredVouchers = await ApplyFilterCriteriaAsync(personId, filteredVouchers);
+            filteredVouchers = await ApplyFilterCriteriaAsync(personId, filteredVouchers, cfWebDefaults);
 
             if (!filteredVouchers.Any())
                 return null;
@@ -605,6 +596,28 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 bpoDictionary = await BuildBlanketPODictionaryAsync(VoucherData);
                 //rcvDictionary = await BuildBlanketRcvDictionaryAsync(VoucherData);
 
+                // Read the OPERS records associated with the approval signatures and 
+                // next approvers on the voucher, and build approver objects.
+                var operators = new List<string>();
+                Collection<Opers> opersCollection = new Collection<Opers>();
+                // get list of Approvers and next approvers from the entire voucher records
+                var allVoucherDataApprovers = VoucherData.SelectMany(voucherContract => voucherContract.VouAuthorizations).Distinct().ToList();
+                if (allVoucherDataApprovers != null && allVoucherDataApprovers.Any(x => x != null))
+                {
+                    operators.AddRange(allVoucherDataApprovers);
+                }
+                var allVoucherDataNextApprovers = VoucherData.SelectMany(voucherContract => voucherContract.VouNextApprovalIds).Distinct().ToList();
+                if (allVoucherDataNextApprovers != null && allVoucherDataNextApprovers.Any(x => x != null))
+                {
+                    operators.AddRange(allVoucherDataNextApprovers);
+                }
+                var uniqueOperators = operators.Distinct().ToList();
+                if (uniqueOperators.Count > 0)
+                {
+                    opersCollection = await DataReader.BulkReadRecordAsync<Opers>("UT.OPERS", uniqueOperators.ToArray(), true);
+                }
+
+
                 foreach (var voucher in VoucherData)
                 {
                     try
@@ -619,7 +632,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         {
                             hierarchyNameDictionary.TryGetValue(voucher.VouVendor, out VoucherVendorName);
                         }
-                        VoucherList.Add(BuildVoucherSummary(voucher, poDictionary, bpoDictionary, VoucherVendorName, requestorName));
+                        VoucherList.Add(BuildVoucherSummary(voucher, poDictionary, bpoDictionary, VoucherVendorName, requestorName, opersCollection));
                     }
                     catch (Exception ex)
                     {
@@ -629,249 +642,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             return VoucherList.AsEnumerable();
 
-        }
-        private async Task<List<string>> ApplyFilterCriteriaAsync(string personId, List<string> filteredVouchers)
-        {
-            //where personId is requestor
-            string reqPersonIdQuery = string.Format("WITH VOU.REQUESTOR EQ '{0}'", personId);
-            filteredVouchers = await ExecuteQueryStatementAsync(filteredVouchers, reqPersonIdQuery);
-            return filteredVouchers;
-        }
-        private async Task<Dictionary<string, string>> GetPersonHierarchyNamesDictionaryAsync(System.Collections.ObjectModel.Collection<Vouchers> voucherData)
-        {
-            #region Get Hierarchy Names
-
-            // Use a colleague transaction to get all names at once. 
-            List<string> personIds = new List<string>();
-            List<string> hierarchies = new List<string>();
-            List<string> personNames = new List<string>();
-            List<string> ioPersonIds = new List<string>();
-            List<string> ioHierarchies = new List<string>();
-
-            Dictionary<string, string> hierarchyNameDictionary = new Dictionary<string, string>();
-
-            GetHierarchyNamesForIdsResponse response = null;
-
-            //Get all unique requestor & initiator personIds
-            personIds = voucherData.Where(x => !string.IsNullOrEmpty(x.VouRequestor)).Select(s => s.VouRequestor).Distinct().ToList();
-
-            if ((personIds != null) && (personIds.Count > 0))
-            {
-                hierarchies = Enumerable.Repeat("PREFERRED", personIds.Count).ToList();
-                ioPersonIds.AddRange(personIds);
-                ioHierarchies.AddRange(hierarchies);
-            }
-
-            //Get all unique ReqVendor Ids where ReqMiscName is missing
-            var vendorIds = voucherData.Where(x => !string.IsNullOrEmpty(x.VouVendor) && !x.VouMiscName.Any()).Select(s => s.VouVendor).Distinct().ToList();
-            if ((vendorIds != null) && (vendorIds.Count > 0))
-            {
-                hierarchies = new List<string>();
-                hierarchies = Enumerable.Repeat("AP.CHECK", vendorIds.Count).ToList();
-                ioPersonIds.AddRange(vendorIds);
-                ioHierarchies.AddRange(hierarchies);
-            }
-
-            // Call a colleague transaction to get the person names based on their hierarchies.
-            GetHierarchyNamesForIdsRequest request = new GetHierarchyNamesForIdsRequest()
-            {
-                IoPersonIds = ioPersonIds,
-                IoHierarchies = ioHierarchies
-            };
-
-            response = await transactionInvoker.ExecuteAsync<GetHierarchyNamesForIdsRequest, GetHierarchyNamesForIdsResponse>(request);
-
-            // The transaction returns the hierarchy names. If the name is multivalued, 
-            // the transaction only returns the first value of the name.
-            if (response != null)
-            {
-                for (int i = 0; i < response.IoPersonIds.Count; i++)
-                {
-                    string key = response.IoPersonIds[i];
-                    string value = response.OutPersonNames[i];
-                    if (!hierarchyNameDictionary.ContainsKey(key))
-                    {
-                        hierarchyNameDictionary.Add(key, value);
-                    }
-                }
-
-            }
-            #endregion
-            return hierarchyNameDictionary;
-        }
-        private VoucherSummary BuildVoucherSummary(Vouchers voucherDataContract, Dictionary<string, PurchaseOrders> poDictionary, Dictionary<string, Bpo> bpoDictionary, string vendorName,  string requestorName)
-        {
-            if (voucherDataContract == null)
-            {
-                throw new ArgumentNullException("voucherDataContract");
-            }
-
-            if (string.IsNullOrEmpty(voucherDataContract.Recordkey))
-            {
-                throw new ArgumentNullException("id");
-            }
-
-            if (!voucherDataContract.VouDate.HasValue)
-            {
-                throw new ApplicationException("Missing date for voucher id: " + voucherDataContract.Recordkey);
-            }
-
-            if (voucherDataContract.VouStatusDate == null || !voucherDataContract.VouStatusDate.First().HasValue)
-            {
-                throw new ApplicationException("Missing status date for voucher id: " + voucherDataContract.Recordkey);
-            }
-
-            var voucherDate = voucherDataContract.VouDate.Value;
-            if (!voucherDataContract.VouDate.HasValue)
-            {
-                throw new ApplicationException("Missing date for voucher: " + voucherDataContract.Recordkey);
-            }
-
-            DateTime? maintenanceDate = null;
-            if (voucherDataContract.VouMaintGlTranDate.HasValue)
-            {
-                maintenanceDate = voucherDataContract.VouMaintGlTranDate.Value.Date;
-            }
-
-            var voucherStatus = ConvertVoucherStatus(voucherDataContract.VouStatus, voucherDataContract.Recordkey);
-
-            var voucherSummaryEntity = new VoucherSummary(voucherDataContract.Recordkey, voucherDataContract.VouDefaultInvoiceNo, vendorName, voucherDate)
-            {
-                Status = voucherStatus,
-                MaintenanceDate = maintenanceDate,
-                VendorId = voucherDataContract.VouVendor,
-                RequestorName = requestorName,
-                Amount = voucherDataContract.VouTotalAmt.HasValue ? voucherDataContract.VouTotalAmt.Value : 0,
-                InvoiceDate = voucherDataContract.VouDefaultInvoiceDate.HasValue ? voucherDataContract.VouDefaultInvoiceDate.Value : default(DateTime?),
-
-            };
-
-            // Add any associated purchase orders to the voucher summary domain entity
-            if (!string.IsNullOrEmpty(voucherDataContract.VouPoNo ))
-            {
-                PurchaseOrders purchaseOrder = null;
-                if (poDictionary.TryGetValue(voucherDataContract.VouPoNo, out purchaseOrder))
-                {
-                    var purchaseOrderSummaryEntity = new PurchaseOrderSummary(purchaseOrder.Recordkey, purchaseOrder.PoNo, vendorName, purchaseOrder.PoDate.Value.Date);
-                    voucherSummaryEntity.AddPurchaseOrder(purchaseOrderSummaryEntity);
-                }
-            }
-
-            // Add any associated blanket purchase orders to the voucher domain entity.
-            if ((voucherDataContract.VouBpoId != null))
-            {
-                if (!string.IsNullOrEmpty(voucherDataContract.VouBpoId))
-                {
-                    Bpo bpo = null;
-                    if (bpoDictionary.TryGetValue(voucherDataContract.VouBpoId, out bpo))
-                    {
-                        voucherSummaryEntity.BlanketPurchaseOrderId = voucherDataContract.VouBpoId;
-                        voucherSummaryEntity.BlanketPurchaseOrderNumber = bpo.BpoNo;
-                    }
-                }
-            }
-            return voucherSummaryEntity;
-        }
-
-        private async Task<List<string>> ExecuteQueryStatementAsync(List<string> filteredVouchers, string queryCriteria)
-        {
-            string[] filteredByQueryCriteria = null;
-            if (string.IsNullOrEmpty(queryCriteria))
-                return null;
-            if (filteredVouchers != null && filteredVouchers.Any())
-            {
-                filteredByQueryCriteria = await DataReader.SelectAsync("VOUCHERS", filteredVouchers.ToArray(), queryCriteria);
-            }
-            else
-            {
-                filteredByQueryCriteria = await DataReader.SelectAsync("VOUCHERS", queryCriteria);
-            }
-            return filteredByQueryCriteria.ToList();
-        }
-        private async Task<Dictionary<string, PurchaseOrders>> BuildPurchaseOrderDictionaryAsync(System.Collections.ObjectModel.Collection<Vouchers> voucherData)
-        {
-            Dictionary<string, PurchaseOrders> purchaseOrderDictionary = new Dictionary<string, PurchaseOrders>();
-            //fetch purchase order no's from all requisitions
-            var vouPoNos = voucherData.Where(x => x.VouPoNo != null && x.VouPoNo.Any()).Select(s => s.VouPoNo).ToList();
-            if (vouPoNos != null && vouPoNos.Any())
-            {
-                List<string> purchaseOrderIds = vouPoNos.Select(x => x).Distinct().ToList();
-                //fetch purchase order details and build dictionary
-                var purchaseOrders = await DataReader.BulkReadRecordAsync<DataContracts.PurchaseOrders>("PURCHASE.ORDERS", purchaseOrderIds.ToArray());
-
-                if (purchaseOrders != null && purchaseOrders.Any())
-                    purchaseOrderDictionary = purchaseOrders.ToDictionary(x => x.Recordkey);
-            }
-
-            return purchaseOrderDictionary;
-        }
-
-        private async Task<Dictionary<string, Bpo>> BuildBlanketPODictionaryAsync(System.Collections.ObjectModel.Collection<Vouchers> voucherData)
-        {
-            Dictionary<string, Bpo> bpoDictionary = new Dictionary<string, Bpo>();
-            //fetch blanket purchase order no's from all requisitions
-            var vouBpoIds = voucherData.Where(x => x.VouBpoId != null && x.VouBpoId.Any()).Select(s => s.VouBpoId).ToList();
-            if (vouBpoIds != null && vouBpoIds.Any())
-            {
-                List<string> blanketPurchaseOrderIds = vouBpoIds.Select(x => x).Distinct().ToList();
-                //fetch blanket purchase order details and build dictionary
-                var Bpos = await DataReader.BulkReadRecordAsync<DataContracts.Bpo>("BPO", blanketPurchaseOrderIds.ToArray());
-
-
-                if (Bpos != null && Bpos.Any())
-                    bpoDictionary = Bpos.ToDictionary(x => x.Recordkey);
-            }
-
-            return bpoDictionary;
-        }
-
-        /// <summary>
-        /// Take first value from a Requisition Status collection and convert to RequisitionStatus enumeration value
-        /// </summary>
-        /// <param name="reqStatus">requisition status</param>
-        /// <param name="requisitionId">requisition id</param>
-        /// <returns>RequisitionStatus enumeration value</returns>
-        private static VoucherStatus ConvertVoucherStatus(List<string> vouStatus, string voucherId)
-        {
-            var voucherStatus = new VoucherStatus();
-
-            // Get the first status in the list of requisition statuses and check it has a value
-            if ((vouStatus) != null && (vouStatus.Any()))
-            {
-                switch (vouStatus.FirstOrDefault().ToUpper())
-                {
-                    case "U":
-                        voucherStatus = VoucherStatus.InProgress;
-                        break;
-                    case "N":
-                        voucherStatus = VoucherStatus.NotApproved;
-                        break;
-                    case "O":
-                        voucherStatus = VoucherStatus.Outstanding;
-                        break;
-                    case "P":
-                        voucherStatus = VoucherStatus.Paid;
-                        break;
-                    case "R":
-                        voucherStatus = VoucherStatus.Reconciled;
-                        break;
-                    case "V":
-                        voucherStatus = VoucherStatus.Voided;
-                        break;
-                    case "X":
-                        voucherStatus = VoucherStatus.Cancelled;
-                        break;
-                    default:
-                        // if we get here, we have corrupt data.
-                        throw new ApplicationException("Invalid voucher status for voucher: " + voucherId);
-                }
-            }
-            else
-            {
-                throw new ApplicationException("Missing status for voucher: " + voucherId);
-            }
-
-            return voucherStatus;
         }
 
         public async Task<VoucherCreateUpdateResponse> CreateVoucherAsync(VoucherCreateUpdateRequest createUpdateRequest)
@@ -1049,38 +819,47 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return response;
         }
 
+
+
         /// <summary>
-        ///  Build Voucher for void Request
+        /// Get the list of voucher's by vendor id and invoice number.
         /// </summary>
-        /// <param name="voucherVoidRequest"></param>
-        /// <returns></returns>
-        private TxVoidVoucherRequest BuildVoucherVoidRequest(VoucherVoidRequest voidRequest)
+        /// <param name="vendorId">Vendor Id</param>
+        /// <param name="invoiceNo">Invoice number</param>
+        /// <returns>List of <see cref="Voucher2">Vouchers</see></returns> 
+        public async Task<IEnumerable<Voucher>> GetVouchersByVendorAndInvoiceNoAsync(string vendorId, string invoiceNo)
         {
-            var request = new TxVoidVoucherRequest();
-            var personId = voidRequest.PersonId;
-            var voucherId = voidRequest.VoucherId;
-            var confirmationEmailAddresses = voidRequest.ConfirmationEmailAddresses;
-            var comments = voidRequest.Comments;
+            if (string.IsNullOrEmpty(vendorId))
+                throw new ArgumentNullException("vendorId", "vendorId is required");
 
-            if (!string.IsNullOrEmpty(personId))
+            if (string.IsNullOrEmpty(invoiceNo))
+                throw new ArgumentNullException("invoiceNo", "invoice number is required");
+
+
+            List<string> filteredVoucherIds = new List<string>();
+
+            string queryCriteriaString = string.Format("WITH VOU.DEFAULT.INVOICE.NO EQ '{0}'  AND VOU.VENDOR EQ '{1}'", invoiceNo, vendorId);
+            filteredVoucherIds = await ExecuteQueryStatementAsync(filteredVoucherIds, queryCriteriaString);
+
+
+            List<Voucher> filteredVouchers = new List<Voucher>();
+            if (filteredVoucherIds != null && filteredVoucherIds.Any())
             {
-                request.AUserId = personId;
-            }
-            if (!string.IsNullOrEmpty(voucherId))
-            {
-                request.AVoucherId = voucherId;
-            }
-            if (!string.IsNullOrEmpty(confirmationEmailAddresses))
-            {
-                request.AConfirmationEmailAddress = confirmationEmailAddresses;
-            }
-            if (!string.IsNullOrEmpty(comments))
-            {
-                request.AComments = comments;
+                var voucherDataContractList = await DataReader.BulkReadRecordAsync<DataContracts.Vouchers>(filteredVoucherIds.ToArray());
+                if (voucherDataContractList != null && voucherDataContractList.Any())
+                {
+                    Dictionary<string, string> hierarchyNameDictionary = await GetPersonHierarchyNamesDictionaryAsync(voucherDataContractList);
+
+                    foreach (var voucher in voucherDataContractList)
+                    {
+                        Voucher voucherDomainEntity = BuildVoucherEntity(voucher, hierarchyNameDictionary);
+                        filteredVouchers.Add(voucherDomainEntity);
+                    }
+                }
+
             }
 
-            return request;
-
+            return filteredVouchers;
         }
 
         /// <summary>
@@ -1091,7 +870,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         private TxCreateWebVouRequest BuildVoucherCreateRequest(VoucherCreateUpdateRequest createUpdateRequest)
         {
             var request = new TxCreateWebVouRequest();
-            var personId = createUpdateRequest.PersonId;            
+            var personId = createUpdateRequest.PersonId;
             var confirmationEmailAddresses = createUpdateRequest.ConfEmailAddresses;
             var voucherEntity = createUpdateRequest.Voucher;
 
@@ -1205,7 +984,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 request.AVendorCity = createUpdateRequest.VendorsVoucherInfo.City;
                 request.AVendorState = createUpdateRequest.VendorsVoucherInfo.State;
                 request.AVendorZip = createUpdateRequest.VendorsVoucherInfo.Zip;
-                request.AVendorCountry = createUpdateRequest.VendorsVoucherInfo.Country;
+                request.AVendorCountry = createUpdateRequest.VendorsVoucherInfo.CountryCode;
                 request.AVendorMiscVendor = createUpdateRequest.VendorsVoucherInfo.MiscVendor;
                 request.AVendorAddrId = createUpdateRequest.VendorsVoucherInfo.AddressId;
                 request.AVendorReImburseMyself = createUpdateRequest.VendorsVoucherInfo.ReImburseMyself;
@@ -1372,6 +1151,461 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
 
             return lineItems;
+        }
+
+        /// <summary>
+        /// Determine whether gl access check can be by passed, based on two conditions Voucher status should be "In-Progress", person id should be either requestor, No Purchase Order should be attached.
+        /// </summary>
+        /// <param name="personId">PersonId</param>
+        /// <param name="voucher">Voucher data contract</param>
+        /// <param name="voucherDomainEntity">Voucher domain entity</param>
+        /// <returns></returns>
+        private static bool CanUserByPassGlAccessCheck(string personId, Vouchers voucher, Voucher voucherDomainEntity)
+        {
+            if (string.IsNullOrEmpty(voucherDomainEntity.PurchaseOrderId))
+                return ((voucherDomainEntity.Status == VoucherStatus.InProgress || voucherDomainEntity.Status == VoucherStatus.Voided) && (voucher.VouRequestor == personId));
+            else
+                return false;
+        }
+
+        private async Task<List<string>> ApplyFilterCriteriaAsync(string personId, List<string> filteredVouchers, CfwebDefaults cfWebDefaults)
+        {
+            //where personId is requestor
+            string reqPersonIdQuery = string.Format("WITH VOU.REQUESTOR EQ '{0}'", personId);
+            filteredVouchers = await ExecuteQueryStatementAsync(filteredVouchers, reqPersonIdQuery);
+
+            if (cfWebDefaults != null)
+            {
+                string voucherStartEndTransDateQuery = string.Empty;
+                //Filter by CfwebCkrStartDate, CfwebCkrEndDate values configured in CFWP form
+                //when CfwebCkrStartDate & CfwebCkrEndDate has a value
+                if (cfWebDefaults.CfwebCkrStartDate.HasValue && cfWebDefaults.CfwebCkrEndDate.HasValue)
+                {
+                    var startDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebCkrStartDate.Value);
+                    var endDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebCkrEndDate.Value);
+                    voucherStartEndTransDateQuery = string.Format("WITH (VOU.MAINT.GL.TRAN.DATE GE '{0}' AND VOU.MAINT.GL.TRAN.DATE LE '{1}') OR WITH (VOU.DATE GE '{0}' AND VOU.DATE LE '{1}')", startDate, endDate);
+                }
+                //when CfwebCkrStartDate has value but CfwebCkrEndDate is null
+                else if (cfWebDefaults.CfwebCkrStartDate.HasValue && !cfWebDefaults.CfwebCkrEndDate.HasValue)
+                {
+                    var startDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebCkrStartDate.Value);
+                    voucherStartEndTransDateQuery = string.Format("VOU.MAINT.GL.TRAN.DATE GE '{0}' OR WITH VOU.DATE GE '{0}'", startDate);
+                }
+                //when CfwebCkrStartDate is null but CfwebCkrEndDate has value
+                else if (!cfWebDefaults.CfwebCkrStartDate.HasValue && cfWebDefaults.CfwebCkrEndDate.HasValue)
+                {
+                    var endDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebCkrEndDate.Value);
+                    voucherStartEndTransDateQuery = string.Format("WITH ((VOU.MAINT.GL.TRAN.DATE NE '') AND (VOU.MAINT.GL.TRAN.DATE LE '{0}')) OR WITH ((VOU.DATE NE '') AND (VOU.DATE LE '{0}'))", endDate);
+                }
+
+                if (!string.IsNullOrEmpty(voucherStartEndTransDateQuery))
+                {
+                    filteredVouchers = await ExecuteQueryStatementAsync(filteredVouchers, voucherStartEndTransDateQuery);
+                }
+
+                //query by CfwebCkrStatuses if statuses are configured in CFWP form.
+                if (cfWebDefaults.CfwebCkrStatuses != null && cfWebDefaults.CfwebCkrStatuses.Any())
+                {
+                    var voucherStatusesCriteria = string.Join(" ", cfWebDefaults.CfwebCkrStatuses.Select(x => string.Format("'{0}'", x.ToUpper())));
+                    voucherStatusesCriteria = "WITH VOU.CURRENT.STATUS EQ " + voucherStatusesCriteria;
+                    filteredVouchers = await ExecuteQueryStatementAsync(filteredVouchers, voucherStatusesCriteria);
+                }
+            }
+            return filteredVouchers;
+        }
+        private async Task<Dictionary<string, string>> GetPersonHierarchyNamesDictionaryAsync(System.Collections.ObjectModel.Collection<Vouchers> voucherData)
+        {
+            #region Get Hierarchy Names
+
+            // Use a colleague transaction to get all names at once. 
+            List<string> personIds = new List<string>();
+            List<string> hierarchies = new List<string>();
+            List<string> personNames = new List<string>();
+            List<string> ioPersonIds = new List<string>();
+            List<string> ioHierarchies = new List<string>();
+
+            Dictionary<string, string> hierarchyNameDictionary = new Dictionary<string, string>();
+
+            GetHierarchyNamesForIdsResponse response = null;
+            if (voucherData != null && voucherData.Any())
+            {
+                //Get all unique requestor & initiator personIds
+                personIds = voucherData.Where(x => !string.IsNullOrEmpty(x.VouRequestor)).Select(s => s.VouRequestor).Distinct().ToList();
+
+                if ((personIds != null) && (personIds.Count > 0))
+                {
+                    hierarchies = Enumerable.Repeat("PREFERRED", personIds.Count).ToList();
+                    ioPersonIds.AddRange(personIds);
+                    ioHierarchies.AddRange(hierarchies);
+                }
+
+                //Get all unique ReqVendor Ids where ReqMiscName is missing
+                var vendorIds = voucherData.Where(x => !string.IsNullOrEmpty(x.VouVendor) && !x.VouMiscName.Any()).Select(s => s.VouVendor).Distinct().ToList();
+                if ((vendorIds != null) && (vendorIds.Count > 0))
+                {
+                    hierarchies = new List<string>();
+                    hierarchies = Enumerable.Repeat("AP.CHECK", vendorIds.Count).ToList();
+                    ioPersonIds.AddRange(vendorIds);
+                    ioHierarchies.AddRange(hierarchies);
+                }
+
+                // Call a colleague transaction to get the person names based on their hierarchies.
+                GetHierarchyNamesForIdsRequest request = new GetHierarchyNamesForIdsRequest()
+                {
+                    IoPersonIds = ioPersonIds,
+                    IoHierarchies = ioHierarchies
+                };
+
+                response = await transactionInvoker.ExecuteAsync<GetHierarchyNamesForIdsRequest, GetHierarchyNamesForIdsResponse>(request);
+
+                // The transaction returns the hierarchy names. If the name is multivalued, 
+                // the transaction only returns the first value of the name.
+                if (response != null)
+                {
+                    for (int i = 0; i < response.IoPersonIds.Count; i++)
+                    {
+                        string key = response.IoPersonIds[i];
+                        string value = response.OutPersonNames[i];
+                        if (!hierarchyNameDictionary.ContainsKey(key))
+                        {
+                            hierarchyNameDictionary.Add(key, value);
+                        }
+                    }
+
+                }
+            }
+
+            #endregion
+            return hierarchyNameDictionary;
+        }
+        private VoucherSummary BuildVoucherSummary(Vouchers voucherDataContract, Dictionary<string, PurchaseOrders> poDictionary, Dictionary<string, Bpo> bpoDictionary, string vendorName, string requestorName, Collection<Opers> opersCollection)
+        {
+            if (voucherDataContract == null)
+            {
+                throw new ArgumentNullException("voucherDataContract");
+            }
+
+            if (string.IsNullOrEmpty(voucherDataContract.Recordkey))
+            {
+                throw new ArgumentNullException("id");
+            }
+
+            if (!voucherDataContract.VouDate.HasValue)
+            {
+                throw new ApplicationException("Missing date for voucher id: " + voucherDataContract.Recordkey);
+            }
+
+            if (voucherDataContract.VouStatusDate == null || !voucherDataContract.VouStatusDate.First().HasValue)
+            {
+                throw new ApplicationException("Missing status date for voucher id: " + voucherDataContract.Recordkey);
+            }
+
+            var voucherDate = voucherDataContract.VouDate.Value;
+            if (!voucherDataContract.VouDate.HasValue)
+            {
+                throw new ApplicationException("Missing date for voucher: " + voucherDataContract.Recordkey);
+            }
+
+            DateTime? maintenanceDate = null;
+            if (voucherDataContract.VouMaintGlTranDate.HasValue)
+            {
+                maintenanceDate = voucherDataContract.VouMaintGlTranDate.Value.Date;
+            }
+
+            var voucherStatus = ConvertVoucherStatus(voucherDataContract.VouStatus, voucherDataContract.Recordkey);
+
+            var voucherSummaryEntity = new VoucherSummary(voucherDataContract.Recordkey, voucherDataContract.VouDefaultInvoiceNo, vendorName, voucherDate)
+            {
+                Status = voucherStatus,
+                MaintenanceDate = maintenanceDate,
+                VendorId = voucherDataContract.VouVendor,
+                RequestorName = requestorName,
+                Amount = voucherDataContract.VouTotalAmt.HasValue ? voucherDataContract.VouTotalAmt.Value : 0,
+                InvoiceDate = voucherDataContract.VouDefaultInvoiceDate.HasValue ? voucherDataContract.VouDefaultInvoiceDate.Value : default(DateTime?),
+
+            };
+            // build approvers and add to entity
+            if ((voucherDataContract.VouAuthEntityAssociation != null) && (voucherDataContract.VouAuthEntityAssociation.Any()))
+            {
+                // Approver object is declared once
+                Approver approver;
+                foreach (var approval in voucherDataContract.VouAuthEntityAssociation)
+                {
+                    //get opersId for the requisition
+                    var oper = opersCollection.FirstOrDefault(x => x.Recordkey == approval.VouAuthorizationsAssocMember);
+                    if (oper != null)
+                    {
+                        approver = new Approver(oper.Recordkey);
+                        approver.SetApprovalName(oper.SysUserName);
+                        approver.ApprovalDate = approval.VouAuthorizationDatesAssocMember.Value;
+                        voucherSummaryEntity.AddApprover(approver);
+                    }
+                }
+            }
+            // build next approvers and add to entity
+            if ((voucherDataContract.VouApprEntityAssociation != null) && (voucherDataContract.VouApprEntityAssociation.Any()))
+            {
+                // Approver object is declared once
+                Approver approver;
+                foreach (var approval in voucherDataContract.VouApprEntityAssociation)
+                {
+                    //get opersId for the requisition
+                    var oper = opersCollection.FirstOrDefault(x => x.Recordkey == approval.VouNextApprovalIdsAssocMember);
+                    if (oper != null)
+                    {
+                        approver = new Approver(oper.Recordkey);
+                        approver.SetApprovalName(oper.SysUserName);
+                        voucherSummaryEntity.AddApprover(approver);
+                    }
+                }
+            }
+            // Add any associated purchase orders to the voucher summary domain entity
+            if (!string.IsNullOrEmpty(voucherDataContract.VouPoNo))
+            {
+                PurchaseOrders purchaseOrder = null;
+                if (poDictionary.TryGetValue(voucherDataContract.VouPoNo, out purchaseOrder))
+                {
+                    var purchaseOrderSummaryEntity = new PurchaseOrderSummary(purchaseOrder.Recordkey, purchaseOrder.PoNo, vendorName, purchaseOrder.PoDate.Value.Date);
+                    voucherSummaryEntity.AddPurchaseOrder(purchaseOrderSummaryEntity);
+                }
+            }
+
+            // Add any associated blanket purchase orders to the voucher domain entity.
+            if ((voucherDataContract.VouBpoId != null))
+            {
+                if (!string.IsNullOrEmpty(voucherDataContract.VouBpoId))
+                {
+                    Bpo bpo = null;
+                    if (bpoDictionary.TryGetValue(voucherDataContract.VouBpoId, out bpo))
+                    {
+                        voucherSummaryEntity.BlanketPurchaseOrderId = voucherDataContract.VouBpoId;
+                        voucherSummaryEntity.BlanketPurchaseOrderNumber = bpo.BpoNo;
+                    }
+                }
+            }
+            return voucherSummaryEntity;
+        }
+
+        private async Task<List<string>> ExecuteQueryStatementAsync(List<string> filteredVouchers, string queryCriteria)
+        {
+            string[] filteredByQueryCriteria = null;
+            if (string.IsNullOrEmpty(queryCriteria))
+                return null;
+            if (filteredVouchers != null && filteredVouchers.Any())
+            {
+                filteredByQueryCriteria = await DataReader.SelectAsync("VOUCHERS", filteredVouchers.ToArray(), queryCriteria);
+            }
+            else
+            {
+                filteredByQueryCriteria = await DataReader.SelectAsync("VOUCHERS", queryCriteria);
+            }
+            return filteredByQueryCriteria.ToList();
+        }
+        private async Task<Dictionary<string, PurchaseOrders>> BuildPurchaseOrderDictionaryAsync(System.Collections.ObjectModel.Collection<Vouchers> voucherData)
+        {
+            Dictionary<string, PurchaseOrders> purchaseOrderDictionary = new Dictionary<string, PurchaseOrders>();
+            //fetch purchase order no's from all requisitions
+            var vouPoNos = voucherData.Where(x => x.VouPoNo != null && x.VouPoNo.Any()).Select(s => s.VouPoNo).ToList();
+            if (vouPoNos != null && vouPoNos.Any())
+            {
+                List<string> purchaseOrderIds = vouPoNos.Select(x => x).Distinct().ToList();
+                //fetch purchase order details and build dictionary
+                var purchaseOrders = await DataReader.BulkReadRecordAsync<DataContracts.PurchaseOrders>("PURCHASE.ORDERS", purchaseOrderIds.ToArray());
+
+                if (purchaseOrders != null && purchaseOrders.Any())
+                    purchaseOrderDictionary = purchaseOrders.ToDictionary(x => x.Recordkey);
+            }
+
+            return purchaseOrderDictionary;
+        }
+
+        private async Task<Dictionary<string, Bpo>> BuildBlanketPODictionaryAsync(System.Collections.ObjectModel.Collection<Vouchers> voucherData)
+        {
+            Dictionary<string, Bpo> bpoDictionary = new Dictionary<string, Bpo>();
+            //fetch blanket purchase order no's from all requisitions
+            var vouBpoIds = voucherData.Where(x => x.VouBpoId != null && x.VouBpoId.Any()).Select(s => s.VouBpoId).ToList();
+            if (vouBpoIds != null && vouBpoIds.Any())
+            {
+                List<string> blanketPurchaseOrderIds = vouBpoIds.Select(x => x).Distinct().ToList();
+                //fetch blanket purchase order details and build dictionary
+                var Bpos = await DataReader.BulkReadRecordAsync<DataContracts.Bpo>("BPO", blanketPurchaseOrderIds.ToArray());
+
+
+                if (Bpos != null && Bpos.Any())
+                    bpoDictionary = Bpos.ToDictionary(x => x.Recordkey);
+            }
+
+            return bpoDictionary;
+        }
+
+        /// <summary>
+        /// Take first value from a Requisition Status collection and convert to RequisitionStatus enumeration value
+        /// </summary>
+        /// <param name="reqStatus">requisition status</param>
+        /// <param name="requisitionId">requisition id</param>
+        /// <returns>RequisitionStatus enumeration value</returns>
+        private static VoucherStatus ConvertVoucherStatus(List<string> vouStatus, string voucherId)
+        {
+            var voucherStatus = new VoucherStatus();
+
+            // Get the first status in the list of requisition statuses and check it has a value
+            if ((vouStatus) != null && (vouStatus.Any()))
+            {
+                switch (vouStatus.FirstOrDefault().ToUpper())
+                {
+                    case "U":
+                        voucherStatus = VoucherStatus.InProgress;
+                        break;
+                    case "N":
+                        voucherStatus = VoucherStatus.NotApproved;
+                        break;
+                    case "O":
+                        voucherStatus = VoucherStatus.Outstanding;
+                        break;
+                    case "P":
+                        voucherStatus = VoucherStatus.Paid;
+                        break;
+                    case "R":
+                        voucherStatus = VoucherStatus.Reconciled;
+                        break;
+                    case "V":
+                        voucherStatus = VoucherStatus.Voided;
+                        break;
+                    case "X":
+                        voucherStatus = VoucherStatus.Cancelled;
+                        break;
+                    default:
+                        // if we get here, we have corrupt data.
+                        throw new ApplicationException("Invalid voucher status for voucher: " + voucherId);
+                }
+            }
+            else
+            {
+                throw new ApplicationException("Missing status for voucher: " + voucherId);
+            }
+
+            return voucherStatus;
+        }
+
+        /// <summary>
+        ///  Build Voucher for void Request
+        /// </summary>
+        /// <param name="voucherVoidRequest"></param>
+        /// <returns></returns>
+        private TxVoidVoucherRequest BuildVoucherVoidRequest(VoucherVoidRequest voidRequest)
+        {
+            var request = new TxVoidVoucherRequest();
+            var personId = voidRequest.PersonId;
+            var voucherId = voidRequest.VoucherId;
+            var confirmationEmailAddresses = voidRequest.ConfirmationEmailAddresses;
+            var comments = voidRequest.Comments;
+
+            if (!string.IsNullOrEmpty(personId))
+            {
+                request.AUserId = personId;
+            }
+            if (!string.IsNullOrEmpty(voucherId))
+            {
+                request.AVoucherId = voucherId;
+            }
+            if (!string.IsNullOrEmpty(confirmationEmailAddresses))
+            {
+                request.AConfirmationEmailAddress = confirmationEmailAddresses;
+            }
+            if (!string.IsNullOrEmpty(comments))
+            {
+                request.AComments = comments;
+            }
+
+            return request;
+
+        }
+
+        private static Voucher BuildVoucherEntity(Vouchers voucher, Dictionary<string, string> hierarchyNameDictionary)
+        {
+            if (voucher == null)
+            {
+                throw new KeyNotFoundException(string.Format("Voucher record does not exist."));
+            }
+
+            // Translate the status code into a VoucherStatus enumeration value
+            VoucherStatus voucherStatus = new VoucherStatus();
+
+            // Get the first status in the list of voucher statuses, and check that it has a value
+            if (voucher.VouStatus != null && !string.IsNullOrEmpty(voucher.VouStatus.FirstOrDefault()))
+            {
+                switch (voucher.VouStatus.FirstOrDefault().ToUpper())
+                {
+                    case "U":
+                        voucherStatus = VoucherStatus.InProgress;
+                        break;
+                    case "N":
+                        voucherStatus = VoucherStatus.NotApproved;
+                        break;
+                    case "O":
+                        voucherStatus = VoucherStatus.Outstanding;
+                        break;
+                    case "P":
+                        voucherStatus = VoucherStatus.Paid;
+                        break;
+                    case "R":
+                        voucherStatus = VoucherStatus.Reconciled;
+                        break;
+                    case "V":
+                        voucherStatus = VoucherStatus.Voided;
+                        break;
+                    case "X":
+                        voucherStatus = VoucherStatus.Cancelled;
+                        break;
+                    default:
+                        // if we get here, we have corrupt data.
+                        throw new ApplicationException("Invalid voucher status for voucher: " + voucher.Recordkey);
+                }
+            }
+            else
+            {
+                throw new ApplicationException("Missing status for voucher: " + voucher.Recordkey);
+            }
+
+            // Determine the vendor name for the voucher. If there is a misc name, use it. Otherwise, get the 
+            // AP.CHECK hierarchy name.
+            var voucherVendorName = "";
+            var requestorName = "";
+            if (!string.IsNullOrEmpty(voucher.VouRequestor))
+                hierarchyNameDictionary.TryGetValue(voucher.VouRequestor, out requestorName);
+
+            // If there is no vendor name and there is a vendor id, use the hierarchy to get the vendor name.
+            voucherVendorName = voucher.VouMiscName != null && voucher.VouMiscName.Any() ? voucher.VouMiscName.FirstOrDefault() : string.Empty;
+            if ((string.IsNullOrEmpty(voucherVendorName)) && (!string.IsNullOrEmpty(voucher.VouVendor)))
+            {
+                hierarchyNameDictionary.TryGetValue(voucher.VouVendor, out voucherVendorName);
+            }
+
+            if (!voucher.VouDate.HasValue)
+            {
+                throw new ApplicationException("Missing voucher date for voucher: " + voucher.Recordkey);
+            }
+
+            if ((string.IsNullOrEmpty(voucher.VouApType)) && (voucherStatus != VoucherStatus.Cancelled))
+            {
+                throw new ApplicationException("Missing AP type for voucher: " + voucher.Recordkey);
+            }
+
+            if (string.IsNullOrEmpty(voucher.VouDefaultInvoiceNo))
+            {
+                throw new ApplicationException("Invoice number is a required field.");
+            }
+            if (!voucher.VouDefaultInvoiceDate.HasValue)
+            {
+                throw new ApplicationException("Invoice date is a required field.");
+            }
+
+
+            var voucherDomainEntity = new Voucher(voucher.Recordkey, voucher.VouDate.Value, voucherStatus, voucherVendorName);
+            voucherDomainEntity.VendorId = voucher.VouVendor;
+            voucherDomainEntity.InvoiceNumber = voucher.VouDefaultInvoiceNo;
+            voucherDomainEntity.InvoiceDate = voucher.VouDefaultInvoiceDate;
+            return voucherDomainEntity;
         }
     }
 }

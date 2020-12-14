@@ -78,6 +78,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //process filters 
             string applicantId = string.Empty;
             string aidYear = string.Empty;
+            string methodology = string.Empty;
+            string applicationId = string.Empty;
             if (filterDto != null)
             {
                 //get aid year
@@ -101,12 +103,31 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         return new Tuple<IEnumerable<Dtos.FinancialAidApplicationOutcome>, int>(new List<Dtos.FinancialAidApplicationOutcome>(), 0);
                     }
                 }
+                //get methodology
+                if (filterDto.Methodology != FinancialAidApplicationsMethodology.NotSet)
+                {
+                    methodology = filterDto.Methodology.ToString().ToLower();
+                }
+                //get application
+                if (filterDto.Application != null && !string.IsNullOrEmpty(filterDto.Application.Id))
+                {
+                    try
+                    {
+                        applicationId = await _financialAidApplicationOutcomeRepository.GetApplicationIdFromGuidAsync(filterDto.Application.Id);
+                        if (string.IsNullOrEmpty(applicationId))
+                            return new Tuple<IEnumerable<Dtos.FinancialAidApplicationOutcome>, int>(new List<Dtos.FinancialAidApplicationOutcome>(), 0);
+                    }
+                    catch // if bad guid, return empty set
+                    {
+                        return new Tuple<IEnumerable<Dtos.FinancialAidApplicationOutcome>, int>(new List<Dtos.FinancialAidApplicationOutcome>(), 0);
+                    }
+                }
             }
 
             var financialAidApplicationOutcomeDtos = new List<Dtos.FinancialAidApplicationOutcome>();
             try
             {
-                var fafsaDomainTuple = await _financialAidApplicationOutcomeRepository.GetAsync(offset, limit, bypassCache, applicantId, aidYear, faSuiteYears);
+                var fafsaDomainTuple = await _financialAidApplicationOutcomeRepository.GetAsync(offset, limit, bypassCache, applicantId, aidYear, methodology, applicationId, faSuiteYears);
                 if (fafsaDomainTuple != null && fafsaDomainTuple.Item1 != null && fafsaDomainTuple.Item1.Any())
                 {
                     foreach (var entity in fafsaDomainTuple.Item1)
@@ -132,7 +153,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 IntegrationApiExceptionAddError(ex);
                 throw IntegrationApiException;
-            }        }
+            }
+        }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM VERSION 9</remarks>
         /// <summary>

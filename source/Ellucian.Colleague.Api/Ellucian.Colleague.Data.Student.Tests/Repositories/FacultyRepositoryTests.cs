@@ -11,6 +11,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Domain.Student.Entities;
+using Ellucian.Colleague.Domain.Student.Repositories;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -217,6 +219,130 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
         }
 
+        [TestClass]
+        public class FacultyRepository_GetFacultyOfficeHoursByIdsAsync_Tests : FacultyRepositoryTests
+        {
+            private Mock<IFacultyRepository> facultyRepoMock;
+            private List<Domain.Student.Entities.FacultyOfficeHours> facultyOfficeHours;
+            private List<string> facultyIds = null;
+
+            [TestInitialize]
+            public void FacultyRepository_GetFacultyOfficeHoursByIdsAsync_Initialize()
+            {
+                base.Initialize();
+                facultyRepoMock = new Mock<IFacultyRepository>();
+                facultyIds = new List<string> { "4682", "4688", "4871" };
+
+                facultyOfficeHours = new List<Domain.Student.Entities.FacultyOfficeHours>()
+                {
+                        new Domain.Student.Entities.FacultyOfficeHours()
+                        {
+                            FacultyId = "4682",
+                            OfficeHours = new List<OfficeHours>()
+                            {
+                                new OfficeHours()
+                                {
+                                    OfficeStartDate = DateTime.Now.AddDays(-10),
+                                    OfficeEndDate = DateTime.Now.AddDays(10),
+                                    OfficeBuilding = "CHW Changewood Hall",
+                                    OfficeRoom = "CHW",
+                                    OfficeFrequency = "W"
+                                },
+                                new OfficeHours()
+                                {
+                                    OfficeStartDate = DateTime.Now.AddDays(-30),
+                                    OfficeEndDate = DateTime.Now.AddDays(10),
+                                    OfficeBuilding = "MS Upper Study Room",
+                                    OfficeRoom = "MS",
+                                    OfficeFrequency = "M"
+                                }
+
+                            }
+                        },
+                        new Domain.Student.Entities.FacultyOfficeHours()
+                        {
+                            FacultyId = "4688",
+                            OfficeHours = new List<OfficeHours>()
+                            {
+                                new OfficeHours()
+                                {
+                                    OfficeStartDate = DateTime.Now.AddDays(-10),
+                                    OfficeEndDate = DateTime.Now.AddDays(10),
+                                    OfficeBuilding = "MSX Master Hall",
+                                    OfficeRoom = "MSX",
+                                    OfficeFrequency = "D"
+                                },
+                                new OfficeHours()
+                                {
+                                    OfficeStartDate = DateTime.Now.AddDays(-30),
+                                    OfficeEndDate = DateTime.Now.AddDays(10),
+                                    OfficeBuilding = "TGH Tiger Botany Hall",
+                                    OfficeRoom = "TGH",
+                                    OfficeFrequency = "W"
+                                }
+
+                            }
+                        },
+
+                        new Domain.Student.Entities.FacultyOfficeHours()
+                        {
+                            FacultyId = "4871",
+                            OfficeHours = new List<OfficeHours>()
+                            {
+                                new OfficeHours()
+                                {
+                                    OfficeStartDate = DateTime.Now.AddDays(-10),
+                                    OfficeEndDate = DateTime.Now.AddDays(10),
+                                    OfficeBuilding = "FRT Fraternity Hall",
+                                    OfficeRoom = "FRT",
+                                    OfficeFrequency = "D"
+                                },
+                                new OfficeHours()
+                                {
+                                    OfficeStartDate = DateTime.Now.AddDays(-20),
+                                    OfficeEndDate = DateTime.Now.AddDays(10),
+                                    OfficeBuilding = "MSR Mountains Study Room",
+                                    OfficeRoom = "MSR",
+                                    OfficeFrequency = "W"
+                                },
+                                new OfficeHours()
+                                {
+                                    OfficeStartDate = DateTime.Now.AddDays(20),
+                                    OfficeEndDate = DateTime.Now.AddDays(10),
+                                    OfficeBuilding = "ESR Electric Study Room",
+                                    OfficeRoom = "ESR",
+                                    OfficeFrequency = "M"
+                                }
+                            }
+                        }
+                    };
+            }
+
+            [TestMethod]
+            public async Task FacultyRepository_GetFacultyOfficeHoursByIdsAsync_Defaults()
+            {
+                facultyRepoMock.Setup(repo => repo.GetFacultyOfficeHoursByIdsAsync(It.IsAny<IEnumerable<string>>())).Returns(Task.FromResult<IEnumerable<Domain.Student.Entities.FacultyOfficeHours>>(facultyOfficeHours));
+                var facultyOfficeHoursList = await repository.GetFacultyOfficeHoursByIdsAsync(facultyIds);
+                Assert.AreEqual(facultyOfficeHours.Count(), facultyIds.Count());
+            }
+
+            [TestMethod]
+            public async Task FacultyRepository_GetFacultyOfficeHoursByIdsAsync_Office_Hours_In_Range()
+            {
+                facultyRepoMock.Setup(repo => repo.GetFacultyOfficeHoursByIdsAsync(It.IsAny<IEnumerable<string>>())).Returns(Task.FromResult<IEnumerable<Domain.Student.Entities.FacultyOfficeHours>>(facultyOfficeHours));
+                var facultyOfficeHoursList = await repository.GetFacultyOfficeHoursByIdsAsync(facultyIds);
+                Assert.IsTrue(facultyOfficeHours[0].OfficeHours[0].OfficeStartDate <= DateTimeOffset.UtcNow.Date);
+                Assert.IsTrue(facultyOfficeHours[0].OfficeHours[0].OfficeEndDate >= DateTimeOffset.UtcNow.Date);
+                Assert.IsTrue(facultyOfficeHours[1].OfficeHours[0].OfficeStartDate <= DateTimeOffset.UtcNow.Date);
+                Assert.IsTrue(facultyOfficeHours[1].OfficeHours[0].OfficeEndDate >= DateTimeOffset.UtcNow.Date);
+                Assert.IsTrue(facultyOfficeHours[2].OfficeHours[0].OfficeStartDate <= DateTimeOffset.UtcNow.Date);
+                Assert.IsTrue(facultyOfficeHours[2].OfficeHours[0].OfficeEndDate >= DateTimeOffset.UtcNow.Date);
+                Assert.IsTrue(facultyOfficeHours[2].OfficeHours[1].OfficeStartDate <= DateTimeOffset.UtcNow.Date);
+                Assert.IsTrue(facultyOfficeHours[2].OfficeHours[1].OfficeEndDate >= DateTimeOffset.UtcNow.Date);
+            }
+        }
+
+
         /// <summary>
         /// Set up data reads
         /// </summary>
@@ -226,7 +352,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             MockRecordsAsync<Countries>("COUNTRIES", TestCountriesRepository.GetAllCountriesRecords());
 
             // FACULTY
-            MockRecordsAsync<Faculty>("FACULTY", TestFacultyRepository.GetAllFacultyRecords());
+            MockRecordsAsync<DataContracts.Faculty>("FACULTY", TestFacultyRepository.GetAllFacultyRecords());
 
             // PERSON
             MockRecordsAsync<Base.DataContracts.Person>("PERSON", TestFacultyRepository.GetAllFacultyPersonRecords());

@@ -243,9 +243,9 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
             {
                 throw new ArgumentNullException("awardYear");
             }
-            if (string.IsNullOrWhiteSpace(defaultResult))
+            if (defaultResult == null)
             {
-                throw new ArgumentNullException("defaultResult");
+                defaultResult = " ";
             }
 
             this.code = code;

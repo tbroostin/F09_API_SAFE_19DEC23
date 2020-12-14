@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -20,6 +20,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// </summary>
         /// <param name="fiscalYear">General Ledger fiscal year.</param>
         /// <returns>List of GL cost center DTOs for the specified fiscal year.</returns>
+        [Obsolete("Obsolete as of API verson 1.29; use the QueryCostCenters endpoint")]
         Task<IEnumerable<CostCenter>> GetAsync(string fiscalYear);
 
         /// <summary>

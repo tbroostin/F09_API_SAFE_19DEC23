@@ -156,6 +156,20 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             return _commodityCode;
         }
 
+        private IEnumerable<Domain.ColleagueFinance.Entities.FxaTransferFlags> _fxaTransferFlags = null;
+        /// Get all FixedAssetDesignations Entity Objects
+        /// </summary>
+        /// <param name="bypassCache">Bypass cache flag.  If set to true, will requery cached items</param>
+        /// <returns>A collection of <see cref="FixedAssetDesignations"> FixedAssetDesignationsFixedAssetDesignations entity objects</returns>
+        private async Task<IEnumerable<Domain.ColleagueFinance.Entities.FxaTransferFlags>> GetFixedAssetDesignationsAsync(bool bypassCache)
+        {
+            if (_fxaTransferFlags == null)
+            {
+                _fxaTransferFlags = await colleagueFinanceReferenceDataRepository.GetFxaTransferFlagsAsync(bypassCache);
+            }
+            return _fxaTransferFlags;
+        }
+
         private IEnumerable<Domain.Base.Entities.CommerceTaxCode> _commerceTaxCode = null;
         private async Task<IEnumerable<Domain.Base.Entities.CommerceTaxCode>> GetCommerceTaxCodesAsync(bool bypassCache)
         {
@@ -937,11 +951,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             CheckUpdatePurchaseOrderPermission();
 
             ValidatePurchaseOrder(purchaseOrder);
-
-            if (purchaseOrder.PaymentSource == null)
-            {
-                IntegrationApiExceptionAddError("PaymentSource cannot be unset.", "Validation.Exception");
-            }
+            
             if (IntegrationApiException != null)
             {
                 throw IntegrationApiException;
@@ -954,6 +964,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             // verify the GUID exists to perform an update.  If not, perform a create instead
             if (!string.IsNullOrEmpty(purchaseOrderId))
             {
+                if (purchaseOrder.PaymentSource == null)
+                {
+                    IntegrationApiExceptionAddError("PaymentSource cannot be unset.", "Validation.Exception");
+                }
 
                 GeneralLedgerAccountStructure glConfiguration = null;
 
@@ -1919,6 +1933,37 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         }
                     }
 
+                    if ((lineItem.FixedAssetDesignation != null) && (!string.IsNullOrEmpty(lineItem.FixedAssetDesignation.Id)))
+                    {
+                        IEnumerable<Domain.ColleagueFinance.Entities.FxaTransferFlags> allFixedAssetDesignations = null;
+                        try
+                        {
+                            allFixedAssetDesignations = await GetFixedAssetDesignationsAsync(false);
+                            if (allFixedAssetDesignations == null)
+                            {
+                                IntegrationApiExceptionAddError("Unable to retrieve fixedAssetDesignations.", "Validation.Exception",
+                                       purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                            }
+                            else
+                            {
+                                var fixedAssetDesignations = allFixedAssetDesignations.FirstOrDefault(cc => cc.Guid == lineItem.FixedAssetDesignation.Id);
+                                if ((fixedAssetDesignations == null) || (string.IsNullOrEmpty(fixedAssetDesignations.Code)))
+                                {
+                                    IntegrationApiExceptionAddError(string.Format("FixedAssetDesignation record not found for fixedAssetDesignation.Id '{0}'.", lineItem.FixedAssetDesignation.Id), "Validation.Exception",
+                                           purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                                }
+                                else
+                                {
+                                    apLineItem.FixedAssetsFlag = fixedAssetDesignations.Code;
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            IntegrationApiExceptionAddError(string.Format("An error occurred retrieving the fixedAssetDesignation record for fixedAssetDesignation.Id '{0}'. Details: {1}.", lineItem.FixedAssetDesignation.Id, ex.Message), "Validation.Exception",
+                                       purchaseOrder.Id, purchaseOrderId != "NEW" ? purchaseOrderId : null);
+                        }
+                    }
                     if ((lineItem.UnitOfMeasure != null) && (!string.IsNullOrEmpty(lineItem.UnitOfMeasure.Id)))
                     {
                         IEnumerable<Domain.ColleagueFinance.Entities.CommodityUnitType> allCommodityUnitTypes = null;
@@ -2412,6 +2457,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     {
                         IntegrationApiExceptionAddError("The commodity code id is required when submitting a commodity code.", "Validation.Exception");
                     }
+                    if (lineItem.FixedAssetDesignation != null && string.IsNullOrWhiteSpace(lineItem.FixedAssetDesignation.Id))
+                    {
+                        IntegrationApiExceptionAddError("The fixedAssetDesignation id is required when submitting a fixedAssetDesignation.", "Validation.Exception");
+                    }
                     if (lineItem.UnitOfMeasure != null && string.IsNullOrWhiteSpace(lineItem.UnitOfMeasure.Id))
                     {
                         IntegrationApiExceptionAddError("The UnitofMeasure id is required when submitting a UnitofMeasure.", "Validation.Exception");
@@ -2739,6 +2788,28 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     IntegrationApiExceptionAddError(ex, "Bad.Data", sourceGuid, sourceId);
                 }
             }
+
+            if (!string.IsNullOrEmpty(sourceLineItem.FixedAssetsFlag))
+            {
+                try
+                {
+                    var fixedAssetFlagGuid = await colleagueFinanceReferenceDataRepository.GetFxaTransferFlagGuidAsync(sourceLineItem.FixedAssetsFlag);
+                    if (string.IsNullOrEmpty(fixedAssetFlagGuid))
+                    {
+                        var message = string.Concat("Missing fixed asset designations information.  FixedAssetDesignation: ", sourceLineItem.FixedAssetsFlag);
+                        IntegrationApiExceptionAddError(message, "GUID.Not.Found", sourceGuid, sourceId);
+                    }
+                    else
+                    {
+                        lineItem.FixedAssetDesignation = new GuidObject2(fixedAssetFlagGuid);
+                    }
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", sourceGuid, sourceId);
+                }
+            }
+
             if (!(string.IsNullOrWhiteSpace(sourceLineItem.VendorPart)))
             {
                 lineItem.PartNumber = sourceLineItem.VendorPart;
@@ -3320,7 +3391,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
         private void CheckViewPurchaseOrderPermission()
         {
-            var hasPermission = HasPermission(ColleagueFinancePermissionCodes.ViewPurchaseOrders);
+            var hasPermission = (HasPermission(ColleagueFinancePermissionCodes.ViewPurchaseOrders) || HasPermission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
 
             if (!hasPermission)
             {

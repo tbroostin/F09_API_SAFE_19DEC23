@@ -165,6 +165,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public List<StudentTranscriptGradesHistory> StudentTranscriptGradesHistory { get; set; }
 
         /// <summary>
+        /// The global identifier for the Academic Period.
+        /// </summary>
+        public string Term { get; set; }
+
+        /// <summary>
         /// Base constructor for student transcript grades. 
         /// </summary>
         /// <param name="id">ID of this student transcript grades</param>

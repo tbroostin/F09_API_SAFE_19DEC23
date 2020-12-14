@@ -166,6 +166,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                        ? await DataReader.SelectAsync("APPLICATIONS", limitingKeys, string.Concat(criteria, " ", currStatus))
                        : await DataReader.SelectAsync("APPLICATIONS", limitingKeys, criteria);
                    
+                   if (applicationIds == null || !applicationIds.Any())
+                   {
+                       return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                   }
+
                    CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
                    {
                        limitingKeys = applicationIds.ToList()
@@ -631,22 +636,22 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 return ldmGuidCollection;
             }
 
-            //The data contract can sometimes get the wrong guid
-            var guidList = await DataReader.SelectAsync("LDM.GUID", "WITH LDM.GUID.PRIMARY.KEY EQ '?' AND LDM.GUID.SECONDARY.KEY EQ '' AND LDM.GUID.LDM.NAME EQ 'admission-applications' AND LDM.GUID.REPLACED.BY EQ ''", applicationIds.ToArray());
-            var ldmGuidRecords = await DataReader.BulkReadRecordAsync<LdmGuid>(guidList);
+            var lookups = applicationIds.Select(i => new RecordKeyLookup( "APPLICATIONS", i, string.Empty, string.Empty, false ));
+            var ldmGuidRecords = await DataReader.SelectAsync( lookups.ToArray() );
 
             var exception = new RepositoryException();
 
             foreach (var e in ldmGuidRecords)
             {
                 var output = string.Empty;
-                if (ldmGuidCollection.TryGetValue(e.LdmGuidPrimaryKey, out output))
+                var key = e.Key.Split( new char[] { '+' }, StringSplitOptions.RemoveEmptyEntries );
+                if (ldmGuidCollection.TryGetValue(e.Key[1].ToString(), out output))
                 {
-                    var errorMessage = string.Format("Duplicate key found in LDM.GUID '{0}':", e.LdmGuidPrimaryKey);
+                    var errorMessage = string.Format("Duplicate key found in LDM.GUID '{0}':", e.Key);
                     exception.AddError(new RepositoryError("invalid.key", errorMessage));
                 }
                 else
-                    ldmGuidCollection.Add(e.LdmGuidPrimaryKey, e.Recordkey);
+                    ldmGuidCollection.Add( key[1], e.Value.Guid);
             }
 
             if (exception.Errors.Any())

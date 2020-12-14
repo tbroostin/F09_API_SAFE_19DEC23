@@ -890,6 +890,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 }
 
                 var vendorReturn = await _vendorsService.PutVendorAsync2(guid, mergedVendor);
+
+                //store dataprivacy list and get the extended data to store
+                AddEthosContextProperties(await _vendorsService.GetDataPrivacyListByApi(GetRouteResourceName(), true),
+                   await _vendorsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { vendorReturn.Id }));
+
                 return vendorReturn;
             }
             catch (PermissionsException e)
@@ -926,7 +931,198 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
         #endregion
 
+        #region EEDM Vendors Maximum
 
+        /// <summary>
+        /// Return all vendors
+        /// </summary>
+        /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
+        /// <param name="criteria">The default named query implementation for filtering</param>
+        ///  <param name="vendorDetail">Vendor detail id GUId filter as in person or organization or institution guid</param>
+        /// <returns>List of Vendors <see cref="Dtos.VendorsMaximum"/> objects representing matching vendors</returns>
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [QueryStringFilterFilter("criteria", typeof(VendorsMaximum))]
+        [QueryStringFilterFilter("vendorDetail", typeof(Dtos.Filters.VendorDetail))]
+        [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
+
+        public async Task<IHttpActionResult> GetVendorsMaximumAsync(Paging page, QueryStringFilter criteria, QueryStringFilter vendorDetail)
+        {
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+            if (page == null)
+            {
+                page = new Paging(100, 0);
+            }
+
+            string vendorDetails = "";
+            string vendorDetailFilterValue = string.Empty;
+            var vendorDetailFilterObj = GetFilterObject<Dtos.Filters.VendorDetail>(_logger, "vendorDetail");
+            if ((vendorDetailFilterObj != null) && (vendorDetailFilterObj.vendorDetail != null))
+            {
+                vendorDetails = vendorDetailFilterObj.vendorDetail.Id;
+            }
+
+            var criteriaObj = GetFilterObject<VendorsMaximum>(_logger, "criteria");
+
+            if (CheckForEmptyFilterParameters())
+                return new PagedHttpActionResult<IEnumerable<VendorsMaximum>>(new List<VendorsMaximum>(), page, 0, this.Request);            
+
+            try
+            {
+                var pageOfItems = await _vendorsService.GetVendorsMaximumAsync(page.Offset, page.Limit, criteriaObj, vendorDetails, bypassCache);
+
+                AddEthosContextProperties(await _vendorsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _vendorsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              pageOfItems.Item1.Select(a => a.Id).ToList()));
+
+                return new PagedHttpActionResult<IEnumerable<Dtos.VendorsMaximum>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
+
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
+        /// Read (GET) a vendor using a GUID
+        /// </summary>
+        /// <param name="id">GUID to desired vendor</param>
+        /// <returns>A vendor object <see cref="Dtos.VendorsMaximum"/> in EEDM format</returns>
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+
+        public async Task<Dtos.VendorsMaximum> GetVendorsMaximumByGuidAsync(string id)
+        {
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
+            if (string.IsNullOrEmpty(id))
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("Null id argument",
+                    IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
+            }
+            try
+            {
+                AddEthosContextProperties(
+                   await _vendorsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                   await _vendorsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { id }));
+                return await _vendorsService.GetVendorsMaximumByGuidAsync(id);
+            }            
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
+        /// Create (POST) a new vendorsMaximum
+        /// </summary>
+        /// <param name="vendorsMaximum">DTO of the new vendorsMaximum</param>
+        /// <returns>A vendorsMaximum object <see cref="Dtos.VendorsMaximum"/> in EEDM format</returns>
+        [HttpPost]
+        public async Task<Dtos.VendorsMaximum> PostVendorsMaximumAsync([FromBody] Dtos.VendorsMaximum vendorsMaximum)
+        {
+            //Update is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+
+        }
+
+        /// <summary>
+        /// Update (PUT) an existing vendorsMaximum
+        /// </summary>
+        /// <param name="guid">GUID of the vendorsMaximum to update</param>
+        /// <param name="vendorsMaximum">DTO of the updated vendorsMaximum</param>
+        /// <returns>A vendorsMaximum object <see cref="Dtos.VendorsMaximum"/> in EEDM format</returns>
+        [HttpPut]
+        public async Task<Dtos.VendorsMaximum> PutVendorsMaximumAsync([FromUri] string guid, [FromBody] Dtos.VendorsMaximum vendorsMaximum)
+        {
+            //Update is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+
+        }
+
+        /// <summary>
+        /// Delete (DELETE) a vendorsMaximum
+        /// </summary>
+        /// <param name="guid">GUID to desired vendorsMaximum</param>
+        [HttpDelete]
+        public async Task DeleteVendorsMaximumAsync(string guid)
+        {
+            //Update is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+
+        }
+
+        #endregion
+
+
+        #region Helper Methods
         private bool CompareAddress(List<VendorsAddressesDtoProperty> origAddrs, List<VendorsAddressesDtoProperty> mergedAddrs)
         {
             bool isEqual = true;
@@ -1118,7 +1314,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 _logger.Error(ex, "Unable to populate vendor default tax form info.");
                 throw CreateHttpResponseException("Unable to populate vendor default tax form info.", HttpStatusCode.BadRequest);
             }
-        }        
+        }
+        #endregion
     }
 
 }

@@ -49,7 +49,9 @@ namespace Ellucian.Web.Http.EthosExtend
         /// The actual data in the colleague field to return to the API call
         /// </summary>
         public string ExtendedDataValue { get; set; }
-        
+        public string AssociationController { get; set; }
+        public string UsageType { get; set; }
+        public string TransType { get; set; }
     }
 
     public enum JsonPropertyTypeExtensions

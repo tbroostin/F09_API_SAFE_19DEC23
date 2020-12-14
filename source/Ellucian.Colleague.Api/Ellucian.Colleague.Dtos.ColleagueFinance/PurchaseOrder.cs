@@ -146,5 +146,10 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// List of accepted items id
         /// </summary>
         public List<string> AcceptedItems { get; set; }
+
+        /// <summary>
+        /// List of email addresses - confirmation email notifications would be sent to these email addresses on create / update .
+        /// </summary>
+        public List<string> ConfirmationEmailAddresses { get; set; }
     }
 }

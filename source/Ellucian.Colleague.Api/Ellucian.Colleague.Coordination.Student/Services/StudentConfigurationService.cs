@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Web.Adapters;
@@ -33,6 +33,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var configurationDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.StudentProfileConfiguration, Dtos.Student.StudentProfileConfiguration>();
             studenProfileConfigurationDto = configurationDtoAdapter.MapToType(configuration);
             return studenProfileConfigurationDto;
+        }
+
+        /// <summary>
+        /// Gets Course Catalog Configurations
+        /// </summary>
+        /// <returns>CourseCatalogConfiguration3 object</returns>
+        public async Task<Dtos.Student.CourseCatalogConfiguration3> GetCourseCatalogConfiguration3Async()
+        {
+            Dtos.Student.CourseCatalogConfiguration3 configurationDto = new Dtos.Student.CourseCatalogConfiguration3();
+            Ellucian.Colleague.Domain.Student.Entities.CourseCatalogConfiguration configuration = await _configurationRepository.GetCourseCatalogConfiguration3Async();
+            var catalogConfigurationDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.CourseCatalogConfiguration, Ellucian.Colleague.Dtos.Student.CourseCatalogConfiguration3>();
+            configurationDto = catalogConfigurationDtoAdapter.MapToType(configuration);
+            return configurationDto;
         }
     }
 }

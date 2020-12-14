@@ -204,6 +204,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         public DateTime StatusDate { get; set; }
 
         /// <summary>
+        /// List of email addresses - confirmation email notifications would be sent to these email addresses on create / update .
+        /// </summary>
+        public List<string> ConfirmationEmailAddresses { get; set; }
+
+        /// <summary>
         /// This constructor initializes the voucher domain entity.
         /// </summary>
         /// <param name="voucherId">This is the voucher ID.</param>

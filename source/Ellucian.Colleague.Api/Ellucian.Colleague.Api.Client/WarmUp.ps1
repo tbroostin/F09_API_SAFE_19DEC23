@@ -1,5 +1,5 @@
 # Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
-# Version 1.28.1 (Delivered with Colleague Web API 1.28.1)
+# Version 1.29.1 (Delivered with Colleague Web API 1.29.1)
 
 # PURPOSE:
 # Warm up the Colleague Web API by pre-loading the most frequently-used and shared API data
@@ -103,6 +103,7 @@ $vndPilotV1 = "application/vnd.ellucian-pilot.v1+json"
 $vndInvoicePayV1 = "application/vnd.ellucian-invoice-payment.v1+json"
 $vndIlpV1 = "application/vnd.ellucian-ilp.v1+json"
 $vndHrDemoV1 = "application/vnd.ellucian-human-resource-demographics.v1+json"
+$vndInstEnrV1 = "application/vnd.ellucian-instant-enrollment.v1+json"
 $vndEthosConfigurationSettingsOptions = "application/vnd.hedtech.integration.configuration-settings-options.v1.0.0+json"
 $vndEthosCollectionConfigurationSettingsOptions = "application/vnd.hedtech.integration.collection-configuration-settings-options.v1.0.0+json"
 $vndEthosCompoundConfigurationSettingsOptions = "application/vnd.hedtech.integration.compound-configuration-settings-options.v1.0.0+json"
@@ -595,6 +596,9 @@ if ($runEthosApi)
 	Write-Host "Getting Ethos charge-assessment-methods..."
 	$results = get ($webApiBaseUrl + "/charge-assessment-methods") $token 
 
+	Write-Host "Getting Ethos cip-codes..."
+	$results = get ($webApiBaseUrl + "/cip-codes") $token
+	
 	Write-Host "Getting Ethos citizenship-statuses..."
 	$results = get ($webApiBaseUrl + "/citizenship-statuses") $token
 
@@ -775,6 +779,9 @@ if ($runEthosApi)
 	Write-Host "Getting Ethos fixed-asset-categories..."
 	$results = get ($webApiBaseUrl + "/fixed-asset-categories") $token
 
+	Write-Host "Getting Ethos fixed-asset-designations..."
+	$results = get ($webApiBaseUrl + "/fixed-asset-designations") $token
+		
 	Write-Host "Getting Ethos fixed-asset-types..."
 	$results = get ($webApiBaseUrl + "/fixed-asset-types") $token
 
@@ -1160,6 +1167,11 @@ $results = get ($webApiBaseUrl + "/campus-calendars") $token
 # The endpoints used below are available only with Colleague Web API 1.25 and later.
 Write-Host "Getting agreement periods..."
 $results = get ($webApiBaseUrl + "/agreement-periods") $token
+
+# The endpoints used below are available only with Colleague Web API 1.28 and later.
+Write-Host "Getting instant enrollment course sections..."
+$results = post ($webApiBaseUrl + "/Courses/Search?pageSize=10&pageIndex=1") "{'Keywords':'math'}" $token $vndInstEnrV1
+
 
 # Add additional warm up requests for your custom APIs below.
 

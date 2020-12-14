@@ -1,4 +1,4 @@
-//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Dtos.Converters;
 using Ellucian.Colleague.Dtos.DtoProperties;
@@ -28,6 +28,15 @@ namespace Ellucian.Colleague.Dtos
 
         [JsonProperty("reportingSegment", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public string ReportingSegment { get; set; }
+
+
+        /// <summary>
+        /// The ledger type associated with the activity (general or operating)
+        /// </summary>
+
+        [JsonProperty("ledgerType", DefaultValueHandling = DefaultValueHandling.Ignore, NullValueHandling = NullValueHandling.Ignore)]
+        public LedgerActivityLedgerType? LedgerType { get; set; }
+
 
         /// <summary>
         /// The ledger category associated with the activity.

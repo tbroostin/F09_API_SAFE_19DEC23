@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
@@ -38,6 +38,10 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             }
         };
 
+        public List<NextApprover> nextApprovers = new List<NextApprover>() {
+             new NextApprover("JHN") { NextApproverPersonId="123" }
+        };
+
         // Create a list of next approver validation response domain entities.
         public List<ApproverValidationResponse> approverValidationResponses = new List<ApproverValidationResponse>()
         {
@@ -54,7 +58,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 ErrorMessage = null
             }
         };
-
+        
         public async Task<ApproverValidationResponse> ValidateApproverAsync(string nextApproverId)
         {
             return await Task.Run(() =>
@@ -69,6 +73,15 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             {
                 return approverValidationResponses.Where(x => x.Id == approverId).FirstOrDefault().ApproverName;
             });
+        }
+
+        public async Task<IEnumerable<NextApprover>> QueryNextApproverByKeywordAsync(string searchCriteria)
+        {
+            return await Task.Run(() =>
+            {
+                return nextApprovers;
+            });
+            
         }
     }
 }

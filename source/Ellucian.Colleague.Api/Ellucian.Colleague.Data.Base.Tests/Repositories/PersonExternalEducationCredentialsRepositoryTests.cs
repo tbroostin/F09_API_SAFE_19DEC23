@@ -4,6 +4,7 @@ using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Ellucian.Web.Cache;
@@ -106,7 +107,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(codeItemName, null))
                     .ReturnsAsync(new Tuple<object, SemaphoreSlim>(_personExternalEducationCredentialsCollection.Select(peec => peec.Id).ToArray(), new SemaphoreSlim(1, 1)));
 
-                var resultTuple = await personExternalEducationCredentialsRepo.GetExternalEducationCredentialsAsync(offset, limit, null, "", false);
+                var resultTuple = await personExternalEducationCredentialsRepo.GetExternalEducationCredentialsAsync(offset, limit, null, "", "", "", false);
                 var result = resultTuple.Item1;
 
                 for (int i = 0; i < _personExternalEducationCredentialsCollection.Count(); i++)
@@ -143,7 +144,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [TestMethod]
             public async Task GetPersonExternalEducationCredentialsNonCacheAsync()
             {
-                var resultTuple = await personExternalEducationCredentialsRepo.GetExternalEducationCredentialsAsync(offset, limit, null, "", true);
+                var resultTuple = await personExternalEducationCredentialsRepo.GetExternalEducationCredentialsAsync(offset, limit, null, "", "", "", true);
                 var result = resultTuple.Item1;
 
                 for (int i = 0; i < _personExternalEducationCredentialsCollection.Count(); i++)
@@ -517,9 +518,6 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
                 transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
 
-
-
-
                 // Setup response to PersonExternalEducationCredentials read
                 entityCollection = new Collection<AcadCredentials>(_personExternalEducationCredentialsCollection.Select(record =>
                     new AcadCredentials()
@@ -566,6 +564,13 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 dataAccessorMock.Setup(ac => ac.SelectAsync("ACAD.CREDENTIALS", It.IsAny<string[]>(), It.IsAny<string>()))
 					.ReturnsAsync(new string[] { "1", "2", "3" });
 
+                //var externalEducationData = await DataReader.BulkReadRecordAsync<AcadCredentials>("ACAD.CREDENTIALS", subList);
+                var results = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.AcadCredentials>()
+                { 
+                    BulkRecordsRead = entityCollection 
+                };
+                dataAccessorMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.AcadCredentials>("ACAD.CREDENTIALS", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(results);
+
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<AcadCredentials>("ACAD.CREDENTIALS", It.IsAny<string[]>(), true))
                     .ReturnsAsync(entityCollection);
                 foreach (var entity in entityCollection)
@@ -579,6 +584,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 {
                     dataAccessorMock.Setup(acc => acc.ReadRecordAsync<DataContracts.InstitutionsAttend>(entity.Recordkey, true)).ReturnsAsync(entity);
                 }
+               
 
                 var defaults = new Defaults()
                 {
@@ -608,6 +614,36 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     };
                     return Task.FromResult(result);
                 });
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 2,
+                    CacheName = "PersonExternalEducationCredentialsKeys",
+                    Entity = "ACAD.CREDENTIALS",
+                    Sublist = new List<string> { "1", "2", "3" },
+                    TotalCount = 3,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+                };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
 
                 // Construct repository
                 var apiSettings = new ApiSettings("TEST");

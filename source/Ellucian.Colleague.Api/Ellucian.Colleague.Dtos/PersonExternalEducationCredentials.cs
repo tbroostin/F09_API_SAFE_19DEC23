@@ -1,5 +1,6 @@
-//Copyright 2019 Ellucian Company L.P. and its affiliates.
+//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
+using Ellucian.Colleague.Dtos.Attributes;
 using Ellucian.Colleague.Dtos.Converters;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Newtonsoft.Json;
@@ -18,6 +19,7 @@ namespace Ellucian.Colleague.Dtos
         /// The details of the external education associated with the credential.
         /// </summary>    
         [JsonProperty("externalEducation", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
         public GuidObject2 ExternalEducation { get; set; }
 
         /// <summary>

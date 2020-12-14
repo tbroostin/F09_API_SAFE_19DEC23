@@ -17,7 +17,8 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<Domain.Base.Entities.InstitutionsAttend> GetInstitutionAttendByIdAsync(string id);
 
         Task<Tuple<IEnumerable<Domain.Base.Entities.InstitutionsAttend>, int>> GetInstitutionsAttendAsync(int offset, int limit,
-            string personId = "", string[] filterPersonIds = null, string personFilter = "", bool bypassCache = false);
+            string personId = "", string[] filterPersonIds = null, string personFilter = "", string personByInstitutionTypePersonId = "",
+          InstType? typeFilter = null, bool bypassCache = false);
 
         Task<Dictionary<string, string>> GetInsAttendGuidsCollectionAsync(IEnumerable<string> insAttendIds);
 

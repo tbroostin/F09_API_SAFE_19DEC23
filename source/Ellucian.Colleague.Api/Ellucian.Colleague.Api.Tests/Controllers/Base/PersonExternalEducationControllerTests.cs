@@ -1,4 +1,4 @@
-﻿//Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -12,12 +12,13 @@ using System.Net.Http;
 using System.Web.Http.Hosting;
 using System.Web.Http;
 using Ellucian.Colleague.Coordination.Base.Services;
-using Ellucian.Web.Security;
-using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Api.Controllers;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Http.Models;
+using Ellucian.Colleague.Dtos.Filters;
+using Ellucian.Web.Security;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 {
@@ -140,9 +141,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                  new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
 
             PersonExternalEducationServiceMock.Setup(x => x.GetPersonExternalEducationAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<PersonExternalEducation>(),
-                It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(PersonExternalEducationTuple);
+                It.IsAny<string>(), It.IsAny<PersonByInstitutionType>(),  It.IsAny<bool>())).ReturnsAsync(PersonExternalEducationTuple);
 
-            var outcomes = await PersonExternalEducationController.GetPersonExternalEducationAsync(new Paging(3, 0), criteriaFilter, null);
+            var outcomes = await PersonExternalEducationController.GetPersonExternalEducationAsync(new Paging(3, 0), criteriaFilter, null, null);
 
             var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -168,9 +169,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
 
             PersonExternalEducationServiceMock.Setup(x => x.GetPersonExternalEducationAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<PersonExternalEducation>(), 
-                It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(PersonExternalEducationTuple);
+                It.IsAny<string>(), It.IsAny<PersonByInstitutionType>(), It.IsAny<bool>())).ReturnsAsync(PersonExternalEducationTuple);
 
-            var outcomes = (await PersonExternalEducationController.GetPersonExternalEducationAsync(new Web.Http.Models.Paging(3, 0), criteriaFilter, null));
+            var outcomes = (await PersonExternalEducationController.GetPersonExternalEducationAsync(new Web.Http.Models.Paging(3, 0), criteriaFilter, null, null));
 
             var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -204,8 +205,53 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         public async Task PersonExternalEducationController_GetPersonExternalEducation_Exception()
         {
             PersonExternalEducationServiceMock.Setup(x => x.GetPersonExternalEducationAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<PersonExternalEducation>(),
-                It.IsAny<string>(), It.IsAny<bool>())).Throws<Exception>();
-            await PersonExternalEducationController.GetPersonExternalEducationAsync(new Web.Http.Models.Paging(3, 0), criteriaFilter, null);
+                It.IsAny<string>(), It.IsAny<PersonByInstitutionType>(), It.IsAny<bool>())).Throws<Exception>();
+            await PersonExternalEducationController.GetPersonExternalEducationAsync(new Web.Http.Models.Paging(3, 0), criteriaFilter, null, null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonExternalEducationController_GetPersonExternalEducation_KeyNotFoundException()
+        {
+            PersonExternalEducationServiceMock.Setup(x => x.GetPersonExternalEducationAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<PersonExternalEducation>(),
+                It.IsAny<string>(), It.IsAny<PersonByInstitutionType>(), It.IsAny<bool>())).Throws<KeyNotFoundException>();
+            await PersonExternalEducationController.GetPersonExternalEducationAsync(new Web.Http.Models.Paging(3, 0), criteriaFilter, null, null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonExternalEducationController_GetPersonExternalEducation_PermissionsException()
+        {
+            PersonExternalEducationServiceMock.Setup(x => x.GetPersonExternalEducationAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<PersonExternalEducation>(),
+                It.IsAny<string>(), It.IsAny<PersonByInstitutionType>(), It.IsAny<bool>())).Throws<PermissionsException>();
+            await PersonExternalEducationController.GetPersonExternalEducationAsync(new Web.Http.Models.Paging(3, 0), criteriaFilter, null, null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonExternalEducationController_GetPersonExternalEducation_ArgumentException()
+        {
+            PersonExternalEducationServiceMock.Setup(x => x.GetPersonExternalEducationAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<PersonExternalEducation>(),
+                It.IsAny<string>(), It.IsAny<PersonByInstitutionType>(), It.IsAny<bool>())).Throws<ArgumentException>();
+            await PersonExternalEducationController.GetPersonExternalEducationAsync(new Web.Http.Models.Paging(3, 0), criteriaFilter, null, null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonExternalEducationController_GetPersonExternalEducation_RepositoryException()
+        {
+            PersonExternalEducationServiceMock.Setup(x => x.GetPersonExternalEducationAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<PersonExternalEducation>(),
+                It.IsAny<string>(), It.IsAny<PersonByInstitutionType>(), It.IsAny<bool>())).Throws<RepositoryException>();
+            await PersonExternalEducationController.GetPersonExternalEducationAsync(new Web.Http.Models.Paging(3, 0), criteriaFilter, null, null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonExternalEducationController_GetPersonExternalEducation_IntegrationApiExceptionException()
+        {
+            PersonExternalEducationServiceMock.Setup(x => x.GetPersonExternalEducationAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<PersonExternalEducation>(),
+                It.IsAny<string>(), It.IsAny<PersonByInstitutionType>(), It.IsAny<bool>())).Throws<IntegrationApiException>();
+            await PersonExternalEducationController.GetPersonExternalEducationAsync(new Web.Http.Models.Paging(3, 0), criteriaFilter, null, null);
         }
 
         [TestMethod]
@@ -213,6 +259,46 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         public async Task PersonExternalEducationController_GetPersonExternalEducationByGuidAsync_Exception()
         {
             PersonExternalEducationServiceMock.Setup(x => x.GetPersonExternalEducationByGuidAsync(It.IsAny<string>(), false)).Throws<Exception>();
+            await PersonExternalEducationController.GetPersonExternalEducationByGuidAsync(string.Empty);
+        }
+        
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonExternalEducationController_GetPersonExternalEducationByGuidAsync_KeyNotFoundException()
+        {
+            PersonExternalEducationServiceMock.Setup(x => x.GetPersonExternalEducationByGuidAsync(It.IsAny<string>(), false)).Throws<KeyNotFoundException>();
+            await PersonExternalEducationController.GetPersonExternalEducationByGuidAsync(string.Empty);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonExternalEducationController_GetPersonExternalEducationByGuidAsync_PermissionsException()
+        {
+            PersonExternalEducationServiceMock.Setup(x => x.GetPersonExternalEducationByGuidAsync(It.IsAny<string>(), false)).Throws<PermissionsException>();
+            await PersonExternalEducationController.GetPersonExternalEducationByGuidAsync(string.Empty);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonExternalEducationController_GetPersonExternalEducationByGuidAsync_ArgumentException()
+        {
+            PersonExternalEducationServiceMock.Setup(x => x.GetPersonExternalEducationByGuidAsync(It.IsAny<string>(), false)).Throws<ArgumentException>();
+            await PersonExternalEducationController.GetPersonExternalEducationByGuidAsync(string.Empty);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonExternalEducationController_GetPersonExternalEducationByGuidAsync_IntegrationApiException()
+        {
+            PersonExternalEducationServiceMock.Setup(x => x.GetPersonExternalEducationByGuidAsync(It.IsAny<string>(), false)).Throws<IntegrationApiException>();
+            await PersonExternalEducationController.GetPersonExternalEducationByGuidAsync(string.Empty);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonExternalEducationController_GetPersonExternalEducationByGuidAsync_RepositoryException()
+        {
+            PersonExternalEducationServiceMock.Setup(x => x.GetPersonExternalEducationByGuidAsync(It.IsAny<string>(), false)).Throws<RepositoryException>();
             await PersonExternalEducationController.GetPersonExternalEducationByGuidAsync(string.Empty);
         }
 
@@ -244,7 +330,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             PersonExternalEducationServiceMock.Setup(x => x.CreateUpdatePersonExternalEducationAsync(sourceContext, It.IsAny<bool>())).Throws<Exception>();
             await PersonExternalEducationController.PostPersonExternalEducationAsync(sourceContext);
         }
-
+   
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task PersonExternalEducationController_PutPersonExternalEducationAsync_Exception()

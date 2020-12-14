@@ -88,5 +88,15 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// Set of encumbrance activity detail for the GL account.
         /// </summary>
         public List<GlTransaction> EncumbranceTransactions { get; set; }
+
+        /// <summary>
+        /// Boolean flag indicating if justification note indicator should be shown for the GL Account.
+        /// </summary>
+        public bool ShowJustificationNotes { get; set; }
+
+        /// <summary>
+        /// The justification notes for the GL Account.
+        /// </summary>
+        public string JustificationNotes { get; set; }
     }
 }

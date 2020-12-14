@@ -1,5 +1,6 @@
 ﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 
@@ -225,5 +226,25 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Indicates whether this section should display a client-specified icon (when provided) in course catalog and section search
         /// </summary>
         public bool ShowSpecialIcon { get; set; }
+
+        /// <summary>
+        /// This indicates status of the section- if it is open or waitlisted. It is Open when there are no waitlist otherwise it is Waitlisted.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsStatusWaitlisted
+        {
+            get
+
+            {
+                if (this.Waitlisted > 0)
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+        }
     }
 }

@@ -162,13 +162,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             #region 1099MiContracts
             parm1099miContract = new Parm1099mi()
             {
-                P1099miTCoName = new List<string> {"Pacific University", "Ellucian University"},
-                P1099miTCoAddr = new List<string> {"234 Street", "123 Fairy lakes" },
-                P1099miTCoCity = new List<string> {"City123", "City" },
-                P1099miTState = new List<string> {"SD", "ST" },
-                P1099miTZip = new List<string> {"7654321","1234567" },
-                P1099miTTransmitterId = new List<string> {"0000041", transmitterId },
-                P1099miTTransmitterTin = new List<string> {"12312312",transmitterEin },
+                P1099miTCoName = new List<string> { "Pacific University", "Ellucian University" },
+                P1099miTCoAddr = new List<string> { "234 Street", "123 Fairy lakes" },
+                P1099miTCoCity = new List<string> { "City123", "City" },
+                P1099miTState = new List<string> { "SD", "ST" },
+                P1099miTZip = new List<string> { "7654321", "1234567" },
+                P1099miTTransmitterId = new List<string> { "0000041", transmitterId },
+                P1099miTTransmitterTin = new List<string> { "12312312", transmitterEin },
+                P1099miTContactPhone = new List<string> {"9739000000","9739787651" },
+                P1099miTContactExtension = new List<string> { "12345", "12345" },
                 P1099miPhoneNumber ="9876543210",
                 P1099miPhoneExtension = "123"
                 
@@ -1242,7 +1244,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(parm1099miContract.P1099miTCoAddr[1], actualPdfData.PayerAddressLine1);
             Assert.AreEqual(parm1099miContract.P1099miTCoCity[1] + " " + parm1099miContract.P1099miTState[1] + " " + parm1099miContract.P1099miTZip[1], actualPdfData.PayerAddressLine2);
             Assert.AreEqual("", actualPdfData.PayerAddressLine3);
-            Assert.AreEqual("987-654-3210 " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+            Assert.AreEqual("973-978-7651 12345", actualPdfData.PayerAddressLine4);
             
             // Check the recipient specific boxes
             Assert.IsTrue(!string.IsNullOrEmpty(actualPdfData.Ein));
@@ -1310,17 +1312,21 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         [TestMethod]
         public async Task GetForm1099MiPdfDataAsync_TransmitterPhone_Contains_Hyphen_Request()
         {
-            parm1099miContract.P1099miPhoneNumber = "987-654-3210";
+            parm1099miContract.P1099miTContactPhone = new List<string> { "", "987-654-3210" };
+            parm1099miContract.P1099miTContactExtension = new List<string> { "12345", "12345" };
+            parm1099miContract.buildAssociations();
             var actualPdfData = await repository.GetForm1099MiPdfDataAsync("1", "201");
-            Assert.AreEqual(parm1099miContract.P1099miPhoneNumber + " " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+            Assert.AreEqual(parm1099miContract.P1099miTContactPhone[1] + " " + parm1099miContract.P1099miTContactExtension[1], actualPdfData.PayerAddressLine4);
         }
 
         [TestMethod]
         public async Task GetForm1099MiPdfDataAsync_TransmitterPhone_LengthMoreThan10_Request()
         {
-            parm1099miContract.P1099miPhoneNumber = "98765432101";
-            var actualPdfData = await repository.GetForm1099MiPdfDataAsync("1", "201");
-            Assert.AreEqual(parm1099miContract.P1099miPhoneNumber + " " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+            parm1099miContract.P1099miTContactPhone = new List<string> {"", "98765432101"};
+            parm1099miContract.P1099miTContactExtension = new List<string> { "12345", "12345" };
+            parm1099miContract.buildAssociations();
+            var actualPdfData = await repository.GetForm1099MiPdfDataAsync("1", "202");
+            Assert.AreEqual(parm1099miContract.P1099miTContactPhone[1] + " " + parm1099miContract.P1099miTContactExtension[1], actualPdfData.PayerAddressLine4);
         }
 
         [TestMethod]
@@ -1368,7 +1374,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine1));
             Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine2));
             Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine3));
-            Assert.AreEqual("987-654-3210 " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+            Assert.AreEqual("973-978-7651 12345", actualPdfData.PayerAddressLine4);
         }
         [TestMethod]
         public async Task GetForm1099MiPdfDataAsync_AddressHierarchy_Null_Request()
@@ -1381,7 +1387,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine1));
             Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine2));
             Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine3));
-            Assert.AreEqual("987-654-3210 " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+            Assert.AreEqual("973-978-7651 12345", actualPdfData.PayerAddressLine4);
         }
 
         [TestMethod]
@@ -1396,7 +1402,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine1));
             Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine2));
             Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine3));
-            Assert.AreEqual("987-654-3210 " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+            Assert.AreEqual("973-978-7651 12345", actualPdfData.PayerAddressLine4);
         }
 
         [TestMethod]
@@ -1411,7 +1417,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine1));
             Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine2));
             Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine3));
-            Assert.AreEqual("987-654-3210 " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+            Assert.AreEqual("973-978-7651 12345", actualPdfData.PayerAddressLine4);
         }
 
         [TestMethod]
@@ -1426,7 +1432,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(txGetHierarchyAddressResponse.OutAddressLabel[0] + " " + txGetHierarchyAddressResponse.OutAddressLabel[1], actualPdfData.PayerAddressLine1);
             Assert.AreEqual(txGetHierarchyAddressResponse.OutAddressLabel[2] + " " + txGetHierarchyAddressResponse.OutAddressLabel[3], actualPdfData.PayerAddressLine2);
             Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine3));
-            Assert.AreEqual("987-654-3210 " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+            Assert.AreEqual("973-978-7651 12345", actualPdfData.PayerAddressLine4);
         }
 
         [TestMethod]
@@ -1444,7 +1450,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(txGetHierarchyAddressResponse.OutAddressLines[0] + " " + txGetHierarchyAddressResponse.OutAddressLines[1], actualPdfData.PayerAddressLine1);
             Assert.AreEqual("city, ST 1234567", actualPdfData.PayerAddressLine2);
             Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine3));
-            Assert.AreEqual("987-654-3210 " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+            Assert.AreEqual("973-978-7651 12345", actualPdfData.PayerAddressLine4);
         }
 
         [TestMethod]
@@ -1462,7 +1468,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(txGetHierarchyAddressResponse.OutAddressLines[0] + " " + txGetHierarchyAddressResponse.OutAddressLines[1], actualPdfData.PayerAddressLine1);
             Assert.AreEqual("city, ST 1234567", actualPdfData.PayerAddressLine2);
             Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine3));
-            Assert.AreEqual("987-654-3210 " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+            Assert.AreEqual("973-978-7651 12345", actualPdfData.PayerAddressLine4);
         }
 
         [TestMethod]
@@ -1483,7 +1489,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(parm1099miContract.P1099miTCoAddr[1], actualPdfData.PayerAddressLine1);
             Assert.AreEqual(parm1099miContract.P1099miTCoCity[1] + " " + parm1099miContract.P1099miTState[1] + " " + parm1099miContract.P1099miTZip[1], actualPdfData.PayerAddressLine2);
             Assert.AreEqual("", actualPdfData.PayerAddressLine3);
-            Assert.AreEqual("987-654-3210 " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+            Assert.AreEqual("973-978-7651 12345", actualPdfData.PayerAddressLine4);
 
             // Check the recipient specific boxes
             Assert.IsTrue(!string.IsNullOrEmpty(actualPdfData.Ein));

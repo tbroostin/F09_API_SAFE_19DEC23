@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -85,6 +85,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
         #endregion
 
+        #region Tests for 1098-T
         [TestMethod]
         public async Task GetAsync_1098t_Success()
         {
@@ -102,7 +103,24 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Assert.AreEqual(personContract.Ssn, pdfData.SSN);
         }
 
-        #region Tests
+        [TestMethod]
+        public async Task GetAsync_1098t_NoReportableAmountsIn2019()
+        {
+            form1098contract.Tf98fTaxYear = 2019;
+            var pdfData = await actualRepository.Get1098PdfAsync("0003946", "1");
+
+            Assert.AreEqual(null, pdfData);
+        }
+
+        [TestMethod]
+        public async Task GetAsync_1098t_NoReportableAmountsIn2020()
+        {
+            form1098contract.Tf98fTaxYear = 2020;
+            var pdfData = await actualRepository.Get1098PdfAsync("0003946", "1");
+
+            Assert.AreEqual(null, pdfData);
+        }
+
         [TestMethod]
         public async Task GetAsync_1098t_NullTf98fTaxForm1098Boxes()
         {
@@ -280,7 +298,9 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             Assert.AreEqual(line2, actualStatements.StudentAddressLine2);
         }
+        #endregion
 
+        #region Tests for 1098-E
         [TestMethod]
         public async Task GetAsync_1098e_Success()
         {
@@ -298,9 +318,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Assert.AreEqual(form1098contract.Tf98fInstitution, pdfData.InstitutionId);
             Assert.AreEqual(personContract.Ssn, pdfData.SSN);
         }
-        #endregion
 
-        #region Tests
         [TestMethod]
         public async Task GetAsync_1098e_NullTf98fTaxForm1098Boxes()
         {

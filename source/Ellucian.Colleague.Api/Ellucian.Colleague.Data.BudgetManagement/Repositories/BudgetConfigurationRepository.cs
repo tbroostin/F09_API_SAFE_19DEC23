@@ -1,4 +1,5 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Data.BudgetManagement.DataContracts;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.BudgetManagement.Entities;
@@ -41,7 +42,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                 throw new ApplicationException("The available working budget for Self-Service does not exist in Colleague.");
             }
 
-            var budgetDataContract = await DataReader.ReadRecordAsync<Budget>("BUDGET", buDevDataContract.BudDevBudget);
+            var budgetDataContract = await DataReader.ReadRecordAsync<DataContracts.Budget>("BUDGET", buDevDataContract.BudDevBudget);
             if (budgetDataContract == null)
             {
                 throw new KeyNotFoundException(string.Format("No BUDGET record was found for ID {0}.", buDevDataContract.BudDevBudget));

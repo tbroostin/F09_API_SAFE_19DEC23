@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 
@@ -36,25 +36,25 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         {
             if (string.IsNullOrEmpty(guid))
             {
-                throw new ArgumentNullException(string.Format("Guid is required. Id: {0}", id));
+                throw new ArgumentException(string.Format("GUID is required. Id: '{0}'", id));
             }
             if (string.IsNullOrEmpty(id))
             {
-                throw new ArgumentNullException(string.Format("Accounting string is required. Guid: {0}", guid));
+                throw new ArgumentException(string.Format("Accounting string is required. GUID: '{0}'", guid));
             }
             if (string.IsNullOrEmpty(description))
             {
-                throw new ArgumentNullException(string.Format("Description is required. Guid: {0}", guid));
+                throw new ArgumentException(string.Format("Description is required. GUID: '{0}'", guid));
             }
             if (!transactionDate.HasValue)
             {
-                throw new ArgumentNullException(string.Format("Transaction date is required. Guid: {0}", guid));
+                throw new ArgumentException(string.Format("Transaction date is required. GUID: '{0}'", guid));
             }
             //if (debit == 0) debit = null;
             //if (credit == 0) credit = null;
             if ((!debit.HasValue && !credit.HasValue) || (debit == 0 && credit == 0))
             {
-                throw new ArgumentNullException("Credit/Debit value is required.");
+                throw new ArgumentException(string.Format("Credit/Debit value is required. GUID: '{0}'", guid));
             }
 
             RecordGuid = guid;

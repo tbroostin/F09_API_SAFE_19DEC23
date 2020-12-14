@@ -396,6 +396,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <returns>A list of cost centers.</returns>
         /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
         /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        [Obsolete("Obsolete as of API 1.29. Use QueryCostCentersAsync.")]
         public async Task<IEnumerable<CostCenter>> GetCostCentersAsync(string fiscalYear)
         {
             try
@@ -624,6 +625,7 @@ namespace Ellucian.Colleague.Api.Client
 
         #endregion
 
+        #region Next Approvers
         /// <summary>
         /// Validate a next approver ID.
         /// </summary>
@@ -664,6 +666,50 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+        /// <summary>
+        /// Get the list of approver based on keyword search.
+        /// </summary>
+        /// <param name="queryKeyword"> The search criteria get list of next Approver.</param>
+        /// <returns> The approver search results</returns>
+        /// <exception cref="ResourceNotFoundException">Unable to perform next approver search.</exception>
+        /// <exception cref="Exception">Unable to perform next approver search.</exception>
+        public async Task<IEnumerable<NextApprover>> GetNextApproverByKeywordAsync(string queryKeyword)
+        {
+            if (string.IsNullOrEmpty(queryKeyword))
+            {
+                throw new ArgumentNullException("criteria", "next approver query criteria cannot be empty.");
+            }
+            try
+            {
+                // Create and execute a request to get the search next approver by keyword.
+                string[] pathStrings = new string[] { _searchNextApproversPath, queryKeyword };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                // Add version header
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                // Use URL path and request data to call the web api method (including query string)
+                var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<NextApprover>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let the calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to perform next approver search.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to perform next approver search.");
+                throw;
+            }
+        }
+
+        #endregion
+        
         #region General Ledger Configuration
 
         /// <summary>
@@ -2474,6 +2520,122 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
+        /// <summary>
+        /// Get the list of initiator based on keyword search.
+        /// </summary>
+        /// <param name="queryKeyword"> The search criteria get list of initiator.</param>
+        /// <returns> The initiator search results</returns>
+        /// <exception cref="ResourceNotFoundException">Unable to perform staff search.</exception>
+        /// <exception cref="Exception">Unable to perform staff search.</exception>
+        public async Task<IEnumerable<Initiator>> GetInitiatorByKeywordAsync(string queryKeyword)
+        {
+            if (string.IsNullOrEmpty(queryKeyword))
+            {
+                throw new ArgumentNullException("criteria", "initiator query criteria cannot be empty.");
+            }
+            try
+            {
+                // Create and execute a request to get the search initiator by keyword.
+                string[] pathStrings = new string[] { _initiatorPath, queryKeyword };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                // Add version header
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                // Use URL path and request data to call the web api method (including query string)
+                var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<Initiator>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let the calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to perform initiator search.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to perform initiator search.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the projects based on filter criteria.
+        /// </summary>
+        /// <param name="criteria">The <see cref="Dtos.ColleagueFinance.ProjectQueryCriteria"> criteria</see> to query by.</param>
+        /// <returns>Projects that match the query criteria.</returns>
+        public async Task<IEnumerable<Project>> QueryProjectsAsync(ProjectQueryCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria", "Project query criteria cannot be null.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _projectsPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                // Add version header
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                // Use URL path and request data to call web api method (including query string)
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<Project>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get filtered projects.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get filtered projects.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves list of vouchers by vendor id and invoice number
+        /// </summary>
+        /// <param name="vendorId">Vendor id</param>
+        /// <param name="invoiceNo">Invoice number</param>
+        /// <returns>list of Vouchers</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<Voucher2>> GetVouchersByVendorAndInvoiceNoAsync(string vendorId, string invoiceNo)
+        {           
+            try
+            {
+                var query = UrlUtility.BuildEncodedQueryString(new[] { "vendorId", vendorId, "invoiceNo", invoiceNo });
+                string urlPath = UrlUtility.CombineUrlPathAndArguments(_vouchersPath, query);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<Voucher2>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get voucher's.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get voucher's.");
+                throw;
+            }
+        }
+
+
     }
 }
 

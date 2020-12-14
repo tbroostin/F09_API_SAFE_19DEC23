@@ -1,4 +1,4 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -52,14 +52,16 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <summary>
         /// Gets all the pay cycles available for an institution.
         /// A pay cycle describes a date interval to which employee time worked is applied and processed
+        /// Results can be limited by passing in a lookback date. Pay Periods with end dates before the specified lookback date will be omitted.
         /// </summary>
+        /// <param name="lookbackDate">A optional date which is used to filter previous pay periods with end dates prior to this date.</param>
         /// <returns>A List of pay cycle dtos</returns>
         [HttpGet]
-        public async Task<IEnumerable<PayCycle>> GetPayCyclesAsync()
+        public async Task<IEnumerable<PayCycle>> GetPayCyclesAsync(DateTime? lookbackDate = null)
         {
             try
             {
-                return await payCycleService.GetPayCyclesAsync();
+                return await payCycleService.GetPayCyclesAsync(lookbackDate);
             }
             catch (Exception e)
             {

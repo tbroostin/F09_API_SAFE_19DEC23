@@ -285,7 +285,10 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
                                         }
                                         else
                                         {
-                                            logger.Error("No student advisement record found for student advisement id " + studentAdvisementId + " for Faculty " + advisorId);
+                                            if (adviseeInclusionType != AdviseeInclusionType.NoAdvisees)
+                                            {
+                                                logger.Error("No student advisement record found for student advisement id " + studentAdvisementId + " for Faculty " + advisorId);
+                                            }
                                         }
                                     }
                                 }

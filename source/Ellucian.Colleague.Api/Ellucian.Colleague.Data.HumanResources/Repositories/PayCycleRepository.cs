@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2019 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
@@ -83,8 +83,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <summary>
         /// Get all PayCycle objects, built from database data
         /// </summary>
+        /// <param name="lookbackDate">A optional date which is used to filter previous pay periods with end dates prior to this date.</param>
         /// <returns></returns>
-        public async Task<IEnumerable<PayCycle>> GetPayCyclesAsync()
+        public async Task<IEnumerable<PayCycle>> GetPayCyclesAsync(DateTime? lookbackDate = null)
         {
             var payControlRecords = await GetAllPayControlAsync();
 
@@ -106,7 +107,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         {
                             var payControlRecordsForThisCycle = payControlRecords.Where(pc => pc.Recordkey.EndsWith("*" + payCycleRecord.Recordkey));
                             // build the paycycle object (whose value will be referenced by the validPayCycleEntityToAdd variable)
-                            var validPayCycleEntityToAdd = await BuildPayCycle(payCycleRecord, payControlRecordsForThisCycle);
+                            var validPayCycleEntityToAdd = await BuildPayCycle(payCycleRecord, payControlRecordsForThisCycle, lookbackDate);
                             // if it was successfully created, we can add it to our list, and reset the variable
                             if (validPayCycleEntityToAdd != null)
                             {
@@ -198,7 +199,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                   , Level1CacheTimeoutValue)).Where(pcf => pcf != null));
         }
 
-        private async Task<PayCycle> BuildPayCycle(DataContracts.Paycycle payCycleRecord, IEnumerable<DataContracts.Paycntrl> payControlRecordsForThisCycle)
+        private async Task<PayCycle> BuildPayCycle(DataContracts.Paycycle payCycleRecord, IEnumerable<DataContracts.Paycntrl> payControlRecordsForThisCycle, DateTime? lookbackDate = null)
         {
             if (payCycleRecord == null)
             {
@@ -215,8 +216,19 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 try
                 {
-                    var payPeriodEntity = await BuildPayPeriod(payPeriodRecord, payCycleRecord, payControlRecordsForThisCycle);
-                    payPeriodEntities.Add(payPeriodEntity);
+                    // if there is a lookback start date set: only add pays periods that have end dates AFTER that date
+                    if (lookbackDate.HasValue && payPeriodRecord.PcyEndDateAssocMember.HasValue)
+                    {
+                        // date checking for end dates that are on or after the lookback date
+                        if (DateTime.Compare(payPeriodRecord.PcyEndDateAssocMember.Value, lookbackDate.Value) >= 0) {
+                            payPeriodEntities.Add(await BuildPayPeriod(payPeriodRecord, payCycleRecord, payControlRecordsForThisCycle));
+                        }
+                    }
+                    // else if: check to see if there is a start and end date set. If so- add the pay period
+                    else if (payPeriodRecord.PcyStartDateAssocMember.HasValue && payPeriodRecord.PcyEndDateAssocMember.HasValue)
+                    {
+                        payPeriodEntities.Add(await BuildPayPeriod(payPeriodRecord, payCycleRecord, payControlRecordsForThisCycle));
+                    }
                 }
                 catch (Exception e)
                 {

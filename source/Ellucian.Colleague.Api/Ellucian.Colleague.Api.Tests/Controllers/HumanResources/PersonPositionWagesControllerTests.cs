@@ -91,7 +91,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
                 EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
                 PersonPositionWagesControllerTestsInitialize();
 
-                personPositionWageServiceMock.Setup(s => s.GetPersonPositionWagesAsync(null))
+                personPositionWageServiceMock.Setup(s => s.GetPersonPositionWagesAsync(null, null))
                     .Returns(async () => await getExpectedPersonPositionWages());
             }
 
@@ -108,7 +108,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             [ExpectedException(typeof(HttpResponseException))]
             public async Task CatchGenericExceptionTest()
             {
-                personPositionWageServiceMock.Setup(s => s.GetPersonPositionWagesAsync(null)).Throws(new Exception());
+                personPositionWageServiceMock.Setup(s => s.GetPersonPositionWagesAsync(null, null)).Throws(new Exception());
 
                 try
                 {

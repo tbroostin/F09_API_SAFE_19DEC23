@@ -146,6 +146,19 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         /// <returns>Collection of FiscalYears</returns>
         Task<IEnumerable<Domain.ColleagueFinance.Entities.FiscalYear>> GetFiscalYearsAsync(bool ignoreCache);
 
+        /// <summary>
+        /// Get a collection of FxaTransferFlags
+        /// </summary>
+        /// <param name="ignoreCache">Bypass cache flag</param>
+        /// <returns>Collection of FxaTransferFlags</returns>
+        Task<IEnumerable<FxaTransferFlags>> GetFxaTransferFlagsAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get guid for FxaTransferFlag code
+        /// </summary>
+        /// <param name="code">FxaTransferFlag code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetFxaTransferFlagGuidAsync(string code);
 
         /// <summary>
         /// Returns domain entities for free on board types.

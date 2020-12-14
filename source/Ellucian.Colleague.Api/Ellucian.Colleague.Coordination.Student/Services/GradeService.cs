@@ -111,7 +111,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new KeyNotFoundException("Grade not found for GUID " + id, ex);
             }
-            catch (NullReferenceException nex)
+            catch (NullReferenceException)
             {
                 throw new NullReferenceException("Id must be specified.");
             }
@@ -156,7 +156,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new KeyNotFoundException("Grade not found for GUID " + id, ex);
             }
-            catch (NullReferenceException nex)
+            catch (NullReferenceException)
             {
                 throw new NullReferenceException("Id must be specified.");
             }
@@ -306,14 +306,28 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             var grade = new Ellucian.Colleague.Dtos.Grade();
             var gradeScheme = (await GradeSchemesAsync()).Where(gs => gs != null && gs.Code == response.GradeSchemeCode).FirstOrDefault();
-            var gradeSchemeGuid = gradeScheme != null ? gradeScheme.Guid : null;
+            if (gradeScheme == null)
+            {
+                throw new ArgumentNullException("Bad.Data", string.Format("The GradeScheme '{0}' is missing or invalid.  Referenced in grade record '{1}'. ", response.GradeSchemeCode, response.Id));
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(gradeScheme.Guid))
+                {
+                    throw new ArgumentNullException("GUID.Not.Found", string.Format("The GUID is missing for GradeScheme '{0}' referenced in grade record '{1}', GUID '{2}'. ", response.GradeSchemeCode, response.Id, response.Guid));
+                }
+                else
+                {
+                    var gradeSchemeGuid = gradeScheme != null ? gradeScheme.Guid : null;
 
-            grade.Id = response.Guid;
-            grade.GradeScheme = new Dtos.GuidObject2(gradeSchemeGuid);
-            grade.GradeItem = new Dtos.GradeItem() { GradeItemType = Dtos.GradeItemType.Literal, GradeValue = response.LetterGrade };
-            grade.GradeCmplCreditType = ConvertGradeCmplCode(response.Credit);
-            grade.EquivalentTo = null;
-            
+                    grade.Id = response.Guid;
+                    grade.GradeScheme = new Dtos.GuidObject2(gradeSchemeGuid);
+                    grade.GradeItem = new Dtos.GradeItem() { GradeItemType = Dtos.GradeItemType.Literal, GradeValue = response.LetterGrade };
+                    grade.GradeCmplCreditType = ConvertGradeCmplCode(response.Credit);
+                    grade.EquivalentTo = null;
+                }
+            }
+
             return grade;
         }
 
@@ -327,29 +341,40 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var gradeDefinitionsMaximum = new Dtos.GradeDefinitionsMaximum();
             var gradeSchemeProperty = new Dtos.GradeSchemeProperty();
             var gradeScheme = (await GradeSchemesAsync()).FirstOrDefault(x=> x.Code == response.GradeSchemeCode);
-            if (gradeScheme != null)
+            if (gradeScheme == null)
             {
-                gradeSchemeProperty.EndOn = gradeScheme.EffectiveEndDate;
-                gradeSchemeProperty.StartOn = gradeScheme.EffectiveStartDate;
-                gradeSchemeProperty.Detail = new Dtos.GuidObject2() { Id = gradeScheme.Guid };
-                gradeSchemeProperty.Code = gradeScheme.Code;
-                gradeSchemeProperty.Title = gradeScheme.Description;
-
-                var acadLevel = (await studentReferenceDataRepository.GetAcademicLevelsAsync()).FirstOrDefault(al => al.GradeScheme == gradeScheme.Code);
-                if (acadLevel != null)
-                {
-                    var acadLevelProperty = new Dtos.AcademicLevelProperty();
-                    acadLevelProperty.Code = acadLevel.Code;
-                    acadLevelProperty.Title = acadLevel.Description;
-                    acadLevelProperty.Detail = new Dtos.GuidObject2() { Id = acadLevel.Guid };
-                    gradeSchemeProperty.AcademicLevel = acadLevelProperty;          
-                }                
+                throw new ArgumentNullException("Bad.Data", string.Format("The GradeScheme '{0}' is missing or invalid.  Referenced in grade record '{1}'. ", response.GradeSchemeCode, response.Id));
             }
-            gradeDefinitionsMaximum.Id = response.Guid;
-            gradeDefinitionsMaximum.GradeScheme = gradeSchemeProperty;
-            gradeDefinitionsMaximum.GradeItem = new Dtos.GradeItem() { GradeItemType = Dtos.GradeItemType.Literal, GradeValue = response.LetterGrade };
-            gradeDefinitionsMaximum.GradeCmplCreditType = ConvertGradeCmplCode(response.Credit);
-            gradeDefinitionsMaximum.EquivalentTo = null;
+            else
+            {
+                if (string.IsNullOrEmpty(gradeScheme.Guid))
+                {
+                    throw new ArgumentNullException("GUID.Not.Found", string.Format("The GUID is missing for GradeScheme '{0}' referenced in grade record '{1}', GUID '{2}'. ", response.GradeSchemeCode, response.Id, response.Guid));
+                }
+                else
+                {
+                    gradeSchemeProperty.EndOn = gradeScheme.EffectiveEndDate;
+                    gradeSchemeProperty.StartOn = gradeScheme.EffectiveStartDate;
+                    gradeSchemeProperty.Detail = new Dtos.GuidObject2() { Id = gradeScheme.Guid };
+                    gradeSchemeProperty.Code = gradeScheme.Code;
+                    gradeSchemeProperty.Title = gradeScheme.Description;
+
+                    var acadLevel = (await studentReferenceDataRepository.GetAcademicLevelsAsync()).FirstOrDefault(al => al.GradeScheme == gradeScheme.Code);
+                    if (acadLevel != null)
+                    {
+                        var acadLevelProperty = new Dtos.AcademicLevelProperty();
+                        acadLevelProperty.Code = acadLevel.Code;
+                        acadLevelProperty.Title = acadLevel.Description;
+                        acadLevelProperty.Detail = new Dtos.GuidObject2() { Id = acadLevel.Guid };
+                        gradeSchemeProperty.AcademicLevel = acadLevelProperty;          
+                    }
+                }
+                gradeDefinitionsMaximum.Id = response.Guid;
+                gradeDefinitionsMaximum.GradeScheme = gradeSchemeProperty;
+                gradeDefinitionsMaximum.GradeItem = new Dtos.GradeItem() { GradeItemType = Dtos.GradeItemType.Literal, GradeValue = response.LetterGrade };
+                gradeDefinitionsMaximum.GradeCmplCreditType = ConvertGradeCmplCode(response.Credit);
+                gradeDefinitionsMaximum.EquivalentTo = null;
+            }
 
             return gradeDefinitionsMaximum;
         }

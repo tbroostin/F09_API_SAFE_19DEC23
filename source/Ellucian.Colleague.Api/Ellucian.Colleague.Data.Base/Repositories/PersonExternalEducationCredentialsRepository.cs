@@ -36,7 +36,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             CacheTimeout = Level1CacheTimeoutValue;
             this._readSize = ((apiSettings != null) && (apiSettings.BulkReadSize > 0)) ? apiSettings.BulkReadSize : 5000;
         }
-
+        
         /// <summary>
         ///  Get all external education data consisting of academic credential data, excluding home insitution,
         /// along with some data from institutions attended
@@ -45,9 +45,12 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="limit"></param>
         /// <param name="filterPersonIds"></param>
         /// <param name="personFilter"></param>
+        /// <param name="personId"></param>
+        /// <param name="externalEducationID"></param>
         /// <param name="bypassCache"></param>
         /// <returns>Collection of ExternalEducation domain entities</returns>
-        public async Task<Tuple<IEnumerable<ExternalEducation>, int>> GetExternalEducationCredentialsAsync(int offset, int limit, string[] filterPersonIds = null, string personFilter = "", bool bypassCache = false)
+        public async Task<Tuple<IEnumerable<ExternalEducation>, int>> GetExternalEducationCredentialsAsync(int offset, int limit,
+            string[] filterPersonIds = null, string personFilter = "", string personId = "", string externalEducationID = "", bool bypassCache = false)
         {
             var criteria = string.Empty;
             var coreDefaultData = await GetDefaults();
@@ -67,7 +70,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 try
                 {
-                    string institutionAttendPersonFilterKey = CacheSupport.BuildCacheKey("ExternalEducationPersonFilterKeys", personFilter);
+                    string institutionAttendPersonFilterKey = CacheSupport.BuildCacheKey("ExternalEducationPersonFilterKeys", personFilter,
+                       filterPersonIds.Count().ToString());
                     if (offset == 0 && ContainsKey(BuildFullCacheKey(institutionAttendPersonFilterKey)))
                     {
                         ClearCache(new List<string> { institutionAttendPersonFilterKey });
@@ -106,27 +110,34 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                List<string> acadCredIds = new List<string>();
 
                                var instAttendIds = await DataReader.SelectAsync("INSTITUTIONS.ATTEND", IdsFromStuFil.Distinct().ToArray(), "WITH INSTA.ACAD.CREDENTIALS NE ''");
-                               columns = await DataReader.BatchReadRecordColumnsAsync("INSTITUTIONS.ATTEND", instAttendIds, new string[] { "INSTA.ACAD.CREDENTIALS" });
 
-                               foreach (KeyValuePair<string, Dictionary<string, string>> entry in columns)
+                               if (instAttendIds != null && instAttendIds.Any())
                                {
-                                   var instAttendId = entry.Key;
-                                   foreach (KeyValuePair<string, string> institutitionsAttended in entry.Value)
+                                   columns = await DataReader.BatchReadRecordColumnsAsync("INSTITUTIONS.ATTEND", instAttendIds, new string[] { "INSTA.ACAD.CREDENTIALS" });
+
+                                   foreach (KeyValuePair<string, Dictionary<string, string>> entry in columns)
                                    {
-                                       var acadCredentials = institutitionsAttended.Value.Split(_VM);
-                                       foreach (var acadCredKey in acadCredentials)
+                                       var instAttendId = entry.Key;
+                                       foreach (KeyValuePair<string, string> institutitionsAttended in entry.Value)
                                        {
-                                           if (!string.IsNullOrEmpty(acadCredKey))
+                                           var acadCredentials = institutitionsAttended.Value.Split(_VM);
+                                           foreach (var acadCredKey in acadCredentials)
                                            {
-                                               acadCredIds.Add(acadCredKey);
+                                               if (!string.IsNullOrEmpty(acadCredKey))
+                                               {
+                                                   acadCredIds.Add(acadCredKey);
+                                               }
                                            }
                                        }
                                    }
-                               }
-                               acadCredentialsLimitingKeys.AddRange(acadCredIds);
-                           }
 
-                           acadCredentialsLimitingKeys.Sort();
+                                   acadCredentialsLimitingKeys.AddRange(acadCredIds);
+                               }
+                           }
+                           if (acadCredentialsLimitingKeys.Any())
+                           {
+                               acadCredentialsLimitingKeys.Sort();
+                           }
                            return acadCredentialsLimitingKeys;
                        }, 20);
 
@@ -146,29 +157,104 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             #endregion
 
-            string personExternalEducationCredentialsKey = CacheSupport.BuildCacheKey("PersonExternalEducationCredentialsKeys", personFilter);
-            if (offset == 0 && ContainsKey(BuildFullCacheKey(personExternalEducationCredentialsKey)))
+            #region externalEducation filter
+            //WITH ACAD.PERSON.ID EQ 'the first part of the key' AND ACAD.INSTITUTION.ID EQ 'the second part of the key'
+            if (!string.IsNullOrEmpty(externalEducationID))
             {
-                ClearCache(new List<string> { personExternalEducationCredentialsKey });
+                var externalEducation = externalEducationID.Split('*');
+                if (externalEducation != null && externalEducation.Count() > 1)
+                {
+                    var externalEducationPersonId = externalEducation[0];
+                    var externalEducationInstitutionId = externalEducation[1];
+
+                    if (!string.IsNullOrEmpty(criteria))
+                    {
+                        criteria += " AND ";
+                    }
+                    criteria += string.Format("WITH ACAD.PERSON.ID EQ '{0}' AND ACAD.INSTITUTIONS.ID EQ '{1}'", externalEducationPersonId, externalEducationInstitutionId);
+                }
+            }
+            #endregion
+
+            #region personId filter
+
+            if (!string.IsNullOrEmpty(personId))
+            {
+
+                if (!string.IsNullOrEmpty(criteria))
+                {
+                    criteria += " AND ";
+                }
+                criteria += string.Format("WITH ACAD.PERSON.ID EQ '{0}'", personId);
             }
 
-            var acadCredentialsIds = await GetOrAddToCacheAsync<string[]>(personExternalEducationCredentialsKey,
-               async () =>
-               {
-                   var acadCredentialIds = await DataReader.SelectAsync("ACAD.CREDENTIALS", limitingKeys, criteria);
-                   Array.Sort(acadCredentialIds);
-                   return acadCredentialIds;
-               }, 20);
+            #endregion
 
-            if (acadCredentialsIds == null || !acadCredentialsIds.Any())
+            string personExternalEducationCredentialsKey = CacheSupport.BuildCacheKey("PersonExternalEducationCredentialsKeys", personFilter,
+               filterPersonIds != null && filterPersonIds.Any() ? filterPersonIds.Count().ToString() : "", personId, externalEducationID);
+           
+            var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                personExternalEducationCredentialsKey,
+                "ACAD.CREDENTIALS",
+                offset,
+                limit,
+                20,
+                async () =>
+                {
+                    CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
+                    {
+                        limitingKeys = limitingKeys != null && limitingKeys.Any() ? limitingKeys.Distinct().ToList() : null,
+                        criteria = criteria
+                    };
+                    return requirements;
+                }
+            );
+
+            if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
             {
                 return new Tuple<IEnumerable<ExternalEducation>, int>(new List<ExternalEducation>(), 0);
             }
-            totalCount = acadCredentialsIds.Count();
+            var subList = keyCacheObject.Sublist.ToArray();
+            totalCount = keyCacheObject.TotalCount.Value;
 
-            var subList = acadCredentialsIds.Skip(offset).Take(limit).ToArray();
-            var externalEducationData = await DataReader.BulkReadRecordAsync<AcadCredentials>("ACAD.CREDENTIALS", subList);
+            //var externalEducationData = await DataReader.BulkReadRecordAsync<AcadCredentials>("ACAD.CREDENTIALS", subList);
+            var acadCredentialData = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.AcadCredentials>("ACAD.CREDENTIALS", subList);
 
+            if (acadCredentialData.Equals(default(BulkReadOutput<DataContracts.AcadCredentials>)))
+            {
+                return new Tuple<IEnumerable<ExternalEducation>, int>(new List<ExternalEducation>(), 0);
+            }
+            if ((acadCredentialData.InvalidKeys != null && acadCredentialData.InvalidKeys.Any())
+                    || (acadCredentialData.InvalidRecords != null && acadCredentialData.InvalidRecords.Any()))
+            {
+                var repositoryException = new RepositoryException();
+
+                if (acadCredentialData.InvalidKeys.Any())
+                {
+                    repositoryException.AddErrors(acadCredentialData.InvalidKeys
+                        .Select(key => new RepositoryError("invalid.key",
+                        string.Format("Unable to locate the following key '{0}'.", key.ToString()))));
+                }
+                if (acadCredentialData.InvalidRecords.Any())
+                {
+                    repositoryException.AddErrors(acadCredentialData.InvalidRecords
+                       .Select(r => new RepositoryError("invalid.record",
+                       string.Format("Error: '{0}' ", r.Value))
+                       { SourceId = r.Key }));
+                }
+                throw repositoryException;
+            }
+            var externalEducationData = acadCredentialData.BulkRecordsRead;
+
+            if (externalEducationData == null)
+            {
+                return new Tuple<IEnumerable<ExternalEducation>, int>(new List<ExternalEducation>(), 0);
+            }
             var institutionsAttendKeys = externalEducationData.Select(ee => string.Concat(ee.AcadPersonId, "*", ee.AcadInstitutionsId));
             if (institutionsAttendKeys == null || !institutionsAttendKeys.Any())
             {

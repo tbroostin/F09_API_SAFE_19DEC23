@@ -30,7 +30,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Tests.Repositories
         public TestGeneralLedgerConfigurationRepository testGlConfigurationRepository;
         public TestGeneralLedgerAccountRepository testGlAcccountRepository;
 
-        public Budget budgetRecord;
+        public DataContracts.Budget budgetRecord;
         public WorkingBudget workingBudget;
         public BudgetConfiguration budgetConfiguration;
         public List<BudgetOfficer> budgetOfficers;
@@ -884,7 +884,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Tests.Repositories
             });
 
             budgetRecord.BuFinalDate = DateTime.Now.AddDays(-1);
-            dataReaderMock.Setup(dr => dr.ReadRecordAsync<Budget>("BUDGET", workingBudgetId, true)).Returns(() =>
+            dataReaderMock.Setup(dr => dr.ReadRecordAsync<DataContracts.Budget>("BUDGET", workingBudgetId, true)).Returns(() =>
             {
                 return Task.FromResult(budgetRecord);
             });
@@ -987,7 +987,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Tests.Repositories
             });
 
             budgetRecord.BuFinalDate = null;
-            dataReaderMock.Setup(dr => dr.ReadRecordAsync<Budget>("BUDGET", workingBudgetId, true)).Returns(() =>
+            dataReaderMock.Setup(dr => dr.ReadRecordAsync<DataContracts.Budget>("BUDGET", workingBudgetId, true)).Returns(() =>
             {
                 return Task.FromResult(budgetRecord);
             });
@@ -2198,7 +2198,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Tests.Repositories
                 return Task.FromResult(this.testBuDevConfigRepository.BudgetDevDefaultsContract);
             });
 
-            dataReaderMock.Setup(dr => dr.ReadRecordAsync<Budget>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+            dataReaderMock.Setup(dr => dr.ReadRecordAsync<DataContracts.Budget>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
             {
                 return Task.FromResult(budgetRecord);
             });

@@ -1,9 +1,10 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Colleague.Dtos.Student.InstantEnrollment;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -173,6 +174,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns>The <see cref="CourseCatalogConfiguration2">Course Catalog Configuration</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. </exception>
         /// <accessComments>Any authenticated user can get this resource.</accessComments>
+        [Obsolete("Obsolete as of API version 1.29, use version 3 of this API")]
         public async Task<CourseCatalogConfiguration2> GetCourseCatalogConfiguration2Async()
         {
             CourseCatalogConfiguration2 configurationDto = null;
@@ -211,6 +213,48 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 throw CreateHttpResponseException("Could not retrieve registration configuration data.", HttpStatusCode.BadRequest);
             }
             return configurationDto;
+        }
+
+        /// <summary>
+        /// Retrieves the configuration information needed for Colleague Self-Service instant enrollment
+        /// </summary>
+        /// <returns>The <see cref="InstantEnrollmentConfiguration"/></returns>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. </exception>
+        /// <accessComments>Any authenticated user can get this resource.</accessComments>
+        public async Task<InstantEnrollmentConfiguration> GetInstantEnrollmentConfigurationAsync()
+        {
+            InstantEnrollmentConfiguration configurationDto = null;
+            try
+            {
+                Domain.Student.Entities.InstantEnrollment.InstantEnrollmentConfiguration configuration = await _configurationRepository.GetInstantEnrollmentConfigurationAsync();
+                var instantEnrollmentConfigurationDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.InstantEnrollment.InstantEnrollmentConfiguration, InstantEnrollmentConfiguration>();
+                configurationDto = instantEnrollmentConfigurationDtoAdapter.MapToType(configuration);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException("Could not retrieve Colleague Self-Service instant enrollment configuration data.", HttpStatusCode.BadRequest);
+            }
+            return configurationDto;
+        }
+
+        /// <summary>
+        /// Retrieves the configuration information needed for course catalog searches asynchronously.
+        /// </summary>
+        /// <returns>The <see cref="CourseCatalogConfiguration3">Course Catalog Configuration</see></returns>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. </exception>
+        /// <accessComments>Any authenticated user can get this resource.</accessComments>
+        public async Task<CourseCatalogConfiguration3> GetCourseCatalogConfiguration3Async()
+        {
+            try
+            {
+                return await _configurationService.GetCourseCatalogConfiguration3Async();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Unable to get the course catalog configuration information.");
+                throw CreateHttpResponseException("Unable to get the course catalog configuration information.", HttpStatusCode.BadRequest);
+            }
         }
     }
 }

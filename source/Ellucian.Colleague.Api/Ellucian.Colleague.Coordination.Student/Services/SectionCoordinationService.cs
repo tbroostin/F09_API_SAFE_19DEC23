@@ -6113,7 +6113,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 var secTerm = entity.TermId;
                 var secLoc = entity.Location;
-                sectionDto.CensusDates = new List<DateTime?>(); //default
 
                 Domain.Student.Entities.Term term = (await AllTermsAsync()).FirstOrDefault(t => t.Code == secTerm);
                 if (term != null)
@@ -7042,11 +7041,31 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
             }
 
+            //First, we need to check all required properties are present at the root level
             if (sectionDto.Course == null || string.IsNullOrEmpty(sectionDto.Course.Id))
             {
                 IntegrationApiExceptionAddError("Course is required.", "Missing.Required.Property", sectionDto.Id, sectionId);
             }
 
+            if (sectionDto.Titles == null || !sectionDto.Titles.Any())
+            {
+                IntegrationApiExceptionAddError("At least one section title must be provided.", "Validation.Exception", sectionDto.Id, sectionId);
+            }
+
+            if (sectionDto.StartOn == null || !sectionDto.StartOn.HasValue)
+            {
+                IntegrationApiExceptionAddError("The startOn is required.", "Missing.Required.Property", sectionDto.Id, sectionId);
+            }
+
+            if (sectionDto.InstructionalMethods == null || !sectionDto.InstructionalMethods.Any())
+            {
+                IntegrationApiExceptionAddError("Instructional method id is a required property.", "Missing.Required.Property", sectionDto.Id, sectionId);
+            }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
             //Moved course up here and throw error since course is required and many of the course fields are needed to finish PUT/POST.
             Course course = null;
             try
@@ -7059,11 +7078,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw IntegrationApiException;
             }
 
-            if (sectionDto.Titles == null || !sectionDto.Titles.Any())
-            {
-                IntegrationApiExceptionAddError("At least one section title must be provided.", "Validation.Exception", sectionDto.Id, sectionId);
-            }
-
             if (sectionDto.Titles != null && sectionDto.Titles.Any())
             {
                 foreach (var title in sectionDto.Titles)
@@ -7073,11 +7087,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         IntegrationApiExceptionAddError("The title value must be provided for the title object.", "Missing.Required.Property", sectionDto.Id, sectionId);
                     }
                 }
-            }
-
-            if (!sectionDto.StartOn.HasValue)
-            {
-                IntegrationApiExceptionAddError("The startOn is required.", "Missing.Required.Property", sectionDto.Id, sectionId);
             }
 
             if (sectionDto.StartOn.HasValue && sectionDto.EndOn.HasValue)
@@ -7872,10 +7881,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                 }
             }
-            else
-            {
-                IntegrationApiExceptionAddError("Instructional method id is a required property.", "Missing.Required.Property", sectionDto.Id, sectionId);
-            }
+
             // Add instructional method data if supplied
             if (contactMethodCodes != null)
             {
@@ -10610,15 +10616,42 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
 
             }
-            var locations = new List<Location>();
+
             if (!string.IsNullOrEmpty(meeting.Room) && meeting.Room != "*")
             {
-                var roomid = new GuidObject2() { Id = ConvertRoomCodeToGuid(await RoomsAsync(), meeting.Room) };
-                var room = new Dtos.InstructionalRoom2() { Room = roomid, LocationType = InstructionalLocationType.InstructionalRoom };
+                /*
+                    In some cases, it's possible that Colleague customers may no longer have records in the ROOMS file that correspond to the 
+                    CSM.BLDG and CSM.ROOM combination that is exposed in this reference (e.g. some rooms may have been removed when remodeling was done, 
+                    but the reference to the room itself was not removed from COURSE.SEC.MEETING file). If this is the case, we should omit the locations 
+                    array object from the response altogether. This will avoid the issue of surfacing an error for an old room that is no longer used by 
+                    a client yet is referenced in older COURSE.SEC.MEETING records. See http://corpappprod.ellucian.com/crmview/Main/CRDetail.asp?crno=CR-000173681 
+                */
 
-                var location = new Location() { Locations = room };
-                locations.Add(location);
-                outputDto.Locations = locations;
+                try
+                {
+                    //In above scenario following may throw RepositoryException. Per spec just don't add locations to the payload.
+                    var locations = new List<Location>();
+                    string roomGuid = string.Empty;
+                    roomGuid = await _roomRepository.GetRoomsGuidAsync(meeting.Room);
+                    if ((string.IsNullOrEmpty(roomGuid)) || (roomGuid.Equals(Guid.Empty.ToString())))
+                    {
+                        throw new ArgumentException(string.Format("GUID is missing, or not found, for room '{0}'. ", meeting.Room),
+                            "GUID.Not.Found");
+                    }
+                    else
+                    {
+                        var roomid = new GuidObject2(roomGuid);
+                        var room = new Dtos.InstructionalRoom2() { Room = roomid, LocationType = InstructionalLocationType.InstructionalRoom };
+
+                        var location = new Location() { Locations = room };
+                        locations.Add(location);
+                        outputDto.Locations = locations;
+                    }
+                }
+                catch (Exception e)
+                {
+                    logger.Error(string.Concat("Ethos API instructional-events V6, Method: ConvertSectionMeetingToInstructionalEvent2Async, Line: 10653, ", e.Message));
+                }
             }
 
             outputDto.Workload = meeting.Load;
@@ -10757,15 +10790,42 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
 
             }
-            var locations = new List<Location>();
+
             if (!string.IsNullOrEmpty(meeting.Room) && meeting.Room != "*")
             {
-                var roomid = new GuidObject2() { Id = ConvertRoomCodeToGuid(await RoomsAsync(), meeting.Room) };
-                var room = new Dtos.InstructionalRoom2() { Room = roomid, LocationType = InstructionalLocationType.InstructionalRoom };
+                /*
+                    In some cases, it's possible that Colleague customers may no longer have records in the ROOMS file that correspond to the 
+                    CSM.BLDG and CSM.ROOM combination that is exposed in this reference (e.g. some rooms may have been removed when remodeling was done, 
+                    but the reference to the room itself was not removed from COURSE.SEC.MEETING file). If this is the case, we should omit the locations 
+                    array object from the response altogether. This will avoid the issue of surfacing an error for an old room that is no longer used by 
+                    a client yet is referenced in older COURSE.SEC.MEETING records. See http://corpappprod.ellucian.com/crmview/Main/CRDetail.asp?crno=CR-000173681 
+                */
 
-                var location = new Location() { Locations = room };
-                locations.Add(location);
-                outputDto.Locations = locations;
+                try
+                {
+                    //In above scenario following may throw RepositoryException. Per spec just don't add locations to the payload.
+                    var locations = new List<Location>();
+                    string roomGuid = string.Empty;
+                    roomGuid = await _roomRepository.GetRoomsGuidAsync(meeting.Room);
+                    if ((string.IsNullOrEmpty(roomGuid)) || (roomGuid.Equals(Guid.Empty.ToString())))
+                    {
+                        throw new ArgumentException(string.Format("GUID is missing, or not found, for room '{0}'. ", meeting.Room),
+                            "GUID.Not.Found");
+                    }
+                    else
+                    {
+                        var roomid = new GuidObject2(roomGuid);
+                        var room = new Dtos.InstructionalRoom2() { Room = roomid, LocationType = InstructionalLocationType.InstructionalRoom };
+
+                        var location = new Location() { Locations = room };
+                        locations.Add(location);
+                        outputDto.Locations = locations;
+                    }
+                }
+                catch (Exception e)
+                {
+                    logger.Error(string.Concat("Ethos API instructional-events V8, Method: ConvertSectionMeetingToInstructionalEvent3Async, Line: 10827, ", e.Message));
+                }
             }
 
             outputDto.Workload = meeting.Load;
@@ -10959,23 +11019,39 @@ namespace Ellucian.Colleague.Coordination.Student.Services
            
             if (!string.IsNullOrEmpty(meeting.Room) && meeting.Room != "*")
             {
-                var locations = new List<Location>();
-                
-                var roomGuid = await _roomRepository.GetRoomsGuidAsync(meeting.Room);               
 
-                if ((string.IsNullOrEmpty(roomGuid)) || (roomGuid.Equals(Guid.Empty.ToString())))
+                /*
+                    In some cases, it's possible that Colleague customers may no longer have records in the ROOMS file that correspond to the 
+                    CSM.BLDG and CSM.ROOM combination that is exposed in this reference (e.g. some rooms may have been removed when remodeling was done, 
+                    but the reference to the room itself was not removed from COURSE.SEC.MEETING file). If this is the case, we should omit the locations 
+                    array object from the response altogether. This will avoid the issue of surfacing an error for an old room that is no longer used by 
+                    a client yet is referenced in older COURSE.SEC.MEETING records. See http://corpappprod.ellucian.com/crmview/Main/CRDetail.asp?crno=CR-000173681 
+                */
+
+                try
                 {
-                    IntegrationApiExceptionAddError(string.Format("GUID is missing, or not found, for room '{0}'. ", meeting.Room), 
-                        "GUID.Not.Found" , meeting.Guid, meeting.Id);
+                    //In above scenario following may throw RepositoryException. Per spec just don't add locations to the payload.
+                    var locations = new List<Location>();
+                    string roomGuid = string.Empty;
+                    roomGuid = await _roomRepository.GetRoomsGuidAsync( meeting.Room );
+                    if( ( string.IsNullOrEmpty( roomGuid ) ) || ( roomGuid.Equals( Guid.Empty.ToString() ) ) )
+                    {
+                        IntegrationApiExceptionAddError( string.Format( "GUID is missing, or not found, for room '{0}'. ", meeting.Room ),
+                            "GUID.Not.Found", meeting.Guid, meeting.Id );
+                    }
+                    else
+                    {
+                        var roomid = new GuidObject2( roomGuid );
+                        var room = new Dtos.InstructionalRoom2() { Room = roomid, LocationType = InstructionalLocationType.InstructionalRoom };
+
+                        var location = new Location() { Locations = room };
+                        locations.Add( location );
+                        outputDto.Locations = locations;
+                    }
                 }
-                else
+                catch( Exception e )
                 {
-                    var roomid = new GuidObject2(roomGuid);
-                    var room = new Dtos.InstructionalRoom2() { Room = roomid, LocationType = InstructionalLocationType.InstructionalRoom };
-
-                    var location = new Location() { Locations = room };
-                    locations.Add(location);
-                    outputDto.Locations = locations;
+                    logger.Error( string.Concat( "Ethos API instructional-events V11, Method: ConvertSectionMeetingToInstructionalEvent4Async, Line: 10976, ", e.Message ));
                 }
             }
 

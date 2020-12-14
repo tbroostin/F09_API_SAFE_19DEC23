@@ -133,6 +133,34 @@ namespace Ellucian.Colleague.Api.Controllers
                 throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
             }
         }
+        /// <summary>
+        /// Performs a search of sections that are available for Instant Enrollment only.
+        /// The criteria supplied is keyword and various filters which may be used to search and narrow list of sections.
+        /// </summary>
+        /// <param name="criteria"></param>
+        /// <param name="pageSize"></param>
+        /// <param name="pageIndex"></param>
+        /// <returns></returns>
+        /// <accessComments>Any authenticated user can perform search on sections and view Instant Enrollment catalog.</accessComments>
+        public async Task<SectionPage> PostInstantEnrollmentCourseSearchAsync([FromBody]InstantEnrollmentCourseSearchCriteria criteria, int pageSize=10, int pageIndex=0)
+        {
+            try
+            {
+                // Logging the timings for monitoring
+                _logger.Info("Call Course Search Service from Courses controller... ");
+                var watch = new Stopwatch();
+                watch.Start();
+                SectionPage sectionPage = await _courseService.InstantEnrollmentSearchAsync(criteria, pageSize, pageIndex);
+                watch.Stop();
+                _logger.Info("Course search returned in: " + watch.ElapsedMilliseconds.ToString());
+                return sectionPage;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString() + ex.StackTrace);
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+            }
+        }
 
         /// <summary>
         /// For each course ID specified, this API will return the sections for this course that are offered in terms "open for registration". 

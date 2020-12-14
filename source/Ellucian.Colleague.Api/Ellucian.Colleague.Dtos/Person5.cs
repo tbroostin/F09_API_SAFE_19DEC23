@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Dtos.Converters;
 using Ellucian.Colleague.Dtos.DtoProperties;
@@ -148,7 +148,7 @@ namespace Ellucian.Colleague.Dtos
         /// <see cref="Phone">Phones</see> of the person
         /// </summary>
         [JsonProperty("phones", DefaultValueHandling = DefaultValueHandling.Ignore)]
-        public IEnumerable<PersonPhoneDtoProperty> Phones { get; set; }
+        public IEnumerable<PersonPhone2DtoProperty> Phones { get; set; }
 
         /// <summary>
         /// <see cref="GuidObject">Email addresses</see> of the person

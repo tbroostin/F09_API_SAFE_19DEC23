@@ -37,10 +37,10 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
             public void CountyConstructorNullGuid()
             {
                 county = new County(null, code, description);
+                Assert.IsNull(county.Guid);
             }
 
             [TestMethod]
@@ -58,10 +58,10 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
             public void CountyConstructorEmptyGuid()
             {
                 county = new County(string.Empty, code, description);
+                Assert.AreEqual(string.Empty, county.Guid);
             }
 
             [TestMethod]

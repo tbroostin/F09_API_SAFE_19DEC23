@@ -25,6 +25,7 @@ using GlAccts = Ellucian.Colleague.Data.ColleagueFinance.DataContracts.GlAccts;
 using Projects = Ellucian.Colleague.Data.ColleagueFinance.DataContracts.Projects;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Exceptions;
+using GlAcctsMemos = Ellucian.Colleague.Data.ColleagueFinance.DataContracts.GlAcctsMemos;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 {
@@ -1907,66 +1908,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 DateTime? date = new DateTime(2017, 5, 1);
                 var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "asset", "available", new List<string>() { "1" }, date);
                 Assert.IsNotNull(actuals);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
-            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValueByGuid3_AccountingComponent()
-            {
-                var record = _glAcctsDataContract.FirstOrDefault(p => p.Recordkey == "11_00_01_00_20603_52010");
-                record.MemosEntityAssociation = new List<GlAcctsMemos>() { new GlAcctsMemos()};
-                dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.GlAccts>(It.IsAny<string>(), It.IsAny<bool>()))
-                   .ReturnsAsync(_glAcctsDataContract.FirstOrDefault(p => p.Recordkey == "11_00_01_00_20603_52010"));
-                dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<GuidLookup[]>())).Returns<GuidLookup[]>(gla =>
-                {
-                    var result = new Dictionary<string, GuidLookupResult>();
-                    foreach (var gl in gla)
-                    {
-                        result.Add(gl.Guid, new GuidLookupResult() { Entity = "GL.ACCTS", PrimaryKey = "1" });
-                    }
-                    return Task.FromResult(result);
-                });
-                try
-                {
-                    await _referenceDataRepo.GetAccountingStringComponentValue3ByGuid(record.RecordGuid);
-                }
-                catch (RepositoryException e)
-                {
-                    Assert.AreEqual(1, e.Errors.Count());
-                    Assert.AreEqual("The record associated to the accounting string component value contains an invalid element. guid: '4f937f08-f6a0-4a1c-8d55-9f2a6dd6be46'",
-                        e.Errors[0].Message);
-                    throw e;
-                }
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
-            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValueByGuid3_AvailFundsController()
-            {
-                var record = _glAcctsDataContract.FirstOrDefault(p => p.Recordkey == "11_00_01_00_20603_52010");
-                record.MemosEntityAssociation = new List<GlAcctsMemos>() { new GlAcctsMemos() { AvailFundsControllerAssocMember = "2000" } };
-                dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.GlAccts>(It.IsAny<string>(), It.IsAny<bool>()))
-                   .ReturnsAsync(_glAcctsDataContract.FirstOrDefault(p => p.Recordkey == "11_00_01_00_20603_52010"));
-                dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<GuidLookup[]>())).Returns<GuidLookup[]>(gla =>
-                {
-                    var result = new Dictionary<string, GuidLookupResult>();
-                    foreach (var gl in gla)
-                    {
-                        result.Add(gl.Guid, new GuidLookupResult() { Entity = "GL.ACCTS", PrimaryKey = "1" });
-                    }
-                    return Task.FromResult(result);
-                });
-                try
-                {
-                    await _referenceDataRepo.GetAccountingStringComponentValue3ByGuid(record.RecordGuid);
-                }
-                catch (RepositoryException e)
-                {
-                    Assert.AreEqual(1, e.Errors.Count());
-                    Assert.AreEqual("The record associated to the accounting string component value contains an invalid element. guid: '4f937f08-f6a0-4a1c-8d55-9f2a6dd6be46'",
-                        e.Errors[0].Message);
-                    throw e;
-                }
             }
 
             [TestMethod]

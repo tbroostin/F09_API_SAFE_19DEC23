@@ -31,6 +31,13 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         public const string DeviceInfo = "<DeviceInfo>" +
                                          " <OutputFormat>PDF</OutputFormat>" +
                                          "</DeviceInfo>";
+        public const string OneL = "1L";
+        public const string OneM = "1M";
+        public const string OneN = "1N";
+        public const string OneO = "1O";
+        public const string OneP = "1P";
+        public const string OneQ = "1Q";
+        public const string ZeroFormattedAmount = "0.00";
 
         private IHumanResourcesTaxFormPdfDataRepository taxFormPdfDataRepository;
 
@@ -574,13 +581,60 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 parameters.Add(utility.BuildReportParameter("PlanStartMonthCode", pdfData.PlanStartMonthCode));
 
                 int counter = 17;
+                int totalBoxCount = 34;
+
+                if(pdfData.TaxYear == "2020")
+                {
+                    counter = 18;
+                    totalBoxCount = 30;
+
+                    if (HasOfferCodeRequiringAgeAndZip(pdfData.OfferOfCoverage12Month) || HasOfferCodeRequiringAgeAndZip(pdfData.OfferOfCoverageJanuary) || HasOfferCodeRequiringAgeAndZip(pdfData.OfferOfCoverageFebruary) ||
+                        HasOfferCodeRequiringAgeAndZip(pdfData.OfferOfCoverageMarch) || HasOfferCodeRequiringAgeAndZip(pdfData.OfferOfCoverageApril) || HasOfferCodeRequiringAgeAndZip(pdfData.OfferOfCoverageMay) ||
+                        HasOfferCodeRequiringAgeAndZip(pdfData.OfferOfCoverageJune) || HasOfferCodeRequiringAgeAndZip(pdfData.OfferOfCoverageJuly) || HasOfferCodeRequiringAgeAndZip(pdfData.OfferOfCoverageAugust) ||
+                        HasOfferCodeRequiringAgeAndZip(pdfData.OfferOfCoverageSeptember) || HasOfferCodeRequiringAgeAndZip(pdfData.OfferOfCoverageOctober) || HasOfferCodeRequiringAgeAndZip(pdfData.OfferOfCoverageNovember) ||
+                        HasOfferCodeRequiringAgeAndZip(pdfData.OfferOfCoverageDecember))
+                    {
+                        parameters.Add(utility.BuildReportParameter("EmployeeAge", pdfData.EmployeeAge.ToString()));
+                        parameters.Add(utility.BuildReportParameter("ZipCode12Month", pdfData.ZipCode12Month));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeJanuary", pdfData.ZipCodeJanuary));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeFebruary", pdfData.ZipCodeFebruary));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeMarch", pdfData.ZipCodeMarch));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeApril", pdfData.ZipCodeApril));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeMay", pdfData.ZipCodeMay));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeJune", pdfData.ZipCodeJune));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeJuly", pdfData.ZipCodeJuly));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeAugust", pdfData.ZipCodeAugust));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeSeptember", pdfData.ZipCodeSeptember));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeOctober", pdfData.ZipCodeOctober));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeNovember", pdfData.ZipCodeNovember));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeDecember", pdfData.ZipCodeDecember));
+                    }
+                    else
+                    {
+                        parameters.Add(utility.BuildReportParameter("EmployeeAge", string.Empty));
+                        parameters.Add(utility.BuildReportParameter("ZipCode12Month", string.Empty));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeJanuary", string.Empty));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeFebruary", string.Empty));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeMarch", string.Empty));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeApril", string.Empty));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeMay", string.Empty));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeJune", string.Empty));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeJuly", string.Empty));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeAugust", string.Empty));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeSeptember", string.Empty));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeOctober", string.Empty));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeNovember", string.Empty));
+                        parameters.Add(utility.BuildReportParameter("ZipCodeDecember", string.Empty));
+                    }
+                }
+
                 foreach (var dependant in pdfData.CoveredIndividuals)
                 {
                     TaxFormPdfUtility.Populate1095CDependentRow(ref parameters, dependant, counter);
                     counter += 1;
                 }
 
-                if (counter < 34)
+                if (counter < totalBoxCount)
                 {
                     Form1095cCoveredIndividualsPdfData emptyDependant = new Form1095cCoveredIndividualsPdfData()
                     {
@@ -605,7 +659,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                         IsEmployeeItself = false
                     };
 
-                    for (int i = counter; i < 35; i++)
+                    for (int i = counter; i < totalBoxCount + 1 ; i++)
                     {
                         TaxFormPdfUtility.Populate1095CDependentRow(ref parameters, emptyDependant, i);
                     }
@@ -715,21 +769,21 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
                 // Box Data
                 parameters.Add(utility.BuildReportParameter("SocialInsuranceNumber", pdfData.SocialInsuranceNumber));
-                parameters.Add(utility.BuildReportParameter("EmploymentIncome", pdfData.EmploymentIncome));
-                parameters.Add(utility.BuildReportParameter("EmployeesCPPContributions", pdfData.EmployeesCPPContributions));
-                parameters.Add(utility.BuildReportParameter("EmployeesQPPContributions", pdfData.EmployeesQPPContributions));
-                parameters.Add(utility.BuildReportParameter("EmployeesEIPremiums", pdfData.EmployeesEIPremiums));
-                parameters.Add(utility.BuildReportParameter("RPPContributions", pdfData.RPPContributions));
-                parameters.Add(utility.BuildReportParameter("IncomeTaxDeducted", pdfData.IncomeTaxDeducted));
-                parameters.Add(utility.BuildReportParameter("EIInsurableEarnings", pdfData.EIInsurableEarnings));
-                parameters.Add(utility.BuildReportParameter("CPPQPPPensionableEarnings", pdfData.CPPQPPPensionableEarnings));
-                parameters.Add(utility.BuildReportParameter("UnionDues", pdfData.UnionDues));
-                parameters.Add(utility.BuildReportParameter("CharitableDonations", pdfData.CharitableDonations));
+                parameters.Add(utility.BuildReportParameter("EmploymentIncome", UseBlankIfZeroAmount(pdfData.EmploymentIncome)));
+                parameters.Add(utility.BuildReportParameter("EmployeesCPPContributions", UseBlankIfZeroAmount(pdfData.EmployeesCPPContributions)));
+                parameters.Add(utility.BuildReportParameter("EmployeesQPPContributions", UseBlankIfZeroAmount(pdfData.EmployeesQPPContributions)));
+                parameters.Add(utility.BuildReportParameter("EmployeesEIPremiums", UseBlankIfZeroAmount(pdfData.EmployeesEIPremiums)));
+                parameters.Add(utility.BuildReportParameter("RPPContributions", UseBlankIfZeroAmount(pdfData.RPPContributions)));
+                parameters.Add(utility.BuildReportParameter("IncomeTaxDeducted", UseBlankIfZeroAmount(pdfData.IncomeTaxDeducted)));
+                parameters.Add(utility.BuildReportParameter("EIInsurableEarnings", UseBlankIfZeroAmount(pdfData.EIInsurableEarnings)));
+                parameters.Add(utility.BuildReportParameter("CPPQPPPensionableEarnings", UseBlankIfZeroAmount(pdfData.CPPQPPPensionableEarnings)));
+                parameters.Add(utility.BuildReportParameter("UnionDues", UseBlankIfZeroAmount(pdfData.UnionDues)));
+                parameters.Add(utility.BuildReportParameter("CharitableDonations", UseBlankIfZeroAmount(pdfData.CharitableDonations)));
                 parameters.Add(utility.BuildReportParameter("RPPorDPSPRegistrationNumber", pdfData.RPPorDPSPRegistrationNumber));
                 parameters.Add(utility.BuildReportParameter("Amended", pdfData.Amended));
-                parameters.Add(utility.BuildReportParameter("PensionAdjustment", pdfData.PensionAdjustment));
-                parameters.Add(utility.BuildReportParameter("EmployeesPPIPPremiums", pdfData.EmployeesPPIPPremiums));
-                parameters.Add(utility.BuildReportParameter("PPIPInsurableEarnings", pdfData.PPIPInsurableEarnings));
+                parameters.Add(utility.BuildReportParameter("PensionAdjustment", UseBlankIfZeroAmount(pdfData.PensionAdjustment)));
+                parameters.Add(utility.BuildReportParameter("EmployeesPPIPPremiums", UseBlankIfZeroAmount(pdfData.EmployeesPPIPPremiums)));
+                parameters.Add(utility.BuildReportParameter("PPIPInsurableEarnings", UseBlankIfZeroAmount(pdfData.PPIPInsurableEarnings)));
 
                 // Other boxes
                 for (var i = 0; i < 6; i++)
@@ -792,6 +846,23 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
 
             return reportBytes;
+        }
+
+        /// <summary>
+        /// Accepts a "N2" formatted decimal (as a string) and returns a blank value if it is "0.00".
+        /// </summary>
+        /// <param name="formattedNumericAmount"></param>
+        /// <returns>The original formatted numeric amount or a blank string.</returns>
+        private string UseBlankIfZeroAmount(string formattedNumericAmount)
+        {
+            if (formattedNumericAmount != null && formattedNumericAmount.Equals(ZeroFormattedAmount))
+            {
+                return string.Empty;
+            }
+            else
+            {
+                return formattedNumericAmount;
+            }
         }
 
         /// <summary>
@@ -886,5 +957,17 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 return HasPermission(HumanResourcesPermissionCodes.ViewT4);
             }
         }
+
+        /// <summary>
+        /// Determines whether a specified offer code has a value that requires display
+        /// of the age and zip code on the 1095-C tax form.
+        /// </summary>
+        /// <param name="offerCode">Contains the offer code.</param>
+        /// <returns>Returns a boolean value.</returns>
+        private bool HasOfferCodeRequiringAgeAndZip(string offerCode)
+        {
+            return offerCode == OneL || offerCode == OneM || offerCode == OneN || offerCode == OneO || offerCode == OneP || offerCode == OneQ;
+        }
+
     }
 }

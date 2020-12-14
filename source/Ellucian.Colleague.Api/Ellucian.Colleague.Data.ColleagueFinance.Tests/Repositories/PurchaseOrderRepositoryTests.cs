@@ -1552,24 +1552,28 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             purchaseOrderDataContractList.Add(this.purchaseOrderDataContract);
             dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
             dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(new Collection<Requisitions>());
-            var purchaseOrderSummaryList = await testPurchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+            var expectedPurchaseOrderSummaryList = await testPurchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
             var actual = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
             Assert.IsNotNull(actual);
             Assert.IsTrue(actual.ToList().Count == 1);
 
-            var actualRequisitionSummary = purchaseOrderSummaryList.Where(x => x.Id == purchaseOrderId).FirstOrDefault();
-            var requisitionSummary = actual.FirstOrDefault();
+            var expectedPurchaseOrderSummary = expectedPurchaseOrderSummaryList.Where(x => x.Id == purchaseOrderId).FirstOrDefault();
+            var actualPurchaseOrderSummary = actual.FirstOrDefault();
 
             //assert on entity properties
-            Assert.AreEqual(actualRequisitionSummary.Id, requisitionSummary.Id);
-            Assert.AreEqual(actualRequisitionSummary.Number, requisitionSummary.Number);
-            Assert.AreEqual(actualRequisitionSummary.Date, requisitionSummary.Date);
-            Assert.AreEqual(actualRequisitionSummary.Status, requisitionSummary.Status);
-            Assert.AreEqual(actualRequisitionSummary.InitiatorName, requisitionSummary.InitiatorName);
-            Assert.AreEqual(actualRequisitionSummary.RequestorName, requisitionSummary.RequestorName);
-            Assert.AreEqual(actualRequisitionSummary.VendorId, requisitionSummary.VendorId);
-            Assert.AreEqual(actualRequisitionSummary.VendorName, requisitionSummary.VendorName);
-            Assert.AreEqual(actualRequisitionSummary.Amount, requisitionSummary.Amount);
+            Assert.AreEqual(expectedPurchaseOrderSummary.Id, actualPurchaseOrderSummary.Id);
+            Assert.AreEqual(expectedPurchaseOrderSummary.Number, actualPurchaseOrderSummary.Number);
+            Assert.AreEqual(expectedPurchaseOrderSummary.Date, actualPurchaseOrderSummary.Date);
+            Assert.AreEqual(expectedPurchaseOrderSummary.Status, actualPurchaseOrderSummary.Status);
+            Assert.AreEqual(expectedPurchaseOrderSummary.InitiatorName, actualPurchaseOrderSummary.InitiatorName);
+            Assert.AreEqual(expectedPurchaseOrderSummary.RequestorName, actualPurchaseOrderSummary.RequestorName);
+            Assert.AreEqual(expectedPurchaseOrderSummary.VendorId, actualPurchaseOrderSummary.VendorId);
+            Assert.AreEqual(expectedPurchaseOrderSummary.VendorName, actualPurchaseOrderSummary.VendorName);
+            Assert.AreEqual(expectedPurchaseOrderSummary.Amount, actualPurchaseOrderSummary.Amount);
+
+            Assert.AreEqual(expectedPurchaseOrderSummary.Approvers.Count, actualPurchaseOrderSummary.Approvers.Count);
+            Assert.AreEqual(expectedPurchaseOrderSummary.Approvers.Where(a=>a.ApprovalDate == null).ToList().Count, actualPurchaseOrderSummary.Approvers.Where(a => a.ApprovalDate == null).ToList().Count);
+            Assert.AreEqual(expectedPurchaseOrderSummary.Approvers.Where(a => a.ApprovalDate != null).ToList().Count, actualPurchaseOrderSummary.Approvers.Where(a => a.ApprovalDate != null).ToList().Count);
         }
 
         [TestMethod]
@@ -1591,34 +1595,34 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             purchaseOrderDataContractList.Add(this.purchaseOrderDataContract);
             dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
 
-            var requisitionSummaryList = await testPurchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+            var purchaseOrderSummaryList = await testPurchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
             var actual = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
             Assert.IsNotNull(actual);
             Assert.IsTrue(actual.ToList().Count == 1);
             dataReaderMock.Verify(x => x.SelectAsync("PURCHASE.ORDERS", It.IsAny<string[]>(), It.IsAny<string>()), Times.Once);
             dataReaderMock.Verify(x => x.SelectAsync("PURCHASE.ORDERS", It.IsAny<string>()), Times.Once);
 
-            var actualRequisitionSummary = requisitionSummaryList.Where(x => x.Id == purchaseOrderId).FirstOrDefault();
-            var requisitionSummary = actual.FirstOrDefault();
+            var actualPurchaseOrderSummary = purchaseOrderSummaryList.Where(x => x.Id == purchaseOrderId).FirstOrDefault();
+            var purchaseOrderSummary = actual.FirstOrDefault();
 
             //assert on entity properties
-            Assert.AreEqual(actualRequisitionSummary.Id, requisitionSummary.Id);
-            Assert.AreEqual(actualRequisitionSummary.Number, requisitionSummary.Number);
-            Assert.AreEqual(actualRequisitionSummary.Date, requisitionSummary.Date);
-            Assert.AreEqual(actualRequisitionSummary.Status, requisitionSummary.Status);
+            Assert.AreEqual(actualPurchaseOrderSummary.Id, purchaseOrderSummary.Id);
+            Assert.AreEqual(actualPurchaseOrderSummary.Number, purchaseOrderSummary.Number);
+            Assert.AreEqual(actualPurchaseOrderSummary.Date, purchaseOrderSummary.Date);
+            Assert.AreEqual(actualPurchaseOrderSummary.Status, purchaseOrderSummary.Status);
             //Assert.AreEqual(actualRequisitionSummary.StatusDate, requisitionSummary.StatusDate);
-            Assert.AreEqual(actualRequisitionSummary.InitiatorName, requisitionSummary.InitiatorName);
-            Assert.AreEqual(actualRequisitionSummary.RequestorName, requisitionSummary.RequestorName);
-            Assert.AreEqual(actualRequisitionSummary.VendorId, requisitionSummary.VendorId);
-            Assert.AreEqual(actualRequisitionSummary.VendorName, requisitionSummary.VendorName);
-            Assert.AreEqual(actualRequisitionSummary.Amount, requisitionSummary.Amount);
+            Assert.AreEqual(actualPurchaseOrderSummary.InitiatorName, purchaseOrderSummary.InitiatorName);
+            Assert.AreEqual(actualPurchaseOrderSummary.RequestorName, purchaseOrderSummary.RequestorName);
+            Assert.AreEqual(actualPurchaseOrderSummary.VendorId, purchaseOrderSummary.VendorId);
+            Assert.AreEqual(actualPurchaseOrderSummary.VendorName, purchaseOrderSummary.VendorName);
+            Assert.AreEqual(actualPurchaseOrderSummary.Amount, purchaseOrderSummary.Amount);
         }
 
         [TestMethod]
         public async Task GetPurchaseOrderSummaryByPersonIdAsync_EmptyList()
         {
-            var requisitionSummaryList = await this.purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
-            Assert.IsNull(requisitionSummaryList);
+            var purchaseOrderSummaryList = await this.purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+            Assert.IsNull(purchaseOrderSummaryList);
         }
 
         [TestMethod]
@@ -1640,8 +1644,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 return Task.FromResult(new CfwebDefaults() { CfwebReqStatuses = new List<string> { "0" } });
             });
             dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(new Collection<PurchaseOrders>());
-            var requisitionSummaryList = await this.purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
-            Assert.IsNull(requisitionSummaryList);
+            var purchaseOrderSummaryList = await this.purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+            Assert.IsNull(purchaseOrderSummaryList);
             dataReaderMock.Verify(x => x.SelectAsync("PURCHASE.ORDERS", It.IsAny<string>()), Times.Exactly(1));
         }
 
@@ -1669,7 +1673,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 PoDefaultInitiator="ABC",
                 PoRequestor="MlOwks",
                 PoVendor="ABC Company",
-                PoMiscName=new List<string> { "ABC" }
+                PoMiscName=new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
             };
 
             purchaseOrderDataContractList.Add(purchaseOrderDataContract);
@@ -1693,7 +1699,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 PoDefaultInitiator = "ABC",
                 PoRequestor = "MlOwks",
                 PoVendor = "ABC Company",
-                PoMiscName = new List<string> { "ABC" }
+                PoMiscName = new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
             };
 
             purchaseOrderDataContractList.Add(purchaseOrderDataContract);
@@ -1718,12 +1726,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 PoDefaultInitiator = "ABC",
                 PoRequestor = "MlOwks",
                 PoVendor = "ABC Company",
-                PoMiscName = new List<string> { "ABC" }
+                PoMiscName = new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
             };
 
             purchaseOrderDataContractList.Add(purchaseOrderDataContract);
             dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
-            var requisition = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+            var purchaseOrderSummaryList = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
         }
 
         [TestMethod]
@@ -1748,11 +1758,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 PoDefaultInitiator = "ABC",
                 PoRequestor = "MlOwks",
                 PoVendor = "ABC Company",
-                PoMiscName = new List<string> { "ABC" }
+                PoMiscName = new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
             };
             purchaseOrderDataContractList.Add(purchaseOrderDataContract);
             dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
-            var requisition = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+            var purchaseOrderSummaryList = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
         }
 
         [TestMethod]
@@ -1771,12 +1783,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 PoDefaultInitiator = "ABC",
                 PoRequestor = "MlOwks",
                 PoVendor = "ABC Company",
-                PoMiscName = new List<string> { "ABC" }
+                PoMiscName = new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
             };
 
             purchaseOrderDataContractList.Add(purchaseOrderDataContract);
             dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
-            var requisition = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+            var purchaseOrderSummaryList = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
         }
 
         [TestMethod]
@@ -1795,13 +1809,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 PoDefaultInitiator = "ABC",
                 PoRequestor = "MlOwks",
                 PoVendor = "ABC Company",
-                PoMiscName = new List<string> { "ABC" }
+                PoMiscName = new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
             };
 
 
             purchaseOrderDataContractList.Add(purchaseOrderDataContract);
             dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
-            var requisition = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+            var purchaseOrderSummaryList = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
         }
 
         [TestMethod]
@@ -1821,13 +1837,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 PoDefaultInitiator = "ABC",
                 PoRequestor = "MlOwks",
                 PoVendor = "ABC Company",
-                PoMiscName = new List<string> { "ABC" }
+                PoMiscName = new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
             };
 
 
             purchaseOrderDataContractList.Add(purchaseOrderDataContract);
             dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
-            var requisition = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+            var purchaseOrderSummaryList = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
         }
         #endregion
 
@@ -1997,8 +2015,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 DefaultCommodityCode = "",
                 Comments = "It is a PO for Pen",
                 InternalComments = "Pen is ordered",
-                CommodityCode = "00375",
-
+                CommodityCode = "00375"
             };
             // Mock Execute within the transaction invoker to return a TxUpdateWebPurchaseOrderResponse object
 
@@ -2530,6 +2547,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     ItmComments = lineItem.Comments,
                     ItmExpectedDeliveryDate = lineItem.ExpectedDeliveryDate,
                     ItmVendorPart = lineItem.VendorPart,
+                    ItmFixedAssetsFlag = lineItem.FixedAssetsFlag,                  
                     ItemPoEntityAssociation = new List<ItemsItemPo>(),
                     PoGlTaxesEntityAssociation = new List<ItemsPoGlTaxes>(),
                     ItemPoStatusEntityAssociation = new List<ItemsItemPoStatus>()

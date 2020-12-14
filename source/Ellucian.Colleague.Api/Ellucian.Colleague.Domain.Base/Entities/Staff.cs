@@ -31,6 +31,11 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public string StaffInitials { get; set; }
 
         /// <summary>
+        /// The staff member's loginid/operatorid
+        /// </summary>
+        public string StaffLoginId { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="Staff"/> class.
         /// </summary>
         /// <param name="id">The identifier.</param>

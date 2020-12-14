@@ -305,26 +305,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(result.Guid, guid);
             }
 
-            [TestMethod]
-            public async Task GetAdmissionApplicationSupportingItemsAsync_Returns_SupportingItemIds_Null()
-            {
-                dataReaderMock.Setup(d => d.SelectAsync("MAILING", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(null);
-                var result = await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsAsync(0, 2);
-
-                Assert.IsNotNull(result);
-                Assert.AreEqual(result.Item2, 0);
-            }
-
-            [TestMethod]
-            public async Task GetAdmissionApplicationSupportingItemsAsync_Returns_SupportingItemIds_Empty()
-            {
-                dataReaderMock.Setup(d => d.SelectAsync("MAILING", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new string[] { });
-                var result = await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsAsync(0, 2);
-
-                Assert.IsNotNull(result);
-                Assert.AreEqual(result.Item2, 0);
-            }
-
+           
             [TestMethod]
             public async Task GetAdmissionApplicationSupportingItemsAsync_Returns_MailingSubList_Null()
             {

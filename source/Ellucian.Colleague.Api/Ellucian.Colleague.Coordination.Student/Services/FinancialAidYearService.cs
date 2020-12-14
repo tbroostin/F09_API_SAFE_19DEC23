@@ -1,12 +1,15 @@
-﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System;
@@ -20,10 +23,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
     public class FinancialAidYearService : BaseCoordinationService, IFinancialAidYearService
     {
         private IStudentReferenceDataRepository financialAidReferenceDataRepository;
+        private readonly ITermRepository _termRepository;
         private readonly IConfigurationRepository configurationRepository;
 
         public FinancialAidYearService(IAdapterRegistry adapterRegistry,
-            IStudentReferenceDataRepository financialAidReferenceDataRepository,
+            IStudentReferenceDataRepository financialAidReferenceDataRepository, 
+            ITermRepository termRepository,
             IConfigurationRepository configurationRepository,
             ICurrentUserFactory currentUserFactory,
             IRoleRepository roleRepository,
@@ -31,7 +36,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, configurationRepository: configurationRepository)
         {
             this.financialAidReferenceDataRepository = financialAidReferenceDataRepository;
+            _termRepository = termRepository;
             this.configurationRepository = configurationRepository;
+        }
+
+        //Get collection of academic terms for the named query.
+        private IEnumerable<Domain.Student.Entities.Term> _academicPeriods = null;
+        private async Task<IEnumerable<Domain.Student.Entities.Term>> AcademicPeriodsAsync( bool bypassCache )
+        {
+            if( _academicPeriods == null )
+            {
+                _academicPeriods = await _termRepository.GetAsync( bypassCache );
+            }
+            return _academicPeriods;
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -39,19 +56,74 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// Gets all financial aid years
         /// </summary>
         /// <returns>Collection of FinancialAidYear DTO objects</returns>
-        public async Task<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidYear>> GetFinancialAidYearsAsync(bool bypassCache = false)
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidYear>> GetFinancialAidYearsAsync(string academicPeriodId = "", bool bypassCache = false)
         {
             var financialAidYearCollection = new List<Ellucian.Colleague.Dtos.FinancialAidYear>();
+            IEnumerable<Domain.Student.Entities.FinancialAidYear> financialAidYearEntities = null;
 
-            var financialAidYearEntities = await financialAidReferenceDataRepository.GetFinancialAidYearsAsync(bypassCache);
-            if (financialAidYearEntities != null && financialAidYearEntities.Count() > 0)
+            if( !string.IsNullOrEmpty( academicPeriodId ) )
             {
-                foreach (var financialAidYear in financialAidYearEntities)
+                if(string.IsNullOrWhiteSpace(academicPeriodId))
                 {
-                    financialAidYearCollection.Add(ConvertFinancialAidYearEntityToDto(financialAidYear));
+                    return financialAidYearCollection;
+                }
+                //Get terms. If there are no terms defined then return an empty set.
+                var terms = await AcademicPeriodsAsync( bypassCache );
+                if( terms == null || !terms.Any() )
+                {
+                    return financialAidYearCollection;
+                }
+
+                //Get term based on the guid. If no term is found then return an empty set.
+                var term = terms.FirstOrDefault( t => t.RecordGuid.Equals( academicPeriodId, StringComparison.InvariantCultureIgnoreCase ) );
+                if( term == null )
+                {
+                    return financialAidYearCollection;
+                }
+
+                //Get FA Years. If none defined then return an empty set.
+                var faYrs = term.FinancialAidYears.Where( fay => fay.HasValue );
+                if( faYrs == null || !faYrs.Any() )
+                {
+                    return financialAidYearCollection;
+                }
+                //Convert years to a string array for filter.
+                string[] yrs = faYrs.Select( i => i.ToString() ).ToArray();
+                //Otherwise continue & get financial aid years which matched with fa years defined in a term.
+                var tempFaYrs = await financialAidReferenceDataRepository.GetFinancialAidYearsAsync( bypassCache );
+                if( tempFaYrs != null && tempFaYrs.Any() )
+                {
+                    financialAidYearEntities = tempFaYrs.Where( t => !string.IsNullOrWhiteSpace( t.Code ) && yrs.Contains( t.Code ) ).ToList();
+                    if( financialAidYearEntities == null || !financialAidYearEntities.Any() )
+                    {
+                        return financialAidYearCollection;
+                    }
+
+                    //Convert & return DTO's.
+                    foreach( var financialAidYear in financialAidYearEntities )
+                    {
+                        financialAidYearCollection.Add( ConvertFinancialAidYearEntityToDto( financialAidYear ) );
+                    }
                 }
             }
+            else
+            {
+                financialAidYearEntities = await financialAidReferenceDataRepository.GetFinancialAidYearsAsync( bypassCache );
+                if( financialAidYearEntities != null && financialAidYearEntities.Any() )
+                {
+                    foreach( var financialAidYear in financialAidYearEntities )
+                    {
+                        financialAidYearCollection.Add( ConvertFinancialAidYearEntityToDto( financialAidYear ) );
+                    }
+                }
+            }
+            if( IntegrationApiException != null )
+            {
+                throw IntegrationApiException;
+            }
+
             return financialAidYearCollection;
+
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -63,10 +135,30 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             try
             {
-                var finYears = await financialAidReferenceDataRepository.GetFinancialAidYearsAsync(true);
-                return ConvertFinancialAidYearEntityToDto(finYears.Where(fa => fa.Guid.ToString().Equals( guid, StringComparison.OrdinalIgnoreCase)).First());
+                var finYear = await financialAidReferenceDataRepository.GetFinancialAidYearAsync( guid );
+                if(finYear == null)
+                {
+                    IntegrationApiExceptionAddError( string.Format( "Financial aid year not found for GUID '{0}'", guid ), "GUID.Not.Found", guid, string.Empty, System.Net.HttpStatusCode.NotFound );
+                    throw IntegrationApiException;
+                }
+                //GetFinancialAidYearAsync
+                var dto = ConvertFinancialAidYearEntityToDto( finYear );
+                if( IntegrationApiException != null )
+                {
+                    throw IntegrationApiException;
+                }
+                return dto;
             }
-            catch (InvalidOperationException ex)
+            catch( IntegrationApiException e)
+            {
+                throw;
+            }
+            catch(RepositoryException e)
+            {
+                IntegrationApiExceptionAddError( string.Format( "Financial aid year not found for GUID '{0}'", guid ), "GUID.Not.Found", guid, string.Empty, System.Net.HttpStatusCode.NotFound );
+                throw IntegrationApiException;
+            }
+            catch (Exception ex)
             {
                 throw new KeyNotFoundException("Financial aid year not found for GUID " + guid, ex);
             }
@@ -104,7 +196,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 catch (Exception e)
                 {
-                    throw new ArgumentException("Code not defined for financial aid year for guid " + source.Guid + " with title " + source.Description);
+                    IntegrationApiExceptionAddError(string.Format("Code not defined for financial aid year for guid '{0}' with title '{1}'", source.Guid, source.Description ), "GUID.Not.Found", source.Guid, source.Code);
                 }
             }
             financialAidYear.Description = null;

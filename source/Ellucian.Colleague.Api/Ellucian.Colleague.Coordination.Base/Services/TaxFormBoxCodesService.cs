@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates..
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates..
 
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Coordination.Base.Adapters;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
@@ -42,7 +43,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             boxCodesEntities = (await _referenceDataRepository.GetAllBoxCodesAsync()).ToList();
             // Create the adapter to convert BoxCodes domain entities to DTOs.
-            var boxCodesDtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.BoxCodes, Ellucian.Colleague.Dtos.Base.TaxFormBoxCodes>();
+            var boxCodesEntityToDtoAdapter = new BoxCodesEntityToDtoAdapter(_adapterRegistry, logger);
 
             if (boxCodesEntities != null && boxCodesEntities.Any())
             {
@@ -50,7 +51,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 boxCodesEntities = boxCodesEntities.OrderBy(x => x.Code).ToList();
                 foreach (var tax in boxCodesEntities)
                 {
-                    boxCodesList.Add(boxCodesDtoAdapter.MapToType(tax));
+                    boxCodesList.Add(boxCodesEntityToDtoAdapter.MapToType(tax));
                 }
             }
 

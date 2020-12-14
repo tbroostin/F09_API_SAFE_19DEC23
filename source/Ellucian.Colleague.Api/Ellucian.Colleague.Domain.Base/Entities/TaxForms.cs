@@ -24,5 +24,6 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         FormT2202A,
         Form1099MI,
         FormW2C,
+        Form1099NEC,
     }
 }

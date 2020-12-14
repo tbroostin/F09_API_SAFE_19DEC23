@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2019 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -35,8 +35,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// Get PersonPositionWages for the given personIds
         /// </summary>
         /// <param name="personIds">a list of personids for whom to get PersonPositionWages</param>
+        /// <param name="lookupStartDate"> optional look up start date, all records with end date before this date will not be retrieved</param>
         /// <returns></returns>
-        public async Task<IEnumerable<PersonPositionWage>> GetPersonPositionWagesAsync(IEnumerable<string> personIds)
+        public async Task<IEnumerable<PersonPositionWage>> GetPersonPositionWagesAsync(IEnumerable<string> personIds, DateTime? lookupStartDate = null)
         {
             if (personIds == null)
             {
@@ -49,6 +50,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             //select all the PERPOSWG ids with the HRP.ID equal to the input personids
             var criteria = "WITH PPWG.HRP.ID EQ ?";
+            if (lookupStartDate.HasValue)
+            {
+                criteria += " AND (PPWG.END.DATE GE '" + UniDataFormatter.UnidataFormatDate(lookupStartDate.Value, InternationalParameters.HostShortDateFormat, InternationalParameters.HostDateDelimiter) 
+                    + "' OR PPWG.END.DATE EQ '')";
+            }
             var perposwgKeys = await DataReader.SelectAsync("PERPOSWG", criteria, personIds.Select(id => string.Format("\"{0}\"", id)).ToArray());
             if (perposwgKeys == null)
             {

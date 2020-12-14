@@ -3138,5 +3138,140 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
 
         }
 
+        [TestClass]
+        public class ProgramEvaluatorRequirmentGroupsWithInListOrder : ProgramEvaluationTests
+        {
+
+
+            //PROG.SORT.ORDER.BB - DATASETUP is in devcoll - student_sort/Testing123!
+            /* Req9( IN.LIST.ORDER.2)->S-5
+             * TAKE 7 COURSES FROM FREN-100 GERM-100 HIND-100 ARTH-100 HUMT-100 CRIM-100 POLI-100; IN.LIST.ORDER;
+             * using default sorting only and no sort specifications
+             * such as default sorting will occur by putting completed courses and then IP courses and then planned courses at end.
+             * completed courses and ip courses are sorted on STC.START.DATE ASC followed by STC.ACAD.CRED.ID in desc
+             * planned courses/sections by default are sorted on term id followed by desc section ids. If planned course is there which does not have sectionId then it will fall at the end of sorted planned courses/sections list
+             * After default soring is done, the result again gets re-sorted based upon the list of courses on From courses syntax
+             * IN.LIST.ORDER rearrange Completed courses on top, sorted based upon sequence
+             * followed by Inprogress courses, sorted based upon sequence
+             * followed by planned courses (planned courses are not sorted based upon the sequence in from courses list, these are always pushed at the bottom)
+             */
+
+            /* STUDENT ID- 0016301
+             Academic Credits and planned courses in order of STC.START.DATE
+             Courses   Id		 Status 	 	Term 		STC.START.DATE  
+            FRN-100      126		IP		    2019/FA	    08/10/20	
+            GERM-100                 PL		    2019/FA	    08/06/20			COURSE ID-7442
+            HIND-100     125	    PR		    2020/FA 	08/01/20		
+            ARTH-100       	        PL		    2020/WI	    08/07/20		COURSE ID-7444
+            HUMT-100     128	    C		    2021/SP	    08/09/20		
+            CRIM-100     129	    IP		    2020/FA    	08/11/20		
+            POLI-100     127		C		    2020BT	   	08/05/20		
+         
+                without in list order
+                POLI-100 HUMT-100 HIND-100 FREN-100 CRIM-100  ARTH-100 GERM-100
+
+                WITH IN LIST ORDER
+                HUMT-100 POLI-100 FREN-100 HIND-100 CRIM-100 GERM-100 ARTH-100*/
+
+
+            [TestMethod]
+            public async Task ValidateNonInListOrderAppliedCourses()
+            {
+                 studentid = "0016301";
+                    studentprogram = await GetStudentProgram(studentid, "PROG.IN.LIST.SORT.ORDER.BB");
+                    additionalrequirements = new List<Requirement>();
+                    credits = await GetCredits(studentid);
+                    plannedcourses = await GetCourses(studentid);
+                    overrides = new List<Override>();
+                    ProgramRequirements pr = await programRequirementsRepo.GetAsync("PROG.IN.LIST.SORT.ORDER.BB", "2013");
+                    ProgramEvaluation eval = new ProgramEvaluator(studentprogram, pr, additionalrequirements, credits, plannedcourses, ruleResults, overrides, courses, logger).Evaluate();
+                    Assert.IsNotNull(eval);
+                Assert.IsNotNull(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results);
+
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[0].Result,Result.Applied);
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[0].GetCourse().Name,"POLI-100");
+                Assert.IsNotNull(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[0].GetAcadCred());
+                Assert.IsTrue(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[0].GetAcadCred().IsCompletedCredit);
+
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[1].Result, Result.Applied);
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[1].GetCourse().Name, "HUMT-100");
+                Assert.IsNotNull(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[1].GetAcadCred());
+                Assert.IsTrue(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[1].GetAcadCred().IsCompletedCredit);
+
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[2].Result, Result.Applied);
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[2].GetCourse().Name, "HIND-100");
+                Assert.IsNotNull(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[2].GetAcadCred());
+                Assert.IsFalse(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[2].GetAcadCred().IsCompletedCredit);
+
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[3].Result, Result.Applied);
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[3].GetCourse().Name, "FREN-100");
+                Assert.IsNotNull(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[3].GetAcadCred());
+                Assert.IsFalse(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[3].GetAcadCred().IsCompletedCredit);
+
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[4].Result, Result.Applied);
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[4].GetCourse().Name, "CRIM-100");
+                Assert.IsNotNull(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[4].GetAcadCred());
+                Assert.IsFalse(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[4].GetAcadCred().IsCompletedCredit);
+
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[5].Result, Result.PlannedApplied);
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[5].GetCourse().Name, "ARTH-100");
+                Assert.IsNull(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[5].GetAcadCred());
+
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[6].Result, Result.PlannedApplied);
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[6].GetCourse().Name, "GERM-100");
+                Assert.IsNull(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[6].GetAcadCred());
+            }
+
+            [TestMethod]
+            public async Task ValidateInListOrderInFromClause()
+            {
+
+                studentid = "0016301";
+                studentprogram = await GetStudentProgram(studentid, "PROG.IN.LIST.SORT.ORDER.BB");
+                additionalrequirements = new List<Requirement>();
+                credits = await GetCredits(studentid);
+                plannedcourses = await GetCourses(studentid);
+                overrides = new List<Override>();
+                ProgramRequirements pr = await programRequirementsRepo.GetAsync("PROG.IN.LIST.SORT.ORDER.BB", "2013");
+                ProgramEvaluation eval = new ProgramEvaluator(studentprogram, pr, additionalrequirements, credits, plannedcourses, ruleResults, overrides, courses, logger).Evaluate();
+                Assert.IsNotNull(eval);
+                Assert.IsNotNull(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results);
+
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[0].Result, Result.Applied);
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[0].GetCourse().Name, "HUMT-100");
+                Assert.IsNotNull(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[0].GetAcadCred());
+                Assert.IsTrue(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[0].GetAcadCred().IsCompletedCredit);
+
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[1].Result, Result.Applied);
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[1].GetCourse().Name, "POLI-100");
+                Assert.IsNotNull(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[1].GetAcadCred());
+                Assert.IsTrue(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[1].GetAcadCred().IsCompletedCredit);
+
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[2].Result, Result.Applied);
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[2].GetCourse().Name, "FREN-100");
+                Assert.IsNotNull(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[2].GetAcadCred());
+                Assert.IsFalse(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[2].GetAcadCred().IsCompletedCredit);
+
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[3].Result, Result.Applied);
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[3].GetCourse().Name, "HIND-100");
+                Assert.IsNotNull(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[3].GetAcadCred());
+                Assert.IsFalse(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[3].GetAcadCred().IsCompletedCredit);
+
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[4].Result, Result.Applied);
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[4].GetCourse().Name, "CRIM-100");
+                Assert.IsNotNull(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[4].GetAcadCred());
+                Assert.IsFalse(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[4].GetAcadCred().IsCompletedCredit);
+
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[5].Result, Result.PlannedApplied);
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[5].GetCourse().Name, "GERM-100");
+                Assert.IsNull(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[5].GetAcadCred());
+
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[6].Result, Result.PlannedApplied);
+                Assert.AreEqual(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[6].GetCourse().Name, "ARTH-100");
+                Assert.IsNull(eval.RequirementResults[0].SubRequirementResults[0].GroupResults[1].Results[6].GetAcadCred());
+            }
+
+        }
+
     }
 }

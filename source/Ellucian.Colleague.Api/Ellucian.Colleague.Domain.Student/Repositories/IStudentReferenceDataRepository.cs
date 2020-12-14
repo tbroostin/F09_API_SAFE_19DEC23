@@ -265,6 +265,26 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<IEnumerable<ChargeAssessmentMethod>> GetChargeAssessmentMethodsAsync(bool ignoreCache);
 
         /// <summary>
+        /// Get All CIP codes for cip-codes API (HEDM)
+        /// </summary>
+        /// <returns>List of CipCode entities</returns>
+        Task<IEnumerable<CipCode>> GetCipCodesAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get guid for Cip code
+        /// </summary>
+        /// <param name="code">Cip code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetCipCodesGuidAsync(string code);
+
+        /// <summary>
+        /// Get code for Cip code guid
+        /// </summary>
+        /// <param name="code">Cip code guid</param>
+        /// <returns>code</returns>
+        Task<string> GetCipCodesFromGuidAsync(string guid);
+
+        /// <summary>
         /// Class Levels such as FR - Freshman, SO - Sophomore, etc.
         /// </summary>
         Task<IEnumerable<ClassLevel>> GetClassLevelsAsync();
@@ -979,7 +999,12 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <returns>Collection of financial aid years</returns>
         Task<IEnumerable<FinancialAidYear>> GetFinancialAidYearsAsync(bool ignoreCache = false);
 
-
+        /// <summary>
+        /// Get code for GetFinancialAidYears guid
+        /// </summary>
+        /// <param name="sourceGuid"></param>
+        /// <returns></returns>
+        Task<FinancialAidYear> GetFinancialAidYearAsync( string sourceGuid );
 
         /// <summary>
         /// Get guid for GetFinancialAidYears code
@@ -1044,5 +1069,41 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <param name="code"></param>
         /// <returns></returns>
         Task<string> GetEducationGoalGuidAsync(string code);
+
+        /// <summary>
+        /// Returns all education goals
+        /// </summary>
+        /// <param name="ignoreCache">Flag indicating whether or not to bypass the cache</param>
+        /// <returns>Collection of <see cref="EducationGoal">education goals</see></returns>
+        Task<IEnumerable<EducationGoal>> GetAllEducationGoalsAsync(bool bypassCache = false);
+
+        /// <summary>
+        /// Returns all registration reasons
+        /// </summary>
+        /// <param name="ignoreCache">Flag indicating whether or not to bypass the cache</param>
+        /// <returns>Collection of <see cref="RegistrationReason">registration reasons</see></returns>
+        Task<IEnumerable<RegistrationReason>> GetRegistrationReasonsAsync(bool bypassCache = false);
+
+        /// <summary>
+        /// Returns all registration marketing sources
+        /// </summary>
+        /// <param name="ignoreCache">Flag indicating whether or not to bypass the cache</param>
+        /// <returns>Collection of <see cref="RegistrationMarketingSource">registration marketing sources</see></returns>
+        Task<IEnumerable<RegistrationMarketingSource>> GetRegistrationMarketingSourcesAsync(bool bypassCache = false);
+
+        /// <summary>
+        /// Returns all Financial Aid Marital Statuses.
+        /// </summary>
+        /// <param name="bypassCache"></param>
+        /// <param name="years"></param>
+        /// <returns>IEnumerable<FinancialAidMaritalStatus></returns>
+        Task<IEnumerable<FinancialAidMaritalStatus>> GetFinancialAidMaritalStatusesAsync( bool bypassCache = false, params string[] years );
+
+        /// <summary>
+        /// Returns Financial Aid Marital Status.
+        /// </summary>
+        /// <param name="year"></param>
+        /// <returns></returns>
+        Task<FinancialAidMaritalStatus> GetFinancialAidMaritalStatusAsync( string year, string code );
     }
 }

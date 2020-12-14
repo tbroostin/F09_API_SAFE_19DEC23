@@ -274,7 +274,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 employmentPerformanceReviewsRepositoryMock.Setup(i => i.GetEmploymentPerformanceReviewByIdAsync(It.IsAny<string>())).ReturnsAsync(employmentPerformanceReviewsEntities.ToList()[0]);
                 employmentPerformanceReviewsRepositoryMock.Setup(i => i.GetGuidFromIdAsync(It.IsAny<string>(), "PERSON")).ReturnsAsync("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d");
                 employmentPerformanceReviewsRepositoryMock.Setup(i => i.GetGuidFromIdAsync(It.IsAny<string>(), "PERPOS")).ReturnsAsync("d2253ac7-9931-4560-b42f-1fccd43c952e");
-                employmentPerformanceReviewsRepositoryMock.Setup(i => i.GetJobGuidFromIdAsync(It.IsAny<string>(), "PERPOS")).ReturnsAsync("d2253ac7-9931-4560-b42f-1fccd43c952e");
                 hrReferenceDataRepositoryMock.Setup(i => i.GetEmploymentPerformanceReviewTypesAsync(It.IsAny<bool>())).ReturnsAsync(employmentPerformanceReviewTypeEntities);
                 hrReferenceDataRepositoryMock.Setup(i => i.GetEmploymentPerformanceReviewRatingsAsync(It.IsAny<bool>())).ReturnsAsync(employmentPerformanceReviewRatingEntities);
 

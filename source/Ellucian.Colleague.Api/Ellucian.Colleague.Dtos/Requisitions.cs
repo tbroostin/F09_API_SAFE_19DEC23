@@ -29,6 +29,12 @@ namespace Ellucian.Colleague.Dtos
         public string ReferenceNumber { get; set; }
 
         /// <summary>
+        /// The type of requisition, i.e. Procurement or eProcurement.
+        /// </summary>
+        [JsonProperty("type", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public RequisitionTypes? Type { get; set; }
+
+        /// <summary>
         /// The payment source associated with the requisition which is used for calculating taxes
         /// </summary>
         [JsonProperty("paymentSource", DefaultValueHandling = DefaultValueHandling.Ignore)]

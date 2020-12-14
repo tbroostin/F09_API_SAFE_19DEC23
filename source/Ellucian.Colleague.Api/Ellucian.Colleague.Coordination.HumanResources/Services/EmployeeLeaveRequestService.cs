@@ -2,8 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Ellucian.Colleague.Coordination.HumanResources.Adapters;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -12,12 +10,9 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Dtos;
-using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.HumanResources;
-using Ellucian.Colleague.Dtos.HumanResources;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 
@@ -95,6 +90,56 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             return leaveRequestDTOs;
         }
+
+        /// <summary>
+        /// Gets the Approved Leave Requests for a timecard week based on the date range. 
+        /// </summary>
+        /// <param name="startDate">Start date of timecard week</param>
+        /// <param name="endDate">End date of timecard week</param>
+        /// <param name="effectivePersonId">Optional parameter for passing effective person Id</param>
+        /// <returns>List of Leave Request DTO</returns>
+        public async Task<IEnumerable<Dtos.HumanResources.LeaveRequest>> GetLeaveRequestsForTimeEntryAsync(DateTime startDate, DateTime endDate, string effectivePersonId = null)
+        {
+           
+            //Take LoggedInUser Id when no id is passed
+            if (string.IsNullOrWhiteSpace(effectivePersonId))
+            {
+                effectivePersonId = CurrentUser.PersonId;
+            }
+
+            //Check for Proxy Access(TO-DO) , Timecard Approver Permission , when effective person id is not same as logged in User  
+            if (!CurrentUser.IsPerson(effectivePersonId) &&
+                    !(HasPermission(HumanResourcesPermissionCodes.ApproveRejectEmployeeTimecard)))
+            {
+                throw new PermissionsException(string.Format("User {0} does not have permission to fetch leave request information of {1}", CurrentUser.PersonId, effectivePersonId));
+            }
+
+            var personIds = new List<string>() { effectivePersonId };
+
+            if (HasPermission(HumanResourcesPermissionCodes.ApproveRejectEmployeeTimecard))
+            {
+                var superviseeIds = await supervisorsRepository.GetSuperviseesBySupervisorAsync(effectivePersonId);
+                if (superviseeIds == null || !superviseeIds.Any())
+                {
+                    logger.Error(string.Format("Supervisor {0} does not supervise any employees", effectivePersonId));
+                }
+                else
+                {
+                    personIds.AddRange(superviseeIds);
+                }
+
+            }
+
+           //Invoke repository method
+            var leaveRequestEntities = await employeeLeaveRequestRepository.GetLeaveRequestsForTimeEntryAsync(startDate,endDate,personIds.Distinct());
+            var leaveRequestEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.HumanResources.Entities.LeaveRequest, Dtos.HumanResources.LeaveRequest>();
+            var leaveRequestDTOs = leaveRequestEntities.Select(lre => leaveRequestEntityToDtoAdapter.MapToType(lre)).ToList();
+
+            return leaveRequestDTOs;
+        }
+
+      
+
 
         /// <summary>
         /// Service method that gets a single LeaveRequest object matching the given id based on the user's permissions. 
@@ -472,7 +517,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             return newLeaveRequestCommentDTO;
         }
 
-       
+
         #region Helper_Methods
         /// <summary>
         /// Helper method that creates a LeaveRequestHelper used for updating an existing leave request record
@@ -622,7 +667,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             return totalHoursList;
         }
-       
+
         /// <summary>
         /// Retreives list of Supervisees for a Leave Approver/Supervisor
         /// </summary>
@@ -631,7 +676,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         {
             //Get the logged in user id
             string supervisorId = CurrentUser.PersonId;
-             
+
             //Fetch Supervisees only for users with APPROVE.REJECT.LEAVE.REQUEST
             if (!HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest))
             {

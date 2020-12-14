@@ -21,6 +21,7 @@ using VendorType = Ellucian.Colleague.Dtos.EnumProperties.VendorType;
 using Ellucian.Colleague.Dtos.Filters;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Dmi.Runtime;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 {
@@ -31,15 +32,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private readonly IVendorsRepository _vendorsRepository;
         private readonly IPersonRepository _personRepository;
         private readonly IAddressRepository _addressRepository;
+        private readonly IVendorContactsRepository _vendorContactRepository;
         private readonly IReferenceDataRepository _referenceDataRepository;
         private readonly IInstitutionRepository _institutionRepository;
         private readonly IConfigurationRepository _configurationRepository;
+        public static char _SM = Convert.ToChar(DynamicArray.SM);
 
         public VendorsService(
             IColleagueFinanceReferenceDataRepository colleagueFinanceReferenceDataRepository,
             IVendorsRepository vendorsRepository,
             IPersonRepository personRepository,
             IAddressRepository addressRepository,
+            IVendorContactsRepository vendorContactRepository,
             IReferenceDataRepository referenceDataRepository,
             IInstitutionRepository institutionRepository,
             IConfigurationRepository configurationRepository,
@@ -56,6 +60,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             _institutionRepository = institutionRepository;
             _referenceDataRepository = referenceDataRepository;
             _addressRepository = addressRepository;
+            _vendorContactRepository = vendorContactRepository;
         }
 
 
@@ -120,6 +125,46 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private async Task<IEnumerable<TaxForms2>> GetAllTaxForms2Async(bool bypassCache)
         {
             return _taxforms ?? (_taxforms = await _referenceDataRepository.GetTaxFormsBaseAsync(bypassCache));
+        }
+
+        private IEnumerable<Domain.Base.Entities.PhoneType> _phoneType = null;
+        private async Task<IEnumerable<Domain.Base.Entities.PhoneType>> GetPhoneTypesAsync(bool bypassCache)
+        {
+            if (_phoneType == null)
+            {
+                _phoneType = await _referenceDataRepository.GetPhoneTypesAsync(bypassCache);
+            }
+            return _phoneType;
+        }
+
+        private IEnumerable<Domain.Base.Entities.AddressType2> _addressType2 = null;
+        private async Task<IEnumerable<Domain.Base.Entities.AddressType2>> GetAddressTypes2Async(bool bypassCache)
+        {
+            if (_addressType2 == null)
+            {
+                _addressType2 = await _referenceDataRepository.GetAddressTypes2Async(bypassCache);
+            }
+            return _addressType2;
+        }
+
+        private IEnumerable<Domain.Base.Entities.Country> _countries = null;
+        private async Task<IEnumerable<Domain.Base.Entities.Country>> GetAllCountriesAsync(bool bypassCache)
+        {
+            if (_countries == null)
+            {
+                _countries = await _referenceDataRepository.GetCountryCodesAsync(bypassCache);
+            }
+            return _countries;
+        }
+
+        private IEnumerable<State> _states = null;
+        private async Task<IEnumerable<State>> GetAllStatesAsync(bool bypassCache)
+        {
+            if (_states == null)
+            {
+                _states = await _referenceDataRepository.GetStateCodesAsync(bypassCache);
+            }
+            return _states;
         }
 
         #region EEDM vendor v8
@@ -2092,6 +2137,1099 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
         #endregion
 
+        #region EEDM vendor maximum
+
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
+        /// <summary>
+        /// Gets all vendors maximum
+        /// </summary>
+        /// <returns>Collection of Vendors DTO objects</returns>
+        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>, int>> GetVendorsMaximumAsync(int offset, int limit, VendorsMaximum criteriaObj, string vendorDetails, bool bypassCache = false)
+        {
+            CheckViewVendorPermission();
+
+            var vendorsCollection = new List<VendorsMaximum>();
+
+            var vendorId = string.Empty;
+            var taxId = string.Empty;
+            List<string> statuses = null;
+            List<string> types = null;
+            List<string> addresses = null;
+ 
+            //check if vendorDetail criteria present and get the id to send in to the repo
+            if (!string.IsNullOrEmpty(vendorDetails))
+            {
+                try
+                {
+                    var personId = await _personRepository.GetPersonIdFromGuidAsync(vendorDetails);
+                    if (!string.IsNullOrEmpty(personId))
+                    {
+                        vendorId = personId;
+                    }
+                    else
+                    {
+                        return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                    }
+                }
+                catch
+                {
+                    return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                }
+            }
+            //process person Id filter
+            if (criteriaObj != null && criteriaObj.VendorDetail != null)
+            {
+                if (criteriaObj.VendorDetail.Person != null && !string.IsNullOrEmpty(criteriaObj.VendorDetail.Person.Id))
+                {
+                    try
+                    {
+                        var person = await _personRepository.GetPersonByGuidNonCachedAsync(criteriaObj.VendorDetail.Person.Id);
+                        if (person == null)
+                        {
+                            return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                        }
+                        else
+                        {
+                            var institution = await _institutionRepository.GetInstitutionsFromListAsync(new string[] { person.Id });
+                            if (institution != null && institution.Any())
+                                return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                            else
+                            {
+                                if (person.PersonCorpIndicator == "Y")
+                                    return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                                else
+                                {
+                                    if (String.IsNullOrEmpty(vendorId))
+                                        vendorId = person.Id;
+                                    else
+                                        return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                                }
+
+                            } 
+                        }
+                    }
+                    catch
+                    {
+                        return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                    }
+
+                }
+
+                if (criteriaObj.VendorDetail.Organization != null && !string.IsNullOrEmpty(criteriaObj.VendorDetail.Organization.Id))
+                {
+                    try
+                    {
+                        var person = await _personRepository.GetPersonByGuidNonCachedAsync(criteriaObj.VendorDetail.Organization.Id);
+                        if (person == null)
+                        {
+                            return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                        }
+                        else
+                        {
+                            var institution = await _institutionRepository.GetInstitutionsFromListAsync(new string[] { person.Id });
+                            if (institution != null && institution.Any())
+                                return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                            else
+                            {
+                                if (person.PersonCorpIndicator != "Y")
+                                    return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                                else
+                                {
+                                    if (String.IsNullOrEmpty(vendorId))
+                                        vendorId = person.Id;
+                                    else
+                                        return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                                }
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                    }
+
+                }
+
+                if (criteriaObj.VendorDetail.Institution != null && !string.IsNullOrEmpty(criteriaObj.VendorDetail.Institution.Id))
+                {
+                    try
+                    {
+                        var person = await _personRepository.GetPersonByGuidNonCachedAsync(criteriaObj.VendorDetail.Institution.Id);
+                        if (person == null)
+                        {
+                            return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                        }
+                        else
+                        {
+                            if ((string.IsNullOrEmpty(person.PersonCorpIndicator) || (person.PersonCorpIndicator == "N")))
+                            {
+                                return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                            }
+                            else
+                            {
+                                var institution = await _institutionRepository.GetInstitutionsFromListAsync(new string[] { person.Id });
+                                if (institution == null || !institution.Any())
+                                {
+                                    return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                                }
+                                else
+                                {
+                                    if (String.IsNullOrEmpty(vendorId))
+                                        vendorId = person.Id;
+                                    else
+                                        return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                                }
+                            }
+
+                        }
+                    }
+                    catch
+                    {
+                        return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                    }
+
+                }
+
+
+
+            }            
+            //process statuses filter
+            if (criteriaObj != null && criteriaObj.Statuses != null && criteriaObj.Statuses.Any())
+            {
+                statuses = new List<string>();
+                foreach (var status in criteriaObj.Statuses)
+                {
+                    if (status.ToString().ToLower() != "active" && status.ToString().ToLower() != "holdpayment" && status.ToString().ToLower() != "approved")
+                    {
+                        return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                    }
+                    else
+                    {
+                        statuses.Add(status.ToString());
+                    }
+                }
+            }
+            //process types filter
+            if (criteriaObj != null && criteriaObj.Types != null && criteriaObj.Types.Any())
+            {
+                types = new List<string>();
+                foreach (var type in criteriaObj.Types)
+                {
+                    if (type.ToString().ToLower() != "eprocurement" && type.ToString().ToLower() != "travel" && type.ToString().ToLower() != "procurement")
+                    {
+                        return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                    }
+                    else
+                    {
+                        types.Add(type.ToString());
+                    }
+                }
+            }
+            //process taxId filter
+            if (criteriaObj != null && !string.IsNullOrEmpty(criteriaObj.TaxId))
+            {
+                taxId = criteriaObj.TaxId;
+            }
+            //process address Detail filter
+            if (criteriaObj != null && criteriaObj.Addresses != null && criteriaObj.Addresses.Any())
+            {
+                addresses = new List<string>();
+                foreach (var address in criteriaObj.Addresses)
+                {
+                    if (address != null && address.Detail != null && !string.IsNullOrEmpty(address.Detail.Id))
+                    {
+                        try
+                        {
+                            var addressId = await _addressRepository.GetAddressFromGuidAsync(address.Detail.Id);
+                            if (!string.IsNullOrEmpty(addressId))
+                            {
+                                addresses.Add(addressId);
+                            }
+                            else
+                            {
+                                return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                            }
+                        }
+                        catch
+                        {
+                            return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                        }
+                    }
+                    else
+                    {
+                        return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
+                    }
+                }
+            }
+
+
+            Tuple<IEnumerable<Domain.ColleagueFinance.Entities.Vendors>, int> vendorsEntities = null;
+            try
+            {
+                vendorsEntities = await _vendorsRepository.GetVendorsMaximumAsync(offset, limit, vendorId, statuses, types, taxId,addresses);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+            var totalRecords = vendorsEntities.Item2;
+            if ((vendorsEntities != null) && (vendorsEntities.Item1.Any()))
+            {
+                var institutions = await _institutionRepository.GetInstitutionsFromListAsync(vendorsEntities.Item1.Select(x => x.Id).ToArray());
+                var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(vendorsEntities.Item1.Select(x => x.Id).ToArray());
+                var personPOAddressCollection = await _personRepository.GetHierarchyAddressIdsAsync(vendorsEntities.Item1.Select(x => x.Id).ToList(), "PO", DateTime.Today);
+                var personAPAddressCollection = await _personRepository.GetHierarchyAddressIdsAsync(vendorsEntities.Item1.Select(x => x.Id).ToList(), "AP.CHECK", DateTime.Today);
+                var addressIds = new List<string>();
+                var poAddressIds = new List<string>();
+                var apAddressIds = new List<string>();
+                if (personPOAddressCollection != null && personPOAddressCollection.Any())
+                    poAddressIds = personPOAddressCollection.Select(x => x.Value).ToList();
+                if (personAPAddressCollection != null && personAPAddressCollection.Any())
+                    apAddressIds = personAPAddressCollection.Select(x => x.Value).ToList();
+                addressIds = poAddressIds.Union(apAddressIds).ToList();
+                var addressGuidCollection = await _personRepository.GetAddressGuidsCollectionAsync(addressIds);
+                List<Ellucian.Colleague.Domain.ColleagueFinance.Entities.OrganizationContact> vendorContacts = null;
+                try
+                {
+                    vendorContacts = (await _vendorContactRepository.GetVendorContactsForVendorsAsync(vendorsEntities.Item1.Select(x => x.Id).ToArray())).ToList();
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex);
+                }
+                foreach (var vendorsEntity in vendorsEntities.Item1)
+                {
+                    if (vendorsEntity.Guid != null)
+                    {
+                            var vendorDto = await ConvertVendorsEntityToMaximumDtoAsync(vendorsEntity, institutions, personGuidCollection, personPOAddressCollection, personAPAddressCollection, addressGuidCollection, vendorContacts, bypassCache);
+                            vendorsCollection.Add(vendorDto);                        
+                    }
+                }
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+            }
+            return new Tuple<IEnumerable<VendorsMaximum>, int>(vendorsCollection, totalRecords);
+        }
+
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
+        /// <summary>
+        /// Get a Vendors from its GUID
+        /// </summary>
+        /// <returns>Vendors DTO object</returns>
+        public async Task<VendorsMaximum> GetVendorsMaximumByGuidAsync(string guid)
+        {
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid", "GUID is required to get a Vendor.");
+            }
+            CheckViewVendorPermission();
+
+            try
+            {
+                var vendors = await _vendorsRepository.GetVendorsMaximumByGuidAsync(guid);
+                List<Institution> institutions = null;
+                List<Domain.ColleagueFinance.Entities.OrganizationContact> vendorContacts = null;
+                Dictionary<string, string> personGuidCollection = null;
+                Dictionary<string, string> personAPAddressCollection = null;
+                Dictionary<string, string> personPOAddressCollection = null;
+                Dictionary<string, string> addressGuidCollection = null;
+                if (vendors != null)
+                {
+                    institutions = (await _institutionRepository.GetInstitutionsFromListAsync(new string[] { vendors.Id })).ToList();
+                    personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(new string[] { vendors.Id });
+                    personPOAddressCollection = await _personRepository.GetHierarchyAddressIdsAsync(new List<string> { vendors.Id }, "PO", DateTime.Today);
+                    personAPAddressCollection = await _personRepository.GetHierarchyAddressIdsAsync(new List<string> { vendors.Id }, "AP.CHECK", DateTime.Today);
+                    var addressIds = new List<string>();
+                    var poAddressIds = new List<string>();
+                    var apAddressIds = new List<string>();
+                    if (personPOAddressCollection != null && personPOAddressCollection.Any())
+                        poAddressIds = personPOAddressCollection.Select(x => x.Value).ToList();
+                    if (personAPAddressCollection != null && personAPAddressCollection.Any())
+                        apAddressIds = personAPAddressCollection.Select(x => x.Value).ToList();
+                    addressIds = poAddressIds.Union(apAddressIds).ToList();
+                    addressGuidCollection = await _personRepository.GetAddressGuidsCollectionAsync(addressIds);
+                    try
+                    {
+                        vendorContacts = (await _vendorContactRepository.GetVendorContactsForVendorsAsync(new string[] { vendors.Id })).ToList();
+                    }
+                    catch(RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex);
+                    }
+
+                }
+                var dto = await ConvertVendorsEntityToMaximumDtoAsync(vendors, institutions, personGuidCollection, personPOAddressCollection, personAPAddressCollection, addressGuidCollection, vendorContacts);
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+
+                return dto;
+
+            }
+            catch (IntegrationApiException ex)
+            {
+                throw ex;
+            }
+            catch (KeyNotFoundException ex)
+            {
+                throw new KeyNotFoundException("No vendors was found for guid  " + guid, ex);
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new InvalidOperationException("No vendors was found for guid  " + guid, ex);
+            }
+            catch (RepositoryException ex)
+            {
+                throw ex;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("No vendor was found for guid  " + guid, ex);
+            }
+        }
+        
+
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
+        /// <summary>
+        /// Converts a Vendors domain entity to its corresponding Vendors DTO
+        /// </summary>
+        /// <param name="source">Vendors domain entity</param>
+        /// <returns>Vendors DTO</returns>
+        private async Task<VendorsMaximum> ConvertVendorsEntityToMaximumDtoAsync(Domain.ColleagueFinance.Entities.Vendors source,
+             IEnumerable<Domain.Base.Entities.Institution> institutions, Dictionary<string, string> personGuidCollection, Dictionary<string, string> personPOAddressCollection, Dictionary<string, string> personAPAddressCollection, Dictionary<string, string> addressGuidCollection, IEnumerable<Domain.ColleagueFinance.Entities.OrganizationContact> vendorContacts, bool bypassCache = false)
+        {
+            var vendors = new VendorsMaximum();
+            //process currency
+            if (!(string.IsNullOrEmpty(source.CurrencyCode)))
+            {
+                var currencyCodes = (await GetAllCurrencyConversionAsync()).ToList();
+
+                var curCode = currencyCodes.FirstOrDefault(x => x.Code == source.CurrencyCode);
+                if (curCode != null)
+                {
+                    var currencyIsoCode = ConvertCurrencyCodeToCurrencyIsoCode(curCode.CurrencyCode);
+                    if (currencyIsoCode != null)
+                    {
+                        vendors.DefaultCurrency = currencyIsoCode;
+                    }
+                }
+            }
+            // Make sure whe have a valid GUID for the record we are dealing with
+            if (string.IsNullOrEmpty(source.Guid))
+            {
+                IntegrationApiExceptionAddError("Could not find a GUID for vendors entity.", "GUID.Not.Found", id: source.Id);
+            }
+            else
+            {
+                vendors.Id = source.Guid;
+            }
+            //process TaxId
+            if (!string.IsNullOrEmpty(source.TaxId))
+            {
+                vendors.TaxId = source.TaxId;
+            }
+            //process types
+            if (source.Categories != null)
+            {
+                if (source.Categories.Any() && source.Categories.Count > 0)
+                {
+                    var types = new List<VendorTypes>();
+                    foreach (var category in source.Categories)
+                    {
+                        switch (category)
+                        {
+                            case "EP":
+                                types.Add(VendorTypes.EProcurement);
+                                break;
+                            case "TR":
+                                types.Add(VendorTypes.Travel);
+                                break;
+                            case "PR":
+                                types.Add(VendorTypes.Procurement);
+                                break;
+                        }
+                    }
+                    if (types != null && types.Any())
+                    {
+                        vendors.Types = types;
+                    }
+                }
+            }
+            //process vendorDetail
+            if (!string.IsNullOrEmpty(source.Id))
+            {
+                var personGuid = string.Empty;
+                if (personGuidCollection == null)
+                {
+                    IntegrationApiExceptionAddError(string.Concat("Person guid not found for Person Id: '", source.Id, "'"), "GUID.Not.Found"
+                        , source.Id, source.Guid);
+                }
+                else
+                {
+                    personGuidCollection.TryGetValue(source.Id, out personGuid);
+                    if (string.IsNullOrEmpty(personGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("Person guid not found for Person Id: '", source.Id, "'"), "GUID.Not.Found"
+                            , source.Id, source.Guid);
+                    }
+                    else
+                    {
+
+                        var vendorDetail = new VendorDetailsDtoProperty();
+                        //var institution = (await GetInstitutions()).FirstOrDefault(i => i.Id.Equals(source.Id));
+                        Domain.Base.Entities.Institution institution = null;
+                        if (institutions != null && institutions.Any())
+                            institution = institutions.FirstOrDefault(i => i.Id.Equals(source.Id));
+
+                        if (source.IsOrganization && institution == null)
+                        {
+                            vendorDetail.Organization = new GuidObject2(personGuid);
+                        }
+                        else if (institution != null)
+                        {
+                            vendorDetail.Institution = new GuidObject2(personGuid);
+                        }
+                        else
+                        {
+                            vendorDetail.Person = new GuidObject2(personGuid);
+                        }
+                        vendors.VendorDetail = vendorDetail;                        
+                    }
+                }
+            }
+            //process statuses
+            var vendorsStatuses = new List<VendorsStatuses?>();
+
+            if (source.ActiveFlag == "Y")
+                vendorsStatuses.Add(VendorsStatuses.Active);
+            if (source.StopPaymentFlag == "Y")
+                vendorsStatuses.Add(VendorsStatuses.Holdpayment);
+            if (source.ApprovalFlag == "Y")
+                vendorsStatuses.Add(VendorsStatuses.Approved);
+
+            if (vendorsStatuses.Any())
+            {
+                vendors.Statuses = vendorsStatuses;
+            }
+            //process startOn
+            vendors.StartOn = source.AddDate;          
+
+            //get tax from components. If the VEN.TAX.FORM does not have a default box code in the 1st special processing of the TAX.FORMS valcode table, 
+            //then omit the taxFormComponent object from the response.
+            if (!string.IsNullOrEmpty(source.TaxForm))
+            {
+                var taxBoxes = await GetAllBoxCodesAsync(bypassCache);
+                var taxForms = await GetAllTaxForms2Async(bypassCache);
+                if (taxForms != null && taxForms.Any())
+                {
+                    var taxForm = taxForms.FirstOrDefault(box => box.Code == source.TaxForm);
+                    if (taxForm != null)
+                    {
+                        var taxBox = taxBoxes.FirstOrDefault(aps => aps.Code == taxForm.defaultTaxBox);
+                        if (taxBox != null)
+                        {
+                            if (!string.IsNullOrEmpty(taxBox.Guid))
+                                vendors.DefaultTaxFormComponent = new GuidObject2(taxBox.Guid);
+                            else
+                                IntegrationApiExceptionAddError(string.Concat("No Guid found, Entity:'BOX.CODES', Record ID:'", taxBox, "'"), "GUID.Not.Found",
+                                source.Id, source.Guid);
+                        }
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("No Guid found, Entity:'CORE-VALCODES, TAX.FORMS', Record ID:'", source.TaxForm, "'"), "GUID.Not.Found",
+                                source.Id, source.Guid);
+                    }
+                }
+            }
+            
+            //populate the default address Id and usage
+            //get PO address
+            var POAddr = string.Empty;
+            if (personPOAddressCollection != null && personPOAddressCollection.Any())
+            {
+                personPOAddressCollection.TryGetValue(source.Id, out POAddr);
+            }
+            var addresses = new List<VendorsAddressesDtoProperty>();
+            if (!string.IsNullOrEmpty(POAddr))
+            {
+                // get vendor-address-usages for PO
+                var address = new VendorsAddressesDtoProperty();
+                try
+                {
+                    var addressType = "PO";
+                    var addressTypeGuid = await _colleagueFinanceReferenceDataRepository.GetIntgVendorAddressUsagesGuidAsync(addressType);
+                    if (addressTypeGuid != null)
+                    {
+                        address.Usage = new GuidObject2(addressTypeGuid);
+                    }
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                        source.Id, source.Guid);
+                }
+                //get address guid
+                var addressGuid = string.Empty;
+                if (addressGuidCollection != null && addressGuidCollection.Any())
+                    addressGuidCollection.TryGetValue(POAddr, out addressGuid);
+                if (!string.IsNullOrEmpty(addressGuid))
+                {
+                    address.Address = new GuidObject2(addressGuid);
+                    addresses.Add(address);
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError(string.Concat("Address guid not found for addresss Id : ,POAddr "), "GUID.Not.Found",
+                        source.Id, source.Guid);
+                }
+
+            }
+            //get APCHECK address
+            var APCheckAddr = string.Empty;
+            if (personAPAddressCollection != null && personAPAddressCollection.Any())
+            {
+                personAPAddressCollection.TryGetValue(source.Id, out APCheckAddr);
+            }
+            if (!string.IsNullOrEmpty(APCheckAddr))
+            {
+                // get vendor-address-usages for PO
+                var address = new VendorsAddressesDtoProperty();
+                try
+                {
+                    var addressType = "CHECK";
+                    var addressTypeGuid = await _colleagueFinanceReferenceDataRepository.GetIntgVendorAddressUsagesGuidAsync(addressType);
+                    if (addressTypeGuid != null)
+                    {
+                        address.Usage = new GuidObject2(addressTypeGuid);
+                    }
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                        source.Id, source.Guid);
+                }
+                //get default address guid
+                var addressGuid = string.Empty;
+                if (addressGuidCollection != null && addressGuidCollection.Any())
+                    addressGuidCollection.TryGetValue(APCheckAddr, out addressGuid);
+                if (!string.IsNullOrEmpty(addressGuid))
+                {
+                    address.Address = new GuidObject2(addressGuid);
+                    addresses.Add(address);
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError(string.Concat("Address guid not found for addresss Id : ", APCheckAddr), "GUID.Not.Found",
+                        source.Id, source.Guid);
+                }
+            }
+            if (addresses != null && addresses.Any())
+            {
+                vendors.DefaultAddresses = addresses;
+            }
+
+            //get vendorcontacts
+
+            if (vendorContacts != null && vendorContacts.Any())
+            {
+                var orgContacts = vendorContacts.Where(con => con.VendorId == source.Id);
+               
+                if (orgContacts != null && orgContacts.Any())
+                {
+                    vendors.Contacts = new List<VendorsMaximumContacts>();
+                    foreach (var entity in orgContacts)
+                    {
+                        var contact = await ConvertVendorContactEntityToDtoAsync(entity, source.Id, source.Guid);
+                        if (contact != null)
+                            vendors.Contacts.Add(contact);
+                    }
+                }
+            }
+
+            //get address
+            if (source.Addresses != null && source.Addresses.Any())
+            {
+                var personAddressDtos = await GetPersonAddressDtoCollectionAsync(source.Addresses, source.Id, source.Guid, bypassCache);
+                if (personAddressDtos != null && personAddressDtos.Any())
+                {
+                    vendors.Addresses = personAddressDtos.ToList();
+                }
+            }
+
+            if (source.Phones != null && source.Phones.Any())
+            {
+                var personPhoneDtos = await GetPersonPhoneDtoCollectionAsync(source.Phones, source.Id, source.Guid, bypassCache);
+                if (personPhoneDtos != null && personPhoneDtos.Any())
+                {
+                    vendors.Phones = personPhoneDtos.ToList();
+                }
+            }
+
+            return vendors;
+        }
+
+        /// <summary>
+        /// Converts OrganizationContact entity to VendorsMaximumContacts dto.
+        /// </summary>
+        /// <param name="source">OrganizationContact entity</param>
+        /// <param name="vendorId">vendor Id for error handling</param>
+        /// <param name="vendorGuid">vendor Guid for error handling</param>
+        /// <returns>VendorsMaximumContacts DTO</returns>
+        private async Task<VendorsMaximumContacts> ConvertVendorContactEntityToDtoAsync(Domain.ColleagueFinance.Entities.OrganizationContact source, string vendorId, string vendorGuid)
+        {
+            VendorsMaximumContacts dto = new VendorsMaximumContacts();
+
+            //id
+            if (!String.IsNullOrEmpty(source.Guid))
+                dto.VendorContact = new GuidObject2(source.Guid);
+            else
+                IntegrationApiExceptionAddError(string.Concat("Guid not found for Organization Contact Id: '", source.Id, "'"), "GUID.Not.Found", vendorGuid, vendorId);
+
+            //contact.relationshipType.id
+            if (!string.IsNullOrEmpty(source.RelationshipType))
+            {
+                try
+                {
+                    var relTypeId = await _referenceDataRepository.GetRelationTypes3GuidAsync(source.RelationshipType);
+                    if (relTypeId == null || string.IsNullOrEmpty(relTypeId.Item1))
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("Contact relation type guid not found for relationshipType: '", source.RelationshipType, "'"), "GUID.Not.Found", vendorGuid, vendorId);
+                    }
+                    else
+                    {
+                        dto.RelationshipType = new GuidObject2(relTypeId.Item1);
+                    }
+                }
+                catch (Exception)
+                {
+                    IntegrationApiExceptionAddError(string.Concat("Contact relation type guid not found for relationshipType: '", source.RelationshipType, "'"), "GUID.Not.Found", vendorGuid, vendorId);
+                }
+            }
+            else
+            {
+                IntegrationApiExceptionAddError(string.Concat("RelationshipType is missing for Organization Contact Id: '", source.Id, "'"), "GUID.Not.Found", vendorGuid, vendorId);
+            }
+
+            //contact.person.detail.id, contact.person.name
+            dto.Person = new Dtos.DtoProperties.VendorContactsPerson()
+            {
+                Detail = new GuidObject2(source.ContactPersonGuid),
+            };
+
+            if (!string.IsNullOrWhiteSpace(source.ContactPreferedName))
+            {
+                dto.Person.Name = source.ContactPreferedName;
+            }
+            else
+            {
+                IntegrationApiExceptionAddError(string.Concat("Contact person name not found for Organization Contact Id: '", source.Id, "'"), "Bad.Data", vendorGuid, vendorId);
+
+            }
+            //contact.phones.type.id, contact.phones.number, contact.phones.extension
+            if (source.PhoneInfos != null && source.PhoneInfos.Any())
+            {
+                foreach (var phoneInfo in source.PhoneInfos)
+                {
+                    VendorContactsPhones contactPhone = new VendorContactsPhones();
+                    try
+                    {
+                        if (!string.IsNullOrEmpty(phoneInfo.PhoneType))
+                        {
+                            var typeGuid = await _referenceDataRepository.GetPhoneTypesGuidAsync(phoneInfo.PhoneType);
+                            if (!string.IsNullOrEmpty(typeGuid))
+                            {
+                                contactPhone.Type = new GuidObject2(typeGuid);
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError(string.Concat("Contact phone type guid not found for PhoneType: '", phoneInfo.PhoneType, "'"), "GUID.Not.Found", vendorGuid, vendorId);
+                            }
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("Contact phone type guid not found for (phoneInfo.PhoneType: '", phoneInfo.PhoneType, "'"), "Bad.Data", vendorGuid, vendorId);
+                    }
+                    if (!string.IsNullOrEmpty(phoneInfo.PhoneNumber))
+                    {
+                        contactPhone.Number = phoneInfo.PhoneNumber;
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("Contact phone type guid not found for Organization Contact Id: '", source.Id, "'"), "Bad.Data", vendorGuid, vendorId);
+                    }
+
+                    contactPhone.Extension = !string.IsNullOrEmpty(phoneInfo.PhoneExtension) ? phoneInfo.PhoneExtension : null;
+
+                    if (dto.Phones == null) dto.Phones = new List<VendorContactsPhones>();
+
+                    dto.Phones.Add(contactPhone);
+                }
+            }
+            return dto;
+        }
+
+
+        /// <summary>
+        /// Converts address entity to VendorsMaximumAddresses dto.
+        /// </summary>
+        /// <param name="addressEntities">list of address Entities</param>
+        /// <param name="vendorId">vendor Id for error handling</param>
+        /// <param name="vendorGuid">vendor Guid for error handling</param>
+        /// <returns>VendorsMaximumAddresses DTO</returns>
+
+        private async Task<IEnumerable<Dtos.DtoProperties.VendorsMaximumAddresses>> GetPersonAddressDtoCollectionAsync(IEnumerable<Domain.Base.Entities.Address> addressEntities, string vendorId, string vendorGuid, bool bypassCache = false)
+        {
+            var addressDtos = new List<Dtos.DtoProperties.VendorsMaximumAddresses>();
+            if (addressEntities != null && addressEntities.Any())
+            {
+                // Repeate the address when we have multiple types.
+                // Multiple types are separated by sub-value marks.
+                IEnumerable<Domain.Base.Entities.AddressType2> addressTypes = null;
+                try
+                {
+                    addressTypes = await GetAddressTypes2Async(bypassCache);
+                }
+                catch (Exception)
+                {
+                    // do not throw exception
+                    return addressDtos;
+                }
+
+                foreach (var addressEntity in addressEntities)
+                {
+                    //we just want the address that has the address lines
+                    if (addressEntity.AddressLines != null && addressEntity.AddressLines.Any())
+                    {
+                        if (addressEntity.TypeCode != null && !string.IsNullOrEmpty(addressEntity.TypeCode))
+                        {
+                            string[] addrTypes = addressEntity.TypeCode.Split(_SM);
+                            for (int i = 0; i < addrTypes.Length; i++)
+                            {
+
+                                var addrType = addrTypes[i];
+                                var addressDto = new Dtos.DtoProperties.VendorsMaximumAddresses();
+                                if (!string.IsNullOrEmpty(addressEntity.Guid))
+                                {
+                                    addressDto.Detail = new Dtos.GuidObject2(addressEntity.Guid);
+                                }
+                                else
+                                {
+                                    IntegrationApiExceptionAddError(string.Concat("Address guid not found for address Id : '", addressEntity.AddressId, "'"), "GUID.Not.Found", vendorGuid, vendorId);
+                                }
+                                if (addressTypes != null && addressTypes.Any())
+                                {
+                                    var type = addressTypes.FirstOrDefault(at => at.Code == addrType);
+                                    if (type != null)
+                                    {
+                                        if (!string.IsNullOrEmpty(type.Guid))
+                                        {
+                                            addressDto.Type = new Dtos.DtoProperties.PersonAddressType2DtoProperty();
+                                            addressDto.Type.AddressType =
+                                                (Dtos.EnumProperties.AddressType)
+                                                    Enum.Parse(typeof(Dtos.EnumProperties.AddressType),
+                                                        type.AddressTypeCategory.ToString());
+                                            addressDto.Type.Detail = new Dtos.GuidObject2(type.Guid);
+                                            addressDto.Type.Title = type.Description;
+                                            addressDto.Type.Code = type.Code;
+                                        }
+                                        else
+                                        {
+                                            IntegrationApiExceptionAddError(string.Concat("Address type guid not found for address type id : '", addrType, "'"), "GUID.Not.Found", vendorGuid, vendorId);
+                                        }
+
+                                    }
+                                    else
+                                    {
+                                        IntegrationApiExceptionAddError(string.Concat("Invalid address type : '", addrType, "'"), "Bad.Data", vendorGuid, vendorId);
+                                    }
+                                }
+                                else
+                                {
+                                    IntegrationApiExceptionAddError(string.Concat("Address type is missing for address id : '", addressEntity.AddressId, "'"), "Bad.Data", vendorGuid, vendorId);
+                                }
+                                addressDto.StartOn = addressEntity.EffectiveStartDate;
+                                addressDto.EndOn = addressEntity.EffectiveEndDate;
+                                addressDto.AddressLines = addressEntity.AddressLines;
+                                addressDto.Status = Status.Active;
+                                addressDto.Place = await BuildAddressPlace(addressEntity.CountryCode, addressEntity.City, addressEntity.State, addressEntity.PostalCode, string.Empty, addressEntity.IntlRegion, addressEntity.IntlLocality, addressEntity.IntlPostalCode, vendorId, vendorGuid, bypassCache);
+                                var addrPhones = (await GetPersonPhoneDtoCollectionAsync(addressEntity.PhoneNumbers, vendorId, vendorGuid, bypassCache)).ToList();
+                                if (addrPhones != null && addrPhones.Any())
+                                {
+                                    addressDto.Phones = addrPhones;
+                                }
+                                addressDtos.Add(addressDto);
+                            }
+
+                        }
+                        else
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("Address types are missing."), "Bad.Data", vendorGuid, vendorId);
+                        }
+                    }
+                }
+            }
+            return addressDtos;
+        }
+
+        /// <summary>
+        /// Converts phone entity to PersonPhoneDtoProperty dto.
+        /// </summary>
+        /// <param name="phoneEntities">list of phone Entities</param>
+        /// <param name="vendorId">vendor Id for error handling</param>
+        /// <param name="vendorGuid">vendor Guid for error handling</param>
+        /// <returns>PersonPhoneDtoProperty DTO</returns>
+        private async Task<IEnumerable<Dtos.DtoProperties.PersonPhoneDtoProperty>> GetPersonPhoneDtoCollectionAsync(IEnumerable<Domain.Base.Entities.Phone> phoneEntities, string vendorId, string vendorGuid, bool bypassCache = false)
+        {
+            var phoneDtos = new List<Dtos.DtoProperties.PersonPhoneDtoProperty>();
+            if (phoneEntities != null && phoneEntities.Any())
+            {
+                IEnumerable<Domain.Base.Entities.PhoneType> phoneTypeEntities = null;
+                try
+                {
+                    phoneTypeEntities = await GetPhoneTypesAsync(bypassCache);
+                }
+                catch (Exception)
+                {
+                    //do not throw exception
+                    return phoneDtos;
+                }
+                foreach (var phoneEntity in phoneEntities)
+                {
+                    //phonenumber is required by the schema so ignore those that does not have a phonenumber
+                    if (!string.IsNullOrEmpty(phoneEntity.Number))
+                    {
+                        string phoneTypeGuid = "";
+                        string category = "";
+                        Domain.Base.Entities.PhoneType phoneTypeEntity = null;
+
+                        //phone type is not required in Colleague
+                        if (!string.IsNullOrEmpty(phoneEntity.TypeCode))
+                        {
+                            if (phoneTypeEntities != null && phoneTypeEntities.Any())
+                            {
+                                phoneTypeEntity = phoneTypeEntities.FirstOrDefault(pt => pt.Code == phoneEntity.TypeCode);
+                                if (phoneTypeEntity != null)
+                                {
+                                    if (!string.IsNullOrEmpty(phoneTypeEntity.Guid))
+                                    {
+                                        phoneTypeGuid = phoneTypeEntity.Guid;
+                                        category = phoneTypeEntity.PhoneTypeCategory.ToString();
+                                    }
+                                    else
+                                    {
+                                        IntegrationApiExceptionAddError(string.Concat("Phone type guid not found for phone type id : '", phoneEntity.TypeCode, "'"), "GUID.Not.Found", vendorGuid, vendorId);
+                                    }
+                                }
+                                else
+                                {
+                                    IntegrationApiExceptionAddError(string.Concat("Invalid phone type : '", phoneEntity.TypeCode, "'"), "Bad.Data", vendorGuid, vendorId);
+                                }
+
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError(string.Concat("Phone types are missing."), "Bad.Data", vendorGuid, vendorId);
+                            }
+                        }
+                        var phoneDto = new Dtos.DtoProperties.PersonPhoneDtoProperty();
+
+                        phoneDto.Number = phoneEntity.Number;
+                        phoneDto.Extension = string.IsNullOrEmpty(phoneEntity.Extension) ? null : phoneEntity.Extension;
+                        if (!string.IsNullOrEmpty(phoneTypeGuid))
+                        {
+                            var type = new Dtos.DtoProperties.PersonPhoneTypeDtoProperty();
+                            type.Detail = new Dtos.GuidObject2(phoneTypeGuid);
+                            if (!string.IsNullOrEmpty(category))
+                                type.PhoneType = (Dtos.EnumProperties.PersonPhoneTypeCategory)Enum.Parse(typeof(Dtos.EnumProperties.PersonPhoneTypeCategory), category);
+                            phoneDto.Type = type;
+                        }
+                        if (!string.IsNullOrEmpty(phoneEntity.CountryCallingCode))
+                            phoneDto.CountryCallingCode = phoneEntity.CountryCallingCode;                       
+                        phoneDtos.Add(phoneDto);
+                    }    
+                    
+                }
+
+            }
+            return phoneDtos;
+        }
+
+        /// <summary>
+        /// Build an AddressPlace DTO from address components
+        /// </summary>
+        /// <param name="addressCountry"></param>
+        /// <param name="addressCity"></param>
+        /// <param name="addressState"></param>
+        /// <param name="addressZip"></param>
+        /// <param name="hostCountry"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns><see cref="AddressPlace"></returns>
+        private async Task<AddressPlace> BuildAddressPlace(string addressCountry, string addressCity,
+            string addressState, string addressZip, string hostCountry, string IntlRegion, string IntlLocality, string IntlPostalCode, string vendorId, string vendorGuid, bool bypassCache = false)
+        {
+            var addressCountryDto = new Dtos.AddressCountry();
+            Dtos.AddressRegion region = null;
+            Domain.Base.Entities.Country country = null;
+            if (!string.IsNullOrEmpty(addressCountry))
+            {
+                country = (await GetAllCountriesAsync(bypassCache)).FirstOrDefault(x => x.Code == addressCountry);
+                if (country == null)
+                {
+                    IntegrationApiExceptionAddError("Unable to locate country code for " + addressCountry, "Bad.Data", vendorGuid, vendorId);
+                }
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(addressState))
+                {
+                    var states = (await GetAllStatesAsync(bypassCache)).FirstOrDefault(x => x.Code == addressState);
+                    if (states != null)
+                    {
+                        if (!string.IsNullOrEmpty(states.CountryCode))
+                        {
+                            country = (await GetAllCountriesAsync(bypassCache)).FirstOrDefault(x => x.Code == states.CountryCode);
+                        }
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError("Invalid State " + addressState, "Bad.Data", vendorGuid, vendorId);
+                    }
+                }
+                if (country == null)
+                {
+                    try
+                    {
+                        if (hostCountry == "USA" || string.IsNullOrEmpty(hostCountry))
+                        {
+                            country = await _referenceDataRepository.GetCountryFromIsoAlpha3CodeAsync("USA");
+                        }
+                        else
+                        {
+                            country = await _referenceDataRepository.GetCountryFromIsoAlpha3CodeAsync("CAN");
+                        }
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex, "Bad.Data", vendorGuid, vendorId);
+                    }
+                }
+            }
+
+            //need to check to make sure ISO code is there.
+            if (country != null && string.IsNullOrEmpty(country.IsoAlpha3Code))
+                IntegrationApiExceptionAddError("ISO country code missing for country: '" + country.Code + "'", "Bad.Data", vendorGuid, vendorId);
+            else
+            {
+                switch (country.IsoAlpha3Code)
+                {
+                    case "USA":
+                        addressCountryDto.Code = Dtos.EnumProperties.IsoCode.USA;
+                        addressCountryDto.PostalTitle = "UNITED STATES OF AMERICA";
+                        break;
+                    case "CAN":
+                        addressCountryDto.Code = Dtos.EnumProperties.IsoCode.CAN;
+                        addressCountryDto.PostalTitle = "CANADA";
+                        break;
+                    case "AUS":
+                        addressCountryDto.Code = Dtos.EnumProperties.IsoCode.AUS;
+                        addressCountryDto.PostalTitle = "AUSTRALIA";
+                        break;
+                    case "BRA":
+                        addressCountryDto.Code = Dtos.EnumProperties.IsoCode.BRA;
+                        addressCountryDto.PostalTitle = "BRAZIL";
+                        break;
+                    case "MEX":
+                        addressCountryDto.Code = Dtos.EnumProperties.IsoCode.MEX;
+                        addressCountryDto.PostalTitle = "MEXICO";
+                        break;
+                    case "NLD":
+                        addressCountryDto.Code = Dtos.EnumProperties.IsoCode.NLD;
+                        addressCountryDto.PostalTitle = "NETHERLANDS";
+                        break;
+                    case "GBR":
+                        addressCountryDto.Code = Dtos.EnumProperties.IsoCode.GBR;
+                        addressCountryDto.PostalTitle = "UNITED KINGDOM OF GREAT BRITAIN AND NORTHERN IRELAND";
+                        break;
+                    default:
+                        try
+                        {
+                            addressCountryDto.Code = (Dtos.EnumProperties.IsoCode)System.Enum.Parse(typeof(Dtos.EnumProperties.IsoCode), country.IsoAlpha3Code);
+                            addressCountryDto.PostalTitle = country.Description.ToUpper();
+                        }
+                        catch (Exception ex)
+                        {
+                            IntegrationApiExceptionAddError(string.Concat(ex.Message, "For the Country: '", addressCountry, "' ISOCode not found: '", country.IsoAlpha3Code, "'"), "Bad.Data", vendorGuid, vendorId);
+                        }
+                        break;
+                }
+            }
+            if (!string.IsNullOrEmpty(addressState))
+            {
+                var states = (await GetAllStatesAsync(bypassCache)).FirstOrDefault(x => x.Code == addressState);
+                if (states != null)
+                {
+                    region = new Dtos.AddressRegion();
+                    region.Code = string.Concat(country.IsoCode, "-", states.Code);
+                    region.Title = states.Description;
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError(string.Concat("Description not found for for the state: '", addressState, "' or an error has occurred retrieving that value."), "Bad.Data", vendorGuid, vendorId);
+                }
+            }
+            else if (!string.IsNullOrEmpty(IntlRegion))
+            {
+                region = new Dtos.AddressRegion();
+                region.Code = IntlRegion;
+                var places = (await _addressRepository.GetPlacesAsync())
+                    .FirstOrDefault(x => x.PlacesRegion == IntlRegion && x.PlacesCountry == country.IsoAlpha3Code && x.PlacesSubRegion == string.Empty);
+                if (places != null)
+
+                    region.Title = places.PlacesDesc;
+            }
+
+
+            if (region != null)
+            {
+                addressCountryDto.Region = region;
+            }
+
+            if (!string.IsNullOrEmpty(addressCity))
+            {
+                addressCountryDto.Locality = addressCity;
+            }
+            else if (!string.IsNullOrEmpty(IntlLocality))
+            {
+                addressCountryDto.Locality = IntlLocality;
+            }
+            if (!string.IsNullOrEmpty(addressZip))
+                addressCountryDto.PostalCode = addressZip;
+            else if (!string.IsNullOrEmpty(IntlPostalCode))
+                addressCountryDto.PostalCode = IntlPostalCode;
+
+            if (country != null)
+                addressCountryDto.Title = country.Description;
+
+            if ((addressCountryDto != null) &&
+                (!string.IsNullOrEmpty(addressCountryDto.Locality) || !string.IsNullOrEmpty(addressCountryDto.PostalCode) || addressCountryDto.Region != null))
+            {
+                return new AddressPlace()
+                {
+                    Country = addressCountryDto
+                };
+            }
+
+            return null;
+        }
+
+        #endregion
+
         /// <summary>
         /// Get the list of vendors based on keyword search.
         /// </summary>
@@ -2157,7 +3295,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             CheckViewVendorForVoucherPermissions();
 
             // Get the list of vendor search result domain entity from the repository
-            var vendorDomainEntities = await _vendorsRepository.VendorSearchForVoucherAsync(searchCriteria.QueryKeyword);
+            var vendorDomainEntities = await _vendorsRepository.VendorSearchForVoucherAsync(searchCriteria.QueryKeyword, searchCriteria.ApType);
 
             if (vendorDomainEntities == null || !vendorDomainEntities.Any())
             {

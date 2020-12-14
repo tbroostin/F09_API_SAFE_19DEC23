@@ -68,8 +68,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             return _activeMajors;
         }
-        
- 
+
+
         /// <summary>
         /// Get the GuidLookupResult for a GUID
         /// </summary>
@@ -111,7 +111,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             var ccds = await GetGuidCodeItemAsync<OtherCcds, AcadCredential>("AllAcadCredentialCcd", "OTHER.CCDS",
                 (m, g) => new
-                    AcadCredential(g, m.Recordkey, 
+                    AcadCredential(g, m.Recordkey,
                     (string.IsNullOrEmpty(m.OccdDesc) ? m.Recordkey : m.OccdDesc),
                     AcademicCredentialType.Certificate), CacheTimeout, this.DataReader.IsAnonymous, ignoreCache);
             if (ccds != null)
@@ -122,7 +122,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var degrees = await GetGuidCodeItemAsync<OtherDegrees, AcadCredential>("AllAcadCredentialDegree", "OTHER.DEGREES",
                 (m, g) => new
                     AcadCredential(g, m.Recordkey,
-                    (string.IsNullOrEmpty(m.OdegDesc) ? m.Recordkey : m.OdegDesc), 
+                    (string.IsNullOrEmpty(m.OdegDesc) ? m.Recordkey : m.OdegDesc),
                      AcademicCredentialType.Degree), CacheTimeout, this.DataReader.IsAnonymous, ignoreCache);
 
             if (degrees != null)
@@ -149,7 +149,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             if (allCodesCache != null && allCodesCache.Any())
             {
                 codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
-            }            
+            }
             //if we cannot find that code in the cache, then refresh the cache and try again.
             if (codeCache == null)
             {
@@ -198,7 +198,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             var majors = await GetAcademicDisciplinesMajorAsync(ignoreCache);
             if (majors != null) academicDisciplineCollection.AddRange(majors.ToList());
-            
+
             var minors = await GetAcademicDisciplinesMinorAsync(ignoreCache);
             if (minors != null) academicDisciplineCollection.AddRange(minors.ToList());
 
@@ -262,7 +262,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var activeMajors = await GetActiveMajorsAsync(ignoreCache);
 
             var majors = await GetGuidCodeItemAsync<OtherMajors, AcademicDiscipline>("AllAcademicDisciplinesMajor", "OTHER.MAJORS",
-                (m, g) => BuildAcademicDisciplineMajorAsync(m, g, activeMajors),CacheTimeout, DataReader.IsAnonymous, ignoreCache);
+                (m, g) => BuildAcademicDisciplineMajorAsync(m, g, activeMajors), CacheTimeout, DataReader.IsAnonymous, ignoreCache);
 
             if (majors != null)
             {
@@ -285,11 +285,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     (string.IsNullOrEmpty(m.OmajDesc) ? m.Recordkey : m.OmajDesc),
 
                     AcademicDisciplineType.Major);
-           
+
             disc.ActiveMajor = activeMajors.Contains(m.Recordkey);
             return disc;
         }
-        
+
         /// <summary>
         /// Get a collection of Academic Discipline
         /// </summary>
@@ -520,7 +520,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         {
             return await GetBuildingsAsync(false);
         }
-                
+
         /// <summary>
         /// Get a collection of buildings
         /// </summary>
@@ -598,7 +598,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         {
 
             return await GetCodeItemAsync<DataContracts.CcdType, Domain.Base.Entities.CcdType>("AllCcdType", "CCD.TYPE",
-                   c => new Domain.Base.Entities.CcdType(c.Recordkey, c.CcdtypeDescription, c.CcdtypeCredentialLevel), 
+                   c => new Domain.Base.Entities.CcdType(c.Recordkey, c.CcdtypeDescription, c.CcdtypeCredentialLevel),
                    CacheTimeout, this.DataReader.IsAnonymous, ignoreCache);
         }
 
@@ -736,7 +736,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                     repositoryException.AddError(new RepositoryError("CommerceTaxCodeRates", ex.Message));
                 }
-            }         
+            }
 
             if (repositoryException.Errors.Any())
             {
@@ -958,17 +958,17 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             try
                             {
                                 communicationCodeEntities.Add(new CommunicationCode(ccRecord.RecordGuid, ccRecord.Recordkey, ccRecord.CcDescription)
-                                    {
-                                        AwardYear = ccRecord.CcFaYear,
-                                        Explanation = ccRecord.CcExplanation,
-                                        OfficeCodeId = ccRecord.CcOffice,
-                                        IsStudentViewable = (corewebDefaultsRecord == null || corewebDefaultsRecord.CorewebCcCodes == null) ? false :
+                                {
+                                    AwardYear = ccRecord.CcFaYear,
+                                    Explanation = ccRecord.CcExplanation,
+                                    OfficeCodeId = ccRecord.CcOffice,
+                                    IsStudentViewable = (corewebDefaultsRecord == null || corewebDefaultsRecord.CorewebCcCodes == null) ? false :
                                             corewebDefaultsRecord.CorewebCcCodes.Contains(ccRecord.Recordkey, StringComparer.Create(CultureInfo.CurrentCulture, true)),
-                                        AllowsAttachments = (string.IsNullOrEmpty(ccRecord.CcAllowAttachments) || ccRecord.CcAllowAttachments.ToUpper() != "Y") ? false : true,
-                                        Hyperlinks = (ccRecord.CcUrlsEntityAssociation == null) ? new List<CommunicationCodeHyperlink>() :
+                                    AllowsAttachments = (string.IsNullOrEmpty(ccRecord.CcAllowAttachments) || ccRecord.CcAllowAttachments.ToUpper() != "Y") ? false : true,
+                                    Hyperlinks = (ccRecord.CcUrlsEntityAssociation == null) ? new List<CommunicationCodeHyperlink>() :
                                             ccRecord.CcUrlsEntityAssociation.Select(urlRecord =>
                                                 new CommunicationCodeHyperlink(urlRecord.CcUrlAssocMember, urlRecord.CcTitleAssocMember)).ToList()
-                                    });
+                                });
                             }
                             catch (Exception e)
                             {
@@ -994,7 +994,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             //
             var communicationCodes = await GetGuidCodeItemAsync<CcCodes, CommunicationCode>("AllCommunicationCodesHedm", "CC.CODES",
               (t, g) => new CommunicationCode(g, t.Recordkey, t.CcDescription, t.CcOffice), CacheTimeout, this.DataReader.IsAnonymous, ignoreCache);
-            
+
             if (communicationCodes != null && communicationCodes.Any())
             {
                 // get valid office codes for admission applications
@@ -1058,12 +1058,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// </summary>
         public async Task<IEnumerable<County>> GetCountiesAsync(bool ignoreCache)
         {
-            return await GetGuidCodeItemAsync<Counties, County>("AllCounties", "COUNTIES",
-               (c, g) => new County(g, c.Recordkey, c.CntyDesc), CacheTimeout, this.DataReader.IsAnonymous, ignoreCache);
+            return await GetCodeItemAsync<Counties, County>("AllCounties", "COUNTIES",
+               c => new County(c.RecordGuid, c.Recordkey, c.CntyDesc), CacheTimeout, this.DataReader.IsAnonymous, ignoreCache);
         }
 
-
-  
         /// <summary>
         /// Countries
         /// </summary>
@@ -1146,7 +1144,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     guid = codeNoCache.Guid;
                 else
                     throw new RepositoryException(string.Concat("No record found, Entity:'COUNTRIES', Record ID:'", isoAlpha3Code, "'"));
-            }            
+            }
             return country;
         }
 
@@ -1200,7 +1198,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         {
             return await GetDepartmentsAsync(false);
         }
-        
+
         /// <summary>
         /// Get a collection of departments
         /// </summary>
@@ -1219,7 +1217,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 return await GetOrAddToCacheAsync<IEnumerable<Department>>("AllBaseDepartments", async () => await this.BuildAllDepartments(), Level1CacheTimeoutValue);
             }
         }
-
 
         /// <summary>
         /// Get a collection of departments
@@ -1261,7 +1258,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             if (codeCache == null)
             {
                 var allCodesNoCache = await GetDepartments2Async(true);
-                if (allCodesCache == null)
+                if (allCodesNoCache == null)
                 {
                     throw new RepositoryException(string.Concat("No Guid found, Entity:'DEPTS', Record ID:'", code, "'"));
                 }
@@ -1285,7 +1282,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
         /// <summary>
         ///  Build Department domain entity collection.
-        ///  Contains guid lookups to ensure the associated LDM.GUID does not contain a secondary key and/or index
         /// </summary>
         /// <returns>Collection of Department domain entities</returns>
         private async Task<IEnumerable<Department>> BuildAllDepartments2()
@@ -1295,15 +1291,22 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             foreach (var departmentRecord in departmentRecords)
             {
-                var dept = new Department(departmentRecord.RecordGuid, departmentRecord.Recordkey, departmentRecord.DeptsDesc, "A".Equals(departmentRecord.DeptsActiveFlag))
+                try
                 {
-                    Division = departmentRecord.DeptsDivision,
-                    School = departmentRecord.DeptsSchool,
-                    InstitutionId = departmentRecord.DeptsInstitutionsId,
-                    DepartmentType = departmentRecord.DeptsType
-                };
+                    var dept = new Department(departmentRecord.RecordGuid, departmentRecord.Recordkey, departmentRecord.DeptsDesc, "A".Equals(departmentRecord.DeptsActiveFlag))
+                    {
+                        Division = departmentRecord.DeptsDivision,
+                        School = departmentRecord.DeptsSchool,
+                        InstitutionId = departmentRecord.DeptsInstitutionsId,
+                        DepartmentType = departmentRecord.DeptsType
+                    };
 
-                departmentEntities.Add(dept);
+                    departmentEntities.Add(dept);
+                }
+                catch (ArgumentNullException e)
+                {
+                    logger.Error(e, e.Message);
+                }
             }
 
             return departmentEntities;
@@ -1312,58 +1315,35 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
         /// <summary>
         ///  Build Department domain entity collection.
-        ///  Contains guid lookups to ensure the associated LDM.GUID does not contain a secondary key and/or index
         /// </summary>
         /// <returns>Collection of Department domain entities</returns>
         private async Task<IEnumerable<Department>> BuildAllDepartments()
         {
             var departmentEntities = new List<Department>();
-            // exclude any LDM.GUID entries that contain a secondary key and/or index
-            string criteria = "WITH LDM.GUID.ENTITY EQ 'DEPTS' AND LDM.GUID.SECONDARY.KEY EQ '' ";
+            var departmentRecords = await DataReader.BulkReadRecordAsync<Depts>("");
 
-            //retrive string array of applicable guids
-            var ldmGuidDepartment = await DataReader.SelectAsync("LDM.GUID", criteria);
-            if ((ldmGuidDepartment != null) && (ldmGuidDepartment.Any()))
+            foreach (var departmentRecord in departmentRecords)
             {
-                // using the string array of applicable guids, convert this into a guidLookup
-                var guidLookUp = ldmGuidDepartment.Select(guid => new GuidLookup(guid)).ToArray();
-                if ((guidLookUp == null) || (!guidLookUp.Any()))
+                if (string.IsNullOrEmpty(departmentRecord.DeptsDesc))
                 {
-                    return departmentEntities;
-                }
-                // BulkReadRecord to get a collection of Department data contracts. The guid returned
-                // in the data contract may not be correct, therefore additional processing is required.
-                var departmentRecords = await DataReader.BulkReadRecordAsync<Depts>("DEPTS", guidLookUp);
-
-                // Perform a guid lookup to get a collection of guids and ids
-                var departmentDictionary = await DataReader.SelectAsync(guidLookUp);
-
-                if ((departmentDictionary == null) || (!departmentDictionary.Any()))
-                {
-                    return departmentEntities;
+                    throw new ApplicationException("Department record for id '" + departmentRecord.Recordkey + "', guid " + departmentRecord.RecordGuid + " is missing a required description.");
                 }
 
-                foreach (var departmentRecord in departmentRecords)
+                try
                 {
-                    // using the id, retrieve the correct guid from the collection of guids and ids
-                    var ldmGuid = departmentDictionary.FirstOrDefault(id => id.Value != null && departmentRecord.Recordkey.Equals(id.Value.PrimaryKey, StringComparison.OrdinalIgnoreCase));
-                    if (!ldmGuid.Equals(new KeyValuePair<string, GuidLookupResult>()))
+                    var dept = new Department(departmentRecord.RecordGuid, departmentRecord.Recordkey, departmentRecord.DeptsDesc, "A".Equals(departmentRecord.DeptsActiveFlag))
                     {
-                        if (string.IsNullOrEmpty(departmentRecord.DeptsDesc))
-                        {
-                            throw new ApplicationException("Department record for id '" + departmentRecord.Recordkey + "', guid " + departmentRecord.RecordGuid + " is missing a required description.");
-                        }
+                        Division = departmentRecord.DeptsDivision,
+                        School = departmentRecord.DeptsSchool,
+                        InstitutionId = departmentRecord.DeptsInstitutionsId,
+                        DepartmentType = departmentRecord.DeptsType
+                    };
 
-                        var dept = new Department(ldmGuid.Key, departmentRecord.Recordkey, departmentRecord.DeptsDesc, "A".Equals(departmentRecord.DeptsActiveFlag))
-                        {
-                            Division = departmentRecord.DeptsDivision,
-                            School = departmentRecord.DeptsSchool,
-                            InstitutionId = departmentRecord.DeptsInstitutionsId,
-                            DepartmentType = departmentRecord.DeptsType
-                        };
-
-                        departmentEntities.Add(dept);
-                    }
+                    departmentEntities.Add(dept);
+                }
+                catch (ArgumentNullException e)
+                {
+                    logger.Error(e, e.Message);
                 }
             }
             return departmentEntities;
@@ -1383,7 +1363,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 throw new ApplicationException("Department record not found for guid " + guid + ".");
             }
 
-            if (string.IsNullOrEmpty(dept.DeptsDesc)){
+            if (string.IsNullOrEmpty(dept.DeptsDesc))
+            {
                 throw new ApplicationException("Department record for guid " + guid + " is missing a required description.");
             }
 
@@ -1439,8 +1420,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
 
             var div = new Division(guid, (String.IsNullOrEmpty(divs.DivDesc) ? divs.Recordkey : divs.DivDesc), divs.DivDesc)
-                                    { SchoolCode = divs.DivSchool, InstitutionId = divs.DivInstitutionsId,  };
-            
+            { SchoolCode = divs.DivSchool, InstitutionId = divs.DivInstitutionsId, };
+
             return div;
 
         }
@@ -1508,7 +1489,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             if (string.IsNullOrEmpty(code))
                 return guid;
             var allCodesCache = await GetEmailTypesAsync(false);
-            EmailType  codeCache = null;
+            EmailType codeCache = null;
             if (allCodesCache != null && allCodesCache.Any())
             {
                 codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
@@ -1772,15 +1753,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return GetGuidCodeItem<Locations, Location>("AllLocations", "LOCATIONS",
                 (l, g) => new Location(g, l.Recordkey, l.LocDesc, l.LocLatitude1, l.LocLongitude1, l.LocLatitude2, l.LocLongitude2,
                     l.LocExportToMobile, l.LocBuildings, l.LocHideInSsCourseSearch.ToUpperInvariant() == "Y")
-                        {
-                            AddressLines = l.LocAddress,
-                            City = l.LocCity,
-                            State = l.LocState,
-                            PostalCode = l.LocZip,
-                            Country = l.LocCountry,
-                            CampusLocation = l.LocCampusLocation,
-                            SortOrder = l.LocSortOrder
-                        }, CacheTimeout, this.DataReader.IsAnonymous, ignoreCache);
+                {
+                    AddressLines = l.LocAddress,
+                    City = l.LocCity,
+                    State = l.LocState,
+                    PostalCode = l.LocZip,
+                    Country = l.LocCountry,
+                    CampusLocation = l.LocCampusLocation,
+                    SortOrder = l.LocSortOrder
+                }, CacheTimeout, this.DataReader.IsAnonymous, ignoreCache);
         }
 
         /// <summary>
@@ -1791,7 +1772,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         public async Task<IEnumerable<Location>> GetLocationsAsync(bool ignoreCache)
         {
             return await GetGuidCodeItemAsync<Locations, Location>("AllLocations", "LOCATIONS",
-                (l, g) => new Location(g, l.Recordkey, (String.IsNullOrEmpty(l.LocDesc)? l.Recordkey : l.LocDesc), l.LocLatitude1, l.LocLongitude1, l.LocLatitude2, l.LocLongitude2,
+                (l, g) => new Location(g, l.Recordkey, (String.IsNullOrEmpty(l.LocDesc) ? l.Recordkey : l.LocDesc), l.LocLatitude1, l.LocLongitude1, l.LocLatitude2, l.LocLongitude2,
                     l.LocExportToMobile, l.LocBuildings, l.LocHideInSsCourseSearch.ToUpperInvariant() == "Y")
                 {
                     AddressLines = l.LocAddress,
@@ -1821,7 +1802,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
             }
-             //if we cannot find that code in the cache, then refresh the cache and try again.
+            //if we cannot find that code in the cache, then refresh the cache and try again.
             if (codeCache == null)
             {
                 var allCodesNoCache = await GetLocationsAsync(true);
@@ -1961,7 +1942,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return await GetGuidValcodeAsync<MilStatuses>("CORE", "MIL.STATUSES",
                 (cl, g) => new MilStatuses(g, cl.ValInternalCodeAssocMember, (string.IsNullOrEmpty(cl.ValExternalRepresentationAssocMember)
                     ? cl.ValInternalCodeAssocMember : cl.ValExternalRepresentationAssocMember))
-                    { Category = ConvertVeteranStatusCodeToVeteranStatusCategory(cl.ValActionCode3AssocMember) }, bypassCache: ignoreCache);
+                { Category = ConvertVeteranStatusCodeToVeteranStatusCategory(cl.ValActionCode3AssocMember) }, bypassCache: ignoreCache);
         }
 
         /// <summary>
@@ -2006,7 +1987,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
             }
-           
+
             //if we cannot find that code in the cache, then refresh the cache and try again.
             if (codeCache == null)
             {
@@ -2040,7 +2021,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         public IEnumerable<OtherCcd> GetOtherCcds(bool ignoreCache)
         {
             return GetGuidCodeItem<OtherCcds, OtherCcd>("BaseAllOtherCcds", "OTHER.CCDS",
-              (m, g) => new OtherCcd(g, m.Recordkey, (string.IsNullOrEmpty(m.OccdDesc) ? m.Recordkey : m.OccdDesc)) { CredentialTypeID = m.OccdType }, 
+              (m, g) => new OtherCcd(g, m.Recordkey, (string.IsNullOrEmpty(m.OccdDesc) ? m.Recordkey : m.OccdDesc)) { CredentialTypeID = m.OccdType },
               CacheTimeout, this.DataReader.IsAnonymous, ignoreCache);
         }
 
@@ -2053,7 +2034,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         public async Task<IEnumerable<OtherCcd>> GetOtherCcdsAsync(bool ignoreCache)
         {
             return await GetGuidCodeItemAsync<OtherCcds, OtherCcd>("BaseAllOtherCcds", "OTHER.CCDS",
-              (m, g) => new OtherCcd(g, m.Recordkey, (string.IsNullOrEmpty(m.OccdDesc) ? m.Recordkey : m.OccdDesc)) { CredentialTypeID = m.OccdType }, 
+              (m, g) => new OtherCcd(g, m.Recordkey, (string.IsNullOrEmpty(m.OccdDesc) ? m.Recordkey : m.OccdDesc)) { CredentialTypeID = m.OccdType },
               CacheTimeout, this.DataReader.IsAnonymous, ignoreCache);
         }
 
@@ -2074,7 +2055,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
             }
-            
+
             //if we cannot find that code in the cache, then refresh the cache and try again.
             if (codeCache == null)
             {
@@ -2129,7 +2110,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
             }
-            
+
             //if we cannot find that code in the cache, then refresh the cache and try again.
             if (codeCache == null)
             {
@@ -2163,7 +2144,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         public async Task<IEnumerable<OtherMinor>> GetOtherMinorsAsync(bool ignoreCache)
         {
             return await GetGuidCodeItemAsync<OtherMinors, OtherMinor>("BaseAllOtherMinors", "OTHER.MINORS",
-                (m, g) => new OtherMinor(g, m.Recordkey, (string.IsNullOrEmpty(m.OminDesc) ? m.Recordkey : m.OminDesc)), 
+                (m, g) => new OtherMinor(g, m.Recordkey, (string.IsNullOrEmpty(m.OminDesc) ? m.Recordkey : m.OminDesc)),
                 CacheTimeout, this.DataReader.IsAnonymous, ignoreCache);
         }
 
@@ -2179,12 +2160,12 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             if (string.IsNullOrEmpty(code))
                 return guid;
             var allCodesCache = await GetOtherMinorsAsync(false);
-            OtherMinor codeCache = null; 
+            OtherMinor codeCache = null;
             if (allCodesCache != null && allCodesCache.Any())
             {
                 codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
             }
-             
+
             //if we cannot find that code in the cache, then refresh the cache and try again.
             if (codeCache == null)
             {
@@ -2218,7 +2199,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         public async Task<IEnumerable<OtherSpecial>> GetOtherSpecialsAsync(bool ignoreCache)
         {
             return await GetGuidCodeItemAsync<OtherSpecials, OtherSpecial>("BaseAllOtherSpecials", "OTHER.SPECIALS",
-                (s, g) => new OtherSpecial(g, s.Recordkey, (string.IsNullOrEmpty(s.OspecDesc) ? s.Recordkey : s.OspecDesc) ),
+                (s, g) => new OtherSpecial(g, s.Recordkey, (string.IsNullOrEmpty(s.OspecDesc) ? s.Recordkey : s.OspecDesc)),
                 CacheTimeout, this.DataReader.IsAnonymous, ignoreCache);
         }
 
@@ -2239,7 +2220,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
             }
-            
+
             //if we cannot find that code in the cache, then refresh the cache and try again.
             if (codeCache == null)
             {
@@ -2294,7 +2275,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
             }
-            
+
             //if we cannot find that code in the cache, then refresh the cache and try again.
             if (codeCache == null)
             {
@@ -2416,7 +2397,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             return null;
                         }
                         // add all retrieved person IDs to ongoing list                            
-                        personIds.AddRange(response.PersonIds);                        
+                        personIds.AddRange(response.PersonIds);
                         if (personIds.Count() >= response.TotalRecords)
                         {
                             // abort loop now that we have all personIds from the savedlist
@@ -2606,7 +2587,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         public async Task<IEnumerable<ItemCondition>> GetItemConditionsAsync(bool ignoreCache)
         {
             return await GetValcodeAsync<ItemCondition>("CORE", "ITEM.CONDITION",
-                e => new ItemCondition(e.ValInternalCodeAssocMember, e.ValInternalCodeAssocMember, e.ValExternalRepresentationAssocMember),bypassCache: ignoreCache);
+                e => new ItemCondition(e.ValInternalCodeAssocMember, e.ValInternalCodeAssocMember, e.ValExternalRepresentationAssocMember), bypassCache: ignoreCache);
         }
 
         /// <summary>
@@ -2892,7 +2873,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// </summary>
         /// <param name="code">RelationTypes3 code</param>
         /// <returns>Guid</returns>
-        public async Task<Tuple<string,string>> GetRelationTypes3GuidAsync(string code)
+        public async Task<Tuple<string, string>> GetRelationTypes3GuidAsync(string code)
         {
             //get all the codes from the cache
             string guid = string.Empty;
@@ -3072,8 +3053,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="ignoreCache">Bypass cache flag</param>
         /// <returns>Collection of restrictions</returns>
         public async Task<IEnumerable<Restriction>> GetRestrictionsWithCategoryAsync(bool ignoreCache)
-        {            
-            return await GetGuidCodeItemAsync<Restrictions, Restriction>("AllRestrictionsWithCategories", "RESTRICTIONS",                
+        {
+            return await GetGuidCodeItemAsync<Restrictions, Restriction>("AllRestrictionsWithCategories", "RESTRICTIONS",
             (r, g) => BuildRestrictionWithCategory(g, r), bypassCache: ignoreCache);
         }
 
@@ -3163,7 +3144,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             {
                                 foreach (ApplValcodesVals applVal in schedRepeatsValcode.ValsEntityAssociation)
                                 {
-                                    scheduleRepeatList.Add(new ScheduleRepeat(applVal.ValInternalCodeAssocMember, applVal.ValExternalRepresentationAssocMember, 
+                                    scheduleRepeatList.Add(new ScheduleRepeat(applVal.ValInternalCodeAssocMember, applVal.ValExternalRepresentationAssocMember,
                                         applVal.ValActionCode1AssocMember, ConvertCodeToFrequencyType(applVal.ValActionCode2AssocMember)));
                                 }
                             }
@@ -3461,7 +3442,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         {
             return await GetGuidCodeItemAsync<Vocations, Vocation>("AllEedmVocations", "VOCATIONS",
                (v, g) => new Ellucian.Colleague.Domain.Base.Entities.Vocation(g, v.Recordkey,
-               v.VocationsDesc),  bypassCache: ignoreCache);
+               v.VocationsDesc), bypassCache: ignoreCache);
 
         }
 
@@ -3496,7 +3477,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 var desc = String.IsNullOrEmpty(dt.SchoolsDesc) ? dt.Recordkey : dt.SchoolsDesc;
 
                 school = new School(dt.RecordGuid, dt.Recordkey, desc);
-                
+
                 school.AcademicLevelCode = dt.SchoolsAcadLevel;
                 school.InstitutionId = dt.SchoolsInstitutionsId;
 
@@ -3892,7 +3873,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// </summary>
         /// <param name="code">Type code</param>
         /// <returns>Ethnicity enumeration value</returns>
-        private EthnicityType ConvertEthnicityTypeCodeToEthnicityType(string code)
+        private EthnicityType? ConvertEthnicityTypeCodeToEthnicityType(string code)
         {
             switch (code)
             {
@@ -3901,7 +3882,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 case "N":
                     return EthnicityType.NonHispanic;
                 case "NRA":
-                    return EthnicityType.NonResident;
+                    return null;
                 default:
                     return EthnicityType.NonHispanic;
             }
@@ -4032,6 +4013,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     return MaritalStatusType.Widowed;
                 case "5":
                     return MaritalStatusType.Separated;
+                case "7":
+                    return MaritalStatusType.Other;
                 default:
                     return null;
             }
@@ -4302,14 +4285,14 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     restriction.RestPrtlFollowUpWaForm, restriction.RestPrtlFollowUpLabel, restriction.RestPrtlFollowUpIsMtxt);
 
                 GetRestrictionHyperlinksRequest hyperlinksRequest = new GetRestrictionHyperlinksRequest()
-                    {
-                        RestrictionIds = new List<string>() { rest.Code },
-                        LinkLabelsIn = new List<string>() { rest.FollowUpLabel },
-                        LinkDefinitionsIn = new List<string>() { rest.FollowUpLinkDefinition },
-                        LinkApplicationsIn = new List<string>() { rest.FollowUpApplication },
-                        WaFormsIn = new List<string>() { rest.FollowUpWebAdvisorForm },
-                        MtxtFlagsIn = new List<string>() { rest.MiscellaneousTextFlag ? "Y" : "" }
-                    };
+                {
+                    RestrictionIds = new List<string>() { rest.Code },
+                    LinkLabelsIn = new List<string>() { rest.FollowUpLabel },
+                    LinkDefinitionsIn = new List<string>() { rest.FollowUpLinkDefinition },
+                    LinkApplicationsIn = new List<string>() { rest.FollowUpApplication },
+                    WaFormsIn = new List<string>() { rest.FollowUpWebAdvisorForm },
+                    MtxtFlagsIn = new List<string>() { rest.MiscellaneousTextFlag ? "Y" : "" }
+                };
                 GetRestrictionHyperlinksResponse hyperlinksResponse = transactionInvoker.Execute<GetRestrictionHyperlinksRequest, GetRestrictionHyperlinksResponse>(hyperlinksRequest);
 
                 if (string.IsNullOrEmpty(rest.FollowUpLabel))
@@ -4416,7 +4399,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 (cl, g) => new CorrStatus(g, cl.ValInternalCodeAssocMember, (string.IsNullOrEmpty(cl.ValExternalRepresentationAssocMember)
                     ? cl.ValInternalCodeAssocMember : cl.ValExternalRepresentationAssocMember), cl.ValActionCode1AssocMember), bypassCache: ignoreCache);
         }
-        
+
 
         /// <summary>
         /// Converts a veteran status code to the corresponding veteran status enumeration value
@@ -4776,7 +4759,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         public async Task<IEnumerable<CaseType>> GetCaseTypesAsync()
         {
             return await GetCodeItemAsync<CaseTypes, Domain.Base.Entities.CaseType>("AllCaseTypes", "CASE.TYPES",
-             c => new CaseType(c.CtypName, c.CtypDescription, c.Recordkey, c.CtypCategory, c.CtypDefaultPriority, c.CtypActiveFlag.ToUpperInvariant() == "Y", c.CtypAllowCaseContrib.ToUpperInvariant() == "Y",c.CtypAvailCommCodes));
+             c => new CaseType(c.CtypName, c.CtypDescription, c.Recordkey, c.CtypCategory, c.CtypDefaultPriority, c.CtypActiveFlag.ToUpperInvariant() == "Y", c.CtypAllowCaseContrib.ToUpperInvariant() == "Y", c.CtypAvailCommCodes));
 
         }
 
@@ -4785,7 +4768,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// </summary>
         /// <returns>Collection of Case priorities</returns>
         public async Task<IEnumerable<CasePriority>> GetCasePrioritiesAsync()
-        {          
+        {
             return await GetOrAddToCacheAsync<IEnumerable<Domain.Base.Entities.CasePriority>>("AllCasePriorities", async () =>
             {
                 return await GetValcodeAsync<CasePriority>("CORE", "CASE.PRIORITIES",
@@ -4813,7 +4796,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             return CaseCategories;
         }
-        
+
         private async Task<List<string>> GetCaseWorkerEmailAddressHierarchyAsync(string caseWorkerEmailHierarchyCode, Dflts defaults)
         {
             List<string> CaseWorkerEmailHierarchy = new List<string>();

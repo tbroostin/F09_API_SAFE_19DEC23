@@ -77,6 +77,12 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// </summary>
         public List<string> VoucherIds { get; set; }
 
+        /// <summary>
+        /// List of Approvers associated to this purchase order
+        /// </summary>
+        public List<Approver> Approvers { get; set; }
+
+
 
     }
 }

@@ -357,6 +357,76 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         public string SafeHarborCodeDecember { get; set; }
 
         /// <summary>
+        /// Employee's Age
+        /// </summary>
+        public int? EmployeeAge { get; set; }
+
+        /// <summary>
+        /// Zip code for 12 months
+        /// </summary>
+        public string ZipCode12Month { get; set; }
+
+        /// <summary>
+        /// Zip code for January
+        /// </summary>
+        public string ZipCodeJanuary { get; set; }
+
+        /// <summary>
+        /// Zip code for February
+        /// </summary>
+        public string ZipCodeFebruary { get; set; }
+
+        /// <summary>
+        /// Zip code for March
+        /// </summary>
+        public string ZipCodeMarch { get; set; }
+
+        /// <summary>
+        /// Zip code for April
+        /// </summary>
+        public string ZipCodeApril { get; set; }
+
+        /// <summary>
+        /// Zip code for May
+        /// </summary>
+        public string ZipCodeMay { get; set; }
+
+        /// <summary>
+        /// Zip code for June
+        /// </summary>
+        public string ZipCodeJune { get; set; }
+
+        /// <summary>
+        /// Zip code for July
+        /// </summary>
+        public string ZipCodeJuly { get; set; }
+
+        /// <summary>
+        /// Zip code for August
+        /// </summary>
+        public string ZipCodeAugust { get; set; }
+
+        /// <summary>
+        /// Zip code for September
+        /// </summary>
+        public string ZipCodeSeptember { get; set; }
+
+        /// <summary>
+        /// Zip code for October
+        /// </summary>
+        public string ZipCodeOctober { get; set; }
+
+        /// <summary>
+        /// Zip code for November
+        /// </summary>
+        public string ZipCodeNovember { get; set; }
+
+        /// <summary>
+        /// Zip code for December
+        /// </summary>
+        public string ZipCodeDecember { get; set; }
+
+        /// <summary>
         /// Employer provides self-insured coverage?
         /// </summary>
         public bool EmployeeIsSelfInsured { get; set; }

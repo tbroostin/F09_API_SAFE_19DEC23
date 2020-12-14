@@ -2,7 +2,7 @@
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.Base.Transactions;
-using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -11,7 +11,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
@@ -79,7 +78,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
                 dicResult = new Dictionary<string, GuidLookupResult>()
                 {
-                    { guid, new GuidLookupResult() { Entity = "LEDGER.ACTIVITIES", PrimaryKey = "1" } }
+                    { guid, new GuidLookupResult() { Entity = "GLA.2020", PrimaryKey = "1" } }
                 };
 
                 lookupResult = new Dictionary<string, RecordKeyLookupResult>()
@@ -203,14 +202,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task LedgerActivityRepository_GetGlaFyrAsync_Invalid_ReportingSegment()
+             public async Task LedgerActivityRepository_GetGlaFyrAsync_Invalid_ReportingSegment()
             {
-                await ledgerActivityRepository.GetGlaFyrAsync(0, 2, "2017", "", "", "Name1", "");
+                var result = await ledgerActivityRepository.GetGlaFyrAsync(0, 2, "2017", "", "", "Name1", "");
+                Assert.IsNotNull(result);
+                Assert.AreEqual(result.Item2, 0);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(RepositoryException))]
             public async Task LedgerActivityRepository_BuildGlaSourceCode_Empty_GlaSource_From_Repository()
             {
                 glaDataContracts.FirstOrDefault().GlaSource = null;
@@ -218,7 +218,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(RepositoryException))]
             public async Task LedgerActivityRepository_GetGlSourceCodesAsync_Throws_Exception()
             {
                 dataReaderMock.Setup(d => d.ReadRecordAsync<ApplValcodes>(It.IsAny<string>(), It.IsAny<string>(), true)).ThrowsAsync(new Exception());
@@ -226,7 +226,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(RepositoryException))]
             public async Task LedgerActivityRepository_GetGlSourceCodesAsync_GlSourceCodes_Null_From_Repository()
             {
                 dataReaderMock.Setup(d => d.ReadRecordAsync<ApplValcodes>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(null);
@@ -234,7 +234,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(RepositoryException))]
             public async Task LedgerActivityRepository_BuildGlaSourceCode_GlSourceCode_NotFound()
             {
                 glaDataContracts.FirstOrDefault().GlaSource = "2";
@@ -285,6 +285,21 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 await ledgerActivityRepository.GetGlaFyrByIdAsync(guid);
             }
 
+            [TestMethod]
+            [ExpectedException(typeof(KeyNotFoundException))]
+            public async Task LedgerActivityRepository_GetGlaFyrByIdAsync_InvaidEntity()
+            {
+                dicResult = new Dictionary<string, GuidLookupResult>()
+                {
+                    { guid, new GuidLookupResult() { Entity = "INVALID", PrimaryKey = "1" }
+                 }
+                };
+
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dicResult);
+
+                await ledgerActivityRepository.GetGlaFyrByIdAsync(guid);
+            }
+        
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task LedgerActivityRepository_GetGlaFyrByIdAsync_ReadRecordAsync_Returns_Null()

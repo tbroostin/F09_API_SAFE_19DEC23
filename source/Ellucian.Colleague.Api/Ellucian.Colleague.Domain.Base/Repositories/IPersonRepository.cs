@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -196,6 +196,13 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<bool> IsCorpAsync(string personId);
 
         /// <summary>
+        /// Determine if the GUID represents a valid person, rather than an institution or corporation
+        /// </summary>
+        /// <param name="personId">Potential person GUID</param>
+        /// <returns>Person Record Key if CorpIndicator is false, otherwise returns empty string</returns>
+        Task<string> GetPersonIdForNonCorpOnly(string personGuid);
+
+        /// <summary>
         /// Determine if the person is a faculty member
         /// </summary>
         /// <param name="id">Person ID</param>
@@ -359,6 +366,13 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="personGuids"></param>
         /// <returns></returns>
         Task<IEnumerable<Ellucian.Colleague.Domain.Base.Entities.PersonPin>> GetPersonPinsAsync(string[] personGuids);
+
+        /// <summary>
+        /// Returns the collection of person user names
+        /// </summary>
+        /// <param name="personIds"></param>
+        /// <returns></returns>
+        Task<IEnumerable<Ellucian.Colleague.Domain.Base.Entities.PersonUserName>> GetPersonUserNamesAsync(string[] personIds);
 
         Task<EmailAddress> GetEmailAddressFromHierarchyAsync(string personId, string emailHierarchy);
 

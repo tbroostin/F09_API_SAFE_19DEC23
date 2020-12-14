@@ -137,7 +137,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            public async Task ExpectedEqulsActualTest()
+            public async Task ExpectedEqualsActualTest()
             {
                 var expected = (await testEmployeeLeaveRequestRepository.GetLeaveRequestsAsync(new List<string>() { employeeLeaveRequestUserFactory.CurrentUser.PersonId }))
                     .Select(lr => leaveRequestEntityToDtoAdapter.MapToType(lr));
@@ -542,6 +542,66 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
         #endregion
 
+        [TestClass]
+        public class GetLeaveRequestsForTimeEntryAsync : EmployeeLeaveRequestServiceTests
+        {
+            private IEnumerable<LeaveRequest> leaveRequestEntities;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                EmployeeLeaveRequestServiceTestsInitilize();
+
+                //Set up Data
+                SetupData();
+
+                //Set up mock
+                SetupMock();
+            }
+
+            private async void SetupData()
+            {
+                leaveRequestEntities = await testEmployeeLeaveRequestRepository.GetLeaveRequestsForTimeEntryAsync(DateTime.Today, DateTime.Today.AddDays(4), new List<string>() { employeeLeaveRequestUserFactory.CurrentUser.PersonId });
+            }
+
+            private void SetupMock()
+            {
+                employeeLeaveRequestRepositoryMock.Setup(elr => elr.GetLeaveRequestsForTimeEntryAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<IEnumerable<string>>())).
+               ReturnsAsync(leaveRequestEntities);
+            }
+
+
+            [TestMethod, ExpectedException(typeof(PermissionsException))]
+            public async Task GetLeaveRequestsForTimeEntryAsync_Throws_PermissionException()
+            {
+                await employeeLeaveRequestService.GetLeaveRequestsForTimeEntryAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), "0001958");
+            }
+
+            [TestMethod]
+            public async Task GetLeaveRequestsForTimeEntryAsync_With_Valid_Data_From_Repository()
+            {
+                employeeLeaveRequestService = new EmployeeLeaveRequestService(supervisorsRepositoryMock.Object,
+              personBaseRepositoryMock.Object,
+              testEmployeeLeaveRequestRepository,
+              adapterRegistryMock.Object,
+              employeeLeaveRequestUserFactory,
+              roleRepositoryMock.Object,
+              loggerMock.Object
+              );
+
+                var expected = (await testEmployeeLeaveRequestRepository.GetLeaveRequestsForTimeEntryAsync(DateTime.Today,DateTime.Today.AddDays(4),new List<string>() { employeeLeaveRequestUserFactory.CurrentUser.PersonId }))
+                  .Select(lr => leaveRequestEntityToDtoAdapter.MapToType(lr));
+
+                string persondId = employeeLeaveRequestUserFactory.CurrentUser.PersonId;
+
+                var actual = await employeeLeaveRequestService.GetLeaveRequestsForTimeEntryAsync(DateTime.Today, DateTime.Today.AddDays(4), persondId);
+
+                Assert.IsTrue(actual.Any());
+                Assert.AreEqual(actual.FirstOrDefault().EmployeeId, persondId);
+
+                CollectionAssert.AreEqual(expected.ToList(), actual.ToList(), leaveRequestDtoComparer);
+            }
+        }
         #region Helpers
         private FunctionEqualityComparer<Dtos.HumanResources.LeaveRequest> LeaveRequestComparer()
         {

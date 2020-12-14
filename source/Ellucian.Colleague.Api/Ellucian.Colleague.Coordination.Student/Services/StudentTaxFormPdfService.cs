@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Base.Utility;
@@ -307,7 +307,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var utility = new ReportUtility();
                 var parameters = new List<ReportParameter>();
 
-                if (pdfData.TaxYear == "2019")
+                int taxYearInt;
+                bool taxYearParseSuccess = int.TryParse(pdfData.TaxYear, out taxYearInt);
+                
+                if (taxYearParseSuccess && taxYearInt >= 2019)
                 {
                     parameters.Add(utility.BuildReportParameter("TaxYear", pdfData.TaxYear));
                     parameters.Add(utility.BuildReportParameter("FlyingClub", pdfData.FlyingClub));
@@ -336,7 +339,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var sessionPeriod = pdfData.SessionPeriods.ElementAtOrDefault(i);
                     if (sessionPeriod != null)
                     {
-                        if (pdfData.TaxYear == "2019")
+                        if (taxYearParseSuccess && taxYearInt >= 2019)
                         {
                             parameters.Add(utility.BuildReportParameter("FromYear" + sessionPeriodNumber, sessionPeriod.StudentFromYear.Substring(2)));
                             parameters.Add(utility.BuildReportParameter("FromMonth" + sessionPeriodNumber, sessionPeriod.StudentFromMonth.Length > 1 ? sessionPeriod.StudentFromMonth : "0" + sessionPeriod.StudentFromMonth));

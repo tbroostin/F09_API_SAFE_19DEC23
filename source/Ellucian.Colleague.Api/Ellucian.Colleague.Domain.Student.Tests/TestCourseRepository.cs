@@ -60,7 +60,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 {"18","306","MATH-102","MATH","Geometry","100","UG", "Introduction to geometrical theory and practice",""},
                 {"19","315","MATH-103","MATH","Trigonometry","100","UG", "Introduction to tools needed for calculus",""},
                 {"20","84","SPAN-300","MDLL","Advanced Spanish","300","UG", "Conversational spanish",""},
-                {"21","122","DANC-100","PERF","Ballroom Dancing","100","UG", "Learn to dance like the Greatest Generation",""},
+                {"21","122","DANC-100","PERF","Ballroom Dancing","100","UG", "Learn to dance like the Greatest Generation","SD"},
                 {"22","28","DANC-200","PERF","Dance Theory","200","UG", "Study of dance","MAIN"},
                 {"23","159","SOCI-100","SOCI","Introduction to Sociology","100","UG", "Study of the world societies",""},
                 {"24","155","POLI-100","POLI","Intro to Political Science","100","UG", "Politics, complexities, insights",""},
@@ -169,7 +169,17 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     {"99","7439","ENGL-201","ENGL","ENGLISH-201","200","UG","ENGLISH II","" },
 
                  // test data for course constructor failure (missing short title)
-                 {"100","7440","ENGL-201BAD","ENGL","","200","UG","ENGLISH II","" },
+                 {"100","7440","ENGL-201BAD","ENGL","neeeds small title","200","UG","ENGLISH II","" },
+
+                 //test data for testing of in.list.order
+                 //FREN-100 GERM-100 HIND-100 ARTH-100 HUMT-100 CRIM-100 POLI-100; -- POLI-100 already exist with index of 155
+                 {"101","7441","FREN-100","LANG","French basics","100","UG","Basic french learning",""},
+                 {"102","7442","GERM-100","LANG","German basics","100","UG","Basic german learning",""},
+                 {"103","7443","HIND-100","LANG","Hindi basics","100","UG","Basic hindi learning",""},
+                 {"104","7444","ARTH-100","LANG","Art history basics","100","UG","Basic art history learning",""},
+                 {"105","7445","HUMT-100","ART","Humanity basics","100","UG","Basic humaninty learning",""},
+                 {"106","7446","CRIM-100","CRIM","law basics","100","UG","Basic crime law learning",""}
+
 
                 };
 

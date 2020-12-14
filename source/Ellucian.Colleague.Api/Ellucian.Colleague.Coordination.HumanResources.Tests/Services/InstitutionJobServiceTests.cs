@@ -746,7 +746,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
     {
         #region DECLARATION
 
-        protected Domain.Entities.Role createInstitutionJob = new Domain.Entities.Role(1, "CREATE.UPDATE.INSTITUTION.JOB");
+        protected Domain.Entities.Role createInstitutionJob = new Domain.Entities.Role( 1, "CREATE.UPDATE.INSTITUTION.JOB" );
+        protected Domain.Entities.Role viewInstitutionJob = new Domain.Entities.Role( 2, "VIEW.INSTITUTION.JOB" );
 
         private Mock<IPositionRepository> positionRepositoryMock;
         private Mock<IHumanResourcesReferenceDataRepository> hrReferenceDataRepositoryMock;
@@ -964,7 +965,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         private void InitializeMock(bool bypassCache = false)
         {
             createInstitutionJob.AddPermission(new Domain.Entities.Permission(HumanResourcesPermissionCodes.CreateInstitutionJob));
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createInstitutionJob });
+            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createInstitutionJob, viewInstitutionJob } );
 
             personRepositoryMock.Setup(p => p.GetHostCountryAsync()).ReturnsAsync("USA");
             personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
@@ -1292,7 +1293,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof( PermissionsException ) )]
         public async Task InstitutionJobsService_PutInstitutionJobsAsync_PermissionException()
         {
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });

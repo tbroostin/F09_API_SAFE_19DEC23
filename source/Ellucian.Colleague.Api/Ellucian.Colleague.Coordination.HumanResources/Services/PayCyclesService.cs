@@ -1,4 +1,4 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
@@ -40,10 +40,11 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <summary>
         /// Get all Pay Cycles
         /// </summary>
+        /// <param name="lookbackDate">A optional date which is used to filter previous pay periods with end dates prior to this date.</param>
         /// <returns></returns>
-        public async Task<IEnumerable<Ellucian.Colleague.Dtos.HumanResources.PayCycle>> GetPayCyclesAsync()
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.HumanResources.PayCycle>> GetPayCyclesAsync(DateTime? lookbackDate = null)
         {
-            var payCycleEntities = await payCycleRepository.GetPayCyclesAsync();
+            var payCycleEntities = await payCycleRepository.GetPayCyclesAsync(lookbackDate);
             var entityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.HumanResources.Entities.PayCycle, Ellucian.Colleague.Dtos.HumanResources.PayCycle>();
             return payCycleEntities.Select(payCycle => entityToDtoAdapter.MapToType(payCycle));
         }

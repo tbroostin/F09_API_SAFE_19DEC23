@@ -376,6 +376,50 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             return response;
         }
 
+        /// <summary>
+        /// Get the list of voucher's by vendor id and invoice number.
+        /// </summary>
+        /// <param name="vendorId">Vendor Id</param>
+        /// <param name="invoiceNo">Invoice number</param>
+        /// <returns>List of <see cref="Voucher2">Vouchers</see></returns>
+        public async Task<IEnumerable<Voucher2>> GetVouchersByVendorAndInvoiceNoAsync(string vendorId, string invoiceNo)
+        {
+            if (string.IsNullOrEmpty(vendorId))
+                throw new ArgumentNullException("vendorId", "vendorId is required");
+
+            if (string.IsNullOrEmpty(invoiceNo))
+                throw new ArgumentNullException("invoiceNo", "invoice number is required");
+
+            // Check the permission code to view voucher information.
+            CheckViewVoucherPermission();
+
+            // Get the GL Configuration so we know how to format the GL numbers, and get the full GL access role
+            var glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
+            if (glConfiguration == null)
+            {
+                throw new ArgumentNullException("glConfiguration", "glConfiguration cannot be null");
+            }
+
+            List<Voucher2> voucherDtos = new List<Voucher2>();
+
+            // Get the list of voucher id's from the repository
+            var voucherDomainEntities = await voucherRepository.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNo);
+
+            if (voucherDomainEntities != null && voucherDomainEntities.Any())
+            {
+                // Convert the voucher domain entity and all its child objects into voucher2 DTOs.
+                var voucherDtoAdapter = new Voucher2EntityToDtoAdapter(_adapterRegistry, logger);
+
+                foreach (var voucherDomainEntity in voucherDomainEntities)
+                {
+                    var voucherDto = voucherDtoAdapter.MapToType(voucherDomainEntity, glConfiguration.MajorComponentStartPositions);
+
+                    voucherDtos.Add(voucherDto);
+                }
+            }
+
+            return voucherDtos;
+        }
 
 
         /// <summary>

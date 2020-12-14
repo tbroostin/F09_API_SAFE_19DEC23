@@ -1,4 +1,4 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Data.Colleague;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -202,13 +202,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
         };
 
 
-        public async Task<IEnumerable<PayCycle>> GetPayCyclesAsync()
+        public async Task<IEnumerable<PayCycle>> GetPayCyclesAsync(DateTime? lookbackStartDate = null)
         {
             var payCycles = payCycleRecords
                 .Select(pc =>
                 {
                     try{
-                        return BuildPayCycle(pc);
+                        return BuildPayCycle(pc, lookbackStartDate);
                     }
                     catch (Exception)
                     {
@@ -217,10 +217,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 })
                 .Where(e => e != null);
 
+
             return await Task.FromResult(payCycles);
         }
 
-        public PayCycle BuildPayCycle(PayCycleRecord record)
+        public PayCycle BuildPayCycle(PayCycleRecord record, DateTime? lookbackDate = null)
         {
  	        if (record == null)
             {
@@ -232,10 +233,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             {
                 annualPayFrequency = payCycleFrequencies.FirstOrDefault(f => f.Code == record.payFrequency).AnnualPayFrequency;
             }
+
             return new PayCycle(record.id, record.description, record.startDay)
             {
                 PayClassIds = record.payClassIds,
-                PayPeriods = record.payPeriods.Select(dateRange => new PayPeriod(dateRange.startDate.Value, dateRange.endDate.Value)).ToList(),
+                PayPeriods = record.payPeriods.Select(dateRange => new PayPeriod(dateRange.startDate.Value, dateRange.endDate.Value)).Where(x => lookbackDate.HasValue ? DateTime.Compare(x.EndDate, lookbackDate.Value) >= 0 : x.EndDate != null).ToList(),
                 AnnualPayFrequency = annualPayFrequency,
                 Description = record.description
             };

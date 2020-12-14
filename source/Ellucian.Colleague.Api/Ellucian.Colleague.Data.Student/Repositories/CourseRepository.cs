@@ -21,6 +21,7 @@ using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Base.Services;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -33,6 +34,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         private const string _coursesCacheName = "AllCourses";
         private bool addToErrorCollection = false;
         private RepositoryException exception;
+        const string AllCoursessCacheKey = "AllCoursessCacheKey";
+        const int AllCoursessCacheKeyTimeout = 20;
 
         // Sets the maximum number of records to bulk read at one time
         readonly int readSize;
@@ -210,6 +213,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return await GetPagedCoursesAsync(offset, limit, subject, number, academicLevel, owningInstitutionUnit, titles, instructionalMethods, startOn, endOn, topic, categories, "", addToCollection);
         }
 
+
         /// <summary>
         /// Gets all courses from the database using custom paging
         /// </summary>
@@ -219,81 +223,88 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             //flag determines if errors will be returned as part of a collection.
             this.addToErrorCollection = addToCollection;
-
-            string criteria = BuildCriteria(subject, number, academicLevel, owningInstitutionUnit, titles, instructionalMethods, startOn, endOn, topic, categories, activeOn);
-
-            // Select from COURSES to get all the Ids
-            //string[] courseIds = await DataReader.SelectAsync("COURSES", criteria);
-            string[] courseIds = new string[] { };
-
-            var coursesCacheKey = string.Concat("CoursesKey",
-                string.IsNullOrEmpty(subject) ? "" : "Subject" + subject,
-                string.IsNullOrEmpty(number) ? "" : "Number" + number,
-                academicLevel != null && academicLevel.Any() ? "AcadLevel" + string.Join("", academicLevel) : "",
-                owningInstitutionUnit != null && owningInstitutionUnit.Any() ? "OwnInst" + string.Join("", owningInstitutionUnit) : "",
-                titles != null && titles.Any() ? "Title" + string.Join("", titles) : "",
-                instructionalMethods != null && instructionalMethods.Any() ? "InstMethods" + string.Join("", instructionalMethods) : "",
-                string.IsNullOrEmpty(startOn) ? "" : "StartOn" + startOn,
-                string.IsNullOrEmpty(endOn) ? "" : "EndOn" + endOn,
-                string.IsNullOrEmpty(topic) ? "" : "Topic" + topic,
-                categories != null && categories.Any() ? "Categories" + string.Join("", categories) : "",
-                string.IsNullOrEmpty(activeOn) ? "" : "ActiveOn" + activeOn );
-
-
-            if (offset == 0 && ContainsKey(BuildFullCacheKey(coursesCacheKey)))
-            {
-                ClearCache(new List<string> { coursesCacheKey });
-            }
-            courseIds = await GetOrAddToCacheAsync<string[]>(coursesCacheKey,
-                async () =>
-                {
-                    courseIds = await DataReader.SelectAsync("COURSES", criteria);
-                    Array.Sort(courseIds);
-                    return courseIds;
-                });
-
-
-            if ((courseIds == null) || (!courseIds.Any()))
-            {
-                return new Tuple<IEnumerable<Course>, int>(new List<Course>(), 0);
-            }
-
-            int totalCount = courseIds.Count();
-
-            Array.Sort(courseIds);
-
-            var subList = courseIds.Skip(offset).Take(limit).ToArray();
-
-            var coursesData = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.Courses>("COURSES", subList);
-
-            if (coursesData.Equals(default(BulkReadOutput<DataContracts.Courses>)))
-            {
-                return new Tuple<IEnumerable<Course>, int>(new List<Course>(), totalCount);
-            }
-            if ((coursesData.InvalidKeys != null && coursesData.InvalidKeys.Any())
-                    || (coursesData.InvalidRecords != null && coursesData.InvalidRecords.Any()))
-            {
-                var repositoryException = new RepositoryException();
-
-                if (coursesData.InvalidKeys.Any())
-                {
-                    repositoryException.AddErrors(coursesData.InvalidKeys
-                        .Select(key => new RepositoryError("invalid.key",
-                        string.Format("Unable to locate the following key '{0}'.", key.ToString()))));
-                }
-                if (coursesData.InvalidRecords.Any())
-                {
-                    repositoryException.AddErrors(coursesData.InvalidRecords
-                       .Select(r => new RepositoryError("invalid.record",
-                       string.Format("Error: '{0}' ", r.Value))
-                       { SourceId = r.Key }));
-                }
-                throw repositoryException;
-            }
-
             Dictionary<string, Course> courseList = null;
+            int totalCount = 0;
+
             try
             {
+                string coursesKey = CacheSupport.BuildCacheKey( AllCoursessCacheKey,
+                                                            string.IsNullOrEmpty( subject ) ? "" : subject,
+                                                            string.IsNullOrEmpty( number ) ? "" : number,
+                                                            academicLevel != null && academicLevel.Any() ? academicLevel : null,
+                                                            owningInstitutionUnit != null && owningInstitutionUnit.Any() ? owningInstitutionUnit : null,
+                                                            titles != null && titles.Any() ? titles : null,
+                                                            instructionalMethods != null && instructionalMethods.Any() ? instructionalMethods : null,
+                                                            string.IsNullOrEmpty( startOn ) ? "" : startOn,
+                                                            string.IsNullOrEmpty( endOn ) ? "" : endOn,
+                                                            string.IsNullOrEmpty( topic ) ? "" : topic,
+                                                            categories != null && categories.Any() ? categories : null,
+                                                            string.IsNullOrEmpty( activeOn ) ? "" : activeOn);
+
+
+                var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                       this,
+                       ContainsKey,
+                       GetOrAddToCacheAsync,
+                       AddOrUpdateCacheAsync,
+                       transactionInvoker,
+                       coursesKey,
+                       "",
+                       offset,
+                       limit,
+                       AllCoursessCacheKeyTimeout,
+                       async () =>
+                       {
+                           string criteria = BuildCriteria( subject, number, academicLevel, owningInstitutionUnit, titles, instructionalMethods, startOn, endOn, topic, categories, activeOn );
+
+                           string[] courseIds = new string[] { };
+
+                           courseIds = await DataReader.SelectAsync( "COURSES", criteria );
+
+                           return new CacheSupport.KeyCacheRequirements()
+                           {
+                               limitingKeys = courseIds != null && courseIds.Any() ? courseIds.Distinct().ToList() : null,
+                               criteria = criteria,
+                           };
+                       } );
+
+
+                if( keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any() )
+                {
+                    return new Tuple<IEnumerable<Course>, int>( new List<Course>(), 0 );
+                }
+
+                totalCount = keyCacheObject.TotalCount.Value;
+
+                var subList = keyCacheObject.Sublist.ToArray();
+
+                var coursesData = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.Courses>("COURSES", subList);
+
+                if (coursesData.Equals(default(BulkReadOutput<DataContracts.Courses>)))
+                {
+                    return new Tuple<IEnumerable<Course>, int>(new List<Course>(), totalCount);
+                }
+                if ((coursesData.InvalidKeys != null && coursesData.InvalidKeys.Any())
+                        || (coursesData.InvalidRecords != null && coursesData.InvalidRecords.Any()))
+                {
+                    var repositoryException = new RepositoryException();
+
+                    if (coursesData.InvalidKeys.Any())
+                    {
+                        repositoryException.AddErrors(coursesData.InvalidKeys
+                            .Select(key => new RepositoryError("invalid.key",
+                             string.Format("Unable to locate the following key '{0}'.", key.ToString()))));
+                    }
+                    if (coursesData.InvalidRecords.Any())
+                    {
+                        repositoryException.AddErrors(coursesData.InvalidRecords
+                           .Select(r => new RepositoryError("invalid.record",
+                            string.Format("Error: '{0}' ", r.Value))
+                           { SourceId = r.Key }));
+                    }
+                    throw repositoryException;
+                }
+
                 courseList = await BuildCoursesAsync(coursesData.BulkRecordsRead.ToList(), await GetCourseRequirements(coursesData.BulkRecordsRead.ToList()));
             }
             catch (Exception ex)
@@ -795,6 +806,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         List<CourseApproval> courseApprovals = new List<CourseApproval>();
                         if (crs.ApprovalStatusEntityAssociation != null && crs.ApprovalStatusEntityAssociation.Any())
                         {
+                            int index = 0;
                             foreach (var approval in crs.ApprovalStatusEntityAssociation)
                             {
                                 if (string.IsNullOrEmpty(approval.CrsStatusAssocMember))
@@ -804,17 +816,35 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 }
                                 try
                                 {
+                                    // The CourseApprovals initialization method has dates as non-nullable and
+                                    // will bomb with "Nullable object must have a value" if we try to pass them
+                                    // into the constructor without values.  Provide a more accurate error if these
+                                    // cases.
+                                    if (approval.CrsStatusDateAssocMember == null || !approval.CrsStatusDateAssocMember.HasValue)
+                                    {
+                                        throw new ArgumentNullException("statusDate", "Status date must be supplied.");
+                                    }
+                                    if (approval.CrsApprovalDateAssocMember == null || !approval.CrsApprovalDateAssocMember.HasValue)
+                                    {
+                                        throw new ArgumentNullException("date", "Approval date must be supplied.");
+                                    }
                                     var courseApproval = new CourseApproval(approval.CrsStatusAssocMember, approval.CrsStatusDateAssocMember.Value, approval.CrsApprovalAgencyIdsAssocMember, approval.CrsApprovalIdsAssocMember, approval.CrsApprovalDateAssocMember.Value);
                                     courseApproval.Status = ConvertStatusStringToCourseStatus(approval.CrsStatusAssocMember, courseStatuses);
                                     courseApprovals.Add(courseApproval);
                                 }
                                 catch (Exception ex)
                                 {
-                                    var msg = "Exception occurred while processing Course Approvals for Course Id";
+                                    var msg = "Exception occurred while processing Course Approvals for Course Id.";
                                     logger.Info(msg + " " + crs.Recordkey);
                                     logger.Info(ex.Message);
-                                    LogRepoError(msg + ex.Message, crs.RecordGuid, crs.Recordkey);
+                                    // Only report the current (first) status in the association.
+                                    // Any historical data missing approvals can be ignored.
+                                    if (index == 0)
+                                    {
+                                        LogRepoError(msg + " " + ex.Message, crs.RecordGuid, crs.Recordkey);
+                                    }
                                 }
+                                index++;
                             }
                         }
 
@@ -830,10 +860,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 }
                                 catch (Exception ex)
                                 {
-                                    var msg = "Exception occurred while processing Offering Departments for Course Id";
+                                    var msg = "Exception occurred while processing Offering Departments for Course Id.";
                                     logger.Info(msg + " " + crs.Recordkey);
                                     logger.Info(ex.Message);
-                                    LogRepoError(msg, crs.RecordGuid, crs.Recordkey);
+                                    LogRepoError(msg + " " + ex.Message, crs.RecordGuid, crs.Recordkey);
                                 }
                             }
                         }
@@ -1566,7 +1596,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 CrsBillingCred = course.BillingCredits,
                 CrsWaitlistMultSectFlag = course.AllowWaitlistMultipleSections,
                 CrsCourseTypes = course.CourseTypeCodes == null ? null : course.CourseTypeCodes.ToList(),
-                CrsTopicCode = course.TopicCode
+                CrsTopicCode = course.TopicCode,
+                CrsCip = course.FederalCourseClassification,
+                CrsLevels = course.CourseLevelCodes
             };
 
             // Get Extended Data names and values
@@ -1588,11 +1620,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         CrsDeptPcts = dept.ResponsibilityPercentage
                     });
                 }
-            }
-
-            if (course.CourseLevelCodes != null && course.CourseLevelCodes.Any())
-            {
-                request.CrsLevels.AddRange(course.CourseLevelCodes);
             }
 
             if (course.CourseApprovals != null && course.CourseApprovals.Any())

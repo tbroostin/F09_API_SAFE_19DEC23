@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Tests;
@@ -11,7 +11,6 @@ using Moq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
@@ -104,8 +103,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             adapterRegistryMock.Setup(r => r.GetAdapter<Domain.HumanResources.Entities.PersonPosition, PersonPosition>())
                 .Returns(personPositionEntityToDtoAdapter);
 
-            personPositionRepositoryMock.Setup(r => r.GetPersonPositionsAsync(It.IsAny<IEnumerable<string>>()))
-               .Returns<IEnumerable<string>>((personIds) => testPersonPositionRepository.GetPersonPositionsAsync(personIds));
+            personPositionRepositoryMock.Setup(r => r.GetPersonPositionsAsync(It.IsAny<IEnumerable<string>>(), null))
+               .Returns<IEnumerable<string>, DateTime?>((personIds, date) => testPersonPositionRepository.GetPersonPositionsAsync(personIds, date));
 
             personPositionDtoComparer = new FunctionEqualityComparer<PersonPosition>(
                 (p1, p2) => p1.Id == p2.Id && p1.PersonId == p2.PersonId && p1.PositionId == p2.PositionId && p1.StartDate == p2.StartDate,
@@ -135,7 +134,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 await actualService.GetPersonPositionsAsync();
                 personPositionRepositoryMock.Verify(r =>
                     r.GetPersonPositionsAsync(It.Is<IEnumerable<string>>(list =>
-                        list.Count() == 1 && list.ElementAt(0) == employeeCurrentUserFactory.CurrentUser.PersonId)));
+                        list.Count() == 1 && list.ElementAt(0) == employeeCurrentUserFactory.CurrentUser.PersonId), null));
             }
 
             [TestMethod]
@@ -144,15 +143,15 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 await proxyActualService.GetPersonPositionsAsync("0000001");
                 personPositionRepositoryMock.Verify(r =>
                     r.GetPersonPositionsAsync(It.Is<IEnumerable<string>>(list =>
-                        list.Count() == 1 && list.ElementAt(0) == "0000001")));
+                        list.Count() == 1 && list.ElementAt(0) == "0000001"), null));
             }
 
             [TestMethod]
             [ExpectedException(typeof(ApplicationException))]
             public async Task RepositoryReturnsNullTest()
             {
-                personPositionRepositoryMock.Setup(r => r.GetPersonPositionsAsync(It.IsAny<IEnumerable<string>>()))
-                    .Returns<IEnumerable<string>>((ids) => Task.FromResult<IEnumerable<Domain.HumanResources.Entities.PersonPosition>>(null));
+                personPositionRepositoryMock.Setup(r => r.GetPersonPositionsAsync(It.IsAny<IEnumerable<string>>(), null))
+                    .ReturnsAsync(null);
 
                 try
                 {
@@ -171,7 +170,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 var expected = (await testPersonPositionRepository.GetPersonPositionsAsync(new List<string>() { employeeCurrentUserFactory.CurrentUser.PersonId }))
                     .Select(ppEntity => personPositionEntityToDtoAdapter.MapToType(ppEntity));
 
-                var actual = await actualService.GetPersonPositionsAsync();
+                var actual = await actualService.GetPersonPositionsAsync(employeeCurrentUserFactory.CurrentUser.PersonId);
 
                 CollectionAssert.AreEqual(expected.ToArray(), actual.ToArray(), personPositionDtoComparer);
             }
@@ -201,7 +200,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 await actualService.GetPersonPositionsAsync(UserForAdminPermissionCheck);
                 personPositionRepositoryMock.Verify(r =>
                     r.GetPersonPositionsAsync(It.Is<IEnumerable<string>>(list =>
-                        list.Count() == 1 && list.ElementAt(0) == UserForAdminPermissionCheck)));
+                        list.Count() == 1 && list.ElementAt(0) == UserForAdminPermissionCheck), null));
             }
 
             [TestMethod]

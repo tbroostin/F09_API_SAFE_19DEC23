@@ -1,4 +1,4 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using System;
@@ -93,7 +93,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             }
         }
 
-        public async Task<IEnumerable<PersonPosition>> GetPersonPositionsAsync(IEnumerable<string> personIds)
+        public async Task<IEnumerable<PersonPosition>> GetPersonPositionsAsync(IEnumerable<string> personIds, DateTime? startDate = null)
         {
             var records = personPositionRecords.Where(p => personIds.Contains(p.personId));
 

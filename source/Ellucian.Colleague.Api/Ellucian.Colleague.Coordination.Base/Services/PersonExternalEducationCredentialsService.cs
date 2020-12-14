@@ -1,4 +1,4 @@
-//Copyright 2019 Ellucian Company L.P. and its affiliates.
+//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -24,11 +24,12 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private readonly IPersonExternalEducationCredentialsRepository _personExternalEducationCredentialsRepository;
         private readonly IInstitutionRepository _institutionRepository;
         private readonly IReferenceDataRepository _referenceDataRepository;
-
+        private readonly IPersonRepository _personRepository;
         public PersonExternalEducationCredentialsService(
             IPersonExternalEducationCredentialsRepository personExternalEducationCredentialsRepository,
             IInstitutionRepository institutionRepository,
             IReferenceDataRepository referenceDataRepository,
+            IPersonRepository personRepository,
             IAdapterRegistry adapterRegistry,
             ICurrentUserFactory currentUserFactory,
             IRoleRepository roleRepository,
@@ -39,6 +40,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             _personExternalEducationCredentialsRepository = personExternalEducationCredentialsRepository;
             _institutionRepository = institutionRepository;
             _referenceDataRepository = referenceDataRepository;
+            _personRepository = personRepository;
         }
 
         #region Reference Methods
@@ -115,7 +117,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// Gets all person-external-education-credentials
         /// </summary>
         /// <returns>Collection of PersonExternalEducationCredentials DTO objects</returns>
-        public async Task<Tuple<IEnumerable<PersonExternalEducationCredentials>, int>> GetPersonExternalEducationCredentialsAsync(int offset, int limit, string personFilter, bool bypassCache = false)
+        public async Task<Tuple<IEnumerable<PersonExternalEducationCredentials>, int>> GetPersonExternalEducationCredentialsAsync(int offset, int limit, string personFilter,
+            Dtos.PersonExternalEducationCredentials personExternalEducationCredentialsFilter = null,
+            string personGuid = "", bool bypassCache = false)
         {
             var personExternEducationCredentialsCollection = new List<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials>();
             int totalCount = 0;
@@ -123,12 +127,14 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             ViewPersonExternalEducationCredentialsPermission();
 
-            //convert person filter named query.
-            string[] filterPersonIds = new List<string>().ToArray();
-
-            if (!string.IsNullOrEmpty(personFilter))
+            string[] filterPersonIds = null;
+            var personId = string.Empty;
+            var externalEducationId = string.Empty;
+            try
             {
-                try
+                #region person filter named query.
+          
+                if (!string.IsNullOrEmpty(personFilter))
                 {
                     var personFilterKeys = (await _referenceDataRepository.GetPersonIdsByPersonFilterGuidAsync(personFilter));
                     if (personFilterKeys != null && personFilterKeys.Any())
@@ -140,16 +146,48 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         return new Tuple<IEnumerable<Dtos.PersonExternalEducationCredentials>, int>(new List<Dtos.PersonExternalEducationCredentials>(), 0);
                     }
                 }
-                catch (Exception)
+
+                #endregion
+
+                #region person GUID filter
+               
+                if (!string.IsNullOrEmpty(personGuid))
                 {
-                    return new Tuple<IEnumerable<Dtos.PersonExternalEducationCredentials>, int>(new List<Dtos.PersonExternalEducationCredentials>(), 0);
+                    personId = await _personRepository.GetPersonIdForNonCorpOnly(personGuid);
+                    if (string.IsNullOrEmpty(personId))
+                    {
+                        return new Tuple<IEnumerable<Dtos.PersonExternalEducationCredentials>, int>(new List<Dtos.PersonExternalEducationCredentials>(), 0);
+                    }
                 }
+
+                #endregion
+
+                #region external Education filter
+
+                if (personExternalEducationCredentialsFilter != null)
+                {
+                    if (personExternalEducationCredentialsFilter.ExternalEducation != null && !string.IsNullOrEmpty(personExternalEducationCredentialsFilter.ExternalEducation.Id))
+                    {
+                        externalEducationId = await _personExternalEducationCredentialsRepository.GetExternalEducationIdFromGuidAsync(personExternalEducationCredentialsFilter.ExternalEducation.Id);
+                        if (string.IsNullOrEmpty(externalEducationId))
+                        {
+                            return new Tuple<IEnumerable<Dtos.PersonExternalEducationCredentials>, int>(new List<Dtos.PersonExternalEducationCredentials>(), 0);
+                        }
+                    }
+                }
+
+                #endregion
+            }
+            catch (Exception)
+            {
+                return new Tuple<IEnumerable<Dtos.PersonExternalEducationCredentials>, int>(new List<Dtos.PersonExternalEducationCredentials>(), 0);
             }
 
-            Tuple<IEnumerable<Domain.Base.Entities.ExternalEducation>, int> entities = new Tuple<IEnumerable<Domain.Base.Entities.ExternalEducation>, int>(null, 0);
+            var entities = new Tuple<IEnumerable<Domain.Base.Entities.ExternalEducation>, int>(null, 0);
             try
             {
-                entities = await _personExternalEducationCredentialsRepository.GetExternalEducationCredentialsAsync(offset, limit, filterPersonIds, personFilter, bypassCache);
+                entities = await _personExternalEducationCredentialsRepository.GetExternalEducationCredentialsAsync(offset, limit, filterPersonIds, personFilter, 
+                   personId, externalEducationId, bypassCache);
                 if (entities == null || !entities.Item1.Any())
                 {
                     return new Tuple<IEnumerable<Dtos.PersonExternalEducationCredentials>, int>(new List<Dtos.PersonExternalEducationCredentials>(), 0);
@@ -512,14 +550,25 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 personExternalEducationCredentials.Recognitions = new List<GuidObject2>();
                 foreach (var honor in source.AcadHonors)
                 {
-                    var honorEntity = (await AcademicHonorsAsync(bypassCache)).FirstOrDefault(ac => ac.Code.Equals(honor, StringComparison.OrdinalIgnoreCase));
-                    if (honorEntity == null || string.IsNullOrEmpty(honorEntity.Guid))
+                    //var honorEntity = (await AcademicHonorsAsync(bypassCache)).FirstOrDefault(ac => ac.Code.Equals(honor, StringComparison.OrdinalIgnoreCase));
+                    var honorEntityGuid = string.Empty;
+                    try
                     {
-                        IntegrationApiExceptionAddError(string.Format("Cannot find a GUID for Honor code of '{0}'.", honor), "Validation.Exception", source.Guid, source.Id);
+                        honorEntityGuid = await _referenceDataRepository.GetOtherHonorsGuidAsync(honor);
+
+
+                        if (string.IsNullOrEmpty(honorEntityGuid))
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Cannot find a GUID for Honor code of '{0}'.", honor), "Validation.Exception", source.Guid, source.Id);
+                        }
+                        else
+                        {
+                            personExternalEducationCredentials.Recognitions.Add(new GuidObject2(honorEntityGuid));
+                        }
                     }
-                    else
+                    catch (RepositoryException ex)
                     {
-                        personExternalEducationCredentials.Recognitions.Add(new GuidObject2(honorEntity.Guid));
+                        IntegrationApiExceptionAddError(ex, "Validation.Exception", source.Guid, source.Id);
                     }
                 }
             }

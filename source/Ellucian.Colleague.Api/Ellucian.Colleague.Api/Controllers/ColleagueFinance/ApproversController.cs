@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -9,6 +9,7 @@ using Ellucian.Web.License;
 using Ellucian.Web.Security;
 using slf4net;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Net;
 using System.Threading.Tasks;
@@ -64,6 +65,53 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(ex.Message);
                 throw CreateHttpResponseException("Unable to validate a next approver.", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Get the list of initiators based on keyword search.
+        /// </summary>
+        /// <param name="queryKeyword">parameter for passing search keyword</param>
+        /// <returns> The Next approver search results</returns>      
+        /// <accessComments>
+        /// Requires at least one of the permissions CREATE.UPDATE.REQUISITION or CREATE.UPDATE.PURCHASE.ORDER or CREATE.UPDATE.VOUCHER.
+        /// </accessComments>
+        [HttpGet]
+        public async Task<IEnumerable<NextApprover>> GetNextApproverByKeywordAsync(string queryKeyword)
+        {
+
+            if (string.IsNullOrEmpty(queryKeyword))
+            {
+                string message = "query keyword is required to query.";
+                logger.Error(message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+
+            try
+            {
+                var nextApproverSearchResults = await approverService.QueryNextApproverByKeywordAsync(queryKeyword);
+                return nextApproverSearchResults;
+            }
+            catch (ArgumentNullException anex)
+            {
+                logger.Error(anex, "Invalid argument.");
+                throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex, "Insufficient permissions to get the approver info.");
+                throw CreateHttpResponseException("Insufficient permissions to get the approver info.", HttpStatusCode.Forbidden);
+            }
+            catch (KeyNotFoundException knfex)
+            {
+                logger.Error(knfex, "Record not found.");
+                throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
+            }
+            // Application exceptions will be caught below.
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to search approver");
+                throw CreateHttpResponseException("Unable to search approver", HttpStatusCode.BadRequest);
             }
         }
     }

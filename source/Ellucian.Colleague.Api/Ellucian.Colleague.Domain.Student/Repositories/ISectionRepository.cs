@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -327,6 +327,7 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<Dictionary<string,SectionSeats>> GetSectionsSeatsAsync(IEnumerable<string> sectionIds);
         Task<IEnumerable<Section>> GetCachedSectionsAsync(IEnumerable<string> sectionIds, bool bestFit = false);
         DateTime GetChangedRegistrationSectionsCacheBuildTime();
+        DateTime GetChangedInstantEnrollmentSectionsCacheBuildTime();
         Task<IEnumerable<SectionGradeResponse>> ImportGradesAsync(SectionGrades sectionGrades, bool forceNoVerifyFlag, bool checkForLocksFlag, GradesPutCallerTypes callerTypes);
                 
         /// <summary>
@@ -570,6 +571,12 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
 
         Task<SectionMidtermGradingComplete> GetSectionMidtermGradingCompleteAsync(string sectionId);
         Task<SectionMidtermGradingComplete> PostSectionMidtermGradingCompleteAsync(string sectionId, int? midtermGradeNumber, string completeOperator, DateTimeOffset? dateAndTime);
+
+        /// <summary>
+        /// Retrieve Instant Enrollment sections
+        /// </summary>
+        /// <returns></returns>
+        Task<IEnumerable<Section>> GetInstantEnrollmentSectionsAsync();
 
     }
 }

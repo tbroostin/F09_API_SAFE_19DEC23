@@ -76,8 +76,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 var criteriaObject = GetFilterObject<Dtos.FinancialAidApplicationOutcome>(logger, "criteria");
                 if (CheckForEmptyFilterParameters())
                     return new PagedHttpActionResult<IEnumerable<Dtos.FinancialAidApplication>>(new List<Dtos.FinancialAidApplication>(), page, 0, this.Request);
+                
                 var pageOfItems = await financialAidApplicationOutcomeService.GetAsync(page.Offset, page.Limit, criteriaObject, bypassCache);
-
 
                 AddEthosContextProperties(
                     await financialAidApplicationOutcomeService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),

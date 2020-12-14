@@ -112,7 +112,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             }
 
             [TestMethod]
-            public async Task LedgerActivitiesController_GetLedgerActivitiesAsync_With_Filters()
+            public async Task LedgerActivitiesController_GetLedgerActivitiesAsync_FiscalYear_Filter()
             {
                 //string criteria = @"{'fiscalYear':{'id':'70479f3b-bb79-4c0b-a0db-c240cd51e300'}}";
                 ledgerActivitiesController.Request.Properties.Add(
@@ -130,6 +130,121 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 
                 Assert.IsNotNull(result);
                 Assert.AreEqual(actuals.FirstOrDefault().Id, guid);
+            }
+
+            [TestMethod]
+            public async Task LedgerActivitiesController_GetLedgerActivitiesAsync_FiscalYear_NamedQuery_Filter()
+            {
+                //string fiscalYear = @"{'fiscalYear':{'id':'70479f3b-bb79-4c0b-a0db-c240cd51e300'}}";
+                ledgerActivitiesController.Request.Properties.Add(
+                      string.Format("FilterObject{0}", "fiscalYear"),
+                      new Dtos.Filters.FiscalYearFilter() { FiscalYear = new Dtos.GuidObject2("70479f3b-bb79-4c0b-a0db-c240cd51e300") });
+
+                var result = await ledgerActivitiesController.GetLedgerActivitiesAsync(null, criteriaFilter);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+
+                HttpResponseMessage httpResponseMessage = await result.ExecuteAsync(cancelToken);
+
+                var actuals = ((ObjectContent<IEnumerable<Dtos.LedgerActivity>>)httpResponseMessage.Content)
+                    .Value as IEnumerable<Dtos.LedgerActivity>;
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(actuals.FirstOrDefault().Id, guid);
+            }
+
+
+            [TestMethod]
+            public async Task LedgerActivitiesController_GetLedgerActivitiesAsync_FiscalPeriod_Filter()
+            {
+                //string criteria = @"{'fiscalPeriod':{'id':'70479f3b-bb79-4c0b-a0db-c240cd51e300'}}";
+                ledgerActivitiesController.Request.Properties.Add(
+                      string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.Filters.LedgerActivityFilter() { FiscalPeriod = new Dtos.GuidObject2("70479f3b-bb79-4c0b-a0db-c240cd51e300") });
+
+                var result = await ledgerActivitiesController.GetLedgerActivitiesAsync(null, criteriaFilter);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+
+                HttpResponseMessage httpResponseMessage = await result.ExecuteAsync(cancelToken);
+
+                var actuals = ((ObjectContent<IEnumerable<Dtos.LedgerActivity>>)httpResponseMessage.Content)
+                    .Value as IEnumerable<Dtos.LedgerActivity>;
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(actuals.FirstOrDefault().Id, guid);
+            }
+
+            [TestMethod]
+            public async Task LedgerActivitiesController_GetLedgerActivitiesAsync_Period_Filter()
+            {
+                //string criteria = @"{'period':{'id':'70479f3b-bb79-4c0b-a0db-c240cd51e300'}}";
+                ledgerActivitiesController.Request.Properties.Add(
+                      string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.Filters.LedgerActivityFilter() { Period = new Dtos.GuidObject2("70479f3b-bb79-4c0b-a0db-c240cd51e300") });
+
+                var result = await ledgerActivitiesController.GetLedgerActivitiesAsync(null, criteriaFilter);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+
+                HttpResponseMessage httpResponseMessage = await result.ExecuteAsync(cancelToken);
+
+                var actuals = ((ObjectContent<IEnumerable<Dtos.LedgerActivity>>)httpResponseMessage.Content)
+                    .Value as IEnumerable<Dtos.LedgerActivity>;
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(actuals.FirstOrDefault().Id, guid);
+            }
+
+            [TestMethod]
+            public async Task LedgerActivitiesController_GetLedgerActivitiesAsync_Period_and_FiscalPeriod_Filter_Same()
+            {
+                //string criteria = @"{'fiscalPeriod':{'id':'70479f3b-bb79-4c0b-a0db-c240cd51e300'}, 'period':{'id':'70479f3b-bb79-4c0b-a0db-c240cd51e300'}}";
+                ledgerActivitiesController.Request.Properties.Add(
+                      string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.Filters.LedgerActivityFilter()
+                      {
+                          Period = new Dtos.GuidObject2("70479f3b-bb79-4c0b-a0db-c240cd51e300"),
+                          FiscalPeriod = new Dtos.GuidObject2("70479f3b-bb79-4c0b-a0db-c240cd51e300")
+                      }); ;
+
+                var result = await ledgerActivitiesController.GetLedgerActivitiesAsync(null, criteriaFilter);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+
+                HttpResponseMessage httpResponseMessage = await result.ExecuteAsync(cancelToken);
+
+                var actuals = ((ObjectContent<IEnumerable<Dtos.LedgerActivity>>)httpResponseMessage.Content)
+                    .Value as IEnumerable<Dtos.LedgerActivity>;
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(actuals.FirstOrDefault().Id, guid);
+            }
+
+            [TestMethod]
+            public async Task LedgerActivitiesController_GetLedgerActivitiesAsync_Period_and_FiscalPeriod_Filter_Different()
+            {
+                //string criteria = @"{'fiscalPeriod':{'id':'70479f3b-bb79-4c0b-a0db-c240cd51e300'}, 'period':{'id':'80479f3b-bb79-4c0b-a0db-c240cd51e301'}}";
+                ledgerActivitiesController.Request.Properties.Add(
+                      string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.Filters.LedgerActivityFilter()
+                      {
+                          Period = new Dtos.GuidObject2("70479f3b-bb79-4c0b-a0db-c240cd51e300"),
+                          FiscalPeriod = new Dtos.GuidObject2("80479f3b-bb79-4c0b-a0db-c240cd51e301")
+                      }); ;
+
+                var result = await ledgerActivitiesController.GetLedgerActivitiesAsync(null, criteriaFilter);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+
+                HttpResponseMessage httpResponseMessage = await result.ExecuteAsync(cancelToken);
+
+                var actuals = ((ObjectContent<IEnumerable<Dtos.LedgerActivity>>)httpResponseMessage.Content)
+                    .Value as IEnumerable<Dtos.LedgerActivity>;
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(actuals.Count(), 0);
+
             }
 
             [TestMethod]

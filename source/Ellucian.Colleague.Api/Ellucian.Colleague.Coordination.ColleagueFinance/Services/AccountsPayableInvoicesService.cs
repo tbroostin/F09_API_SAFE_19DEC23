@@ -1,4 +1,4 @@
-﻿//Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -71,6 +71,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private IEnumerable<Domain.ColleagueFinance.Entities.AccountsPayableSources> _accountsPayableSources;
         private IEnumerable<BoxCodes> _boxCodes;
         private IEnumerable<Domain.ColleagueFinance.Entities.CommodityCode> _commodityCodes;
+        private IEnumerable<Domain.ColleagueFinance.Entities.FxaTransferFlags> _fxaTransferFlags = null;
         private IEnumerable<Domain.ColleagueFinance.Entities.CommodityUnitType> _commodityUnitTypes;
         private IEnumerable<Domain.ColleagueFinance.Entities.VendorTerm> _vendorTerms;
         private Domain.ColleagueFinance.Entities.GeneralLedgerAccountStructure _glAccountStructure;
@@ -112,6 +113,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             if (string.IsNullOrEmpty(accountsPayableInvoicesDto.Id))
                 throw new ArgumentNullException("accountsPayableInvoices", "Must provide a guid for accountsPayableInvoices update");
 
+            // verify the user has the permission to update a accountsPayableInvoices
+            CheckUpdateApInvoicesPermission();
+
             ValidateAccountsPayableInvoices2(accountsPayableInvoicesDto);
 
             if (accountsPayableInvoicesDto.Payment != null && accountsPayableInvoicesDto.Payment.Source == null)
@@ -120,7 +124,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
 
             // get the person ID associated with the incoming guid
-            var accountsPayableInvoicesId = await _accountsPayableInvoicesRepository.GetAccountsPayableInvoicesIdFromGuidAsync(accountsPayableInvoicesDto.Id);
+            var accountsPayableInvoicesId = string.Empty;
+            try
+            {
+                accountsPayableInvoicesId = await _accountsPayableInvoicesRepository.GetAccountsPayableInvoicesIdFromGuidAsync(accountsPayableInvoicesDto.Id);
+            }
+            //if the guid does not exist, the method above will throw KeyNotFoundException, which we are going to ignore but if they sent GUID belongs to different entity then
+            // it throws repo exception that we want to catch and throw. 
+            catch (KeyNotFoundException)
+            {
+
+            }
+
 
             //Used to figure out if there are funds that exceed the budget.
             var overrideAvailable = new List<Domain.ColleagueFinance.Entities.FundsAvailable>();
@@ -135,10 +150,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     {
                         throw new Exception(string.Format("InvoiceNumber does not match voucher ID associated with GUID {0}.", guid));
                     }
-
-                    // verify the user has the permission to update a accountsPayableInvoices
-                    CheckUpdateApInvoicesPermission();
-
                     _accountsPayableInvoicesRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
                     //Fund checking.
@@ -172,9 +183,25 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     // update the entity in the database
                     var updatedAccountsPayableInvoicesEntity =
                         await _accountsPayableInvoicesRepository.UpdateAccountsPayableInvoicesAsync(accountsPayableInvoicesEntity);
-
+                    // get needed guids
+                    Dictionary<string, string> vendorGuidCollection = null;
+                    Dictionary<string, string> poGuidCollection = null;
+                    Dictionary<string, string> bpoGuidCollection = null;
+                    Dictionary<string, string> addressGuidCollection = null;
+                    if (!string.IsNullOrEmpty(updatedAccountsPayableInvoicesEntity.VendorId))
+                        vendorGuidCollection = await _vendorsRepository.GetVendorGuidsCollectionAsync(new List<string>() { updatedAccountsPayableInvoicesEntity.VendorId });
+                    if (!string.IsNullOrEmpty(updatedAccountsPayableInvoicesEntity.VendorAddressId))
+                        addressGuidCollection = await _personRepository.GetAddressGuidsCollectionAsync(new List<string>() { updatedAccountsPayableInvoicesEntity.VendorAddressId });
+                    if (!string.IsNullOrEmpty(updatedAccountsPayableInvoicesEntity.BlanketPurchaseOrderId))
+                        bpoGuidCollection = await _accountsPayableInvoicesRepository.GetGuidsCollectionAsync(new List<string>() { updatedAccountsPayableInvoicesEntity.BlanketPurchaseOrderId }, "BPO");
+                    if (updatedAccountsPayableInvoicesEntity.LineItems != null && updatedAccountsPayableInvoicesEntity.LineItems.Any())
+                    {
+                        var PoIds = updatedAccountsPayableInvoicesEntity.LineItems.Where(cv => !string.IsNullOrEmpty(cv.PurchaseOrderId)).Select(cd => cd.PurchaseOrderId).Distinct();
+                        poGuidCollection = await _accountsPayableInvoicesRepository.GetGuidsCollectionAsync(PoIds.ToArray(), "PURCHASE.ORDERS");
+                    }                       
+                    
                     // convert the entity to a DTO
-                    var dtoAccountsPayableInvoice = await ConvertAccountsPayableInvoicesEntityToDto2Async(updatedAccountsPayableInvoicesEntity, glConfiguration, true);
+                    var dtoAccountsPayableInvoice = await ConvertAccountsPayableInvoicesEntityToDto2Async(updatedAccountsPayableInvoicesEntity, glConfiguration, vendorGuidCollection, poGuidCollection, bpoGuidCollection, addressGuidCollection, true);
 
                     //populate our response if we had a submitted by and if there was items Overridden when a Budget was exceeded.
                     if (accountsPayableInvoicesDto.SubmittedBy != null && !string.IsNullOrWhiteSpace(accountsPayableInvoicesDto.SubmittedBy.Id))
@@ -292,14 +319,27 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         _projectReferenceIds = await _accountsPayableInvoicesRepository.GetProjectIdsFromReferenceNo(projectRefNos.ToArray());
                     }
                 }
-                var accountsPayableInvoicesEntity
-                         = await ConvertAccountsPayableInvoices2DtoToEntityAsync(accountsPayableInvoicesDto.Id, accountsPayableInvoicesDto, glConfiguration.MajorComponents.Count);
-                
+                var accountsPayableInvoicesEntity = await ConvertAccountsPayableInvoices2DtoToEntityAsync(accountsPayableInvoicesDto.Id, accountsPayableInvoicesDto, glConfiguration.MajorComponents.Count);
                 // create a AccountsPayableInvoices entity in the database
                 createdAccountsPayableInvoices =
                     await _accountsPayableInvoicesRepository.CreateAccountsPayableInvoicesAsync(accountsPayableInvoicesEntity);
-
-                var dtoAccountsPayableInvoice = await ConvertAccountsPayableInvoicesEntityToDto2Async(createdAccountsPayableInvoices, glConfiguration, true);
+                //get needed guid collection
+                Dictionary<string, string> vendorGuidCollection = null;
+                Dictionary<string, string> poGuidCollection = null;
+                Dictionary<string, string> bpoGuidCollection = null;
+                Dictionary<string, string> addressGuidCollection = null;
+                if (!string.IsNullOrEmpty(createdAccountsPayableInvoices.VendorId))
+                    vendorGuidCollection = await _vendorsRepository.GetVendorGuidsCollectionAsync(new List<string>() { createdAccountsPayableInvoices.VendorId });
+                if (!string.IsNullOrEmpty(createdAccountsPayableInvoices.VendorAddressId))
+                    addressGuidCollection = await _personRepository.GetAddressGuidsCollectionAsync(new List<string>() { createdAccountsPayableInvoices.VendorAddressId });
+                if (!string.IsNullOrEmpty(createdAccountsPayableInvoices.BlanketPurchaseOrderId))
+                    bpoGuidCollection = await _accountsPayableInvoicesRepository.GetGuidsCollectionAsync(new List<string>() { createdAccountsPayableInvoices.BlanketPurchaseOrderId }, "BPO");
+                if (createdAccountsPayableInvoices.LineItems != null && createdAccountsPayableInvoices.LineItems.Any())
+                {
+                    var PoIds = createdAccountsPayableInvoices.LineItems.Where(cv => !string.IsNullOrEmpty(cv.PurchaseOrderId)).Select(cd => cd.PurchaseOrderId).Distinct();
+                    poGuidCollection = await _accountsPayableInvoicesRepository.GetGuidsCollectionAsync(PoIds.ToArray(), "PURCHASE.ORDERS");                    
+                }
+                var dtoAccountsPayableInvoice = await ConvertAccountsPayableInvoicesEntityToDto2Async(createdAccountsPayableInvoices, glConfiguration, vendorGuidCollection, poGuidCollection, bpoGuidCollection, addressGuidCollection, true);
 
                 //populate our response if we had a submitted by and if there was items Overridden when a Budget was exceeded.
                 if (accountsPayableInvoicesDto.SubmittedBy != null && !string.IsNullOrWhiteSpace(accountsPayableInvoicesDto.SubmittedBy.Id))
@@ -377,13 +417,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             try
             {
-
-                var accountsPayableInvoicesCollection = new List<Ellucian.Colleague.Dtos.AccountsPayableInvoices2>();
-           
+                var accountsPayableInvoicesCollection = new List<Ellucian.Colleague.Dtos.AccountsPayableInvoices2>();           
                 var accountsPayableInvoicesEntities = await _accountsPayableInvoicesRepository.GetAccountsPayableInvoices2Async(offset, limit, invoiceNumber);
                 var totalRecords = accountsPayableInvoicesEntities.Item2;
-                var glConfiguration = await GetGeneralLedgerAccountStructure();
-
                 var projectIds = accountsPayableInvoicesEntities.Item1
                              .SelectMany(t => t.LineItems)
                              .Where(i => i.GlDistributions != null)
@@ -396,13 +432,32 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 {
                     _projectReferenceIds = await _accountsPayableInvoicesRepository.GetProjectReferenceIds(projectIds.ToArray());
                 }
-
-                foreach (var accountsPayableInvoiceEntity in accountsPayableInvoicesEntities.Item1)
+                if (accountsPayableInvoicesEntities.Item1 != null && accountsPayableInvoicesEntities.Item1.Any())
                 {
-                    if (accountsPayableInvoiceEntity.Guid != null)
+                    var glConfiguration = await GetGeneralLedgerAccountStructure();
+                    //get needed guid collection
+                    Dictionary<string, string> poGuidCollection = null;
+                    var associatedLineItems = accountsPayableInvoicesEntities.Item1.SelectMany(x => x.LineItems);
+                    var vendorGuidCollection = await _vendorsRepository.GetVendorGuidsCollectionAsync(accountsPayableInvoicesEntities.Item1.Select(x => x.VendorId).ToArray());
+                    var addressGuidCollection = await _personRepository.GetAddressGuidsCollectionAsync(accountsPayableInvoicesEntities.Item1.Select(x => x.VendorAddressId).ToArray());
+                    var bpoGuidCollection = await _accountsPayableInvoicesRepository.GetGuidsCollectionAsync(accountsPayableInvoicesEntities.Item1.Select(x => x.BlanketPurchaseOrderId).ToArray(), "BPO");
+                    if (associatedLineItems != null && associatedLineItems.Any())
                     {
-                        var accountsPayableInvoiceDto = await this.ConvertAccountsPayableInvoicesEntityToDto2Async(accountsPayableInvoiceEntity, glConfiguration, bypassCache);
-                        accountsPayableInvoicesCollection.Add(accountsPayableInvoiceDto);
+                        var PoIds = associatedLineItems.Where(cv => !string.IsNullOrEmpty(cv.PurchaseOrderId)).Select(cd => cd.PurchaseOrderId).Distinct();
+                        poGuidCollection = await _accountsPayableInvoicesRepository.GetGuidsCollectionAsync(PoIds.ToArray(), "PURCHASE.ORDERS");                       
+                    }
+
+                    foreach (var accountsPayableInvoiceEntity in accountsPayableInvoicesEntities.Item1)
+                    {
+                        try
+                        {
+                            var accountsPayableInvoiceDto = await this.ConvertAccountsPayableInvoicesEntityToDto2Async(accountsPayableInvoiceEntity, glConfiguration, vendorGuidCollection, poGuidCollection, bpoGuidCollection, addressGuidCollection, bypassCache);
+                            accountsPayableInvoicesCollection.Add(accountsPayableInvoiceDto);
+                        }
+                        catch(Exception ex)
+                        {
+                            throw new Exception(string.Concat(ex.Message, "Entity: 'VOUCHERS', Record ID: '", accountsPayableInvoiceEntity.Id, "'"));
+                        }
                     }
                 }
                 return new Tuple<IEnumerable<Dtos.AccountsPayableInvoices2>, int>(accountsPayableInvoicesCollection, totalRecords);
@@ -431,17 +486,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw new ArgumentNullException("guid", "A GUID is required to obtain an Accounts Payable Invoice.");
             }
             CheckViewApInvoicesPermission();
-            var glConfiguration = await GetGeneralLedgerAccountStructure();
-            if (glConfiguration == null)
-            {
-                throw new ArgumentNullException("GL Account Structure is not configured.");
-            }
+           
             try
             {
                 var accountsPayableInvoice = await _accountsPayableInvoicesRepository.GetAccountsPayableInvoicesByGuidAsync(guid, true);
                 if (accountsPayableInvoice == null)
                 {
                     throw new KeyNotFoundException("No Accounts Payable Invoices was found for guid " + guid);
+                }
+                var glConfiguration = await GetGeneralLedgerAccountStructure();
+                if (glConfiguration == null)
+                {
+                    throw new ArgumentNullException("GL Account Structure is not configured.");
                 }
                 var projectIds = accountsPayableInvoice.LineItems
                        .Where(i => i.GlDistributions != null)
@@ -454,8 +510,24 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 {
                     _projectReferenceIds = await _accountsPayableInvoicesRepository.GetProjectReferenceIds(projectIds.ToArray());
                 }
+                //get needed guid collection
+                Dictionary<string, string> vendorGuidCollection = null;
+                Dictionary<string, string> poGuidCollection = null;
+                Dictionary<string, string> bpoGuidCollection = null;
+                Dictionary<string, string> addressGuidCollection = null;
+                if (!string.IsNullOrEmpty( accountsPayableInvoice.VendorId))
+                    vendorGuidCollection = await _vendorsRepository.GetVendorGuidsCollectionAsync(new List<string>() {  accountsPayableInvoice.VendorId });
+                if (!string.IsNullOrEmpty(accountsPayableInvoice.VendorAddressId))
+                    addressGuidCollection = await _personRepository.GetAddressGuidsCollectionAsync(new List<string>() { accountsPayableInvoice.VendorAddressId });
+                if (!string.IsNullOrEmpty(accountsPayableInvoice.BlanketPurchaseOrderId))
+                    bpoGuidCollection = await _accountsPayableInvoicesRepository.GetGuidsCollectionAsync(new List<string>() { accountsPayableInvoice.BlanketPurchaseOrderId }, "BPO");
+                if ( accountsPayableInvoice.LineItems != null &&  accountsPayableInvoice.LineItems.Any())
+                {
+                    var PoIds =  accountsPayableInvoice.LineItems.Where(cv => !string.IsNullOrEmpty(cv.PurchaseOrderId)).Select(cd => cd.PurchaseOrderId).Distinct();
+                    poGuidCollection = await _accountsPayableInvoicesRepository.GetGuidsCollectionAsync(PoIds.ToArray(), "PURCHASE.ORDERS");                    
+                }
 
-                return await ConvertAccountsPayableInvoicesEntityToDto2Async(accountsPayableInvoice, glConfiguration);
+                return await ConvertAccountsPayableInvoicesEntityToDto2Async(accountsPayableInvoice, glConfiguration, vendorGuidCollection, poGuidCollection, bpoGuidCollection, addressGuidCollection);
             }
             catch (KeyNotFoundException ex)
             {
@@ -537,7 +609,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
 
             var guid = accountsPayableInvoices.Id;
-            var voucherId = await _accountsPayableInvoicesRepository.GetAccountsPayableInvoicesIdFromGuidAsync(guid);
+            var voucherId = string.Empty;            
+            try
+            {
+                voucherId = await _accountsPayableInvoicesRepository.GetAccountsPayableInvoicesIdFromGuidAsync(guid);
+            }
+            catch { }
+            //voucherId cannot be null as it will throw entity exception. This value is nulled in repo before the ctx is called. 
+            if (string.IsNullOrEmpty(voucherId))
+            {
+                voucherId = "NEW";
+            }
             var date = (accountsPayableInvoices.TransactionDate == DateTime.MinValue)
                 ? DateTime.Now.Date : accountsPayableInvoices.TransactionDate;
             var invoiceNumber = accountsPayableInvoices.VendorInvoiceNumber;
@@ -752,6 +834,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 {
                     throw new Exception("Unable to retrieve commerce tax codes.");
                 }
+                var uniqueValues = new List<string>();
                 foreach (var itemTax in accountsPayableInvoices.Taxes)
                 {
                     if (itemTax != null && itemTax.TaxCode != null && !string.IsNullOrEmpty(itemTax.TaxCode.Id))
@@ -764,6 +847,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         if (taxCode.AppurEntryFlag == false)
                         {
                             throw new ArgumentException(string.Concat("Tax Code '", taxCode.Code, "' is not permitted for use on AP/PUR documents."));
+                        }
+                        if (!uniqueValues.Contains(itemTax.TaxCode.Id))
+                        {
+                            uniqueValues.Add(itemTax.TaxCode.Id);
+                        }
+                        else
+                        {
+                            throw new ArgumentException(string.Concat("Duplicate taxCode Ids are not permitted."));
                         }
                     }
                     //check tax code rates
@@ -902,6 +993,20 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         apLineItem.CommodityCode = commodityCode.Code;
                     }
 
+                    if ((lineItem.FixedAssetDesignation != null) && (!string.IsNullOrEmpty(lineItem.FixedAssetDesignation.Id)))
+                    {
+                        var allFixedAssesDesigns = (await GetFixedAssetDesignationsAsync(false));
+                        if ((allFixedAssesDesigns == null) || (!allFixedAssesDesigns.Any()))
+                        {
+                            throw new Exception("An error occurred extracting all fixed asset designations");
+                        }
+                        var fixedAssetDesignation = allFixedAssesDesigns.FirstOrDefault(c => c.Guid == lineItem.FixedAssetDesignation.Id);
+                        if (fixedAssetDesignation == null)
+                        {
+                            throw new Exception("Unable to determine fixed asset designations represented by guid: " + lineItem.FixedAssetDesignation.Id);
+                        }
+                        apLineItem.FixedAssetsFlag = fixedAssetDesignation.Code;
+                    }
 
                     if ((lineItem.UnitofMeasure != null) && (!string.IsNullOrEmpty(lineItem.UnitofMeasure.Id)))
                     {
@@ -946,6 +1051,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     if ((lineItem.Taxes != null) && (lineItem.Taxes.Any()))
                     {
                         var accountsPayableLineItemTaxes = new List<LineItemTax>();
+                        var uniqueValues = new List<string>();
                         foreach (var lineItemTax in lineItem.Taxes)
                         {
                             if (lineItemTax != null && lineItemTax.TaxCode != null && !string.IsNullOrEmpty(lineItemTax.TaxCode.Id))
@@ -963,6 +1069,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                 if (taxCode.AppurEntryFlag == false)
                                 {
                                     throw new ArgumentException(string.Concat("Tax Code '", taxCode.Code, "' is not permitted for use on AP/PUR documents."));
+                                }
+                                if (!uniqueValues.Contains(lineItemTax.TaxCode.Id))
+                                {
+                                    uniqueValues.Add(lineItemTax.TaxCode.Id);
+                                }
+                                else
+                                {
+                                    throw new ArgumentException(string.Concat("Duplicate taxCode Ids are not permitted."));
                                 }
                                 if (lineItemTax.VendorAmount != null && lineItemTax.VendorAmount.Value != null && lineItemTax.VendorAmount.Value.HasValue)
                                 {
@@ -1085,7 +1199,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="bypassCache">Bypass cache flag.  If set to true, will requery cached items</param>
         /// <returns><see cref="Dtos.AccountsPayableInvoices2">AccountsPayableInvoices</see></returns>
         private async Task<AccountsPayableInvoices2> ConvertAccountsPayableInvoicesEntityToDto2Async(Domain.ColleagueFinance.Entities.AccountsPayableInvoices source,
-            GeneralLedgerAccountStructure GlConfig, bool bypassCache = false)
+            GeneralLedgerAccountStructure GlConfig, Dictionary<string, string> vendorGuidCollection, Dictionary<string, string> poGuidCollection, Dictionary<string, string> bpoGuidCollection, Dictionary<string, string> addressGuidCollection, bool bypassCache = false)
         {
 
             var accountsPayableInvoices = new Ellucian.Colleague.Dtos.AccountsPayableInvoices2();
@@ -1113,8 +1227,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 currency = ((hostCountry == "CAN") || (hostCountry == "CANADA")) ? CurrencyIsoCode.CAD :
                     CurrencyIsoCode.USD;
             }
-
-            accountsPayableInvoices.Id = source.Guid;
+            if (string.IsNullOrEmpty(source.Guid))
+                throw new ArgumentException(string.Concat("Missing GUID for voucher: ", source.Id));
+            else
+                accountsPayableInvoices.Id = source.Guid;
             accountsPayableInvoices.InvoiceNumber = source.Id;
 
             if (!string.IsNullOrEmpty(source.Type))
@@ -1138,36 +1254,34 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             accountsPayableInvoices.Vendor = new AccountsPayableInvoicesVendorDtoProperty();
             if (!string.IsNullOrEmpty(source.VendorId))
             {
-                try
+                string vendorGuid = string.Empty;
+                if (vendorGuidCollection != null && vendorGuidCollection.Any() && vendorGuidCollection.TryGetValue(source.VendorId, out vendorGuid))
                 {
-                    var vendorGuid = await _vendorsRepository.GetVendorGuidFromIdAsync(source.VendorId);
-                    if (!string.IsNullOrEmpty(vendorGuid))
+                    var addressId = !string.IsNullOrEmpty(source.VoucherAddressId) && source.VoucherUseAltAddress ? source.VoucherAddressId : string.Empty;
+                    var existingVendor = new AccountsPayableInvoicesExistingVendorDtoProperty();
+                    existingVendor.Vendor = new GuidObject2(vendorGuid);
+                    if (!(string.IsNullOrEmpty(addressId)))
                     {
-                        var addressId = !string.IsNullOrEmpty(source.VoucherAddressId) && source.VoucherUseAltAddress ? source.VoucherAddressId : string.Empty;
-
-                        var existingVendor = new AccountsPayableInvoicesExistingVendorDtoProperty();
-                        existingVendor.Vendor = new GuidObject2(vendorGuid);
-                        if (!(string.IsNullOrEmpty(addressId)))
+                        try
                         {
-                            try
+                            var addressGuid = string.Empty;
+                            if (addressGuidCollection != null && addressGuidCollection.Any())
+                                addressGuidCollection.TryGetValue(addressId, out addressGuid);
+                            if (!(string.IsNullOrWhiteSpace(addressGuid)))
                             {
-                                var addressGuid = await _addressRepository.GetAddressGuidFromIdAsync(addressId.Trim());
-                                if (!(string.IsNullOrWhiteSpace(addressGuid)))
-                                {
-                                    existingVendor.AlternativeVendorAddress = new GuidObject2(addressGuid);
-                                }
-                            }
-                            catch
-                            {
-                                // Do nothing if invalid address ID.  Just leave address ID off the results.
+                                existingVendor.AlternativeVendorAddress = new GuidObject2(addressGuid);
                             }
                         }
-                        accountsPayableInvoices.Vendor.ExistingVendor = existingVendor;
+                        catch
+                        {
+                            // Do nothing if invalid address ID.  Just leave address ID off the results.
+                        }
                     }
+                    accountsPayableInvoices.Vendor.ExistingVendor = existingVendor;
                 }
-                catch
+                else
                 {
-                    if (!source.VoucherMiscName.Any())
+                    if (source.VoucherMiscName == null ||!source.VoucherMiscName.Any())
                     {
                         throw new ArgumentException(string.Concat("Missing vendor information for voucher:", source.Id, " Guid: ", source.Guid));
                     }
@@ -1293,15 +1407,16 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             foreach (var voucherTax in source.VoucherTaxes)
             {
                 var accountsPayableInvoicesTax = new AccountsPayableInvoicesTaxesDtoProperty();
-
-                var taxCodesEntities = await GetAllCommerceTaxCodesAsync(bypassCache);
-                if (taxCodesEntities != null)
+                var taxCodeGuid = string.Empty;
+                try
                 {
-                    var taxCode = taxCodesEntities.FirstOrDefault(tax => tax.Code == voucherTax.TaxCode);
-                    if (taxCode != null)
-                    {
-                        accountsPayableInvoicesTax.TaxCode = new GuidObject2(taxCode.Guid);
-                    }
+                    taxCodeGuid = await _referenceDataRepository.GetCommerceTaxCodeGuidAsync(voucherTax.TaxCode);
+                }
+                catch { }
+
+                if (!string.IsNullOrEmpty(taxCodeGuid))
+                {
+                    accountsPayableInvoicesTax.TaxCode = new GuidObject2(taxCodeGuid);
                 }
 
                 var vendorAmount = new Amount2DtoProperty
@@ -1322,36 +1437,38 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 accountsPayableInvoices.InvoiceType = (source.VoucherNet < 0) ? AccountsPayableInvoicesInvoiceType.Creditinvoice
                     : AccountsPayableInvoicesInvoiceType.Invoice;
             }
-
+            var apTypeGuid = string.Empty;
             if (!(string.IsNullOrWhiteSpace(source.ApType)))
             {
-                var payment = new AccountsPayableInvoicesPaymentDtoProperty();
-                var accountsPayableSources = await GetAllAccountsPayableSourcesAsync(bypassCache);
-                if (accountsPayableSources != null)
+                var payment = new AccountsPayableInvoicesPaymentDtoProperty();                
+                try
                 {
-                    var apType = accountsPayableSources.FirstOrDefault(aps => aps.Code == source.ApType);
-                    if (apType != null)
-                    {
-                        payment.Source = new GuidObject2(apType.Guid);
-                        payment.PaymentDueOn = source.DueDate;
-
-                        var vendorTerm = source.VoucherVendorTerms;
-                        if (!string.IsNullOrEmpty(vendorTerm))
-                        {
-                            var vendorTerms = await GetAllVendorTermsAsync(bypassCache);
-                            if (vendorTerms != null)
-                            {
-                                var term = vendorTerms.FirstOrDefault(vt => vt.Code == vendorTerm);
-                                if (term != null)
-                                {
-                                    payment.PaymentTerms = new GuidObject2(term.Guid);
-                                }
-                            }
-                        }
-                    }
-                    accountsPayableInvoices.Payment = payment;
+                    apTypeGuid = await _colleagueFinanceReferenceDataRepository.GetAccountsPayableSourceGuidAsync(source.ApType);
                 }
-            }
+                catch { }
+
+                if (!string.IsNullOrEmpty(apTypeGuid))
+                {
+                    payment.Source = new GuidObject2(apTypeGuid);
+                    payment.PaymentDueOn = source.DueDate;
+                    if (!string.IsNullOrEmpty(source.VoucherVendorTerms))
+                    {
+                        var vendorTermGuid = string.Empty;
+                        try
+                        {
+                            vendorTermGuid = await _colleagueFinanceReferenceDataRepository.GetVendorTermGuidAsync(source.VoucherVendorTerms);
+                        }
+                        catch { }
+
+                        if (!string.IsNullOrEmpty(vendorTermGuid))
+                        {
+                            payment.PaymentTerms = new GuidObject2(vendorTermGuid);
+                        }
+
+                    }
+                }
+                accountsPayableInvoices.Payment = payment;
+            }                
 
             if (!(string.IsNullOrWhiteSpace(source.Comments)))
                 accountsPayableInvoices.InvoiceComment = source.Comments;
@@ -1365,24 +1482,49 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
                     if (!string.IsNullOrEmpty(lineItem.PurchaseOrderId))
                     {
-                        var guid = await _accountsPayableInvoicesRepository.GetGuidFromID(lineItem.PurchaseOrderId, "PURCHASE.ORDERS");
-                        if (!string.IsNullOrEmpty(guid))
+                        var poGuid = string.Empty;
+                        if (poGuidCollection == null)
                         {
-                            accountsPayableInvoicesLineItem.ReferenceDocument = new LineItemReferenceDocumentDtoProperty2()
-                            {
-                                PurchaseOrder = new GuidObject2(guid)
-                            };
+                            throw new ArgumentException(string.Concat("GUID not found for " , "PURCHASE.ORDERS" , " id " , lineItem.PurchaseOrderId));
                         }
+                        else
+                        {
+                            poGuidCollection.TryGetValue(lineItem.PurchaseOrderId, out poGuid);
+                            if (string.IsNullOrEmpty(poGuid))
+                            {
+                                throw new ArgumentException(string.Concat("GUID not found for ", "PURCHASE.ORDERS", " id ", lineItem.PurchaseOrderId));
+                            }
+                            else
+                            {
+                                accountsPayableInvoicesLineItem.ReferenceDocument = new LineItemReferenceDocumentDtoProperty2()
+                                {
+                                    PurchaseOrder = new GuidObject2(poGuid)
+                                };
+                            }
+                        }
+                        
                     }
                     else if (!string.IsNullOrEmpty(source.BlanketPurchaseOrderId))
                     {
-                        var guid = await _accountsPayableInvoicesRepository.GetGuidFromID(source.BlanketPurchaseOrderId, "BPO");
-                        if (!string.IsNullOrEmpty(guid))
+                        var bpoGuid = string.Empty;
+                        if (bpoGuidCollection == null)
                         {
-                            accountsPayableInvoicesLineItem.ReferenceDocument = new LineItemReferenceDocumentDtoProperty2()
+                            throw new ArgumentException(string.Concat("GUID not found for ", "BPO", " id ", source.BlanketPurchaseOrderId));
+                        }
+                        else
+                        {
+                            bpoGuidCollection.TryGetValue(source.BlanketPurchaseOrderId, out bpoGuid);
+                            if (string.IsNullOrEmpty(bpoGuid))
                             {
-                                BlanketPurchaseOrder = new GuidObject2(guid)
-                            };
+                                throw new ArgumentException(string.Concat("GUID not found for ", "BPO", " id ", source.BlanketPurchaseOrderId));
+                            }
+                            else
+                            {
+                                accountsPayableInvoicesLineItem.ReferenceDocument = new LineItemReferenceDocumentDtoProperty2()
+                                {
+                                    BlanketPurchaseOrder = new GuidObject2(bpoGuid)
+                                };
+                            }
                         }
                     }
                     else if (!string.IsNullOrEmpty(source.RecurringVoucherId))
@@ -1403,28 +1545,40 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
                     if (!(string.IsNullOrEmpty(lineItem.CommodityCode)))
                     {
-                        var commodityCodes = await GetAllCommodityCodesAsync(bypassCache);
-                        if (commodityCodes != null)
+                        var commodityCodeGuid = string.Empty;
+                        try
                         {
-                            var commodityCode = commodityCodes.FirstOrDefault(cc => cc.Code == lineItem.CommodityCode);
-                            if (commodityCode != null)
-                            {
-                                accountsPayableInvoicesLineItem.CommodityCode = new GuidObject2(commodityCode.Guid);
-                            }
+                            commodityCodeGuid = await _colleagueFinanceReferenceDataRepository.GetCommodityCodeGuidAsync(lineItem.CommodityCode);
+                        }
+                        catch { }
+                        if (!string.IsNullOrEmpty(commodityCodeGuid))
+                        {
+                            accountsPayableInvoicesLineItem.CommodityCode = new GuidObject2(commodityCodeGuid);
                         }
                     }
+
+                    if (!string.IsNullOrEmpty(lineItem.FixedAssetsFlag))
+                    {
+                        var fixedAssetFlag = await _colleagueFinanceReferenceDataRepository.GetFxaTransferFlagGuidAsync(lineItem.FixedAssetsFlag);
+                        if (!string.IsNullOrEmpty(fixedAssetFlag))
+                        {
+                            accountsPayableInvoicesLineItem.FixedAssetDesignation = new GuidObject2(fixedAssetFlag);
+                        }
+                    }
+
                     accountsPayableInvoicesLineItem.Quantity = lineItem.Quantity;
 
                     if (!(string.IsNullOrEmpty(lineItem.UnitOfIssue)))
                     {
-                        var commodityUnitTypes = await GetAllCommodityUnitTypesAsync(bypassCache);
-                        if (commodityUnitTypes != null)
+                        var commodityUnitTypeGuid = string.Empty;
+                        try
                         {
-                            var commodityUnitType = commodityUnitTypes.FirstOrDefault(x => x.Code == lineItem.UnitOfIssue);
-                            if (commodityUnitType != null)
-                            {
-                                accountsPayableInvoicesLineItem.UnitofMeasure = new GuidObject2(commodityUnitType.Guid);
-                            }
+                            commodityUnitTypeGuid = await _colleagueFinanceReferenceDataRepository.GetCommodityUnitTypeGuidAsync(lineItem.UnitOfIssue);
+                        }
+                        catch { }
+                        if (!string.IsNullOrEmpty(commodityUnitTypeGuid))
+                        {
+                            accountsPayableInvoicesLineItem.UnitofMeasure = new GuidObject2(commodityUnitTypeGuid);
                         }
                     }
 
@@ -1438,56 +1592,59 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
                     if ((lineItem.AccountsPayableLineItemTaxes != null) && (lineItem.AccountsPayableLineItemTaxes.Any()))
                     {
-                        var taxCodesEntities = await GetAllCommerceTaxCodesAsync(bypassCache);
-                        if (taxCodesEntities != null)
+
+
+                        //need to combine similar taxcodes
+                        var lineItemTaxesTuple = lineItem.AccountsPayableLineItemTaxes
+                            .GroupBy(l => l.TaxCode)
+                            .Select(cl => new Tuple<string, decimal?>(
+                                   cl.First().TaxCode,
+                                   cl.Sum(c => c.TaxAmount)
+                                )).ToList().OrderBy(co => co.Item1);
+
+                        foreach (var lineItemTax in lineItemTaxesTuple)
                         {
-                            //need to combine similar taxcodes
-                            var lineItemTaxesTuple = lineItem.AccountsPayableLineItemTaxes
-                                .GroupBy(l => l.TaxCode)
-                                .Select(cl => new Tuple<string, decimal?>(
-                                       cl.First().TaxCode,
-                                       cl.Sum(c => c.TaxAmount)
-                                    )).ToList().OrderBy(co => co.Item1);
 
-                            foreach (var lineItemTax in lineItemTaxesTuple)
+                            var accountsPayableInvoicesTax = new AccountsPayableInvoicesTaxesDtoProperty();
+                            var taxCodeGuid = string.Empty;
+                            try
                             {
-
-                                var accountsPayableInvoicesTax = new AccountsPayableInvoicesTaxesDtoProperty();
-
-                                var taxCode = taxCodesEntities.FirstOrDefault(tax => tax.Code == lineItemTax.Item1);
-                                if (taxCode != null)
-                                {
-                                    accountsPayableInvoicesTax.TaxCode = new GuidObject2(taxCode.Guid);
-                                }
-                                accountsPayableInvoicesTax.VendorAmount = new Amount2DtoProperty()
-                                {
-                                    Currency = currency,
-                                    Value = lineItemTax.Item2
-                                };
-
-                                // get tax code rate
-                                var allTaxCodeRatesEntities = await GetAllCommerceTaxCodeRatesAsync(bypassCache);
-                                if (allTaxCodeRatesEntities != null)
-                                {
-                                    var taxRateEntities = allTaxCodeRatesEntities.Where(r => r.Code == taxCode.Code && r.ApTaxEffectiveDate <= source.Date).OrderByDescending(date => date.ApTaxEffectiveDate);
-                                    if (taxRateEntities != null && taxRateEntities.Any())
-                                    {
-                                        var taxRateDtos = new List<LineItemTaxCodeRateDtoProperty>();
-                                        var taxRateDto = new LineItemTaxCodeRateDtoProperty();
-                                        taxRateDto.Rate = new GuidObject2(taxRateEntities.FirstOrDefault().Guid);
-                                        taxRateDto.Amount = new Amount2DtoProperty()
-                                        {
-                                            Currency = currency,
-                                            Value = lineItemTax.Item2
-                                        };
-                                        taxRateDtos.Add(taxRateDto);
-                                        accountsPayableInvoicesTax.TaxCodeRates = taxRateDtos;
-                                    }
-                                }
-
-                                accountsPayableInvoicesLineItemTaxes.Add(accountsPayableInvoicesTax);
+                                taxCodeGuid = await _referenceDataRepository.GetCommerceTaxCodeGuidAsync(lineItemTax.Item1);
                             }
+                            catch { }
+                            if (!string.IsNullOrEmpty(taxCodeGuid))
+                            {
+                                accountsPayableInvoicesTax.TaxCode = new GuidObject2(taxCodeGuid);
+                            }
+                            accountsPayableInvoicesTax.VendorAmount = new Amount2DtoProperty()
+                            {
+                                Currency = currency,
+                                Value = lineItemTax.Item2
+                            };
+
+                            // get tax code rate
+                            var allTaxCodeRatesEntities = await GetAllCommerceTaxCodeRatesAsync(bypassCache);
+                            if (allTaxCodeRatesEntities != null)
+                            {
+                                var taxRateEntities = allTaxCodeRatesEntities.Where(r => r.Code == lineItemTax.Item1 && r.ApTaxEffectiveDate <= source.Date).OrderByDescending(date => date.ApTaxEffectiveDate);
+                                if (taxRateEntities != null && taxRateEntities.Any())
+                                {
+                                    var taxRateDtos = new List<LineItemTaxCodeRateDtoProperty>();
+                                    var taxRateDto = new LineItemTaxCodeRateDtoProperty();
+                                    taxRateDto.Rate = new GuidObject2(taxRateEntities.FirstOrDefault().Guid);
+                                    taxRateDto.Amount = new Amount2DtoProperty()
+                                    {
+                                        Currency = currency,
+                                        Value = lineItemTax.Item2
+                                    };
+                                    taxRateDtos.Add(taxRateDto);
+                                    accountsPayableInvoicesTax.TaxCodeRates = taxRateDtos;
+                                }
+                            }
+
+                            accountsPayableInvoicesLineItemTaxes.Add(accountsPayableInvoicesTax);
                         }
+
                         if (accountsPayableInvoicesLineItemTaxes.Any())
                             accountsPayableInvoicesLineItem.Taxes = accountsPayableInvoicesLineItemTaxes;
                     }
@@ -1592,29 +1749,25 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             accountsPayableInvoicesAccountDetail.Allocation = accountDetailAllocation;
 
 
-                            if (!(string.IsNullOrWhiteSpace(source.ApType)))
+                            if (!string.IsNullOrWhiteSpace(source.ApType))
                             {
-                                var accountsPayableSources = await GetAllAccountsPayableSourcesAsync(bypassCache);
-                                if (accountsPayableSources != null)
+                                if (!string.IsNullOrEmpty(apTypeGuid))
                                 {
-                                    var accountsPayableSource = accountsPayableSources.FirstOrDefault(aps => aps.Code == source.ApType);
-                                    if (accountsPayableSource != null)
-                                    {
-                                        accountsPayableInvoicesAccountDetail.Source = new GuidObject2(accountsPayableSource.Guid);
-                                    }
+                                    accountsPayableInvoicesAccountDetail.Source = new GuidObject2(apTypeGuid);
                                 }
                             }
 
                             if (!(string.IsNullOrWhiteSpace(lineItem.TaxFormCode)))
                             {
-                                var taxBoxes = await GetAllBoxCodesAsync(bypassCache);
-                                if (taxBoxes != null)
+                                var taxBoxeGuid = string.Empty;
+                                try
                                 {
-                                    var taxBox = taxBoxes.FirstOrDefault(aps => aps.Code == lineItem.TaxFormCode);
-                                    if (taxBox != null)
-                                    {
-                                        accountsPayableInvoicesAccountDetail.TaxFormComponent = new GuidObject2(taxBox.Guid);
-                                    }
+                                    taxBoxeGuid = await _referenceDataRepository.GetBoxCodesGuidAsync(lineItem.TaxFormCode);
+                                }
+                                catch { }
+                                if (!string.IsNullOrEmpty(taxBoxeGuid))
+                                {
+                                    accountsPayableInvoicesAccountDetail.TaxFormComponent = new GuidObject2(taxBoxeGuid);
                                 }
                             }
 
@@ -1683,13 +1836,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 if (!string.IsNullOrEmpty(source.VoucherMiscCountry))
                 {
-                    throw new KeyNotFoundException("Unable to locate ISO country code for " + source.VoucherMiscCountry);
+                    throw new KeyNotFoundException("Unable to locate ISO country code for " + source.VoucherMiscCountry + " for voucher Id '" + source.Id + "'");
                 }
-                throw new KeyNotFoundException("Unable to locate ISO country code for " + (await GetHostCountryAsync()));
+                throw new KeyNotFoundException("Unable to locate ISO country code for " + (await GetHostCountryAsync())  +" for voucher Id '" + source.Id + "'");
             }
             //need to check to make sure ISO code is there.
             if (string.IsNullOrEmpty(country.IsoAlpha3Code))
-                throw new ArgumentException("Unable to locate ISO country code for " + country.Code);
+                throw new ArgumentException("Unable to locate ISO country code for " + country.Code + " for voucher Id '" + source.Id + "'");
 
             switch (country.IsoAlpha3Code)
             {
@@ -1855,6 +2008,19 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private async Task<IEnumerable<Domain.ColleagueFinance.Entities.CommodityCode>> GetAllCommodityCodesAsync(bool bypassCache)
         {
             return _commodityCodes ?? (_commodityCodes = await _colleagueFinanceReferenceDataRepository.GetCommodityCodesAsync(bypassCache));
+        }
+
+        /// Get all FixedAssetDesignations Entity Objects
+        /// </summary>
+        /// <param name="bypassCache">Bypass cache flag.  If set to true, will requery cached items</param>
+        /// <returns>A collection of <see cref="FixedAssetDesignations"> FixedAssetDesignationsFixedAssetDesignations entity objects</returns>
+        private async Task<IEnumerable<Domain.ColleagueFinance.Entities.FxaTransferFlags>> GetFixedAssetDesignationsAsync(bool bypassCache)
+        {
+            if (_fxaTransferFlags == null)
+            {
+                _fxaTransferFlags = await _colleagueFinanceReferenceDataRepository.GetFxaTransferFlagsAsync(bypassCache);
+            }
+            return _fxaTransferFlags;
         }
 
         /// <summary>
@@ -2133,6 +2299,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     if (lineItem.CommodityCode != null && string.IsNullOrEmpty(lineItem.CommodityCode.Id))
                     {
                         throw new ArgumentNullException("accountsPayableInvoices.LineItems.CommodityCode", "The commodity code id is required when submitting a commodity code. ");
+                    }
+                    if (lineItem.FixedAssetDesignation != null && string.IsNullOrEmpty(lineItem.FixedAssetDesignation.Id))
+                    {
+                        throw new ArgumentNullException("accountsPayableInvoices.LineItems.FixedAssetDesignation", "The fixedAssetDesignation id is required when submitting a fixedAssetDesignation. ");
                     }
                     if (lineItem.UnitofMeasure != null && string.IsNullOrEmpty(lineItem.UnitofMeasure.Id))
                     {

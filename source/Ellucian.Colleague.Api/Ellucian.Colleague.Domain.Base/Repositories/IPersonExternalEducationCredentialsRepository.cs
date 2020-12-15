@@ -9,7 +9,8 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
 {
     public interface IPersonExternalEducationCredentialsRepository : IEthosExtended
     {      
-        Task<Tuple<IEnumerable<ExternalEducation>, int>> GetExternalEducationCredentialsAsync(int offset, int limit, string[] filterPersonIds = null, string personFilter = "", bool bypassCache = false);    
+        Task<Tuple<IEnumerable<ExternalEducation>, int>> GetExternalEducationCredentialsAsync(int offset, int limit, 
+            string[] filterPersonIds = null, string personFilter = "", string personId = "", string externalEducationID = "", bool bypassCache = false);    
         Task<ExternalEducation> GetExternalEducationCredentialsByGuidAsync(string guid);
         Task<string> GetExternalEducationCredentialsIdFromGuidAsync(string guid);
         Task<string> GetExternalEducationIdFromGuidAsync(string guid);

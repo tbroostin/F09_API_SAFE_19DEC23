@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
@@ -331,12 +331,16 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                
                 var hostCorpId = coreDefaultData.DefaultHostCorpId;
 
-                foreach (var perpos in perposRecords)
+
+                Dictionary<string, string> ldmGuidCollection = new Dictionary<string, string>();
+                ldmGuidCollection = await GetInstitutionJobsGuidDictionary( perposSubList );
+
+                foreach( var perpos in perposRecords)
                 {
                     if (perpos != null)
                     {
-                        string errorKey = string.Empty;
-                        string guid = string.Empty;
+                        string errorKey = perpos.Recordkey;
+
                         try
                         {
                             var positionRecord = positionRecords.Where(p => p.Recordkey == perpos.PerposPositionId);
@@ -345,20 +349,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                             var personBenefitsRecords = perbenRecords.Where(ps => ps.PerbenHrpId == perpos.PerposHrpId);
                             var hrPersonRecord = hrperRecords.Where(hr => hr.Recordkey == perpos.PerposHrpId);
 
-                            //The data reader can sometimes get the wrong 
-                            //var guid = perposRecord.RecordGuid;
-                            //var criteria = string.Format("WITH LDM.GUID.PRIMARY.KEY EQ '{0}' AND LDM.GUID.SECONDARY.KEY EQ '' AND LDM.GUID.ENTITY EQ 'PERPOS' AND LDM.GUID.REPLACED.BY EQ ''", perposSubList);
-                            //var guidRecords = await DataReader.SelectAsync("LDM.GUID", criteria);
-                            var guidList = await DataReader.SelectAsync("LDM.GUID", "WITH LDM.GUID.PRIMARY.KEY EQ '?' AND LDM.GUID.SECONDARY.KEY EQ '' AND LDM.GUID.ENTITY EQ 'PERPOS' AND LDM.GUID.REPLACED.BY EQ ''", perposSubList);
-                            var ldmGuidRecords = await DataReader.BulkReadRecordAsync<LdmGuid>(guidList);
-                            Dictionary <string, string> ldmGuidCollection = new Dictionary<string, string>();
-                            foreach (var ldmGuidRecord in ldmGuidRecords)
-                            {
-                                errorKey = ldmGuidRecord.LdmGuidPrimaryKey;
-                                guid = ldmGuidRecord.Recordkey;
-                                ldmGuidCollection.Add(ldmGuidRecord.LdmGuidPrimaryKey, ldmGuidRecord.Recordkey);
-                            }
-                          
                             institutionJobsEntities.Add(
                                 await BuildInstitutionJobsAsync(perpos, personPositionWages, positionRecord, 
                                 personBenefitsRecords, personStatusRecords, hrPersonRecord, ldmGuidCollection, 
@@ -375,11 +365,61 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             catch (RepositoryException e)
             {
-                throw e;
+                if( e.Errors != null && e.Errors.Any() )
+                {
+                    string errorMessage = string.Empty;
+                    e.Errors.ToList().ForEach( i =>
+                    {
+                        errorMessage += i.Code + "\r\n";
+                    } );
+                    throw new RepositoryException( errorMessage, e );
+                }
+                else
+                {
+                    throw;
+                }
             }
 
         }
 
+        /// <summary>
+        /// Gets dictionary with colleague id and guid key pair for institution-jobs.
+        /// </summary>
+        /// <param name="ids"></param>
+        /// <returns>Dictionary containing entity PK (key) and guid (value)</returns>
+        public async Task<Dictionary<string, string>> GetInstitutionJobsGuidDictionary( IEnumerable<string> ids )
+        {
+            var ldmGuidCollection = new Dictionary<string, string>();
+
+            if( ( ids == null ) || ( !ids.Any() ) )
+            {
+                return ldmGuidCollection;
+            }
+
+            var lookups = ids.Select( i => new RecordKeyLookup( "PERPOS", i, string.Empty, string.Empty, false ) );
+            var ldmGuidRecords = await DataReader.SelectAsync( lookups.ToArray() );
+
+            var exception = new RepositoryException();
+
+            foreach( var e in ldmGuidRecords )
+            {
+                var output = string.Empty;
+                var key = e.Key.Split( new char[] { '+' }, StringSplitOptions.RemoveEmptyEntries );
+                if( ldmGuidCollection.TryGetValue( e.Key[ 1 ].ToString(), out output ) )
+                {
+                    var errorMessage = string.Format( "Duplicate key found for key '{0}'.", e.Key );
+                    exception.AddError( new RepositoryError( key[ 1 ].ToString(), "invalid.key", errorMessage ) );
+                }
+                else
+                    ldmGuidCollection.Add( key[ 1 ], e.Value.Guid );
+            }
+
+            if( exception.Errors.Any() )
+            {
+                throw exception;
+            }
+            return ldmGuidCollection;
+        }
 
         /// <summary>
         /// Update an InstitutionJobs domain entity
@@ -593,16 +633,14 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         }
                     }
 
-                    Dictionary<string, string> ldmGuidCollection = new Dictionary<string, string>();                   
-                    var ldmGuidCriteria = string.Format("WITH LDM.GUID.PRIMARY.KEY EQ '{0}' AND LDM.GUID.SECONDARY.KEY EQ '' AND LDM.GUID.ENTITY EQ 'PERPOS' AND LDM.GUID.REPLACED.BY EQ ''", perpos.Recordkey);
-                    var guidRecords = await DataReader.SelectAsync("LDM.GUID", ldmGuidCriteria);
-                    if ((guidRecords == null) || (!guidRecords.Any()))
+                    Dictionary<string, string> ldmGuidCollection = new Dictionary<string, string>();
+                    ldmGuidCollection = await GetInstitutionJobsGuidDictionary( new List<string>() { perpos.Recordkey } );
+
+                    if (( ldmGuidCollection == null) || (!ldmGuidCollection.Any()))
                     {
                         throw new ArgumentNullException("guid", string.Format("LDM.GUID Unable to locate guid for perpos id: {0}", perpos.Recordkey));
 
                     }
-                    ldmGuidCollection.Add(perpos.Recordkey, guidRecords[0]);
-
                     var ldmDefaults = DataReader.ReadRecord<LdmDefaults>("CORE.PARMS", "LDM.DEFAULTS");
                     var hostCountry = await GetHostCountryAsync();
                     var coreDefaultData = GetDefaults();

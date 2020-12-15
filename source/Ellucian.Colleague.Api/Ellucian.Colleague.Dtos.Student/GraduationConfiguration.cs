@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 
 namespace Ellucian.Colleague.Dtos.Student
@@ -84,6 +84,11 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Flag indicating whether or not users may edit previously submitted graduation applications
         /// </summary>
         public bool PreventGraduationApplicationEdits { get; set; }
+
+        /// <summary>
+        /// Flag indicating whether or not the Requirements in My progress page be expanded by default
+        /// </summary>
+        public string ExpandRequirements { get; set; }
 
         /// <summary>
         /// Default constructor

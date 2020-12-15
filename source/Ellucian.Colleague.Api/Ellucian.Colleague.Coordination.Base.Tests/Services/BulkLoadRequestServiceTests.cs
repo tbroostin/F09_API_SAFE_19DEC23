@@ -79,12 +79,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestClass]
-        public class BulkLoadRequestServiceTest_GET: CurrentUserSetup
+        public class BulkLoadRequestServiceTest_GET : CurrentUserSetup
         {
-            // private const string configurationSettingsGuid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc";
-            //private const string configurationSettingsCode = "1";
-            //private ICollection<Domain.Base.Entities.ConfigurationSettings> _configurationSettingsCollection;
-
+          
             private BulkRequestDetails _bulkRequestDetails = null;
 
             private BulkLoadRequestService _bulkLoadRequestService;
@@ -156,7 +153,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 };
 
 
-                _bulkRequestRepoMock.Setup(repo => repo.GetBulkRequestDetails(It.IsAny<string>()))
+                _bulkRequestRepoMock.Setup(repo => repo.GetBulkRequestDetails(It.IsAny<string>(), It.IsAny<string>()))
                     .ReturnsAsync(_bulkRequestDetails);
 
                 _bulkRequestRepoMock.Setup(repo => repo.CreateBulkLoadRequestAsync(It.IsAny<BulkRequest>(), It.IsAny<List<string>>()))
@@ -181,7 +178,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     _adapterRegistryMock.Object, _currentUserFactory,
                     _roleRepositoryMock.Object, _configurationRepoMock.Object, _loggerMock.Object);
             }
-            
+
             [TestCleanup]
             public void Cleanup()
             {
@@ -198,7 +195,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             public async Task BulkLoadRequestService_CreateBulkLoadRequestAsync_NoPermissions()
             {
                 await _bulkLoadRequestService.CreateBulkLoadRequestAsync(_bulkLoadRequestDto, "");
-               
+
             }
 
             [TestMethod]
@@ -215,7 +212,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             public async Task BulkLoadRequestService_CreateBulkLoadRequestAsync_EmptyBody()
             {
                 await _bulkLoadRequestService.CreateBulkLoadRequestAsync(null, BasePermissionCodes.ViewAnyPerson.ToString());
-                
+
             }
 
             [TestMethod]
@@ -251,7 +248,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             }
 
-            [TestMethod]          
+            [TestMethod]
             public async Task BulkLoadRequestService_CreateBulkLoadRequestAsync_InProgress()
             {
                 var results = await _bulkLoadRequestService.CreateBulkLoadRequestAsync(_bulkLoadRequestDto, BasePermissionCodes.ViewAnyPerson.ToString());
@@ -312,7 +309,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     Representation = _bulkRequestDetails.Representation,
                     RequestorTrackingId = _bulkRequestDetails.RequestorTrackingId,
                     ResourceName = _bulkRequestDetails.ResourceName
-                    
+
                 };
 
 
@@ -404,8 +401,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [ExpectedException(typeof(Exception))]
             public async Task BulkLoadRequestService_GetBulkLoadRequestStatus_EmptyId()
             {
-                await _bulkLoadRequestService.GetBulkLoadRequestStatus("");
-               
+                await _bulkLoadRequestService.GetBulkLoadRequestStatus("", "", "VIEW.PERSON");
+
             }
 
 
@@ -413,10 +410,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [ExpectedException(typeof(RepositoryException))]
             public async Task BulkLoadRequestService_GetBulkLoadRequestStatus_InvalidId()
             {
-                _bulkRequestRepoMock.Setup(repo => repo.GetBulkRequestDetails("99"))
+                _bulkRequestRepoMock.Setup(repo => repo.GetBulkRequestDetails(It.IsAny<string>(), "99"))
                      .ThrowsAsync(new RepositoryException());
 
-                await _bulkLoadRequestService.GetBulkLoadRequestStatus("99");
+                await _bulkLoadRequestService.GetBulkLoadRequestStatus("api", "99", "VIEW.ANY.PERSON");
 
             }
 
@@ -424,10 +421,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [ExpectedException(typeof(Exception))]
             public async Task BulkLoadRequestService_GetBulkLoadRequestStatus_Exception()
             {
-                _bulkRequestRepoMock.Setup(repo => repo.GetBulkRequestDetails(_bulkRequestDetails.RequestorTrackingId))
+                _bulkRequestRepoMock.Setup(repo => repo.GetBulkRequestDetails(It.IsAny<string>(), _bulkRequestDetails.RequestorTrackingId))
                      .ThrowsAsync(new Exception());
 
-                await _bulkLoadRequestService.GetBulkLoadRequestStatus(_bulkRequestDetails.RequestorTrackingId);
+                await _bulkLoadRequestService.GetBulkLoadRequestStatus("api", _bulkRequestDetails.RequestorTrackingId, "VIEW.ANY.PERSON");
 
             }
 
@@ -435,9 +432,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task BulkLoadRequestService_GetBulkLoadRequestStatus()
             {
-                var results = await _bulkLoadRequestService.GetBulkLoadRequestStatus(_bulkRequestDetails.RequestorTrackingId);
+                var results = await _bulkLoadRequestService.GetBulkLoadRequestStatus("api", _bulkRequestDetails.RequestorTrackingId, "VIEW.ANY.PERSON");
                 Assert.IsTrue(results is BulkLoadGet);
                 Assert.IsNotNull(results);
+                Assert.AreEqual(results.RequestorTrackingId, _bulkRequestDetails.RequestorTrackingId);
             }
 
 
@@ -448,7 +446,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 var results = _bulkLoadRequestService.IsBulkLoadSupported();
                 Assert.IsTrue(results);
-            
+
             }
 
             [TestMethod]
@@ -457,123 +455,11 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 _bulkRequestRepoMock.Setup(repo => repo.IsBulkLoadSupported()).Throws(new Exception());
 
-                _bulkLoadRequestService.IsBulkLoadSupported();               
+                _bulkLoadRequestService.IsBulkLoadSupported();
 
             }
 
 
-
-            //[TestMethod]
-            //public async Task ConfigurationSettingsService_GetConfigurationSettingsAsync_Count()
-            //{
-            //    var results = await _configurationSettingsService.GetConfigurationSettingsAsync(new List<string>(), true);
-            //    Assert.AreEqual(8, results.Count());
-            //}
-
-            //[TestMethod]
-            //public async Task ConfigurationSettingsService_GetConfigurationSettingsAsync_Properties()
-            //{
-            //    var result =
-            //        (await _configurationSettingsService.GetConfigurationSettingsAsync(new List<string>(), true)).FirstOrDefault(x => x.Id == configurationSettingsGuid);
-            //    Assert.IsNotNull(result.Id);
-            //    Assert.IsNotNull(result.Title);
-            //    Assert.IsNotNull(result.Description);
-            //}
-
-            //[TestMethod]
-            //public async Task ConfigurationSettingsService_GetConfigurationSettingsAsync_Expected()
-            //{
-            //    var expectedResults = _configurationSettingsCollection.FirstOrDefault(c => c.Guid == configurationSettingsGuid);
-            //    var actualResult =
-            //        (await _configurationSettingsService.GetConfigurationSettingsAsync(new List<string>(), true)).FirstOrDefault(x => x.Id == configurationSettingsGuid);
-            //    Assert.AreEqual(expectedResults.Guid, actualResult.Id);
-            //    Assert.AreEqual(expectedResults.Description, actualResult.Title);
-
-            //}
-
-            //[TestMethod]
-            //[ExpectedException(typeof(KeyNotFoundException))]
-            //public async Task ConfigurationSettingsService_GetConfigurationSettingsByGuidAsync_Empty()
-            //{
-            //    _configurationSettingsRepoMock.Setup(repo => repo.GetConfigurationSettingsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
-            //        .Throws<KeyNotFoundException>();
-
-            //    await _configurationSettingsService.GetConfigurationSettingsByGuidAsync("");
-            //}
-
-            //[TestMethod]
-            //[ExpectedException(typeof(KeyNotFoundException))]
-            //public async Task ConfigurationSettingsService_GetConfigurationSettingsByGuidAsync_Null()
-            //{
-            //    _configurationSettingsRepoMock.Setup(repo => repo.GetConfigurationSettingsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
-            //        .Throws<KeyNotFoundException>();
-
-            //    await _configurationSettingsService.GetConfigurationSettingsByGuidAsync(null);
-            //}
-
-            //[TestMethod]
-            //[ExpectedException(typeof(KeyNotFoundException))]
-            //public async Task ConfigurationSettingsService_GetConfigurationSettingsByGuidAsync_InvalidId()
-            //{
-            //    _configurationSettingsRepoMock.Setup(repo => repo.GetConfigurationSettingsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
-            //        .Throws<KeyNotFoundException>();
-
-            //    await _configurationSettingsService.GetConfigurationSettingsByGuidAsync("99");
-            //}
-
-            //[TestMethod]
-            //public async Task ConfigurationSettingsService_GetConfigurationSettingsByGuidAsync_Expected()
-            //{
-            //    var expectedResults =
-            //        _configurationSettingsCollection.First(c => c.Guid == configurationSettingsGuid);
-            //    var actualResult =
-            //        await _configurationSettingsService.GetConfigurationSettingsByGuidAsync(configurationSettingsGuid);
-            //    Assert.AreEqual(expectedResults.Guid, actualResult.Id);
-            //    Assert.AreEqual(expectedResults.Description, actualResult.Title);
-
-            //}
-
-            //[TestMethod]
-            //public async Task ConfigurationSettingsService_GetConfigurationSettingsByGuidAsync_Properties()
-            //{
-            //    var result =
-            //        await _configurationSettingsService.GetConfigurationSettingsByGuidAsync(configurationSettingsGuid);
-            //    Assert.IsNotNull(result.Id);
-            //    Assert.IsNotNull(result.Description);
-            //    Assert.IsNotNull(result.Title);
-
-            //}
-
-            //[TestMethod]
-            //public async Task ConfigurationSettingsService_GetConfigurationSettingsOptionsAsync_Properties()
-            //{
-            //    var resultCollection =
-            //        (await _configurationSettingsService.GetConfigurationSettingsOptionsAsync(new List<string>(), true));
-
-            //    foreach (var result in resultCollection)
-            //    {
-            //        Assert.IsNotNull(result.Id, "Guid");
-            //        Assert.IsNotNull(result.Ethos, "Ethos Resources");
-            //        Assert.IsNotNull(result.SourceOptions, "Source Options");
-            //    }
-            //}
-
-            //[TestMethod]
-            //public async Task ConfigurationSettingsService_GetConfigurationSettingsOptionsByGuidAsync_Properties()
-            //{
-            //    foreach (var setting in _configurationSettingsCollection)
-            //    {
-            //        _configurationSettingsRepoMock.Setup(repo => repo.GetConfigurationSettingsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
-            //          .ReturnsAsync(_configurationSettingsCollection.FirstOrDefault(cs => cs.Guid == setting.Guid));
-
-            //        var result =
-            //            (await _configurationSettingsService.GetConfigurationSettingsOptionsByGuidAsync(setting.Guid, true));
-
-            //        Assert.IsNotNull(result.Id, "Guid");
-            //        Assert.IsNotNull(result.Ethos, "Ethos Resources");
-            //        Assert.IsNotNull(result.SourceOptions, "Source Options");
-            //    }
-            //}
         }
     }
 }

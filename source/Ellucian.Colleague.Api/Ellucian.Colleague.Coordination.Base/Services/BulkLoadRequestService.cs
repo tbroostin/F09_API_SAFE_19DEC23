@@ -120,6 +120,22 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
         }
 
+
+        /// <summary>
+        /// Helper method to determine if the user has permission to view BulkLoadRequest.
+        /// </summary>
+        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
+        private void CheckViewBulkLoadRequestPermission(string permissionCode, string resourceName)
+        {
+            bool hasPermission = HasPermission(permissionCode);
+
+            // User is not allowed to create or update Bulkloadrequest without the appropriate permissions
+            if (!hasPermission)
+            {
+                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view BulkLoadRequest for the resource " + resourceName);
+            }
+        }
+
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Converts a Bulkloadrequest domain entity to its corresponding Bulkloadrequest DTO
@@ -194,18 +210,26 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <summary>
         /// Get the status of the bulk request
         /// </summary>
+        /// <param name="resourceName">Name of the bulk resource</param>
         /// <param name="id">id of the bulk request</param>
+        /// <param name="permissionCode">Permission</param>
         /// <returns></returns>
-        public async Task<BulkLoadGet> GetBulkLoadRequestStatus(string id)
+        public async Task<BulkLoadGet> GetBulkLoadRequestStatus(string resourceName, string id, string permissionCode)
         {
             if (string.IsNullOrEmpty(id))
             {
                 throw new Exception("Id must have a value");
             }
+            if (string.IsNullOrEmpty(resourceName))
+            {
+                throw new Exception("resourceName must have a value");
+            }
+
+            CheckViewBulkLoadRequestPermission(permissionCode, resourceName);
 
             try
             {
-                var bulkRequestEntity = await _bulkLoadRequestRepository.GetBulkRequestDetails(id);
+                var bulkRequestEntity = await _bulkLoadRequestRepository.GetBulkRequestDetails(resourceName, id);
                 return ConvertBulkRequestEntityToBulkLoadGetDto(bulkRequestEntity);
             }
             catch (RepositoryException ex)

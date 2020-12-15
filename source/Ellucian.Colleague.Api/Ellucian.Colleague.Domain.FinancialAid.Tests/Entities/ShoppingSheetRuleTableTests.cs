@@ -82,10 +82,10 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Entities
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
             public void ShoppingSheetRuleTableConstructor_DefaultResultRequiredTest()
             {
-                new ShoppingSheetRuleTable(code, awardYear, " ");
+                var shoppingSheetRuleTableResult = new ShoppingSheetRuleTable(code, awardYear, " ");
+                Assert.AreEqual(shoppingSheetRuleTableResult.DefaultResult, " ");
             }
 
             [TestMethod]

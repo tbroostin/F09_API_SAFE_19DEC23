@@ -12,6 +12,8 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         Married,
         Divorced,
         Widowed,
-        Separated
+        Separated,
+        Unknown,
+        Other
     }
 }

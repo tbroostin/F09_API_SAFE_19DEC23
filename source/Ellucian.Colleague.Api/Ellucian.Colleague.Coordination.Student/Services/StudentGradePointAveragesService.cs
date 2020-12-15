@@ -217,7 +217,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             //Get all student acad programs info based marked cred ids
             var markCredIds = entity.StudentGPAInfoList != null && entity.StudentGPAInfoList.Any() ? 
-                              entity.StudentGPAInfoList.SelectMany(i => i.MarkAcadCredentials).Distinct() : 
+                              entity.StudentGPAInfoList.SelectMany(i => i.MarkAcadCredentials).Distinct().ToList() : 
                               new List<string>();
             IEnumerable<StudentAcademicCredentialProgramInfo> studCredPrgInfo = null;
             if (markCredIds != null || markCredIds.Any())
@@ -265,8 +265,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             //Get credit type codes for "institution"
             var creditTypes = await CreditTypesAsync(bypassCache);
-            var instCreditTypes = creditTypes.Where(i => !string.IsNullOrWhiteSpace(i.Category) && i.Category.Equals("I", StringComparison.OrdinalIgnoreCase))
+            var instCreditTypes = creditTypes.Where(i => !string.IsNullOrWhiteSpace(i.Category) && i.Category.Equals("I", StringComparison.InvariantCultureIgnoreCase))
                                              .Select(c => c.Code)
+                                             .ToList();
+
+            var transferCreditType = creditTypes.Where( i => !string.IsNullOrWhiteSpace( i.Category ) && i.Category.Equals( "T", StringComparison.InvariantCultureIgnoreCase))
+                                             .Select( c => c.Code )
                                              .ToList();
 
             var termBased = source.StudentGPAInfoList.Where(r => !string.IsNullOrEmpty(r.Term) && r.StcAttCredit.HasValue)
@@ -294,14 +298,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (periodBasedCreds != null && periodBasedCreds.Any())
             {
                 List<StudentGradePointAveragesPeriodBasedDtoProperty> periodBasedList = new List<StudentGradePointAveragesPeriodBasedDtoProperty>();
-                decimal? instAttemptedCredits, instEarnedCredits, instQualityPoints, allAttemptedCredits, allEarnedCredits, allQualityPoints = 0.00m;
+                decimal? instAttemptedCredits, instEarnedCredits, instQualityPoints, allAttemptedCredits, allEarnedCredits, allQualityPoints, trAttemptedCredits, trEarnedCredits, trQualityPoints = 0.00m;
                 foreach (var periodBasedCred in periodBasedCreds)
                 {
                     var institutionAcadCred = periodBasedCred.Item.Where(inst => instCreditTypes.Contains(inst.CreditType)).ToList();
                     var allAcadCred = periodBasedCred.Item.Select(all => all).ToList();
+                    //Transfer
+                    var transferAcadCred = periodBasedCred.Item.Where( inst => transferCreditType.Contains( inst.CreditType ) ).ToList();
 
-                    ConvertEntityToGpaValues(useAltCumFlag, out instAttemptedCredits, out instEarnedCredits, out instQualityPoints, out allAttemptedCredits, out allEarnedCredits, 
-                        out allQualityPoints, institutionAcadCred, allAcadCred);
+                    ConvertEntityToGpaValues(useAltCumFlag, out instAttemptedCredits, out instEarnedCredits, out instQualityPoints, 
+                                                            out allAttemptedCredits, out allEarnedCredits, out allQualityPoints, 
+                                                            out trAttemptedCredits, out trEarnedCredits, out trQualityPoints, institutionAcadCred, allAcadCred, transferAcadCred);
 
                     if (instQualityPoints.HasValue && instEarnedCredits.HasValue && institutionAcadCred != null && institutionAcadCred.Any())
                     {
@@ -316,6 +323,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         periodBasedList.Add(await ConvertEntityToPeriodBasedDtoAsync(allAttemptedCredits, allEarnedCredits, allQualityPoints, 
                             "all", periodBasedCred.K.Term, periodBasedCred.K.AcademicLevel, allAcadCred, source.PersonSTGuid, source.StudentId, bypassCache));
                     }
+
+                    if(trQualityPoints.HasValue && trEarnedCredits.HasValue && transferAcadCred != null && transferAcadCred.Any())
+                    {
+                        if( dto.PeriodBased == null ) dto.PeriodBased = new List<StudentGradePointAveragesPeriodBasedDtoProperty>();
+                        periodBasedList.Add( await ConvertEntityToPeriodBasedDtoAsync( trAttemptedCredits, trEarnedCredits, trQualityPoints,
+                            "transfer", periodBasedCred.K.Term, periodBasedCred.K.AcademicLevel, transferAcadCred, source.PersonSTGuid, source.StudentId, bypassCache ) );
+                    }
+
                 }
                 dto.PeriodBased = periodBasedList;
             }
@@ -323,28 +338,33 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (cumulativeCreds != null & cumulativeCreds.Any())
             {
                 List<StudentGradePointAveragesCumulativeDtoProperty> cumulativeList = new List<StudentGradePointAveragesCumulativeDtoProperty>();
-                decimal? instAttemptedCredits, instEarnedCredits, instQualityPoints, allAttemptedCredits, allEarnedCredits, allQualityPoints = 0.00m;
+                decimal? instAttemptedCredits, instEarnedCredits, instQualityPoints, allAttemptedCredits, allEarnedCredits, allQualityPoints, trAttemptedCredits, trEarnedCredits, trQualityPoints = 0.00m;
 
                 foreach (var cumulativeCred in cumulativeCreds)
                 {
                     var institutionAcadCred = cumulativeCred.Where(inst => instCreditTypes.Contains(inst.CreditType) && inst.StcAttCredit.HasValue).ToList();
                     var allAcadCred = cumulativeCred.Where(all => all.StcAttCredit.HasValue).ToList();
+                    var transferAcadCred = cumulativeCred.Where( inst => transferCreditType.Contains( inst.CreditType ) && inst.StcAttCredit.HasValue ).ToList();
 
                     ConvertEntityToGpaValues(useAltCumFlag, out instAttemptedCredits, out instEarnedCredits, out instQualityPoints, out allAttemptedCredits, out allEarnedCredits,
-                        out allQualityPoints, institutionAcadCred, allAcadCred);
+                        out allQualityPoints, out trAttemptedCredits, out trEarnedCredits, out trQualityPoints, institutionAcadCred, allAcadCred, transferAcadCred );
 
-                    if (instQualityPoints.HasValue && instEarnedCredits.HasValue)
+                    if( instQualityPoints.HasValue && instEarnedCredits.HasValue && institutionAcadCred != null && institutionAcadCred.Any() )
                     {
-                        if (dto.Cumulative == null) dto.Cumulative = new List<StudentGradePointAveragesCumulativeDtoProperty>();
-                        if (institutionAcadCred != null && institutionAcadCred.Any())
-                        {
-                            cumulativeList.Add(await ConvertEntityToCumulativeDtoAsync(instAttemptedCredits, instEarnedCredits, instQualityPoints, "institution", institutionAcadCred, source.PersonSTGuid, source.StudentId, bypassCache));
-                        }
+                        if(dto.Cumulative == null) dto.Cumulative = new List<StudentGradePointAveragesCumulativeDtoProperty>();
+                        cumulativeList.Add(await ConvertEntityToCumulativeDtoAsync(instAttemptedCredits, instEarnedCredits, instQualityPoints, "institution", institutionAcadCred, source.PersonSTGuid, source.StudentId, bypassCache));
                     }
-                    if (allQualityPoints.HasValue && allEarnedCredits.HasValue)
+
+                    if( allQualityPoints.HasValue && allEarnedCredits.HasValue )
                     {
-                        if (dto.Cumulative == null) dto.Cumulative = new List<StudentGradePointAveragesCumulativeDtoProperty>();
-                        cumulativeList.Add(await ConvertEntityToCumulativeDtoAsync(allAttemptedCredits, allEarnedCredits, allQualityPoints, "all", allAcadCred, source.PersonSTGuid, source.StudentId, bypassCache));
+                        if( dto.Cumulative == null ) dto.Cumulative = new List<StudentGradePointAveragesCumulativeDtoProperty>();
+                        cumulativeList.Add( await ConvertEntityToCumulativeDtoAsync( allAttemptedCredits, allEarnedCredits, allQualityPoints, "all", allAcadCred, source.PersonSTGuid, source.StudentId, bypassCache ) );
+                    }
+
+                    if( trQualityPoints.HasValue && trEarnedCredits.HasValue && transferAcadCred != null && transferAcadCred.Any() )
+                    {
+                        if( dto.Cumulative == null ) dto.Cumulative = new List<StudentGradePointAveragesCumulativeDtoProperty>();
+                        cumulativeList.Add( await ConvertEntityToCumulativeDtoAsync( trAttemptedCredits, trEarnedCredits, trQualityPoints, "transfer", transferAcadCred, source.PersonSTGuid, source.StudentId, bypassCache ) );
                     }
                 }
                 dto.Cumulative = cumulativeList;
@@ -352,7 +372,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //Earned Degree GPA's
             if (earnedDegreeCreds != null & earnedDegreeCreds.Any())
             {
-                decimal? instAttemptedCredits, instEarnedCredits, instQualityPoints, allAttemptedCredits, allEarnedCredits, allQualityPoints = 0.00m;
+                decimal? instAttemptedCredits, instEarnedCredits, instQualityPoints, allAttemptedCredits, allEarnedCredits, allQualityPoints, trAttemptedCredits, trEarnedCredits, trQualityPoints = 0.00m;
 
                 List<StudentGradePointAveragesEarnedDegreesDtoProperty> earnedDegreeList = new List<StudentGradePointAveragesEarnedDegreesDtoProperty>();
                 var markedCreds = earnedDegreeCreds.SelectMany(mcr => mcr.MarkAcadCredentials).Distinct().ToList();
@@ -374,24 +394,42 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }).ToList(); 
 
                     ConvertEntityToGpaValues(useAltCumFlag, out instAttemptedCredits, out instEarnedCredits, out instQualityPoints, out allAttemptedCredits, out allEarnedCredits,
-                        out allQualityPoints, tempCreds, tempCreds);
+                        out allQualityPoints, out trAttemptedCredits, out trEarnedCredits, out trQualityPoints, tempCreds, tempCreds, tempCreds);
 
                     if (instQualityPoints.HasValue && instEarnedCredits.HasValue)
                     {
-                        if (dto.EarnedDegrees == null) dto.EarnedDegrees = new List<StudentGradePointAveragesEarnedDegreesDtoProperty>();
-
-                        earnedDegreeList.Add(ConvertEntityToEarnedDtoAsync(instAttemptedCredits, instEarnedCredits, instQualityPoints, "institution", tempCreds, studCredPrgInfo, source.PersonSTGuid, 
-                            source.StudentId, markCred, bypassCache));
+                        StudentGradePointAveragesEarnedDegreesDtoProperty spgaDto = ConvertEntityToEarnedDtoAsync( instAttemptedCredits, instEarnedCredits, instQualityPoints, "institution", tempCreds, studCredPrgInfo, source.PersonSTGuid,
+                            source.StudentId, markCred, bypassCache );
+                        if( spgaDto != null )
+                        {
+                            if( dto.EarnedDegrees == null ) dto.EarnedDegrees = new List<StudentGradePointAveragesEarnedDegreesDtoProperty>();
+                            earnedDegreeList.Add( spgaDto );
+                        }
                     }
+                    
                     if (allQualityPoints.HasValue && allEarnedCredits.HasValue)
                     {
-                        if (dto.EarnedDegrees == null) dto.EarnedDegrees = new List<StudentGradePointAveragesEarnedDegreesDtoProperty>();
+                        StudentGradePointAveragesEarnedDegreesDtoProperty spgaDto = ConvertEntityToEarnedDtoAsync( allAttemptedCredits, allEarnedCredits, allQualityPoints, "all", tempCreds, studCredPrgInfo, source.PersonSTGuid,
+                            source.StudentId, markCred, bypassCache );
+                        if( spgaDto != null )
+                        {
+                            if( dto.EarnedDegrees == null ) dto.EarnedDegrees = new List<StudentGradePointAveragesEarnedDegreesDtoProperty>();
+                            earnedDegreeList.Add( spgaDto );
+                        }
+                    }
 
-                        earnedDegreeList.Add(ConvertEntityToEarnedDtoAsync(allAttemptedCredits, allEarnedCredits, allQualityPoints, "all", tempCreds, studCredPrgInfo, source.PersonSTGuid, 
-                            source.StudentId, markCred, bypassCache));
+                    if(trQualityPoints.HasValue && trEarnedCredits.HasValue)
+                    {
+                        StudentGradePointAveragesEarnedDegreesDtoProperty spgaDto = ConvertEntityToEarnedDtoAsync( trAttemptedCredits, trEarnedCredits, trQualityPoints, "transfer", tempCreds, studCredPrgInfo, source.PersonSTGuid,
+                            source.StudentId, markCred, bypassCache );
+                        if( spgaDto != null )
+                        {
+                            if( dto.EarnedDegrees == null ) dto.EarnedDegrees = new List<StudentGradePointAveragesEarnedDegreesDtoProperty>();
+                            earnedDegreeList.Add( spgaDto );
+                        }
                     }
                 }
-                dto.EarnedDegrees = earnedDegreeList;
+                if( earnedDegreeList != null && earnedDegreeList.Any() ) dto.EarnedDegrees = earnedDegreeList;
             }           
             return dto;
         }
@@ -408,8 +446,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="allQualityPoints"></param>
         /// <param name="institutionAcadCred"></param>
         /// <param name="allAcadCred"></param>
-        private static void ConvertEntityToGpaValues(bool useAltCumFlag, out decimal? instAttemptedCredits, out decimal? instEarnedCredits, out decimal? instQualityPoints, out decimal? allAttemptedCredits, out decimal? allEarnedCredits, out decimal? allQualityPoints, 
-            IEnumerable<StudentGPAInfo> institutionAcadCred, IEnumerable<StudentGPAInfo> allAcadCred)
+        private static void ConvertEntityToGpaValues(bool useAltCumFlag, out decimal? instAttemptedCredits, out decimal? instEarnedCredits, out decimal? instQualityPoints, 
+            out decimal? allAttemptedCredits, out decimal? allEarnedCredits, out decimal? allQualityPoints, out decimal? trAttemptedCredits, out decimal? trEarnedCredits, out decimal? trQualityPoints,
+            IEnumerable<StudentGPAInfo> institutionAcadCred, IEnumerable<StudentGPAInfo> allAcadCred, IEnumerable<StudentGPAInfo> trAcadCred )
         {
             if (useAltCumFlag)
             {
@@ -435,6 +474,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 allAttemptedCredits = allAcadCred.Sum(attCr => attCr.StcCumContribAttCredit.HasValue ? attCr.StcCumContribAttCredit.Value : 0.00m);
                 allEarnedCredits = allAcadCred.Sum(eCr => eCr.StcCumContribGpaCredit.HasValue ? eCr.StcCumContribGpaCredit.Value : 0.00m);
                 allQualityPoints = allAcadCred.Sum(qPt => qPt.StcCumContribGradePoint.HasValue ? qPt.StcCumContribGradePoint.Value : 0.00m);
+            }
+
+            if( useAltCumFlag )
+            {
+                trAttemptedCredits = trAcadCred.Sum( attCr => attCr.StcAltCumContribAttCredit.HasValue ? attCr.StcAltCumContribAttCredit.Value : 0.00m );
+                trEarnedCredits = trAcadCred.Sum( eCr => eCr.StcAltCumContribGpaCredit.HasValue ? eCr.StcAltCumContribGpaCredit.Value : 0.00m );
+                trQualityPoints = trAcadCred.Sum( qPt => qPt.StcAltcumContribGradePoint.HasValue ? qPt.StcAltcumContribGradePoint.Value : 0.00m );
+            }
+            else
+            {
+                trAttemptedCredits = trAcadCred.Sum( attCr => attCr.StcCumContribAttCredit.HasValue ? attCr.StcCumContribAttCredit.Value : 0.00m );
+                trEarnedCredits = trAcadCred.Sum( eCr => eCr.StcCumContribGpaCredit.HasValue ? eCr.StcCumContribGpaCredit.Value : 0.00m );
+                trQualityPoints = trAcadCred.Sum( qPt => qPt.StcCumContribGradePoint.HasValue ? qPt.StcCumContribGradePoint.Value : 0.00m );
             }
         }
 
@@ -462,7 +514,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             instPeriodDto.Value = earnedCredits.Value == 0m ? 0.000m : decimal.Round(decimal.Divide(qualityPoints.Value, earnedCredits.Value), 3, MidpointRounding.AwayFromZero);
 
             //Checking if there are missing acad level data
-            var noAcadLevels = acadCred.Where(i => string.IsNullOrWhiteSpace(acadLevel)).ToList();
+            var noAcadLevels = acadCred.Where(i => string.IsNullOrWhiteSpace(i.AcademicLevel)).ToList();
             if (noAcadLevels != null && noAcadLevels.Any())
             {
                 noAcadLevels.ForEach(i =>
@@ -571,7 +623,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var studAcadCredPrgInfo = studCredPrgInfo.FirstOrDefault(i => i.AcademicCredentialsId.Equals(markAcadCredential, StringComparison.OrdinalIgnoreCase));
             if (studAcadCredPrgInfo == null)
             {
-                IntegrationApiExceptionAddError(string.Format("Academic Credit is marked as graduated but the associated academic credentials '{0}' is missing.", markAcadCredential), "acad.credentials.missing", personSTGuid, StudentId);
+                return null;
             }
             else
             {

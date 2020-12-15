@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -9,6 +9,7 @@ using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Filters;
+using Ellucian.Web.Http.Models;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
 using slf4net;
@@ -42,7 +43,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         {
             _financialAidYearService = financialAidYearService;
             _logger = logger;
-        }
+        }        
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
@@ -50,9 +51,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// If the request header "Cache-Control" attribute is set to "no-cache" the data returned will be pulled fresh from the database, otherwise cached data is returned.
         /// </summary>
         /// <returns>All FinancialAidYear objects.</returns>
+        [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
         [HttpGet, ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [QueryStringFilterFilter("academicPeriod", typeof(Dtos.Filters.AcademicPeriodNamedQueryFilter))]
         [EedmResponseFilter]
-        public async Task<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidYear>> GetFinancialAidYearsAsync()
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidYear>> GetFinancialAidYearsAsync(QueryStringFilter academicPeriod)
         {
             bool bypassCache = false;
             if (Request.Headers.CacheControl != null)
@@ -65,7 +68,19 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
-                var items = await _financialAidYearService.GetFinancialAidYearsAsync(bypassCache);
+                string academicPeriodId = string.Empty;
+                var academicPeriodFilter = GetFilterObject<Dtos.Filters.AcademicPeriodNamedQueryFilter>( _logger, "academicPeriod" );
+
+                if( CheckForEmptyFilterParameters() )
+                    return new List<Dtos.FinancialAidYear>();
+
+                if( academicPeriodFilter != null )
+                {
+                    if( academicPeriodFilter.AcademicPeriod != null && !string.IsNullOrEmpty( academicPeriodFilter.AcademicPeriod.Id ) )
+                        academicPeriodId = academicPeriodFilter.AcademicPeriod.Id;
+                }
+
+                var items = await _financialAidYearService.GetFinancialAidYearsAsync( academicPeriodId, bypassCache );
 
                 AddEthosContextProperties(
                     await _financialAidYearService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -77,7 +92,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden );
             }
             catch (KeyNotFoundException e)
             {
@@ -86,8 +101,13 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             catch (ArgumentNullException e)
             {
-                _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                _logger.Error( e.ToString() );
+                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ) );
+            }
+            catch( ArgumentException e )
+            {
+                _logger.Error( e.ToString() );
+                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ) );
             }
             catch (RepositoryException e)
             {
@@ -110,6 +130,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Retrieves an Financial Aid Years by ID.
         /// </summary>
         /// <returns>An <see cref="Dtos.FinancialAidYear">FinancialAidYear</see>object.</returns>
+        [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
         [HttpGet]
         [EedmResponseFilter]
         public async Task<FinancialAidYear> GetFinancialAidYearByIdAsync(string id)
@@ -135,7 +156,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {

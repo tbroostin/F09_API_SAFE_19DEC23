@@ -74,7 +74,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>List of PersonRestrictions Objects</returns>
         public async Task<PersonRestriction> GetPersonHoldByIdAsync(string id)
         {
-            var personHoldId = await GetRecordKeyFromGuidAsync(id);
+            var personHoldId = await GetStudentHoldIdFromGuidAsync(id);
             if (personHoldId == null )
             {
                 throw new KeyNotFoundException("PersonHold GUID " + id + " not found.");
@@ -102,7 +102,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             try
             {
-                var personKey = await GetRecordKeyFromGuidAsync(personId);
+                var personKey = await GetPersonIdFromGuidAsync(personId);
             
                 //if (string.IsNullOrEmpty(personKey))
                 //{
@@ -290,21 +290,71 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public async Task<string> GetStudentHoldIdFromGuidAsync(string id)
+        public async Task<string> GetStudentHoldIdFromGuidAsync(string guid)
         {
-            try
+            if (string.IsNullOrEmpty(guid))
             {
-                return await GetRecordKeyFromGuidAsync(id);
+                throw new ArgumentNullException("guid");
             }
-            catch (ArgumentNullException)
+
+            var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
+            if (idDict == null || idDict.Count == 0)
             {
-                throw;
+                throw new KeyNotFoundException("Person Holds GUID " + guid + " not found.");
             }
-            catch (RepositoryException ex)
+
+            var foundEntry = idDict.FirstOrDefault();
+            if (foundEntry.Value == null)
             {
-                ex.AddError(new RepositoryError("student.restriction.guid.NotFound", "GUID not found for student restriction " + id));
-                throw ex;
+                throw new KeyNotFoundException("Person Holds GUID " + guid + " lookup failed.");
             }
+
+            if (foundEntry.Value.Entity != "STUDENT.RESTRICTIONS")
+            {
+                var errorMessage = string.Format("GUID '{0}' has different entity, '{1}', than expected, 'STUDENT.RESTRICTIONS'", guid, foundEntry.Value.Entity);
+                logger.Error(errorMessage);
+                var exception = new RepositoryException(errorMessage);
+                exception.AddError(new RepositoryError("GUID.Wrong.Type", errorMessage));
+                throw exception;
+            }
+
+            return foundEntry.Value.PrimaryKey;
+        }
+
+        /// <summary>
+        /// Gets id from guid input
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        private async Task<string> GetPersonIdFromGuidAsync(string guid)
+        {
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid");
+            }
+
+            var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
+            if (idDict == null || idDict.Count == 0)
+            {
+                throw new KeyNotFoundException("Person GUID " + guid + " not found.");
+            }
+
+            var foundEntry = idDict.FirstOrDefault();
+            if (foundEntry.Value == null)
+            {
+                throw new KeyNotFoundException("Person GUID " + guid + " lookup failed.");
+            }
+
+            if (foundEntry.Value.Entity != "PERSON")
+            {
+                var errorMessage = string.Format("GUID '{0}' has different entity, '{1}', than expected, 'PERSON'", guid, foundEntry.Value.Entity);
+                logger.Error(errorMessage);
+                var exception = new RepositoryException(errorMessage);
+                exception.AddError(new RepositoryError("GUID.Wrong.Type", errorMessage));
+                throw exception;
+            }
+
+            return foundEntry.Value.PrimaryKey;
         }
         #endregion
 

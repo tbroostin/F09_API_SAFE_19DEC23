@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2019 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -30,9 +30,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <summary>
         /// Get PersonPosition objects for the given personIds
         /// </summary>
-        /// <param name="personIds">Required: A list of personIds for which to get PersonPositions</param>       
+        /// <param name="personIds">Required: A list of personIds for which to get PersonPositions</param>  
+        /// <param name="lookupStartDate">optional lookup start date for look up filtering, 
+        /// all records with end date before this date will not be retrieved</param>
         /// <returns></returns>
-        public async Task<IEnumerable<PersonPosition>> GetPersonPositionsAsync(IEnumerable<string> personIds)
+        public async Task<IEnumerable<PersonPosition>> GetPersonPositionsAsync(IEnumerable<string> personIds, DateTime? lookupStartDate = null)
         {
             if (personIds == null)
             {
@@ -44,7 +46,13 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
 
             var criteria = "WITH PERPOS.HRP.ID EQ ?";
+            if (lookupStartDate.HasValue)
+            {
+                criteria += " AND (PERPOS.END.DATE GE '" + UniDataFormatter.UnidataFormatDate(lookupStartDate.Value, InternationalParameters.HostShortDateFormat, InternationalParameters.HostDateDelimiter)
+                    + "' OR PERPOS.END.DATE EQ '')";
+            }
             var perposKeys = await DataReader.SelectAsync("PERPOS", criteria, personIds.Select(id => string.Format("\"{0}\"", id)).ToArray());
+
             if (perposKeys == null)
             {
                 var message = "Unexpected null returned from PERPOS SelectAsyc";

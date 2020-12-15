@@ -19,8 +19,9 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// Get the bulk request details
         /// </summary>
         /// <param name="id"></param>
+        /// <param name="resourceName"></param>
         /// <returns></returns>
-        Task<BulkRequestDetails> GetBulkRequestDetails(string id);
+        Task<BulkRequestDetails> GetBulkRequestDetails(string resourceName, string id);
 
         /// <summary>
         /// Check if bulk load is supported

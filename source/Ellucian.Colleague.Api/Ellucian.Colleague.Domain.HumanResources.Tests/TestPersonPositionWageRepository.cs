@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2019 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -203,7 +203,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             
         //}
 
-        public async Task<IEnumerable<PersonPositionWage>> GetPersonPositionWagesAsync(IEnumerable<string> personIds)
+        public async Task<IEnumerable<PersonPositionWage>> GetPersonPositionWagesAsync(IEnumerable<string> personIds, DateTime? startDate = null)
         {
             var earnTypeGroupingEntities = new List<EarningsTypeGroup>();
             //foreach (var earnTypeGroupingRecord in earnTypeGroupingsRecords)
@@ -221,19 +221,19 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             //    }
             //}
             var personPositionWages = personPositionWageRecords
-                .Where(r => personIds.Contains(r.personId))
-                .Select(r =>
-                {
-                    try
+                    .Where(r => personIds.Contains(r.personId))
+                    .Select(r =>
                     {
-                        return BuildPersonPositionWage(r, positionPayRecords);
-                    }
-                    catch (Exception)
-                    {
-                        return null;
-                    }
-                })
-                .Where(e => e != null);
+                        try
+                        {
+                            return BuildPersonPositionWage(r, positionPayRecords);
+                        }
+                        catch (Exception)
+                        {
+                            return null;
+                        }
+                    })
+                    .Where(e => e != null);
 
             return await Task.FromResult(personPositionWages);
         }
@@ -255,6 +255,6 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 FundingSources = record.payItems
                     .Select(item => new PositionFundingSource(item.fundSourceId, record.payItems.IndexOf(item)) { ProjectId = item.projectId }).ToList()
             };
-        }
+        }        
     }
 }

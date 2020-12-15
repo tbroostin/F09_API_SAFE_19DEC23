@@ -1,5 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -1209,6 +1208,49 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
         #endregion
 
+        #region Person user name Get Method
+
+        /// <summary>
+        /// Gets person user names
+        /// </summary>
+        /// <param name="personIds"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<Ellucian.Colleague.Domain.Base.Entities.PersonUserName>> GetPersonUserNamesAsync(string[] personIds)
+        {
+            List<Domain.Base.Entities.PersonUserName> personUserNamesEntities = new List<Domain.Base.Entities.PersonUserName>();
+
+            if (personIds != null && personIds.Any())
+            {
+                var orgEntityIds = DataReader.Select("ORG.ENTITY", personIds, null);
+                if (orgEntityIds != null && orgEntityIds.Any())
+                {
+                    var orgEntityRecords = await DataReader.BulkReadRecordAsync<DataContracts.OrgEntity>(orgEntityIds.ToArray());
+                    if (orgEntityRecords != null && orgEntityRecords.Any())
+                    {
+                        var orgEntityEnvIds = orgEntityRecords.Where(oe => (!string.IsNullOrWhiteSpace(oe.OeOrgEntityEnv)))
+                            .Select(oe => oe.OeOrgEntityEnv).Distinct().ToArray();
+                        if (orgEntityEnvIds != null && orgEntityEnvIds.Any())
+                        {
+                            var orgEntityEnvRecords = await DataReader.BulkReadRecordAsync<DataContracts.OrgEntityEnv>(orgEntityEnvIds.ToArray());
+                            if (orgEntityEnvRecords != null && orgEntityEnvRecords.Any())
+                            {
+                                foreach (var orgEntityEnvRecord in orgEntityEnvRecords)
+                                {
+                                    if (orgEntityEnvRecord != null && !string.IsNullOrEmpty(orgEntityEnvRecord.OeeResource) && !string.IsNullOrEmpty(orgEntityEnvRecord.OeeUsername))
+                                    {
+                                        personUserNamesEntities.Add(new Domain.Base.Entities.PersonUserName(orgEntityEnvRecord.OeeResource, orgEntityEnvRecord.OeeUsername));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return personUserNamesEntities;
+        }
+
+        #endregion
+
         #region Build Person Methods
 
         /// <summary>
@@ -1726,7 +1768,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             if (personDataContract.WhereUsed != null && personDataContract.WhereUsed.Contains("FACULTY"))
                             {
                                 personBasedObject.Roles.Add(new PersonRole(PersonRoleType.Instructor, null, null));
-                                //since we know this is a faculty, we can check for advisor role now.
+                            }
+                        }
+
+                        //check if advisor role is assigned and if not check if FAC is associated and and FAC.ADVISE.FLAG is "Y" and assign advisor role
+                        if (personBasedObject.Roles == null || !personBasedObject.Roles.Any() ||
+                            !personBasedObject.Roles.Where(r => r.RoleType == PersonRoleType.Advisor).Any())
+                        {
+                            if (personDataContract.WhereUsed != null && personDataContract.WhereUsed.Contains("FACULTY"))
+                            {
                                 if (await IsAdvisorAsync(personId))
                                 {
                                     personBasedObject.Roles.Add(new PersonRole(PersonRoleType.Advisor, null, null));
@@ -2243,7 +2293,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             if (personDataContract.WhereUsed != null && personDataContract.WhereUsed.Contains("FACULTY"))
                             {
                                 personBasedObject.Roles.Add(new PersonRole(PersonRoleType.Instructor, null, null));
-                                //since we know this is a faculty, we can check for advisor role now.
+                            }
+                        }
+
+                        //check if advisor role is assigned and if not check if FAC is associated and and FAC.ADVISE.FLAG is "Y" and assign advisor role
+                        if (personBasedObject.Roles == null || !personBasedObject.Roles.Any() ||
+                            !personBasedObject.Roles.Where(r => r.RoleType == PersonRoleType.Advisor).Any())
+                        {
+                            if (personDataContract.WhereUsed != null && personDataContract.WhereUsed.Contains("FACULTY"))
+                            {
                                 if (await IsAdvisorAsync(personId))
                                 {
                                     personBasedObject.Roles.Add(new PersonRole(PersonRoleType.Advisor, null, null));
@@ -2757,7 +2815,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             if (personDataContract.WhereUsed != null && personDataContract.WhereUsed.Contains("FACULTY"))
                             {
                                 personBasedObject.Roles.Add(new PersonRole(PersonRoleType.Instructor, null, null));
-                                //since we know this is a faculty, we can check for advisor role now.
+                            }
+                        }
+
+                        //check if advisor role is assigned and if not check if FAC is associated and and FAC.ADVISE.FLAG is "Y" and assign advisor role
+                        if (personBasedObject.Roles == null || !personBasedObject.Roles.Any() ||
+                            !personBasedObject.Roles.Where(r => r.RoleType == PersonRoleType.Advisor).Any())
+                        {
+                            if (personDataContract.WhereUsed != null && personDataContract.WhereUsed.Contains("FACULTY"))
+                            {
                                 if (await IsAdvisorAsync(personId))
                                 {
                                     personBasedObject.Roles.Add(new PersonRole(PersonRoleType.Advisor, null, null));
@@ -2848,7 +2914,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>The person ID</returns>
         public async Task<string> GetPersonIdFromGuidAsync(string guid)
         {
-            //return await GetRecordKeyFromGuidAsync(guid);
             if (string.IsNullOrEmpty(guid))
             {
                 throw new ArgumentNullException("guid");
@@ -2906,10 +2971,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             if (createResponse.PersonIntgErrors.Any())
             {
-                var errorMessage = string.Format("Error(s) occurred updating person '{0}':", person.Guid);
-                var exception = new RepositoryException(errorMessage);
-                createResponse.PersonIntgErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
-                logger.Error(errorMessage);
+                var exception = new RepositoryException();
+                createResponse.PersonIntgErrors.ForEach(e => exception.AddError(new RepositoryError("Create.Update.Exception", string.Concat(e.ErrorCodes, " - ", e.ErrorMessages))));
                 throw exception;
             }
 
@@ -2993,10 +3056,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                 if (updateResponse.PersonIntgErrors.Any())
                 {
-                    var errorMessage = string.Format("Error(s) occurred updating person '{0}':", person.Guid);
-                    var exception = new RepositoryException(errorMessage);
-                    updateResponse.PersonIntgErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
-                    logger.Error(errorMessage);
+                    var exception = new RepositoryException();
+                    updateResponse.PersonIntgErrors.ForEach(e => exception.AddError(new RepositoryError("Create.Update.Exception", string.Concat(e.ErrorCodes, " - ", e.ErrorMessages))));
                     throw exception;
                 }
 
@@ -3604,12 +3665,14 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     InHierarchy = hierarchy,
                     InDate = date.GetValueOrDefault(DateTime.Today)
                 });
+            //we only care about those addresses that has address lines. 
 
             if (response != null && response.GetPersonHierarchyAddressesOutput != null && response.GetPersonHierarchyAddressesOutput.Any())
             {
-                foreach(var ad in response.GetPersonHierarchyAddressesOutput)
+                foreach (var ad in response.GetPersonHierarchyAddressesOutput)
                 {
-                    addressIds.Add(ad.PersonIds, ad.OutAddressId);
+                    if (!string.IsNullOrEmpty(ad.OutAddressLines))
+                        addressIds.Add(ad.PersonIds, ad.OutAddressId);
                 }
             }
             return addressIds;
@@ -3696,7 +3759,33 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>The person ID</returns>
         public async Task<string> GetAddressIdFromGuidAsync(string guid)
         {
-            return await GetRecordKeyFromGuidAsync(guid);
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid");
+            }
+
+            var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
+            if (idDict == null || idDict.Count == 0)
+            {
+                throw new KeyNotFoundException("Address GUID " + guid + " not found.");
+            }
+
+            var foundEntry = idDict.FirstOrDefault();
+            if (foundEntry.Value == null)
+            {
+                throw new KeyNotFoundException("Address GUID " + guid + " lookup failed.");
+            }
+
+            if (foundEntry.Value.Entity != "ADDRESS")
+            {
+                var errorMessage = string.Format("GUID {0} has different entity, {1}, than expected, ADDRESS", guid, foundEntry.Value.Entity);
+                logger.Error(errorMessage);
+                var exception = new RepositoryException(errorMessage);
+                exception.AddError(new RepositoryError("invalid.guid", errorMessage));
+                throw exception;
+            }
+
+            return foundEntry.Value.PrimaryKey;
         }
 
         #endregion

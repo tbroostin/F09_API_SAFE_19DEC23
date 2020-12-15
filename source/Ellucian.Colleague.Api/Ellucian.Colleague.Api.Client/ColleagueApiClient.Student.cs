@@ -1,4 +1,5 @@
 ﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+
 using System;
 using System.Net;
 using System.Linq;
@@ -7,6 +8,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using Newtonsoft.Json;
 using Ellucian.Web.Utility;
+using Ellucian.Colleague.Api.Client.Core;
 using Ellucian.Rest.Client.Exceptions;
 using Ellucian.Colleague.Api.Client.Exceptions;
 using Ellucian.Colleague.Dtos.Base;
@@ -14,6 +16,8 @@ using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Colleague.Dtos.Student.DegreePlans;
 using Ellucian.Colleague.Dtos.Student.Requirements;
 using Ellucian.Colleague.Dtos.Student.QuickRegistration;
+using Ellucian.Colleague.Dtos.Student.InstantEnrollment;
+using Ellucian.Colleague.Dtos.Student.TransferWork;
 
 namespace Ellucian.Colleague.Api.Client
 {
@@ -1892,9 +1896,11 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="sectionEndDate">Lastest last meeting time for the section</param>
         /// <param name="pageSize">Number of items to return per page</param>
         /// <param name="pageIndex">Page number</param>
+        /// <param name="startsAtTime">Start at time (section)</param>
+        /// <param name="endsByTime">End by time (section)</param>
         /// <param name="openAndWaitlistedSections">Flag to retrieve sections that are open and Waitlisted</param>
         /// <returns><see cref="CoursePage2">CoursePage2</see> containing the list of course Ids, section Ids and filters</returns>
-        public async Task<CoursePage2> SearchCoursesAsync(IEnumerable<string> courseIds, IEnumerable<string> subjects, IEnumerable<string> academicLevels, IEnumerable<string> courseLevels, IEnumerable<string> courseTypes, IEnumerable<string> topicCodes, IEnumerable<string> terms, IEnumerable<string> days, IEnumerable<string> locations, IEnumerable<string> faculty, int? startTime, int? endTime, string keyword, RequirementGroup requirementGroup, string requirementCode, IEnumerable<string> sectionIds, IEnumerable<string> onlineCategories, bool? openSections, DateTime? sectionStartDate, DateTime? sectionEndDate, int pageSize, int pageIndex, bool? openAndWaitlistedSections = false)
+        public async Task<CoursePage2> SearchCoursesAsync(IEnumerable<string> courseIds, IEnumerable<string> subjects, IEnumerable<string> academicLevels, IEnumerable<string> courseLevels, IEnumerable<string> courseTypes, IEnumerable<string> topicCodes, IEnumerable<string> terms, IEnumerable<string> days, IEnumerable<string> locations, IEnumerable<string> faculty, int? startTime, int? endTime, string keyword, RequirementGroup requirementGroup, string requirementCode, IEnumerable<string> sectionIds, IEnumerable<string> onlineCategories, bool? openSections, DateTime? sectionStartDate, DateTime? sectionEndDate, int pageSize, int pageIndex, string startsAtTime, string endsByTime, bool? openAndWaitlistedSections = false)
         {
             if (keyword == null) keyword = string.Empty;
 
@@ -1939,6 +1945,8 @@ namespace Ellucian.Colleague.Api.Client
                 criteria.Faculty = faculty;
                 criteria.EarliestTime = startTime == null ? 0 : (int)startTime;
                 criteria.LatestTime = endTime == null ? 0 : (int)endTime;
+                criteria.StartsAtTime = startsAtTime;
+                criteria.EndsByTime = endsByTime;
                 criteria.SectionIds = sectionIds;
                 criteria.OnlineCategories = onlineCategories;
                 criteria.OpenSections = openSections.HasValue ? openSections.Value : false;
@@ -1954,6 +1962,76 @@ namespace Ellucian.Colleague.Api.Client
                 var courses = JsonConvert.DeserializeObject<CoursePage2>(await response.Content.ReadAsStringAsync());
 
                 return courses;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Search for course, brings back a page containing courses that met criteria and associated filters async.
+        /// </summary>
+        /// <param name="topicCodes">List of topic codes</param>
+        /// <param name="terms">List of terms (section)</param>
+        /// <param name="days">List of meeting days (section)</param>
+        /// <param name="locations">List of locations (course and section)</param>
+        /// <param name="faculty">List of faculty (section)</param>
+        /// <param name="courseIds">List of course Ids</param>
+        /// <param name="sectionIds">List of section Ids</param>
+        /// <param name="startTime">Start time (section)</param>
+        /// <param name="endTime">End time (section)</param>
+        /// <param name="keyword">Search string (course and section)</param>
+        /// <param name="onlineCategories">Online Category</param>
+        /// <param name="openSections">Flag to retrieve only sections that are open </param>
+        /// <param name="sectionStartDate">Earliest first meeting time of the section.</param>
+        /// <param name="sectionEndDate">Lastest last meeting time for the section</param>
+        /// <param name="pageSize">Number of items to return per page</param>
+        /// <param name="pageIndex">Page number</param>
+        /// <param name="openAndWaitlistedSections">Flag to retrieve sections that are open and Waitlisted</param>
+        /// <returns><see cref="CoursePage2">CoursePage2</see> containing the list of course Ids, section Ids and filters</returns>
+        public async Task<SectionPage> InstantEnrollmentCourseSearchAsync(IEnumerable<string> topicCodes, IEnumerable<string> terms, IEnumerable<string> days, IEnumerable<string> locations, IEnumerable<string> faculty,
+            IEnumerable<string> courseIds, IEnumerable<string> sectionIds, int? startTime, int? endTime, string keyword, IEnumerable<string> onlineCategories, bool? openSections, DateTime? sectionStartDate, DateTime? sectionEndDate, int pageSize, int pageIndex, bool? openAndWaitlistedSections = false)
+        {
+            if (keyword == null) keyword = string.Empty;
+
+            try
+            {
+                // Build url path + subject
+                var queryString = UrlUtility.BuildEncodedQueryString("pageSize", pageSize.ToString(), "pageIndex", pageIndex.ToString());
+                var urlPath = UrlUtility.CombineUrlPathAndArguments(_coursesSearchPath, queryString);
+
+                var criteria = new InstantEnrollmentCourseSearchCriteria();
+
+                if (!string.IsNullOrEmpty(keyword))
+                {
+                    criteria.Keyword = keyword.Replace("/", "_~");
+                }
+
+                criteria.TopicCodes = topicCodes;
+                criteria.Terms = terms;
+                criteria.DaysOfWeek = days;
+                criteria.Locations = locations;
+                criteria.Faculty = faculty;
+                criteria.EarliestTime = startTime == null ? 0 : (int)startTime;
+                criteria.LatestTime = endTime == null ? 0 : (int)endTime;
+                criteria.OnlineCategories = onlineCategories;
+                criteria.OpenSections = openSections.HasValue ? openSections.Value : false;
+                criteria.SectionStartDate = sectionStartDate;
+                criteria.SectionEndDate = sectionEndDate;
+                criteria.OpenAndWaitlistSections = openAndWaitlistedSections.HasValue ? openAndWaitlistedSections.Value : false;
+                criteria.CourseIds = courseIds;
+                criteria.SectionIds = sectionIds;
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianInstantEnrollmentFormatVersion1);
+
+                // Use URL path to call web api method (including query string)
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+
+                var sections = JsonConvert.DeserializeObject<SectionPage>(await response.Content.ReadAsStringAsync());
+
+                return sections;
             }
             catch (Exception ex)
             {
@@ -5296,7 +5374,7 @@ namespace Ellucian.Colleague.Api.Client
             try
             {
                 // Build url path from qapi path and faculty path
-                string[] pathStrings = new string[] { _qapiPath, _facultyPath};
+                string[] pathStrings = new string[] { _qapiPath, _facultyPath };
                 var urlPath = UrlUtility.CombineUrlPath(pathStrings);
 
                 var headers = new NameValueCollection();
@@ -5325,7 +5403,7 @@ namespace Ellucian.Colleague.Api.Client
                     throw new ArgumentNullException("IDs cannot be empty/null for Faculty office hours retrieval.");
                 }
                 // Build url path from qapi path and faculty path
-                string[] pathStrings = new string[] { _qapiPath,_facultyPath , _officeHoursPath};
+                string[] pathStrings = new string[] { _qapiPath, _facultyPath, _officeHoursPath };
                 var urlPath = UrlUtility.CombineUrlPath(pathStrings);
 
                 var headers = new NameValueCollection();
@@ -7968,7 +8046,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(pathStrings);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                var response = await ExecutePostRequestWithResponseAsync(sectionGradeCompleteInfo,urlPath, headers: headers);
+                var response = await ExecutePostRequestWithResponseAsync(sectionGradeCompleteInfo, urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<SectionMidtermGradingComplete>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -8029,7 +8107,7 @@ namespace Ellucian.Colleague.Api.Client
                     throw new ArgumentNullException("studentId", "Cannot fetch section waitlist info without a student ID.");
                 }
                 var urlPath = UrlUtility.CombineUrlPath(new[] { _sectionsPath, sectionId.ToString(), _waitlistInfoPath });
-                var query = UrlUtility.BuildEncodedQueryString(new[] { "studentId", studentId});
+                var query = UrlUtility.BuildEncodedQueryString(new[] { "studentId", studentId });
                 urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, query);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
@@ -8525,78 +8603,6 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Get a 1098-T tax form PDF
-        /// </summary>
-        /// <param name="personId">ID of the person assigned to and requesting the 1098-T.</param>
-        /// <param name="recordId">The record ID where the 1098-T pdf data is stored</param>
-        /// <returns>Byte array containing PDF data</returns>
-        public async Task<byte[]> Get1098tTaxFormPdf(string personId, string recordId)
-        {
-            if (string.IsNullOrEmpty(personId))
-                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
-
-            if (string.IsNullOrEmpty(recordId))
-                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
-
-            try
-            {
-                // Build url path and create and execute a request to get the tax form pdf
-                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxForm1098tPdfPath, recordId);
-
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                headers.Add(AcceptHeaderKey, "application/pdf");
-                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
-                headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
-                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
-
-                var resource = response.Content.ReadAsByteArrayAsync().Result;
-                return resource;
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex.GetBaseException(), "Unable to retrieve 1098-T tax form pdf.");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Get a T2202A tax form PDF
-        /// </summary>
-        /// <param name="personId">ID of the person assigned to and requesting the T2202A.</param>
-        /// <param name="recordId">The record ID where the T2202A pdf data is stored</param>
-        /// <returns>Byte array containing PDF data</returns>
-        public async Task<byte[]> GetT2202aTaxFormPdf(string personId, string recordId)
-        {
-            if (string.IsNullOrEmpty(personId))
-                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
-
-            if (string.IsNullOrEmpty(recordId))
-                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
-
-            try
-            {
-                // Build url path and create and execute a request to get the tax form pdf
-                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxFormT2202aPdfPath, recordId);
-
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                headers.Add(AcceptHeaderKey, "application/pdf");
-                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
-                headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
-                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
-
-                var resource = response.Content.ReadAsByteArrayAsync().Result;
-                return resource;
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex.GetBaseException(), "Unable to retrieve T2202A tax form pdf.");
-                throw;
-            }
-        }
-
-        /// <summary>
         /// Asynchronously returns the course catalog configuration with all needed information for catalog searches
         /// </summary>
         /// <returns>The requested <see cref="CourseCatalogConfiguration">CourseCatalogConfiguration</see> object</returns>
@@ -8633,6 +8639,29 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_configurationPath, _courseCatalogPath);
                 var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var configuration = JsonConvert.DeserializeObject<CourseCatalogConfiguration2>(await responseString.Content.ReadAsStringAsync());
+
+                return configuration;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the course catalog configuration information.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously returns the course catalog configuration with all needed information for catalog searches
+        /// </summary>
+        /// <returns>The requested <see cref="CourseCatalogConfiguration3">CourseCatalogConfiguration3</see> object</returns>
+        public async Task<CourseCatalogConfiguration3> GetCourseCatalogConfiguration3Async()
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
+                string urlPath = UrlUtility.CombineUrlPath(_configurationPath, _courseCatalogPath);
+                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var configuration = JsonConvert.DeserializeObject<CourseCatalogConfiguration3>(await responseString.Content.ReadAsStringAsync());
 
                 return configuration;
             }
@@ -10323,7 +10352,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <returns>CampusOrganization2 objects</returns>
         public async Task<IEnumerable<CampusOrganization2>> GetCampusOrganizations2Async(List<string> campusOrganizationIds)
         {
-            if(campusOrganizationIds == null || !campusOrganizationIds.Any())
+            if (campusOrganizationIds == null || !campusOrganizationIds.Any())
             {
                 throw new ArgumentNullException("campusOrganizationIds", "CampusOrganizationIds are required to query the CampusOrganization2 records");
             }
@@ -10395,6 +10424,321 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Unable to retrieve Colleague Self-Service Quick Registration information for student {0}.", studentId));
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Returns all education goals
+        /// </summary>
+        /// <param name="useCache">Flag indicating whether or not to bypass the cache</param>
+        /// <returns>Collection of <see cref="EducationGoal">education goals</see></returns>
+        public async Task<IEnumerable<EducationGoal>> GetEducationGoalsAsync(bool useCache = true)
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var responseString = await ExecuteGetRequestWithResponseAsync(_educationGoalsPath, headers: headers, useCache: useCache);
+                var dropReasons = JsonConvert.DeserializeObject<IEnumerable<EducationGoal>>(await responseString.Content.ReadAsStringAsync());
+
+                return dropReasons;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the education goals.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Returns all registration reasons
+        /// </summary>
+        /// <param name="useCache">Flag indicating whether or not to bypass the cache</param>
+        /// <returns>Collection of <see cref="RegistrationReason">registration reasons</see></returns>
+        public async Task<IEnumerable<RegistrationReason>> GetRegistrationReasonsAsync(bool useCache = true)
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var responseString = await ExecuteGetRequestWithResponseAsync(_registrationReasonsPath, headers: headers, useCache: useCache);
+                var dropReasons = JsonConvert.DeserializeObject<IEnumerable<RegistrationReason>>(await responseString.Content.ReadAsStringAsync());
+
+                return dropReasons;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the registration reasons.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Returns all registration marketing sources
+        /// </summary>
+        /// <param name="useCache">Flag indicating whether or not to bypass the cache</param>
+        /// <returns>Collection of <see cref="RegistrationMarketingSource">registration marketing sources</see></returns>
+        public async Task<IEnumerable<RegistrationMarketingSource>> GetRegistrationMarketingSourcesAsync(bool useCache = true)
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var responseString = await ExecuteGetRequestWithResponseAsync(_registrationMarketingSourcesPath, headers: headers, useCache: useCache);
+                var dropReasons = JsonConvert.DeserializeObject<IEnumerable<RegistrationMarketingSource>>(await responseString.Content.ReadAsStringAsync());
+
+                return dropReasons;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the registration marketing sources.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the configuration information needed for Colleague Self-Service instant enrollment
+        /// </summary>
+        /// <returns>The requested <see cref="InstantEnrollmentConfiguration"/></returns>
+        public async Task<InstantEnrollmentConfiguration> GetInstantEnrollmentConfigurationAsync()
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                string urlPath = UrlUtility.CombineUrlPath(_configurationPath, _instantEnrollmentPath);
+                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var configuration = JsonConvert.DeserializeObject<InstantEnrollmentConfiguration>(await responseString.Content.ReadAsStringAsync());
+                return configuration;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the Colleague Self-Service instant enrollment configuration information.");
+                throw;
+            }
+        }
+        /// <summary>
+        /// To post proposed registration payload in order to retrieve cost of sections selected for instant enrollment.
+        /// </summary>
+        /// <param name="proposedRegistration"></param>
+        /// <returns>InstantEnrollmentProposedRegistrationResult</returns>
+        public async Task<InstantEnrollmentProposedRegistrationResult> InstantEnrollmentProposedRegistrationAsync(InstantEnrollmentProposedRegistration proposedRegistration)
+        {
+            if (proposedRegistration == null)
+            {
+                throw new ArgumentNullException("proposedRegistration", "Proposed Registration cannot be null.");
+            }
+
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianInstantEnrollmentFormatVersion1);
+                // Do not log the request body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
+                string urlPath = UrlUtility.CombineUrlPath(_instantEnrollmentPath, _proposedRegistrationPath);
+                var response = await ExecutePostRequestWithResponseAsync(proposedRegistration, urlPath, headers: headers);
+                var proposedRegistrationResult = JsonConvert.DeserializeObject<InstantEnrollmentProposedRegistrationResult>(await response.Content.ReadAsStringAsync());
+                return proposedRegistrationResult;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to complete proposed registration for instant enrollment.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// To post a zero cost registration payload in order to register sections selected for instant enrollment.
+        /// </summary>
+        /// <param name="zeroCostRegistration"></param>
+        /// <returns>InstantEnrollmentZeroCostRegistrationResult</returns>
+        public async Task<InstantEnrollmentZeroCostRegistrationResult> InstantEnrollmentZeroCostRegistrationAsync(InstantEnrollmentZeroCostRegistration zeroCostRegistration)
+        {
+            if (zeroCostRegistration == null)
+            {
+                throw new ArgumentNullException("zeroCostRegistration", "Zero Cost Registration cannot be null.");
+            }
+
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianInstantEnrollmentFormatVersion1);
+
+                // Do not log the request body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
+
+                string urlPath = UrlUtility.CombineUrlPath(_instantEnrollmentPath, _zeroCostRegistrationPath);
+                var response = await ExecutePostRequestWithResponseAsync(zeroCostRegistration, urlPath, headers: headers);
+                var zeroCostRegistrationResult = JsonConvert.DeserializeObject<InstantEnrollmentZeroCostRegistrationResult>(await response.Content.ReadAsStringAsync());
+                return zeroCostRegistrationResult;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to complete zero cost registration for instant enrollment.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// To post proposed registration payload in order to register, and pay for by electronic check, sections selected for instant enrollment.
+        /// </summary>
+        /// <param name="echeckRegistration"></param>
+        /// <returns>InstantEnrollmentEcheckRegistrationResult</returns>
+        public async Task<InstantEnrollmentEcheckRegistrationResult> InstantEnrollmentEcheckRegistrationAsync(InstantEnrollmentEcheckRegistration echeckRegistration)
+        {
+            if (echeckRegistration == null)
+            {
+                throw new ArgumentNullException("echeckRegistration", "Echeck Registration cannot be null.");
+            }
+
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianInstantEnrollmentFormatVersion1);
+                // Do not log the request body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
+                string urlPath = UrlUtility.CombineUrlPath(_instantEnrollmentPath, _echeckRegistrationPath);
+                var response = await ExecutePostRequestWithResponseAsync(echeckRegistration, urlPath, headers: headers);
+                var echeckRegistrationResult = JsonConvert.DeserializeObject<InstantEnrollmentEcheckRegistrationResult>(await response.Content.ReadAsStringAsync());
+                return echeckRegistrationResult;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to complete echeck registration for instant enrollment.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Start an instant enrollment payment gateway transaction, which includes registering the student and creating the student if needed.
+        /// </summary>
+        /// <param name="proposedRegistration">A <see cref="InstantEnrollmentPaymentGatewayRegistration">InstantEnrollmentProposedRegistration</see>containing the information needed to start the payment gateway transaction.</param>
+        /// <returns>A <see cref="InstantEnrollmentStartPaymentGatewayRegistrationResult">InstantEnrollmentStartPaymentGatewayRegistrationResult</see> containing the result of the operation.</returns>
+        public async Task<InstantEnrollmentStartPaymentGatewayRegistrationResult> InstantEnrollmentStartPaymentGatewayRegistrationAsync(InstantEnrollmentPaymentGatewayRegistration proposedRegistration)
+        {
+            if (proposedRegistration == null)
+            {
+                throw new ArgumentNullException("proposedRegistration", "Proposed Registration cannot be null.");
+            }
+
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianInstantEnrollmentFormatVersion1);
+                // Do not log the request body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
+                string urlPath = UrlUtility.CombineUrlPath(_instantEnrollmentPath, _startPaymentGatewayRegistrationPath);
+                var response = await ExecutePostRequestWithResponseAsync(proposedRegistration, urlPath, headers: headers);
+                var registrationResult = JsonConvert.DeserializeObject<InstantEnrollmentStartPaymentGatewayRegistrationResult>(await response.Content.ReadAsStringAsync());
+                return registrationResult;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to complete instant enrollment start payment gateway registration.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves instant enrollment payment acknowledgement paragraph text for a given <see cref="InstantEnrollmentPaymentAcknowledgementParagraphRequest"/>
+        /// </summary>
+        /// <param name="paragraphRequest">An <see cref="InstantEnrollmentPaymentAcknowledgementParagraphRequest">InstantEnrollmentPaymentAcknowledgementParagraphRequest</see>containing the information needed to retrieve instant enrollment payment acknowledgement text.</param>
+        /// <returns>Instant enrollment payment acknowledgement text</returns>
+        public async Task<IEnumerable<string>> GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(InstantEnrollmentPaymentAcknowledgementParagraphRequest paragraphRequest)
+        {
+            if (paragraphRequest == null)
+            {
+                var nullRequestMsg = "An instant enrollment payment acknowledgement paragraph request is required to get instant enrollment payment acknowledgement paragraph text.";
+                throw new ArgumentNullException("paragraphRequest", nullRequestMsg);
+            }
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianInstantEnrollmentFormatVersion1);
+                string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _instantEnrollmentPath, _paymentAcknowledgementParagraphTextPath);
+                var response = await ExecutePostRequestWithResponseAsync(paragraphRequest, urlPath, headers: headers);
+                var registrationResult = JsonConvert.DeserializeObject<IEnumerable<string>>(await response.Content.ReadAsStringAsync());
+                return registrationResult;
+            }
+            catch (Exception ex)
+            {
+                string exceptionMsg = string.Format("An error occurred while attempting to retrieve instant enrollment payment acknowledgement paragraph text for person {0}", paragraphRequest.PersonId);
+                if (!string.IsNullOrEmpty(paragraphRequest.CashReceiptId))
+                {
+                    exceptionMsg += string.Format(" for cash receipt {0}", paragraphRequest.CashReceiptId);
+                }
+                logger.Error(ex, exceptionMsg);
+                throw new ApplicationException(exceptionMsg);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves instant enrollment cash receipt acknowledgement for a given <see cref="InstantEnrollmentCashReceiptAcknowledgementRequest"/>
+        /// </summary>
+        /// <param name="cashReceiptRequest">An <see cref="InstantEnrollmentCashReceiptAcknowledgementRequest">InstantEnrollmentCashReceiptAcknowledgementRequest</see>containing the information needed to retrieve instant enrollment cash receipt acknowledgement.</param>
+        /// <returns>Instant enrollment cash receipt acknowledgement</returns>
+        public async Task<InstantEnrollmentCashReceiptAcknowledgement> GetInstantEnrollmentCashReceiptAcknowledgementAsync(InstantEnrollmentCashReceiptAcknowledgementRequest cashReceiptRequest)
+        {
+            if (cashReceiptRequest == null)
+            {
+                var nullRequestMsg = "An instant enrollment cash receipt acknowledgement request is required to get instant enrollment cash receipt acknowledgement.";
+                throw new ArgumentNullException("cashReceiptRequest", nullRequestMsg);
+            }
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianInstantEnrollmentFormatVersion1);
+                string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _instantEnrollmentPath, _cashReceiptAcknowledgementPath);
+                var response = await ExecutePostRequestWithResponseAsync(cashReceiptRequest, urlPath, headers: headers);
+                var registrationResult = JsonConvert.DeserializeObject<InstantEnrollmentCashReceiptAcknowledgement>(await response.Content.ReadAsStringAsync());
+                return registrationResult;
+            }
+            catch (Exception ex)
+            {
+                string exceptionMsg = "An error occurred while attempting to retrieve an instant enrollment cash receipt acknowledgement";
+                if (!string.IsNullOrEmpty(cashReceiptRequest.TransactionId))
+                {
+                    exceptionMsg += string.Format(" for e-commerce transaction id {0}", cashReceiptRequest.TransactionId);
+                }
+                if (!string.IsNullOrEmpty(cashReceiptRequest.CashReceiptId))
+                {
+                    exceptionMsg += string.Format(" for cash receipt id {0}", cashReceiptRequest.CashReceiptId);
+                }
+                logger.Error(ex, exceptionMsg);
+                throw new ApplicationException(exceptionMsg);
+            }
+        }
+
+        /// <summary>
+        /// Get a student's programs async.
+        /// </summary>
+        /// <returns>Returns the set of student's programs</returns>
+        /// <param name="id">The ID of the student whose programs are being requested</param>
+        /// <param name="currentOnly">Boolean that indicates whether to get only current programs, or current and past programs</param>
+        /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<StudentProgram2>> GetInstantEnrollmentStudentPrograms2Async(string id, bool currentOnly = true)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "ID cannot be empty/null for IEnumerable<StudentProgram2> retrieval.");
+            }
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianInstantEnrollmentFormatVersion1);
+                string query = UrlUtility.BuildEncodedQueryString(new[] { "currentOnly", currentOnly.ToString() });
+                string urlPath = UrlUtility.CombineUrlPath(_studentsPath, id, "programs");
+                urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, query);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<StudentProgram2>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get IEnumerable<StudentProgram2>");
                 throw;
             }
         }
@@ -10998,11 +11342,13 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(reminders, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
                 return resource;
-            } catch (ResourceNotFoundException ex)
+            }
+            catch (ResourceNotFoundException ex)
             {
                 logger.Error(ex, "Unable to clear case reminders.");
                 throw;
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 logger.Error(ex, "Unable to clear case reminder dates.");
                 throw;
@@ -11272,11 +11618,13 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(sendEmailPreference, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<RetentionAlertSendEmailPreference>(await response.Content.ReadAsStringAsync());
                 return resource;
-            } catch (ResourceNotFoundException ex)
+            }
+            catch (ResourceNotFoundException ex)
             {
                 logger.Error(ex, "Unable to set retention alert case worker email preference.");
                 throw;
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 logger.Error(ex, "Unable to set retention alert case worker email preference.");
                 throw;
@@ -11316,6 +11664,144 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
+
+        /// <summary>
+        /// Query persons matching the criteria using the ELF duplicate checking criteria configured for Instant Enrollment.
+        /// </summary>
+        /// <param name="criteria">The <see cref="Dtos.Base.PersonMatchCriteriaInstantEnrollment">criteria</see> to query by.</param>
+        /// <returns>Result of a person biographic/demographic matching inquiry for Instant Enrollment</returns>
+        public async Task<InstantEnrollmentPersonMatchResult> QueryPersonMatchInstantEnrollmentResultsByPostAsync(PersonMatchCriteriaInstantEnrollment criteria)
+        {
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _personsPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianInstantEnrollmentFormatVersion1);
+                // Do not log the request body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
+                var response = await ExecutePostRequestWithResponseAsync<PersonMatchCriteriaInstantEnrollment>(criteria, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<InstantEnrollmentPersonMatchResult>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to retrieve instant enrollment person-matching results.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get student transfer equivalency work for a student
+        /// </summary>
+        /// <param name="studentId">Student ID</param>
+        /// <returns>Returns a list of transfer equivalencies for a student.</returns>
+        public async Task<IEnumerable<TransferEquivalencies>> GetStudentTransferWorkAsync(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "studentId cannot be null or empty.");
+            }
+
+            try
+            {
+                string[] pathStrings = new string[] { _studentsPath, studentId, _studentTransferWorkPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<TransferEquivalencies>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to retrieve transfer and non course equivalency work for student");
+                throw;
+            }
+        }
+
+        #region OBSOLETE TAX INFORMATION METHODS
+
+        // These two methos have been moved to the BASE client.
+
+        /// <summary>
+        /// Get a 1098-T tax form PDF
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the 1098-T.</param>
+        /// <param name="recordId">The record ID where the 1098-T pdf data is stored</param>
+        /// <returns>Byte array containing PDF data</returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use Get1098tTaxFormPdf2Async in the BASE client instead.")]
+        public async Task<byte[]> Get1098tTaxFormPdf(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
+
+            try
+            {
+                // Build url path and create and execute a request to get the tax form pdf
+                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxForm1098tPdfPath, recordId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                headers.Add(AcceptHeaderKey, "application/pdf");
+                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
+                headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = response.Content.ReadAsByteArrayAsync().Result;
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve 1098-T tax form pdf.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a T2202A tax form PDF
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the T2202A.</param>
+        /// <param name="recordId">The record ID where the T2202A pdf data is stored</param>
+        /// <returns>Byte array containing PDF data</returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use GetT2202aTaxFormPdf2Async in the BASE client instead.")]
+        public async Task<byte[]> GetT2202aTaxFormPdf(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
+
+            try
+            {
+                // Build url path and create and execute a request to get the tax form pdf
+                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxFormT2202aPdfPath, recordId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                headers.Add(AcceptHeaderKey, "application/pdf");
+                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
+                headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = response.Content.ReadAsByteArrayAsync().Result;
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve T2202A tax form pdf.");
+                throw;
+            }
+        }
+
+        #endregion
     }
 }
 

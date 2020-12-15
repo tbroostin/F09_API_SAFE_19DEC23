@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
@@ -77,6 +77,11 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// List of purchase orders associated to this requisition
         /// </summary>
         public List<PurchaseOrderLinkSummary> PurchaseOrders { get; set; }
-        
+
+        /// <summary>
+        /// List of Approvers associated to this requisition
+        /// </summary>
+        public List<Approver> Approvers { get; set; }
+
     }
 }

@@ -25,6 +25,12 @@ namespace Ellucian.Web.Http.Filters
         public string[] ValidQueryParameters = new string[] { "offset", "limit", "sort" };
 
         /// <summary>
+        /// List of valid named query parameters (legacy)
+        /// </summary>
+        public string[] NamedQueries = null;
+
+
+        /// <summary>
         /// Prevent query string validation from occuring
         /// </summary>
         public bool IgnoreFilterValidation { get; set; }
@@ -47,12 +53,13 @@ namespace Ellucian.Web.Http.Filters
         /// <summary>
         /// Constructor 
         /// </summary>
-        public ValidateQueryStringFilter(string[] filterGroupNames, bool ignoreFilterValidation = false, bool allowMultipleQueries = false)
+        public ValidateQueryStringFilter(string[] filterGroupNames, bool ignoreFilterValidation = false, bool allowMultipleQueries = false, string[] namedQueries = null)
         {
             IgnoreFilterValidation = ignoreFilterValidation;
             AllowMultipleQueries = allowMultipleQueries;
             ValidQueryParameters =
                 filterGroupNames.Union(ValidQueryParameters).ToArray();
+            NamedQueries = namedQueries;
         }
 
         /// <summary>

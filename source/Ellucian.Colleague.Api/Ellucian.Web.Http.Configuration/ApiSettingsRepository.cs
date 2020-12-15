@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -189,6 +189,12 @@ namespace Ellucian.Web.Http.Configuration
             if (long.TryParse(WebConfigurationManager.AppSettings["AttachRequestMaxSize"], out maxAttachRequestSize))
             {
                 apiSettings.AttachRequestMaxSize = maxAttachRequestSize;
+            }
+
+            bool detailedHealthCheckApiEnabled = false;
+            if (bool.TryParse(WebConfigurationManager.AppSettings["DetailedHealthCheckApiEnabled"], out detailedHealthCheckApiEnabled))
+            {
+                apiSettings.DetailedHealthCheckApiEnabled = detailedHealthCheckApiEnabled;
             }
 
             return apiSettings;

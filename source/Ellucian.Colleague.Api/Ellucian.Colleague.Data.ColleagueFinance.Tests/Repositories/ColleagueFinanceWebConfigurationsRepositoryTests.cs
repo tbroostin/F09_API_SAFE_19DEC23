@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
@@ -31,11 +31,22 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             colleagueFinanceWebConfigurationsRepository = BuildMockColleagueFinanceWebConfigurationsRepository();
             this.cfWebDefaultsDataContract = new CfwebDefaults();
             this.cfWebDefaultsDataContract.CfwebEmailType = "PRI";
+            this.cfWebDefaultsDataContract.CfwebApType = "AP";
             this.cfWebDefaultsDataContract.CfwebReqGlRequired = "Y";
             this.cfWebDefaultsDataContract.CfwebReqAllowMiscVendor = "Y";
             this.cfWebDefaultsDataContract.CfwebReqDesiredDays = 7;
+            this.cfWebDefaultsDataContract.CfwebPoGlRequired = "Y";
+            this.cfWebDefaultsDataContract.CfwebPoAllowMiscVendor = "Y";
+            this.cfWebDefaultsDataContract.CfwebCkrApprovalFlag = "Y";
+            this.cfWebDefaultsDataContract.CfwebCkrAllowMiscVendor = "Y";
+            this.cfWebDefaultsDataContract.CfwebCkrApType = "AP2";
+            this.cfWebDefaultsDataContract.CfwebCkrGlRequired= "Y";
+            this.cfWebDefaultsDataContract.CfwebCkrReqInvoiceNo = "N";
+            this.cfWebDefaultsDataContract.CfwebTaxCodes = new List<string> { "GS", "PS", "FL1" };
             this.purDefaultsDataContract = new PurDefaults();
             this.purDefaultsDataContract.PurShipToCode = "MC";
+            this.purDefaultsDataContract.PurReqApprovalNeededFlag = "N";
+            this.purDefaultsDataContract.PurPoApprovalNeededFlag = "A";
         }
 
 
@@ -62,6 +73,25 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(cfWebDefaultsActual.Result.DefaultEmailType, string.Empty);
             Assert.AreEqual(cfWebDefaultsExpected.Result.DefaultEmailType, cfWebDefaultsActual.Result.DefaultEmailType);
         }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_ValidDefaultAPTypeCode()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsNotNull(cfWebDefaultsActual.Result.DefaultAPTypeCode);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.DefaultAPTypeCode, cfWebDefaultsActual.Result.DefaultAPTypeCode);
+        }
+        public void GetColleagueFinanceWebConfigurations_InvalidDefaultAPTypeCode()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.DefaultAPTypeCode = "";
+            cfWebDefaultsDataContract.CfwebApType = "";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.AreEqual(cfWebDefaultsActual.Result.DefaultAPTypeCode, string.Empty);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.DefaultAPTypeCode, cfWebDefaultsActual.Result.DefaultEmailType);
+        }
+
         [TestMethod]
         public void GetColleagueFinanceWebConfigurations_ValidDefaultShipToCode()
         {
@@ -162,6 +192,204 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.IsNull(cfWebDefaultsActual.Result.CfWebReqDesiredDays);
             Assert.AreEqual(cfWebDefaultsExpected.Result.CfWebReqDesiredDays, cfWebDefaultsActual.Result.CfWebReqDesiredDays);
         }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_ValidCfwebPoGlRequired()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsNotNull(cfWebDefaultsActual.Result.CfWebPoGlRequired);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.CfWebPoGlRequired, cfWebDefaultsActual.Result.CfWebPoGlRequired);
+        }
+
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_ValidCfwebPoGlRequired_No()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.CfWebPoGlRequired = false;
+            cfWebDefaultsDataContract.CfwebPoGlRequired = "N";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsNotNull(cfWebDefaultsActual.Result.CfWebPoGlRequired);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.CfWebPoGlRequired, cfWebDefaultsActual.Result.CfWebPoGlRequired);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_InvalidCfwebPoGlRequired()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.CfWebPoGlRequired = false;
+            cfWebDefaultsDataContract.CfwebPoGlRequired = "";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsFalse(cfWebDefaultsActual.Result.CfWebPoGlRequired);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.CfWebPoGlRequired, cfWebDefaultsActual.Result.CfWebPoGlRequired);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_ValidCfwebPoAllowMiscVendor()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsNotNull(cfWebDefaultsActual.Result.CfWebPoAllowMiscVendor);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.CfWebPoAllowMiscVendor, cfWebDefaultsActual.Result.CfWebPoAllowMiscVendor);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_ValidCfwebPoAllowMiscVendor_No()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.CfWebPoAllowMiscVendor = false;
+            cfWebDefaultsDataContract.CfwebPoAllowMiscVendor = "N";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsNotNull(cfWebDefaultsActual.Result.CfWebPoAllowMiscVendor);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.CfWebPoAllowMiscVendor, cfWebDefaultsActual.Result.CfWebPoAllowMiscVendor);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_InvalidCfwebPoAllowMiscVendor()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.CfWebPoAllowMiscVendor = false;
+            cfWebDefaultsDataContract.CfwebPoAllowMiscVendor = "";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsFalse(cfWebDefaultsActual.Result.CfWebPoAllowMiscVendor);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.CfWebPoAllowMiscVendor, cfWebDefaultsActual.Result.CfWebPoAllowMiscVendor);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_ValidCfwebCkrGlRequired()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsNotNull(cfWebDefaultsActual.Result.RequestPaymentDefaults.GlRequiredForVoucher);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.RequestPaymentDefaults.GlRequiredForVoucher, cfWebDefaultsActual.Result.RequestPaymentDefaults.GlRequiredForVoucher);
+        }
+
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_ValidCfwebCkrGlRequired_No()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.RequestPaymentDefaults.GlRequiredForVoucher = false;
+            cfWebDefaultsDataContract.CfwebCkrGlRequired = "N";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsNotNull(cfWebDefaultsActual.Result.RequestPaymentDefaults.GlRequiredForVoucher);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.RequestPaymentDefaults.GlRequiredForVoucher, cfWebDefaultsActual.Result.RequestPaymentDefaults.GlRequiredForVoucher);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_InvalidCfwebCkrGlRequired()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.RequestPaymentDefaults.GlRequiredForVoucher = false;
+            cfWebDefaultsDataContract.CfwebCkrGlRequired = "";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsFalse(cfWebDefaultsActual.Result.RequestPaymentDefaults.GlRequiredForVoucher);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.RequestPaymentDefaults.GlRequiredForVoucher, cfWebDefaultsActual.Result.RequestPaymentDefaults.GlRequiredForVoucher);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_ValidCfwebCkrAllowMiscVendor()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsNotNull(cfWebDefaultsActual.Result.RequestPaymentDefaults.AllowMiscVendor);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.RequestPaymentDefaults.AllowMiscVendor, cfWebDefaultsActual.Result.RequestPaymentDefaults.AllowMiscVendor);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_ValidCfwebCkrAllowMiscVendor_No()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.RequestPaymentDefaults.AllowMiscVendor = false;
+            cfWebDefaultsDataContract.CfwebCkrAllowMiscVendor = "N";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsNotNull(cfWebDefaultsActual.Result.RequestPaymentDefaults.AllowMiscVendor);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.RequestPaymentDefaults.AllowMiscVendor, cfWebDefaultsActual.Result.RequestPaymentDefaults.AllowMiscVendor);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_InvalidCfwebCkrAllowMiscVendor()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.RequestPaymentDefaults.AllowMiscVendor = false;
+            cfWebDefaultsDataContract.CfwebCkrAllowMiscVendor = "";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsFalse(cfWebDefaultsActual.Result.RequestPaymentDefaults.AllowMiscVendor);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.RequestPaymentDefaults.AllowMiscVendor, cfWebDefaultsActual.Result.RequestPaymentDefaults.AllowMiscVendor);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_ValidVoucherDefaultAPTypeCode()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsNotNull(cfWebDefaultsActual.Result.RequestPaymentDefaults.DefaultAPTypeCode);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.RequestPaymentDefaults.DefaultAPTypeCode, cfWebDefaultsActual.Result.RequestPaymentDefaults.DefaultAPTypeCode);
+        }
+        public void GetColleagueFinanceWebConfigurations_InvalidVoucherDefaultAPTypeCode()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.RequestPaymentDefaults.DefaultAPTypeCode = "";
+            cfWebDefaultsDataContract.CfwebCkrApType = "";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.AreEqual(cfWebDefaultsActual.Result.RequestPaymentDefaults.DefaultAPTypeCode, string.Empty);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.RequestPaymentDefaults.DefaultAPTypeCode, cfWebDefaultsActual.Result.RequestPaymentDefaults.DefaultAPTypeCode);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_ValidRequisitionApprovalNeeded()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.AreEqual(cfWebDefaultsExpected.Result.PurchasingDefaults.IsRequisitionApprovalNeeded, cfWebDefaultsActual.Result.PurchasingDefaults.IsRequisitionApprovalNeeded);
+        }
+        public void GetColleagueFinanceWebConfigurations_InvalidRequisitionApprovalNeeded()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.PurchasingDefaults.IsRequisitionApprovalNeeded = false;
+            cfWebDefaultsDataContract.CfwebCkrApprovalFlag = "";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.AreEqual(cfWebDefaultsExpected.Result.PurchasingDefaults.IsRequisitionApprovalNeeded, cfWebDefaultsActual.Result.PurchasingDefaults.IsRequisitionApprovalNeeded);
+        }
+
+
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_ValidPoApprovalNeeded()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.AreEqual(cfWebDefaultsExpected.Result.PurchasingDefaults.IsPOApprovalNeeded, cfWebDefaultsActual.Result.PurchasingDefaults.IsPOApprovalNeeded);
+        }
+        public void GetColleagueFinanceWebConfigurations_InvalidPoApprovalNeeded()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.PurchasingDefaults.IsPOApprovalNeeded = false;
+            cfWebDefaultsDataContract.CfwebCkrApprovalFlag = "";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.AreEqual(cfWebDefaultsExpected.Result.PurchasingDefaults.IsPOApprovalNeeded, cfWebDefaultsActual.Result.PurchasingDefaults.IsPOApprovalNeeded);
+        }
+
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_ValidVoucherApprovalNeeded()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.AreEqual(cfWebDefaultsExpected.Result.RequestPaymentDefaults.IsVoucherApprovalNeeded, cfWebDefaultsActual.Result.RequestPaymentDefaults.IsVoucherApprovalNeeded);
+        }
+        public void GetColleagueFinanceWebConfigurations_InvalidVoucherApprovalNeeded()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.RequestPaymentDefaults.IsVoucherApprovalNeeded = false;
+            cfWebDefaultsDataContract.CfwebCkrApprovalFlag = "";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.AreEqual(cfWebDefaultsExpected.Result.RequestPaymentDefaults.IsVoucherApprovalNeeded, cfWebDefaultsActual.Result.RequestPaymentDefaults.IsVoucherApprovalNeeded);
+        }
+
+
+     
 
         private ColleagueFinanceWebConfigurationsRepository BuildMockColleagueFinanceWebConfigurationsRepository()
         {

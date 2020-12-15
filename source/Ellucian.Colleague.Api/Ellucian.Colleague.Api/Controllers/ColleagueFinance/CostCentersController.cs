@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -52,6 +52,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// The user can only access those cost centers for which they have
         /// GL account security access granted.
         /// </accessComments>
+        [Obsolete("Obsolete as of API verson 1.29; use the qapi/cost-centers endpoint")]
         public async Task<IEnumerable<CostCenter>> GetAsync(string fiscalYear)
         {
             try

@@ -1,4 +1,4 @@
-//Copyright 2019 Ellucian Company L.P. and its affiliates.
+//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -53,15 +53,20 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Return all personExternalEducationCredentials
         /// </summary>
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
-        /// <param name="personFilter">Person Filter filter options</param>
+        /// <param name="personFilter">Person filter options</param>
+        /// <param name="criteria">Standard filter options</param>
+        /// <param name="person">person GUID filter option</param>
         /// <returns>List of PersonExternalEducationCredentials <see cref="Dtos.PersonExternalEducationCredentials"/> objects representing matching personExternalEducationCredentials</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
+        [QueryStringFilterFilter("criteria", typeof(Ellucian.Colleague.Dtos.PersonExternalEducationCredentials))]
         [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter2))]
+        [QueryStringFilterFilter("person", typeof(Dtos.Filters.PersonGuidFilter))]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]   
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
-        public async Task<IHttpActionResult> GetPersonExternalEducationCredentialsAsync(Paging page, QueryStringFilter personFilter)
-                 {
+        public async Task<IHttpActionResult> GetPersonExternalEducationCredentialsAsync(Paging page, QueryStringFilter criteria,
+                QueryStringFilter personFilter, QueryStringFilter person)
+        {
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
             {
@@ -79,19 +84,33 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
                 string personFilterValue = string.Empty;
                 var personFilterObj = GetFilterObject<Dtos.Filters.PersonFilterFilter2>(_logger, "personFilter");
-                if (personFilterObj != null)
+                if ((personFilterObj != null) && (personFilterObj.personFilter != null))
                 {
-                    if (personFilterObj.personFilter != null)
+                    personFilterValue = personFilterObj.personFilter.Id;
+                    if (string.IsNullOrEmpty(personFilterValue))
                     {
-                        personFilterValue = personFilterObj.personFilter.Id;
-                        if (string.IsNullOrEmpty(personFilterValue))
-                        {
-                            return new PagedHttpActionResult<IEnumerable<Dtos.PersonExternalEducationCredentials>>(new List<Dtos.PersonExternalEducationCredentials>(), page, 0, this.Request);
-                        }
+                        return new PagedHttpActionResult<IEnumerable<Dtos.PersonExternalEducationCredentials>>(new List<Dtos.PersonExternalEducationCredentials>(), page, 0, this.Request);
+                    }
+                }
+            
+                string personGuid = string.Empty;
+                var personGuidFilterObj = GetFilterObject<Dtos.Filters.PersonGuidFilter>(_logger, "person");
+                if ((personGuidFilterObj != null) && (personGuidFilterObj.Person != null))
+                {
+                    personGuid = personGuidFilterObj.Person.Id;
+                    if (string.IsNullOrEmpty(personGuid))
+                    {
+                        return new PagedHttpActionResult<IEnumerable<Dtos.PersonExternalEducationCredentials>>(new List<Dtos.PersonExternalEducationCredentials>(), page, 0, this.Request);
                     }
                 }
 
-                var pageOfItems = await _personExternalEducationCredentialsService.GetPersonExternalEducationCredentialsAsync(page.Offset, page.Limit, personFilterValue, bypassCache);
+                var personExternalEducationFilter = GetFilterObject<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials>(_logger, "criteria");
+
+                if (CheckForEmptyFilterParameters())
+                    return new PagedHttpActionResult<IEnumerable<Dtos.PersonExternalEducationCredentials>>(new List<Dtos.PersonExternalEducationCredentials>(), page, 0, this.Request);
+
+                var pageOfItems = await _personExternalEducationCredentialsService.GetPersonExternalEducationCredentialsAsync(page.Offset, page.Limit, personFilterValue,
+                    personExternalEducationFilter, personGuid, bypassCache);
 
                 AddEthosContextProperties(
                   await _personExternalEducationCredentialsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),

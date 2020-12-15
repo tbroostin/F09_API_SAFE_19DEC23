@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -23,7 +23,7 @@ using Ellucian.Colleague.Domain.Base.Transactions;
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
     [TestClass]
-            public class SectionRegistrationRepositoryTests : BaseRepositorySetup
+    public class SectionRegistrationRepositoryTests : BaseRepositorySetup
     {
         protected void MainInitialize()
         {
@@ -785,7 +785,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
 
         [TestClass]
-        public class GetSectionRegistrationV1600Tests
+        public class GetSectionRegistrationV16Tests
         {
             SectionRegistrationRepository sectionRegistrationRepo;
             SectionRegistrationResponse sectReg;
@@ -1028,6 +1028,30 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
+            public async Task SectionRegistration_GetSectionRegistrations3Async_RegistrationStatusesByAcademicPeriod()
+            {
+                dataAccessorMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new[] { "1" });
+                dataAccessorMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new[] { "1" });
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentAcadCred>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<StudentAcadCred>() { studentAcadCred });
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentCourseSec>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<StudentCourseSec>() { studentCourseSec });
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<CourseSections>(It.IsAny<string[]>(), true)).ReturnsAsync(courseSections);
+
+                var results = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.StudentCourseSec>()
+                { BulkRecordsRead = new Collection<StudentCourseSec>() { studentCourseSec } };
+                dataAccessorMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.StudentCourseSec>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(results);
+
+                var results2 = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.StudentAcadCred>()
+                { BulkRecordsRead = new Collection<StudentAcadCred>() { studentAcadCred } };
+                dataAccessorMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.StudentAcadCred>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(results2);
+
+                var registrationStatusesByAcademicPeriod = new Tuple<string, List<string>>("0000043", new List<string>() { "X", "O"});
+                var response = await sectionRegistrationRepo.GetSectionRegistrations3Async(0, 1, null, null, null, registrationStatusesByAcademicPeriod);
+                Assert.IsNotNull(response);
+                Assert.AreEqual(1, response.Item2);
+            }
+
+
+            [TestMethod]
             public async Task SectionRegistration_GetSectionRegistrations3Async()
             {
                 dataAccessorMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new[] { "1" });
@@ -1035,6 +1059,16 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentAcadCred>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<StudentAcadCred>() { studentAcadCred });
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentCourseSec>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<StudentCourseSec>() { studentCourseSec });
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<CourseSections>(It.IsAny<string[]>(), true)).ReturnsAsync(courseSections);
+                
+                var results = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.StudentCourseSec>()
+                { BulkRecordsRead = new Collection<StudentCourseSec>() { studentCourseSec } };
+                dataAccessorMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.StudentCourseSec>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(results);
+
+                var results2 = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.StudentAcadCred>()
+                { BulkRecordsRead = new Collection<StudentAcadCred>() { studentAcadCred } };
+                dataAccessorMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.StudentAcadCred>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(results2);
+
+
 
                 var response = await sectionRegistrationRepo.GetSectionRegistrations3Async(0, 1, It.IsAny<SectionRegistrationResponse>(), It.IsAny<string>(), It.IsAny<string>());
                 Assert.IsNotNull(response);
@@ -1052,9 +1086,68 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 courseSections.ElementAt(0).SecLocation = "DiffLocation";
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<CourseSections>(It.IsAny<string[]>(), true)).ReturnsAsync(courseSections);
 
+                var results = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.StudentCourseSec>()
+                { BulkRecordsRead = new Collection<StudentCourseSec>() { studentCourseSec } };
+                dataAccessorMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.StudentCourseSec>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(results);
+
+                var results2 = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.StudentAcadCred>()
+                { BulkRecordsRead = new Collection<StudentAcadCred>() { studentAcadCred } };
+                dataAccessorMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.StudentAcadCred>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(results2);
+
+
                 var response = await sectionRegistrationRepo.GetSectionRegistrations3Async(0, 1, It.IsAny<SectionRegistrationResponse>(), It.IsAny<string>(), It.IsAny<string>());
                 Assert.IsNotNull(response);
                 Assert.AreEqual(1, response.Item2);
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task SectionRegistration_GetSectionRegistrations3Async_InvalidKeys()
+            {
+                dataAccessorMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new[] { "1" });
+                dataAccessorMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new[] { "1" });
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentAcadCred>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<StudentAcadCred>() { studentAcadCred });
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentCourseSec>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<StudentCourseSec>() { studentCourseSec });
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<CourseSections>(It.IsAny<string[]>(), true)).ReturnsAsync(courseSections);
+
+                var results = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.StudentCourseSec>()
+                { InvalidKeys = new string[] { "1" }, InvalidRecords = new Dictionary<string, string>() };
+                
+                var results2 = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.StudentAcadCred>()
+                { BulkRecordsRead = new Collection<StudentAcadCred>() { studentAcadCred } };
+                dataAccessorMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.StudentAcadCred>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(results2);
+
+
+                dataAccessorMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.StudentCourseSec>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(results);
+
+                await sectionRegistrationRepo.GetSectionRegistrations3Async(0, 1, It.IsAny<SectionRegistrationResponse>(), It.IsAny<string>(), It.IsAny<string>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task SectionRegistration_GetSectionRegistrations3Async_InvalidRecords()
+            {
+                dataAccessorMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new[] { "1" });
+                dataAccessorMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new[] { "1" });
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentAcadCred>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<StudentAcadCred>() { studentAcadCred });
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentCourseSec>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<StudentCourseSec>() { studentCourseSec });
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<CourseSections>(It.IsAny<string[]>(), true)).ReturnsAsync(courseSections);
+
+                var invalidRecords = new Dictionary<string, string>();
+                invalidRecords.Add("1", "invalid data");
+
+                var results = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.StudentCourseSec>()
+                { InvalidRecords = invalidRecords, InvalidKeys = new string[] { } };
+                dataAccessorMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.StudentCourseSec>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(results);
+               
+                var results2 = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.StudentAcadCred>()
+                { BulkRecordsRead = new Collection<StudentAcadCred>() { studentAcadCred } };
+                dataAccessorMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.StudentAcadCred>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(results2);
+
+
+                await sectionRegistrationRepo.GetSectionRegistrations3Async(0, 1, It.IsAny<SectionRegistrationResponse>(), It.IsAny<string>(), It.IsAny<string>());
+
             }
 
             [TestMethod]
@@ -1133,6 +1226,10 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager.Object);
                 transManager.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
                     .ReturnsAsync(resp);
+
+                var results = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.StudentCourseSec>() 
+                { BulkRecordsRead = new Collection<StudentCourseSec>() { studentCourseSec } };
+                dataAccessorMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.StudentCourseSec>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(results);
 
                 sectionRegistrationRepo = new SectionRegistrationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
                 return sectionRegistrationRepo;

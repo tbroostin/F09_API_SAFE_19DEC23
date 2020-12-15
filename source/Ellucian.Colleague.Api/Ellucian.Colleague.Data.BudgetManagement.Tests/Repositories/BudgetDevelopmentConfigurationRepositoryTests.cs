@@ -1,16 +1,14 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.BudgetManagement.DataContracts;
 using Ellucian.Colleague.Data.BudgetManagement.Repositories;
-using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.BudgetManagement.Entities;
 using Ellucian.Colleague.Domain.BudgetManagement.Tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.BudgetManagement.Tests.Repositories
@@ -23,7 +21,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Tests.Repositories
         private BudgetConfigurationRepository actualRepository;
         private TestBudgetDevelopmentConfigurationRepository testBuDevConfigRepository;
         private BudgetDevDefaults buDevConfigRecord;
-        private Budget budgetRecord;
+        private DataContracts.Budget budgetRecord;
         private BudgetConfiguration buDevConfigEntity;
         private List<BudgetConfigurationComparable> comparableList;
 
@@ -42,7 +40,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Tests.Repositories
             {
                 return Task.FromResult(this.testBuDevConfigRepository.BudgetDevDefaultsContract);
             });
-            dataReaderMock.Setup(dr => dr.ReadRecordAsync<Budget>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+            dataReaderMock.Setup(dr => dr.ReadRecordAsync<DataContracts.Budget>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
             {
                 return Task.FromResult(this.testBuDevConfigRepository.BudgetContract);
             });
@@ -290,9 +288,9 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Tests.Repositories
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task GetBudgetDevelopmentConfigurationAsync_NoBudgetRecord()
         {
-            dataReaderMock.Setup(dr => dr.ReadRecordAsync<Budget>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+            dataReaderMock.Setup(dr => dr.ReadRecordAsync<DataContracts.Budget>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
             {
-                return Task.FromResult(null as Budget);
+                return Task.FromResult(null as DataContracts.Budget);
             });
             buDevConfigEntity = await this.actualRepository.GetBudgetDevelopmentConfigurationAsync();
         }

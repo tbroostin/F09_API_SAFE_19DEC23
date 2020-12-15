@@ -1,8 +1,9 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Tests.Builders;
 using Ellucian.Data.Colleague;
@@ -28,6 +29,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         private CreateDocConsentHistoryResponse createDocConsentHistoryResponse = new CreateDocConsentHistoryResponse();
         private TaxFormConsentRepository taxFormConsentRepository;
         private TaxFormConsentBuilder builder;
+        private TaxFormConsentBuilder2 builder2;
         private Collection<DocConsentHistory> docConsentHistoryContracts;
         private Collection<W2ConsentHistory> w2ConsentHistoryContracts;
         private Collection<T4ConsentHistory> t4ConsentHistoryContracts;
@@ -41,6 +43,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             dataReaderMock = new Mock<IColleagueDataReader>();
             transactionInvoker = new Mock<IColleagueTransactionInvoker>();
             taxFormConsentRepository = BuildTaxFormConsentRepository();
+            this.builder2 = new TaxFormConsentBuilder2();
             this.builder = new TaxFormConsentBuilder();
             InitializeMockStatements();
         }
@@ -52,10 +55,241 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             dataReaderMock = null;
             transactionInvoker = null;
             taxFormConsentRepository = null;
+            this.builder2 = null;
             this.builder = null;
         }
         #endregion
 
+        #region Get2Async
+
+        [TestMethod]
+        public async Task Get2Async_W2()
+        {
+            var formToSelect = TaxFormTypes.FormW2;
+            var taxFormConsentEntities = await taxFormConsentRepository.Get2Async(personId, formToSelect);
+            foreach (var consentContract in w2ConsentHistoryContracts)
+            {
+                // For each consent history object in my input set, confirmat that 
+                // there is one and only matching consent history object in the output set
+                var expectedPersonId = consentContract.W2chHrperId;
+                var expectedTaxForm = formToSelect;
+                var expectedStatus = consentContract.W2chNewStatus == "C";
+                var expectedTimeStamp = ColleagueTimeZoneUtility.ToPointInTimeDateTimeOffset(consentContract.W2chStatusTime, consentContract.W2chStatusDate, apiSettings.ColleagueTimeZone).GetValueOrDefault();
+
+                var consentEntity = taxFormConsentEntities.FirstOrDefault(x =>
+                    x.PersonId == expectedPersonId
+                 && x.TaxForm == expectedTaxForm
+                 && x.HasConsented == expectedStatus
+                 && x.TimeStamp == expectedTimeStamp);
+
+                Assert.IsNotNull(consentEntity);
+            }
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1095C()
+        {
+            formInContext = "1095C";
+            var formToSelect = TaxFormTypes.Form1095C;
+            var taxFormConsentEntities = await taxFormConsentRepository.Get2Async(personId, formToSelect);
+
+            var form1095Contracts = docConsentHistoryContracts.Where(x => x.DchistDocument == formInContext).ToList();
+            Assert.AreEqual(form1095Contracts.Count(), taxFormConsentEntities.Count());
+            foreach (var consentContract in form1095Contracts)
+            {
+                // For each consent history object in my input set, confirmat that 
+                // there is one and only matching consent history object in the output set
+                var expectedPersonId = consentContract.DchistPersonId;
+                var expectedTaxForm = formToSelect;
+                var expectedStatus = consentContract.DchistStatus == "C";
+                var expectedTimeStamp = ColleagueTimeZoneUtility.ToPointInTimeDateTimeOffset(consentContract.DchistStatusTime, consentContract.DchistStatusDate, apiSettings.ColleagueTimeZone).GetValueOrDefault();
+
+                var consentEntity = taxFormConsentEntities.FirstOrDefault(x =>
+                    x.PersonId == expectedPersonId
+                    && x.TaxForm == expectedTaxForm
+                    && x.HasConsented == expectedStatus
+                    && x.TimeStamp == expectedTimeStamp);
+
+                Assert.IsNotNull(consentEntity);
+            }
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1098()
+        {
+            formInContext = "1098";
+            var formToSelect = TaxFormTypes.Form1098;
+            var taxFormConsentEntities = await taxFormConsentRepository.Get2Async(personId, formToSelect);
+
+            var form1098Contracts = docConsentHistoryContracts.Where(x => x.DchistDocument == formInContext).ToList();
+            Assert.AreEqual(form1098Contracts.Count(), taxFormConsentEntities.Count());
+            foreach (var consentContract in form1098Contracts)
+            {
+                // For each consent history object in my input set, confirmat that 
+                // there is one and only matching consent history object in the output set
+                var expectedPersonId = consentContract.DchistPersonId;
+                var expectedTaxForm = formToSelect;
+                var expectedStatus = consentContract.DchistStatus == "C";
+                var expectedTimeStamp = ColleagueTimeZoneUtility.ToPointInTimeDateTimeOffset(consentContract.DchistStatusTime, consentContract.DchistStatusDate, apiSettings.ColleagueTimeZone).GetValueOrDefault();
+
+                var consentEntity = taxFormConsentEntities.FirstOrDefault(x =>
+                    x.PersonId == expectedPersonId
+                    && x.TaxForm == expectedTaxForm
+                    && x.HasConsented == expectedStatus
+                    && x.TimeStamp == expectedTimeStamp);
+
+                Assert.IsNotNull(consentEntity);
+            }
+        }
+
+        [TestMethod]
+        public async Task Get2Async_T4()
+        {
+            var formToSelect = TaxFormTypes.FormT4;
+            var taxFormConsentEntities = await taxFormConsentRepository.Get2Async(personId, formToSelect);
+            Assert.AreEqual(t4ConsentHistoryContracts.Count(), taxFormConsentEntities.Count());
+
+            foreach (var consentContract in t4ConsentHistoryContracts)
+            {
+                // For each consent history object in my input set, confirmat that 
+                // there is one and only matching consent history object in the output set
+                var expectedPersonId = consentContract.T4chHrperId;
+                var expectedTaxForm = formToSelect;
+                var expectedStatus = consentContract.T4chNewStatus == "C";
+                var expectedTimeStamp = ColleagueTimeZoneUtility.ToPointInTimeDateTimeOffset(consentContract.T4chStatusTime, consentContract.T4chStatusDate, apiSettings.ColleagueTimeZone).GetValueOrDefault();
+
+                var consentEntity = taxFormConsentEntities.FirstOrDefault(x =>
+                    x.PersonId == expectedPersonId
+                    && x.TaxForm == expectedTaxForm
+                    && x.HasConsented == expectedStatus
+                    && x.TimeStamp == expectedTimeStamp);
+
+                Assert.IsNotNull(consentEntity);
+            }
+        }
+
+        [TestMethod]
+        public async Task Get2Async_T4A()
+        {
+            var formToSelect = TaxFormTypes.FormT4A;
+            var taxFormConsentEntities = await taxFormConsentRepository.Get2Async(personId, formToSelect);
+            Assert.AreEqual(t4aConsentHistoryContracts.Count(), taxFormConsentEntities.Count());
+
+            foreach (var consentContract in t4aConsentHistoryContracts)
+            {
+                // For each consent history object in my input set, confirmat that 
+                // there is one and only matching consent history object in the output set
+                var expectedPersonId = consentContract.T4achHrperId;
+                var expectedTaxForm = formToSelect;
+                var expectedStatus = consentContract.T4achNewStatus == "C";
+                var expectedTimeStamp = ColleagueTimeZoneUtility.ToPointInTimeDateTimeOffset(consentContract.T4achStatusTime, consentContract.T4achStatusDate, apiSettings.ColleagueTimeZone).GetValueOrDefault();
+
+                var consentEntity = taxFormConsentEntities.FirstOrDefault(x =>
+                    x.PersonId == expectedPersonId
+                    && x.TaxForm == expectedTaxForm
+                    && x.HasConsented == expectedStatus
+                    && x.TimeStamp == expectedTimeStamp);
+
+                Assert.IsNotNull(consentEntity);
+            }
+        }
+
+        [TestMethod]
+        public async Task Get2Async_T2202A()
+        {
+            formInContext = "T2202A";
+            var formToSelect = TaxFormTypes.FormT2202A;
+            var taxFormConsentEntities = await taxFormConsentRepository.Get2Async(personId, formToSelect);
+
+            var form1098Contracts = docConsentHistoryContracts.Where(x => x.DchistDocument == formInContext).ToList();
+            Assert.AreEqual(form1098Contracts.Count(), taxFormConsentEntities.Count());
+            foreach (var consentContract in docConsentHistoryContracts)
+            {
+                // For each consent history object in my input set, confirmat that 
+                // there is one and only matching consent history object in the output set
+                var expectedPersonId = consentContract.DchistPersonId;
+                var expectedTaxForm = formToSelect;
+                var expectedStatus = consentContract.DchistStatus == "C";
+                var expectedTimeStamp = ColleagueTimeZoneUtility.ToPointInTimeDateTimeOffset(consentContract.DchistStatusTime, consentContract.DchistStatusDate, apiSettings.ColleagueTimeZone).GetValueOrDefault();
+
+                var consentEntity = taxFormConsentEntities.FirstOrDefault(x =>
+                    x.PersonId == expectedPersonId
+                    && x.TaxForm == expectedTaxForm
+                    && x.HasConsented == expectedStatus
+                    && x.TimeStamp == expectedTimeStamp);
+
+                Assert.IsNotNull(consentEntity);
+            }
+        }
+
+        [TestMethod]
+        public async Task Get2Async_1099MI()
+        {
+            formInContext = "1099MI";
+            var formToSelect = TaxFormTypes.Form1099MI;
+            var taxFormConsentEntities = await taxFormConsentRepository.Get2Async(personId, formToSelect);
+
+            var form1099MiContracts = docConsentHistoryContracts.Where(x => x.DchistDocument == formInContext).ToList();
+            Assert.AreEqual(form1099MiContracts.Count(), taxFormConsentEntities.Count());
+            foreach (var consentContract in docConsentHistoryContracts)
+            {
+                // For each consent history object in my input set, confirmat that 
+                // there is one and only matching consent history object in the output set
+                var expectedPersonId = consentContract.DchistPersonId;
+                var expectedTaxForm = formToSelect;
+                var expectedStatus = consentContract.DchistStatus == "C";
+                var expectedTimeStamp = ColleagueTimeZoneUtility.ToPointInTimeDateTimeOffset(consentContract.DchistStatusTime, consentContract.DchistStatusDate, apiSettings.ColleagueTimeZone).GetValueOrDefault();
+
+                var consentEntity = taxFormConsentEntities.FirstOrDefault(x =>
+                    x.PersonId == expectedPersonId
+                    && x.TaxForm == expectedTaxForm
+                    && x.HasConsented == expectedStatus
+                    && x.TimeStamp == expectedTimeStamp);
+
+                Assert.IsNotNull(consentEntity);
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task Get2Async_NullPersonIdfor1099Mi()
+        {
+            await taxFormConsentRepository.Get2Async(null, TaxFormTypes.Form1099MI);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task Get2Async_EmptyPersonIdfor1099Mi()
+        {
+            await taxFormConsentRepository.Get2Async(string.Empty, TaxFormTypes.Form1099MI);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task Get2Async_NullPersonId()
+        {
+            await taxFormConsentRepository.Get2Async(null, TaxFormTypes.FormW2);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task Get2Async_EmptyPersonId()
+        {
+            await taxFormConsentRepository.Get2Async(string.Empty, TaxFormTypes.FormW2);
+        }
+
+        [TestMethod]
+        public async Task Get2Async_NullDateTimeOffset()
+        {
+            this.w2ConsentHistoryContracts[0].W2chStatusDate = null;
+            this.w2ConsentHistoryContracts[0].W2chStatusTime = null;
+            var consentEntities = await taxFormConsentRepository.Get2Async("0003946", TaxFormTypes.FormW2);
+
+            // All contracts - except one - should be processed and returned as domain entities.
+            Assert.AreEqual(this.w2ConsentHistoryContracts.Count - 1, consentEntities.Count());
+        }
+
+        #endregion
         #region Tests for GetAsync
         [TestMethod]
         public async Task GetAsync_W2()
@@ -285,6 +519,104 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         }
         #endregion
 
+        #region Tests for Post2Async
+
+        [TestMethod]
+        public async Task Post2Async_W2_HasConsented()
+        {
+            var incomingConsent = this.builder2.WithTaxForm2(TaxFormTypes.FormW2).WithHasConsented2(true).Build2();
+            var returnedConsent = await taxFormConsentRepository.Post2Async(incomingConsent);
+
+            Assert.AreEqual(incomingConsent.HasConsented, returnedConsent.HasConsented);
+            Assert.AreEqual(incomingConsent.PersonId, returnedConsent.PersonId);
+            Assert.AreEqual(incomingConsent.TaxForm, returnedConsent.TaxForm);
+            Assert.AreEqual(incomingConsent.TimeStamp, returnedConsent.TimeStamp);
+        }
+
+        [TestMethod]
+        public async Task Post2Async_W2_HasWithheldConsented()
+        {
+            var incomingConsent = this.builder2.WithTaxForm2(TaxFormTypes.FormW2).WithHasConsented2(false).Build2();
+            var returnedConsent = await taxFormConsentRepository.Post2Async(incomingConsent);
+
+            Assert.AreEqual(incomingConsent.HasConsented, returnedConsent.HasConsented);
+            Assert.AreEqual(incomingConsent.PersonId, returnedConsent.PersonId);
+            Assert.AreEqual(incomingConsent.TaxForm, returnedConsent.TaxForm);
+            Assert.AreEqual(incomingConsent.TimeStamp, returnedConsent.TimeStamp);
+        }
+
+        [TestMethod]
+        public async Task Post2Async_1095C()
+        {
+            var incomingConsent = this.builder2.WithTaxForm2(TaxFormTypes.Form1095C).Build2();
+            var returnedConsent = await taxFormConsentRepository.Post2Async(incomingConsent);
+
+            Assert.AreEqual(incomingConsent.HasConsented, returnedConsent.HasConsented);
+            Assert.AreEqual(incomingConsent.PersonId, returnedConsent.PersonId);
+            Assert.AreEqual(incomingConsent.TaxForm, returnedConsent.TaxForm);
+            Assert.AreEqual(incomingConsent.TimeStamp, returnedConsent.TimeStamp);
+        }
+
+        [TestMethod]
+        public async Task Post2Async_1098()
+        {
+            var incomingConsent = this.builder2.WithTaxForm2(TaxFormTypes.Form1098).Build2();
+            var returnedConsent = await taxFormConsentRepository.Post2Async(incomingConsent);
+
+            Assert.AreEqual(incomingConsent.HasConsented, returnedConsent.HasConsented);
+            Assert.AreEqual(incomingConsent.PersonId, returnedConsent.PersonId);
+            Assert.AreEqual(incomingConsent.TaxForm, returnedConsent.TaxForm);
+            Assert.AreEqual(incomingConsent.TimeStamp, returnedConsent.TimeStamp);
+        }
+
+        [TestMethod]
+        public async Task Post2Async_T4()
+        {
+            var incomingConsent = this.builder2.WithTaxForm2(TaxFormTypes.FormT4).Build2();
+            var returnedConsent = await taxFormConsentRepository.Post2Async(incomingConsent);
+
+            Assert.AreEqual(incomingConsent.HasConsented, returnedConsent.HasConsented);
+            Assert.AreEqual(incomingConsent.PersonId, returnedConsent.PersonId);
+            Assert.AreEqual(incomingConsent.TaxForm, returnedConsent.TaxForm);
+            Assert.AreEqual(incomingConsent.TimeStamp, returnedConsent.TimeStamp);
+        }
+
+        [TestMethod]
+        public async Task Post2Async_T4A()
+        {
+            var incomingConsent = this.builder2.WithTaxForm2(TaxFormTypes.FormT4A).Build2();
+            var returnedConsent = await taxFormConsentRepository.Post2Async(incomingConsent);
+
+            Assert.AreEqual(incomingConsent.HasConsented, returnedConsent.HasConsented);
+            Assert.AreEqual(incomingConsent.PersonId, returnedConsent.PersonId);
+            Assert.AreEqual(incomingConsent.TaxForm, returnedConsent.TaxForm);
+            Assert.AreEqual(incomingConsent.TimeStamp, returnedConsent.TimeStamp);
+        }
+
+        [TestMethod]
+        public async Task Post2Async_T2202A()
+        {
+            var incomingConsent = this.builder2.WithTaxForm2(TaxFormTypes.FormT2202A).Build2();
+            var returnedConsent = await taxFormConsentRepository.Post2Async(incomingConsent);
+
+            Assert.AreEqual(incomingConsent.HasConsented, returnedConsent.HasConsented);
+            Assert.AreEqual(incomingConsent.PersonId, returnedConsent.PersonId);
+            Assert.AreEqual(incomingConsent.TaxForm, returnedConsent.TaxForm);
+            Assert.AreEqual(incomingConsent.TimeStamp, returnedConsent.TimeStamp);
+        }
+
+        [TestMethod]
+        public async Task Post2Async_1099MI()
+        {
+            var incomingConsent = this.builder2.WithTaxForm2(TaxFormTypes.Form1099MI).Build2();
+            var returnedConsent = await taxFormConsentRepository.Post2Async(incomingConsent);
+
+            Assert.AreEqual(incomingConsent.HasConsented, returnedConsent.HasConsented);
+            Assert.AreEqual(incomingConsent.PersonId, returnedConsent.PersonId);
+            Assert.AreEqual(incomingConsent.TaxForm, returnedConsent.TaxForm);
+            Assert.AreEqual(incomingConsent.TimeStamp, returnedConsent.TimeStamp);
+        }
+        #endregion
         #region Tests for PostAsync
         [TestMethod]
         public async Task PostAsync_W2_HasConsented()

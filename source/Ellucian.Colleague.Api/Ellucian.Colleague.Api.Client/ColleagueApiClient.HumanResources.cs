@@ -520,23 +520,38 @@ namespace Ellucian.Colleague.Api.Client
         /// </summary>
         /// <example>SelfService getting person-Statuses on behalf of an employee will return that employee's PersonStatuses</example>
         /// <example>SelfService getting person-Statuses on behalf of a supervisor will return that supervisor's PersonStatuses and all the PersonStatuses of the supervisors reports</example>
+        /// <param name="effectivePersonId">person id requesting this info</param>
+        /// <param name="lookupStartDate">lookup start date, all records with end date before this date will not be retrieved</param>
         /// <returns></returns>
-        public async Task<IEnumerable<PersonEmploymentStatus>> GetPersonEmploymentStatusesAsync(string effectivePersonId = null)
+        public async Task<IEnumerable<PersonEmploymentStatus>> GetPersonEmploymentStatusesAsync(string effectivePersonId = null, DateTime? lookupStartDate = null)
         {
             try
             {
-                string urlPath;
-                if (effectivePersonId == null)
+                string urlPath = UrlUtility.CombineUrlPath(_personEmploymentStatusesPath);
+                string queryString = string.Empty;
+                if (!string.IsNullOrEmpty(effectivePersonId))
                 {
-                    urlPath = UrlUtility.CombineUrlPath(_personEmploymentStatusesPath);
+                    if (lookupStartDate.HasValue)
+                    {
+                        queryString = UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId, "lookupStartDate", lookupStartDate.Value.ToShortDateString());
+                    }
+                    else
+                    {
+                        queryString = UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId);
+                    }
                 }
                 else
                 {
-                    urlPath = _personEmploymentStatusesPath + "?" + UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId);
+                    if (lookupStartDate.HasValue)
+                    {
+                        queryString = UrlUtility.BuildEncodedQueryString("lookupStartDate", lookupStartDate.Value.ToShortDateString());
+                    }
                 }
+
+                var combinedUrl = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<PersonEmploymentStatus>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
@@ -553,23 +568,37 @@ namespace Ellucian.Colleague.Api.Client
         /// <example>SelfService getting person-positions on behalf of an employee will return that employee's PersonPositions</example>
         /// <example>SelfService getting person-positions on behalf of a supervisor will return that supervisor's PersonPositions and all the PersonPositions of the supervisors reports</example>
         /// <param name="effectivePersonId">Optional parameter for effective person Id</param>
+        /// <param name="lookupStartDate">lookup start date, all records with end date before this date will not be retrieved</param>
         /// <returns></returns>
-        public async Task<IEnumerable<PersonPosition>> GetPersonPositionsAsync(string effectivePersonId = null)
+        public async Task<IEnumerable<PersonPosition>> GetPersonPositionsAsync(string effectivePersonId = null, DateTime? lookupStartDate = null)
         {
             try
             {
-                string urlPath;
-                if (effectivePersonId == null)
-                {
-                    urlPath = UrlUtility.CombineUrlPath(_personPositionsPath);
+                string urlPath = UrlUtility.CombineUrlPath(_personPositionsPath);
+                string queryString = string.Empty;
+                if (!string.IsNullOrEmpty(effectivePersonId))
+                {                    
+                    if (lookupStartDate.HasValue)
+                    {
+                        queryString = UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId, "lookupStartDate", lookupStartDate.Value.ToShortDateString());
+                    }
+                    else
+                    {
+                        queryString = UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId);
+                    }
                 }
                 else
                 {
-                    urlPath = _personPositionsPath + "?" + UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId);
+                    if (lookupStartDate.HasValue)
+                    {
+                        queryString = UrlUtility.BuildEncodedQueryString("lookupStartDate", lookupStartDate.Value.ToShortDateString());
+                    }
                 }
+
+                var combinedUrl = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<PersonPosition>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
@@ -584,24 +613,39 @@ namespace Ellucian.Colleague.Api.Client
         /// Get PersonPosition data based on the permissions of the current user.
         /// </summary>
         /// <example>SelfService getting person-position-wages on behalf of an employee will return that employee's PersonPositionWages</example>
-        /// <example>SelfService getting person-position-wages on behalf of a supervisor will return that supervisor's PersonPositionWages and all the PersonPositionWages of the supervisors reports</example>      
+        /// <example>SelfService getting person-position-wages on behalf of a supervisor will return that supervisor's PersonPositionWages and all the PersonPositionWages of the supervisors reports</example>    
+        /// <param name="effectivePersonId">person id requesting this info</param>
+        /// <param name="lookupStartDate">lookup start date, all records with end date before this date will not be retrieved</param>
         /// <returns></returns>
-        public async Task<IEnumerable<PersonPositionWage>> GetPersonPositionWagesAsync(string effectivePersonId = null)
+        public async Task<IEnumerable<PersonPositionWage>> GetPersonPositionWagesAsync(string effectivePersonId = null, DateTime? lookupStartDate = null)
         {
             try
             {
-                string urlPath;
-                if (effectivePersonId == null)
+                string urlPath = UrlUtility.CombineUrlPath(_personPositionWagesPath);
+                string queryString = string.Empty;
+                if (!string.IsNullOrEmpty(effectivePersonId))
                 {
-                    urlPath = UrlUtility.CombineUrlPath(_personPositionWagesPath);
+                    if (lookupStartDate.HasValue)
+                    {
+                        queryString = UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId, "lookupStartDate", lookupStartDate.Value.ToShortDateString());
+                    }
+                    else
+                    {
+                        queryString = UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId);
+                    }
                 }
                 else
                 {
-                    urlPath = _personPositionWagesPath + "?" + UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId);
+                    if (lookupStartDate.HasValue)
+                    {
+                        queryString = UrlUtility.BuildEncodedQueryString("lookupStartDate", lookupStartDate.Value.ToShortDateString());
+                    }
                 }
+
+                var combinedUrl = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<PersonPositionWage>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
@@ -854,16 +898,24 @@ namespace Ellucian.Colleague.Api.Client
         /// <summary>
         /// Get PayCycle data
         /// </summary>
+        /// <param name="lookbackDate">A optional date which is used to filter previous pay periods with end dates prior to this date.</param>
         /// <returns></returns>
-        public async Task<IEnumerable<PayCycle>> GetPayCyclesAsync()
+        public async Task<IEnumerable<PayCycle>> GetPayCyclesAsync(DateTime? lookbackDate = null)
         {
             try
             {
                 // Build url path and create and execute a request to get all pay cycles
                 string urlPath = UrlUtility.CombineUrlPath(_payCyclesPath);
+                Dictionary<string, string> urlArgCollection = new Dictionary<string, string>();
+                if (lookbackDate.HasValue)
+                {
+                    urlArgCollection.Add("lookbackDate", lookbackDate.Value.ToShortDateString());
+                }
+
+                string urlPathWithArguments = UrlUtility.CombineEncodedUrlPathAndArguments(urlPath, urlArgCollection);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPathWithArguments, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<PayCycle>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
@@ -1232,6 +1284,50 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get the leave request information");
+                throw;
+            }
+        }
+
+
+        /// <summary>
+        /// Gets the Approved Leave Requests for a timecard week based on the date range.
+        /// </summary>
+        /// <param name="startDate">Start date of timecard </param>
+        /// <param name="endDate">End date of timecard</param>
+        /// <param name="effectivePersonId">Optional parameter for passing effective person Id</param>
+        /// <returns>List of LeaveRequest DTO</returns>
+        public async Task<IEnumerable<LeaveRequest>> GetLeaveRequestsForTimeEntryAsync(DateTime startDate, DateTime endDate, string effectivePersonId = null)
+        {
+            if (startDate == null)
+            {
+                throw new ArgumentNullException("startDate");
+            }
+
+            if (endDate == null)
+            {
+                throw new ArgumentNullException("endDate");
+            }
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_employeeLeaveRequestsForTimeEntry);
+
+                Dictionary<string, string> urlArgCollection = new Dictionary<string, string>();
+                urlArgCollection.Add("startDate", startDate.ToShortDateString());
+                urlArgCollection.Add("endDate", endDate.ToShortDateString());
+                if (!string.IsNullOrEmpty(effectivePersonId))
+                {
+                    urlArgCollection.Add("effectivePersonId", effectivePersonId);
+                }
+
+                string urlPathWithArguments = UrlUtility.CombineEncodedUrlPathAndArguments(urlPath, urlArgCollection);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPathWithArguments, headers: headers);
+                return JsonConvert.DeserializeObject<List<LeaveRequest>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get the approved leave request information for time entry");
                 throw;
             }
         }

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -39,8 +39,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// </summary>
         /// <param name="personId">ID of the person assigned to and requesting the 1098-T.</param>
         /// <param name="recordId">ID of the record containing the pdf data for a 1098-T tax form</param>
+        /// <param name="suppressNotification">Optional parameter to suppress PDf access email notifications</param>
         /// <returns>1098 T/E data for a pdf</returns>
-        public async Task<Form1098PdfData> Get1098PdfAsync(string personId, string recordId)
+        public async Task<Form1098PdfData> Get1098PdfAsync(string personId, string recordId, bool suppressNotification = false)
         {
             // Get student demographic information and box numbers.
             var pdfDataContract = await DataReader.ReadRecordAsync<TaxForm1098Forms>(recordId);
@@ -70,7 +71,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                 if (pdfDataContract.Tf98fTaxForm1098Boxes == null || !pdfDataContract.Tf98fTaxForm1098Boxes.Any())
                 {
-                    throw new ApplicationException("");
+                    throw new ApplicationException("There are no boxes on the 1098 tax form.");
                 }
                 var form1098BoxDataContracts = await DataReader.BulkReadRecordAsync<TaxForm1098Boxes>(pdfDataContract.Tf98fTaxForm1098Boxes.ToArray());
 
@@ -299,18 +300,38 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             entity.IsGradStudent = boxData.Tf98bValue.ToUpper() == "X";
                         }
                     }
+
+                    // Do not display 1098-T forms that do not have non-zero amounts for box 1, 4, 5, and 6,
+                    // and are for tax year 2019 and beyond.
+                    if (parm1098Contract.P1098TTaxForm == pdfDataContract.Tf98fTaxForm)
+                    {
+                        if (pdfDataContract.Tf98fTaxYear >= 2019)
+                        {
+                            if (!(entity.AmountsPaidForTuitionAndExpenses != null && entity.AmountsPaidForTuitionAndExpenses != "0.00") &&
+                                !(entity.AdjustmentsForPriorYear != null && entity.AdjustmentsForPriorYear != "0.00") &&
+                                !(entity.ScholarshipsOrGrants != null && entity.ScholarshipsOrGrants != "0.00") &&
+                                !(entity.AdjustmentsToScholarshipsOrGrantsForPriorYear != null && entity.AdjustmentsToScholarshipsOrGrantsForPriorYear != "0.00"))
+                            {
+                                throw new ApplicationException("1098-T tax form must have values for box 1, 4, 5, or 6.");
+                            }
+                        }
+                    }
                 }
 
                 // Call the PDF accessed CTX to trigger an email notification
-                TxNotifyStPdfAccessRequest request = new TxNotifyStPdfAccessRequest();
-                request.TaxFormPdfId = recordId;
-                request.PdfPersonId = entity.StudentId;
-                request.TaxForm = "1098";
-                var response = await transactionInvoker.ExecuteAsync<TxNotifyStPdfAccessRequest, TxNotifyStPdfAccessResponse>(request);
+                if (!suppressNotification)
+                {
+                    TxNotifyStPdfAccessRequest request = new TxNotifyStPdfAccessRequest();
+                    request.TaxFormPdfId = recordId;
+                    request.PdfPersonId = entity.StudentId;
+                    request.TaxForm = "1098";
+                    var response = await transactionInvoker.ExecuteAsync<TxNotifyStPdfAccessRequest, TxNotifyStPdfAccessResponse>(request);
+                }
                 return entity;
             }
             catch (Exception e)
             {
+                logger.Error(e, "Couldn't retrieve 1098 tax form data.");
                 return null;
             }
         }

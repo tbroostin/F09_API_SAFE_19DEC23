@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 namespace Ellucian.Colleague.Dtos.Base
 {
@@ -38,23 +38,23 @@ namespace Ellucian.Colleague.Dtos.Base
         FormT2202A,
 
         /// <summary>
-        /// This represents form 1098T.
+        /// This represents form 1098-T.
         /// </summary>
         Form1098T,
 
         /// <summary>
-        /// This represents form 1098E.
+        /// This represents form 1098-E.
         /// </summary>
         Form1098E,
 
         /// <summary>
-        /// This represents form 1099 Misc.
+        /// This represents form 1099-MISC.
         /// </summary>
         Form1099MI,
 
         /// <summary>
-        /// This represents form W2C.
+        /// This represents form W-2c.
         /// </summary>
-        FormW2C,
+        FormW2C
     }
 }

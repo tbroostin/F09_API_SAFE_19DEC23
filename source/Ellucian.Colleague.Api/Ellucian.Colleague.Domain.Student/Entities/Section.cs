@@ -278,6 +278,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// Indicates whether the section should show in the course catalog 
         /// </summary>
         public bool HideInCatalog { get { return _HideInCatalog; } }
+        /// <summary>
+        /// Subject of the section
+        /// </summary>
+        public string Subject { get; set; }
 
         #endregion
 

@@ -28,10 +28,15 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         Task<string> GetVendorIdFromGuidAsync(string id);
         Task<Vendors> GetVendorsAsync(string id);
         Task<IEnumerable<VendorSearchResult>> SearchByKeywordAsync(string searchCriteria, string apType);
-        Task<IEnumerable<VendorsVoucherSearchResult>> VendorSearchForVoucherAsync(string searchCriteria);
+        Task<IEnumerable<VendorsVoucherSearchResult>> VendorSearchForVoucherAsync(string searchCriteria, string apType);
         Task<VendorDefaultTaxFormInfo> GetVendorDefaultTaxFormInfoAsync(string vendorId, string apType);
 
         Task<Dictionary<string, string>> GetVendorGuidsCollectionAsync(IEnumerable<string> vendorIds);
+
+        Task<Vendors> GetVendorsMaximumByGuidAsync(string guid);
+
+        Task<Tuple<IEnumerable<Vendors>, int>> GetVendorsMaximumAsync(int offset, int limit, string vendorDetail = "",
+            List<string> statuses = null, List<string> types = null, string taxId = null, List<string> addresses = null);
 
     }
 }

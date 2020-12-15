@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -277,7 +277,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
                 catch (Exception ex)
                 {
-                    LogDataError("PROXY.CANDIDATES", pc.Recordkey, pc, ex);
+                    // Removed the logDataError which would spit out all the info for a candidate if data could not be retrieved.
+                    // LogDataError("PROXY.CANDIDATES", pc.Recordkey, pc, ex);
+                    logger.Error("Unable to retrieve information for proxy candidate " + pc.Recordkey + ". " + ex.Message);
                 }
             }
 
@@ -301,7 +303,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var data = await this.DataReader.BulkReadRecordAsync<Data.Base.DataContracts.ProxyAccess>("PROXY.ACCESS", string.Format("WITH PRAC.PRINCIPAL.WEB.USER = '{0}'", id));
             if (data == null || !data.Any())
             {
-                logger.Info("User " + id + " has not currently granted permissions for proxy access to any users for any workflows.");
+                logger.Error("User " + id + " has not currently granted permissions for proxy access to any users for any workflows.");
                 return proxyUsers;
             }
             permissions = BuildProxyPermissions(data);

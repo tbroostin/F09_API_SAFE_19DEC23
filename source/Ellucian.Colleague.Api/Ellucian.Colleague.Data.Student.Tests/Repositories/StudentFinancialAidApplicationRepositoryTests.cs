@@ -1,8 +1,10 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates
 
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
+using Ellucian.Colleague.Domain.Base.Transactions;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Ellucian.Web.Http.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -94,7 +96,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
 
-            [TestMethod]
+            [TestMethod]            
             public async Task StudentFinancialAidApplicationRepository_GetByIdAsync()
             {
                 var year = "2017";
@@ -198,35 +200,58 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual("2", actual.Id);
             }
 
-
             [TestMethod]
             public async Task StudentFinancialAidApplicationRepository_GetAsync_VerificationsTrue()
             {
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 2,
+                    CacheName = "AllFinancialAidApplicationsKeys:",
+                    Entity = "",
+                    Sublist = new List<string>() { "2" },
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 5905,
+                            KeyCacheMin = 1,
+                            KeyCachePart = "000",
+                            KeyCacheSize = 5905
+                        },
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 7625,
+                            KeyCacheMin = 5906,
+                            KeyCachePart = "001",
+                            KeyCacheSize = 1720
+                        }
+                    }
+                };
+                transManagerMock.Setup( mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>( It.IsAny<GetCacheApiKeysRequest>() ) )
+                    .ReturnsAsync( resp );
                 var year = "2017";
                 var studentId = "0002020";
                 string guid = "db2cb4bf-9531-4d38-8bcf-a96bc8628156";
-                GuidLookup[] lookup = new GuidLookup[] { new GuidLookup(guid) };
+                GuidLookup[] lookup = new GuidLookup[] { new GuidLookup( guid ) };
                 var lookUpResults = new Dictionary<string, GuidLookupResult>();
-                lookUpResults.Add("AR.INV.ITEMS.INTG", new GuidLookupResult() { Entity = "ISIR.FAFSA", PrimaryKey = "1", SecondaryKey = "Somekey" });
-                dataReaderMock.Setup(i => i.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(lookUpResults);
+                lookUpResults.Add( "AR.INV.ITEMS.INTG", new GuidLookupResult() { Entity = "ISIR.FAFSA", PrimaryKey = "1", SecondaryKey = "Somekey" } );
+                dataReaderMock.Setup( i => i.SelectAsync( It.IsAny<GuidLookup[]>() ) ).ReturnsAsync( lookUpResults );
 
                 // var fileSuiteYears = await DataReader.SelectAsync("FA.SUITES", null);
                 var fileSuiteYears = new string[] { year };
-                dataReaderMock.Setup(i => i.SelectAsync("FA.SUITES", null)).ReturnsAsync(fileSuiteYears);
+                dataReaderMock.Setup( i => i.SelectAsync( "FA.SUITES", null ) ).ReturnsAsync( fileSuiteYears );
 
-             
-                // var csAcyrIds = await DataReader.SelectAsync("CS." + year, "WITH CS.FED.ISIR.ID NE '' OR WITH CS.INST.ISIR.ID NE ''");
                 var csAcyrIds = new string[] { "2" };
-                dataReaderMock.Setup(i => i.SelectAsync("CS." + year, It.IsAny<string>())).ReturnsAsync(csAcyrIds);
+                dataReaderMock.Setup( i => i.SelectAsync( "CS." + year, It.IsAny<string>() ) ).ReturnsAsync( csAcyrIds );
 
-                //var records = await DataReader.BulkReadRecordAsync<CsAcyr>("CS." + year, subList.ToArray());
-                var csAcyr = new CsAcyr() { Recordkey = studentId, CsFedIsirId = "2", CsInstIsirId = "2", CsInstAdj = 25000};
+                var csAcyr = new CsAcyr() { Recordkey = studentId, CsFedIsirId = "2", CsInstIsirId = "2", CsInstAdj = 25000 };
                 var records = new Collection<CsAcyr>() { csAcyr };
-                dataReaderMock.Setup(i => i.BulkReadRecordAsync<CsAcyr>("CS." + year, It.IsAny<string[]>(), true)).ReturnsAsync(records);
+                dataReaderMock.Setup( i => i.BulkReadRecordAsync<CsAcyr>( "CS." + year, It.IsAny<string[]>(), true ) ).ReturnsAsync( records );
 
                 var validApplicationIds = new string[] { "2" };
-                dataReaderMock.Setup(i => i.SelectAsync("ISIR.FAFSA", It.IsAny<string[]>(), It.IsAny<string>() )).ReturnsAsync(validApplicationIds);
-                // var validApplicationIds = await DataReader.SelectAsync("ISIR.FAFSA", "WITH IFAF.STUDENT.ID NE '' AND WITH IFAF.IMPORT.YEAR NE ''");
+                dataReaderMock.Setup( i => i.SelectAsync( "ISIR.FAFSA", It.IsAny<string[]>(), It.IsAny<string>() ) ).ReturnsAsync( validApplicationIds );
 
                 var isirFafsa = new IsirFafsa()
                 {
@@ -257,8 +282,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 };
                 var isirFafsaCollection = new Collection<IsirFafsa>() { isirFafsa };
-                dataReaderMock.Setup(i => i.BulkReadRecordAsync<IsirFafsa>(It.IsAny<string[]>(), true)).ReturnsAsync(isirFafsaCollection);
-                // var bulkRecords = await DataReader.BulkReadRecordAsync<IsirFafsa>(applicationSubList);
+                dataReaderMock.Setup( i => i.BulkReadRecordAsync<IsirFafsa>( It.IsAny<string[]>(), true ) ).ReturnsAsync( isirFafsaCollection );
 
                 var isirCalcResults = new IsirCalcResults()
                 {
@@ -272,83 +296,95 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     IcresInstEfcOvrAmt = 50
                 };
                 var isirCalcResultCollection = new Collection<IsirCalcResults>() { isirCalcResults };
-                dataReaderMock.Setup(i => i.BulkReadRecordAsync<IsirCalcResults>(It.IsAny<string[]>(), true)).ReturnsAsync(isirCalcResultCollection);
-
-                // var bulkIsirCalcResultsRecords = await DataReader.BulkReadRecordAsync<IsirCalcResults>(effectiveApplicationSubList);
-
-                //var isirResults = new IsirResults() { Recordkey = "2" , IresSarCFlag  = "Y", IresCpsPellElig  = "Y", IresVerifFlag ="Y"};
-                //var isirResultsCollection = new Collection<IsirResults>() { isirResults };
-                //dataReaderMock.Setup(i => i.BulkReadRecordAsync<IsirResults>(It.IsAny<string[]>(), true)).ReturnsAsync(isirResultsCollection);
-
-                // var bulkIsirResultsRecords = await DataReader.BulkReadRecordAsync<IsirResults>(effectiveApplicationSubList);
+                dataReaderMock.Setup( i => i.BulkReadRecordAsync<IsirCalcResults>( It.IsAny<string[]>(), true ) ).ReturnsAsync( isirCalcResultCollection );
 
                 var isirProfile = new IsirProfile() { };
                 var isirProfileCollection = new Collection<IsirProfile>() { isirProfile };
-                dataReaderMock.Setup(i => i.BulkReadRecordAsync<IsirProfile>(It.IsAny<string[]>(), true)).ReturnsAsync(isirProfileCollection);
-                //var IsirProfileRecords = await DataReader.BulkReadRecordAsync<IsirProfile>(effectiveApplicationSubList);
+                dataReaderMock.Setup( i => i.BulkReadRecordAsync<IsirProfile>( It.IsAny<string[]>(), true ) ).ReturnsAsync( isirProfileCollection );
 
                 var faSystemParamsResponseData = new FaSysParams()
                 {
                     FspInstitutionName = "Datatel Community College FA"
                 };
-                dataReaderMock.Setup<FaSysParams>(acc => acc.ReadRecord<FaSysParams>("ST.PARMS", "FA.SYS.PARAMS", true)).Returns(faSystemParamsResponseData);
-                dataReaderMock.Setup(acc => acc.ReadRecordAsync<FaSysParams>("ST.PARMS", "FA.SYS.PARAMS", true)).ReturnsAsync(faSystemParamsResponseData);
+                dataReaderMock.Setup<FaSysParams>( acc => acc.ReadRecord<FaSysParams>( "ST.PARMS", "FA.SYS.PARAMS", true ) ).Returns( faSystemParamsResponseData );
+                dataReaderMock.Setup( acc => acc.ReadRecordAsync<FaSysParams>( "ST.PARMS", "FA.SYS.PARAMS", true ) ).ReturnsAsync( faSystemParamsResponseData );
 
 
                 var faSuiteYears = new List<string>() { year };
-                var tuple = await actualRepository.GetAsync(0, 1, false, It.IsAny<string>(), It.IsAny<string>(), faSuiteYears);
-                
-                Assert.IsNotNull(tuple);
+                var tuple = await actualRepository.GetAsync( 0, 1, false, "1", year, faSuiteYears, "institutional", "ISIR" );
+
+                Assert.IsNotNull( tuple );
                 var fafsa = tuple.Item1.ToList();
                 var count = tuple.Item2;
-                Assert.AreEqual(1, count);
+                Assert.AreEqual( 1, count );
 
                 var actual = fafsa.FirstOrDefault();
 
-                Assert.AreEqual(year, actual.AwardYear);
-                Assert.AreEqual(guid, actual.Guid);
-               
-                Assert.AreEqual("2", actual.CsFederalIsirId);
-                Assert.AreEqual("2", actual.FafsaPrimaryId);
-                Assert.AreEqual("PROF", actual.FafsaPrimaryType);
-         
-                Assert.AreEqual("2", actual.Id);
-         
- 
-                //Assert.AreEqual(true, actual.HasStudentAidReportC);
-                //Assert.AreEqual(true, actual.IsPellEligible);
-                //Assert.AreEqual(true, actual.HasVerificationSelection);
+                Assert.AreEqual( year, actual.AwardYear );
+                Assert.AreEqual( guid, actual.Guid );
 
+                Assert.AreEqual( "2", actual.CsFederalIsirId );
+                Assert.AreEqual( "2", actual.FafsaPrimaryId );
+                Assert.AreEqual( "PROF", actual.FafsaPrimaryType );
+
+                Assert.AreEqual( "2", actual.Id );
             }
 
             [TestMethod]
             public async Task StudentFinancialAidApplicationRepository_GetAsync_VerificationsFalse()
             {
-                //CollectionAssert.AreEqual(expectedProfileApplications, actualProfileApplications);
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 2,
+                    CacheName = "AllFinancialAidApplicationsKeys:",
+                    Entity = "",
+                    Sublist = new List<string>() { "2" },
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 5905,
+                            KeyCacheMin = 1,
+                            KeyCachePart = "000",
+                            KeyCacheSize = 5905
+                        },
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 7625,
+                            KeyCacheMin = 5906,
+                            KeyCachePart = "001",
+                            KeyCacheSize = 1720
+                        }
+                    }
+                };
+                transManagerMock.Setup( mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>( It.IsAny<GetCacheApiKeysRequest>() ) )
+                    .ReturnsAsync( resp );
                 var year = "2017";
                 var studentId = "0002020";
                 string guid = "db2cb4bf-9531-4d38-8bcf-a96bc8628156";
-                GuidLookup[] lookup = new GuidLookup[] { new GuidLookup(guid) };
+                GuidLookup[] lookup = new GuidLookup[] { new GuidLookup( guid ) };
                 var lookUpResults = new Dictionary<string, GuidLookupResult>();
-                lookUpResults.Add("AR.INV.ITEMS.INTG", new GuidLookupResult() { Entity = "ISIR.FAFSA", PrimaryKey = "1", SecondaryKey = "Somekey" });
-                dataReaderMock.Setup(i => i.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(lookUpResults);
+                lookUpResults.Add( "AR.INV.ITEMS.INTG", new GuidLookupResult() { Entity = "ISIR.FAFSA", PrimaryKey = "1", SecondaryKey = "Somekey" } );
+                dataReaderMock.Setup( i => i.SelectAsync( It.IsAny<GuidLookup[]>() ) ).ReturnsAsync( lookUpResults );
 
                 // var fileSuiteYears = await DataReader.SelectAsync("FA.SUITES", null);
                 var fileSuiteYears = new string[] { year };
-                dataReaderMock.Setup(i => i.SelectAsync("FA.SUITES", null)).ReturnsAsync(fileSuiteYears);
+                dataReaderMock.Setup( i => i.SelectAsync( "FA.SUITES", null ) ).ReturnsAsync( fileSuiteYears );
 
 
                 // var csAcyrIds = await DataReader.SelectAsync("CS." + year, "WITH CS.FED.ISIR.ID NE '' OR WITH CS.INST.ISIR.ID NE ''");
                 var csAcyrIds = new string[] { "2" };
-                dataReaderMock.Setup(i => i.SelectAsync("CS." + year, It.IsAny<string>())).ReturnsAsync(csAcyrIds);
+                dataReaderMock.Setup( i => i.SelectAsync( "CS." + year, It.IsAny<string>() ) ).ReturnsAsync( csAcyrIds );
 
                 //var records = await DataReader.BulkReadRecordAsync<CsAcyr>("CS." + year, subList.ToArray());
                 var csAcyr = new CsAcyr() { Recordkey = studentId, CsFedIsirId = "2", CsInstIsirId = "2", CsInstAdj = 25000 };
                 var records = new Collection<CsAcyr>() { csAcyr };
-                dataReaderMock.Setup(i => i.BulkReadRecordAsync<CsAcyr>("CS." + year, It.IsAny<string[]>(), true)).ReturnsAsync(records);
+                dataReaderMock.Setup( i => i.BulkReadRecordAsync<CsAcyr>( "CS." + year, It.IsAny<string[]>(), true ) ).ReturnsAsync( records );
 
                 var validApplicationIds = new string[] { "2" };
-                dataReaderMock.Setup(i => i.SelectAsync("ISIR.FAFSA", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(validApplicationIds);
+                dataReaderMock.Setup( i => i.SelectAsync( "ISIR.FAFSA", It.IsAny<string[]>(), It.IsAny<string>() ) ).ReturnsAsync( validApplicationIds );
                 // var validApplicationIds = await DataReader.SelectAsync("ISIR.FAFSA", "WITH IFAF.STUDENT.ID NE '' AND WITH IFAF.IMPORT.YEAR NE ''");
 
                 var isirFafsa = new IsirFafsa()
@@ -380,7 +416,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 };
                 var isirFafsaCollection = new Collection<IsirFafsa>() { isirFafsa };
-                dataReaderMock.Setup(i => i.BulkReadRecordAsync<IsirFafsa>(It.IsAny<string[]>(), true)).ReturnsAsync(isirFafsaCollection);
+                dataReaderMock.Setup( i => i.BulkReadRecordAsync<IsirFafsa>( It.IsAny<string[]>(), true ) ).ReturnsAsync( isirFafsaCollection );
                 // var bulkRecords = await DataReader.BulkReadRecordAsync<IsirFafsa>(applicationSubList);
 
                 var isirCalcResults = new IsirCalcResults()
@@ -395,58 +431,48 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     IcresInstEfcOvrAmt = 50
                 };
                 var isirCalcResultCollection = new Collection<IsirCalcResults>() { isirCalcResults };
-                dataReaderMock.Setup(i => i.BulkReadRecordAsync<IsirCalcResults>(It.IsAny<string[]>(), true)).ReturnsAsync(isirCalcResultCollection);
-
-                // var bulkIsirCalcResultsRecords = await DataReader.BulkReadRecordAsync<IsirCalcResults>(effectiveApplicationSubList);
-
-                //var isirResults = new IsirResults() { Recordkey = "2", IresSarCFlag = "N", IresCpsPellElig = "N", IresVerifFlag = "N" };
-                //var isirResultsCollection = new Collection<IsirResults>() { isirResults };
-                //dataReaderMock.Setup(i => i.BulkReadRecordAsync<IsirResults>(It.IsAny<string[]>(), true)).ReturnsAsync(isirResultsCollection);
-
-                // var bulkIsirResultsRecords = await DataReader.BulkReadRecordAsync<IsirResults>(effectiveApplicationSubList);
+                dataReaderMock.Setup( i => i.BulkReadRecordAsync<IsirCalcResults>( It.IsAny<string[]>(), true ) ).ReturnsAsync( isirCalcResultCollection );
 
                 var isirProfile = new IsirProfile() { };
                 var isirProfileCollection = new Collection<IsirProfile>() { isirProfile };
-                dataReaderMock.Setup(i => i.BulkReadRecordAsync<IsirProfile>(It.IsAny<string[]>(), true)).ReturnsAsync(isirProfileCollection);
+                dataReaderMock.Setup( i => i.BulkReadRecordAsync<IsirProfile>( It.IsAny<string[]>(), true ) ).ReturnsAsync( isirProfileCollection );
                 //var IsirProfileRecords = await DataReader.BulkReadRecordAsync<IsirProfile>(effectiveApplicationSubList);
 
                 var faSystemParamsResponseData = new FaSysParams()
                 {
                     FspInstitutionName = "Datatel Community College FA"
                 };
-                dataReaderMock.Setup<FaSysParams>(acc => acc.ReadRecord<FaSysParams>("ST.PARMS", "FA.SYS.PARAMS", true)).Returns(faSystemParamsResponseData);
-                dataReaderMock.Setup(acc => acc.ReadRecordAsync<FaSysParams>("ST.PARMS", "FA.SYS.PARAMS", true)).ReturnsAsync(faSystemParamsResponseData);
-
+                dataReaderMock.Setup<FaSysParams>( acc => acc.ReadRecord<FaSysParams>( "ST.PARMS", "FA.SYS.PARAMS", true ) ).Returns( faSystemParamsResponseData );
+                dataReaderMock.Setup( acc => acc.ReadRecordAsync<FaSysParams>( "ST.PARMS", "FA.SYS.PARAMS", true ) ).ReturnsAsync( faSystemParamsResponseData );
 
                 var faSuiteYears = new List<string>() { year };
-                var tuple = await actualRepository.GetAsync(0, 1, false, It.IsAny<string>(), It.IsAny<string>(), faSuiteYears);
+                var tuple = await actualRepository.GetAsync( 0, 1, false, It.IsAny<string>(), "", faSuiteYears );
 
-                Assert.IsNotNull(tuple);
+                Assert.IsNotNull( tuple );
                 var fafsa = tuple.Item1.ToList();
                 var count = tuple.Item2;
-                Assert.AreEqual(1, count);
+                Assert.AreEqual( 1, count );
 
                 var actual = fafsa.FirstOrDefault();
 
-                Assert.AreEqual(year, actual.AwardYear);
-                Assert.AreEqual(guid, actual.Guid);
-                
-                Assert.AreEqual("2", actual.CsFederalIsirId);
-                Assert.AreEqual("2", actual.FafsaPrimaryId);
-                Assert.AreEqual("PROF", actual.FafsaPrimaryType);
-            
-                Assert.AreEqual("2", actual.Id);
-           
-               // Assert.AreEqual(false, actual.HasFinancialAidAAministratorAdjustment);
-                Assert.AreEqual(false, actual.HasStudentAidReportC);
-                Assert.AreEqual(false, actual.IsPellEligible);
-                Assert.AreEqual(false, actual.HasVerificationSelection);
+                Assert.AreEqual( year, actual.AwardYear );
+                Assert.AreEqual( guid, actual.Guid );
+
+                Assert.AreEqual( "2", actual.CsFederalIsirId );
+                Assert.AreEqual( "2", actual.FafsaPrimaryId );
+                Assert.AreEqual( "PROF", actual.FafsaPrimaryType );
+
+                Assert.AreEqual( "2", actual.Id );
+
+                // Assert.AreEqual(false, actual.HasFinancialAidAAministratorAdjustment);
+                Assert.AreEqual( false, actual.HasStudentAidReportC );
+                Assert.AreEqual( false, actual.IsPellEligible );
+                Assert.AreEqual( false, actual.HasVerificationSelection );
 
             }
 
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
             public async Task StudentFinancialAidApplicationRepository_GetAsync_InvalidIsirFafsa()
             {
                 //CollectionAssert.AreEqual(expectedProfileApplications, actualProfileApplications);
@@ -506,13 +532,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
 
                 var faSuiteYears = new List<string>() { year };
-                await actualRepository.GetAsync(0, 1, false, It.IsAny<string>(), It.IsAny<string>(), faSuiteYears);
-
+                var result = await actualRepository.GetAsync(0, 1, false, It.IsAny<string>(), It.IsAny<string>(), faSuiteYears);
+                Assert.IsNotNull( result );
+                Assert.AreEqual( 0, result.Item2 );
             }
 
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof( RepositoryException ) )]
             public async Task StudentFinancialAidApplicationRepository_GetAsync_InvalidYear()
             {
                 //CollectionAssert.AreEqual(expectedProfileApplications, actualProfileApplications);
@@ -601,19 +628,13 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 var faSuiteYears = new List<string>() { year };
                 var tuple = await actualRepository.GetAsync(0, 1, false, It.IsAny<string>(), It.IsAny<string>(), faSuiteYears);
-
-                Assert.IsNotNull(tuple);
-                var fafsa = tuple.Item1.ToList();
-                var count = tuple.Item2;
-                Assert.AreEqual(0, count);
-
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
             public async Task StudentFinancialAidApplicationRepository_GetAsync_FfaSuiteYearsNull()
             {
                 var tuple = await actualRepository.GetAsync(0, 1, false, It.IsAny<string>(), It.IsAny<string>(), null);
+                Assert.AreEqual( 0, tuple.Item2 );
             }
 
             private StudentFinancialAidApplicationRepository BuildRepository()

@@ -2274,39 +2274,24 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     records.Add(record);
 
                 }
-                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<Paycycle>("PAYCYCLE", It.IsAny<GuidLookup[]>(), It.IsAny<bool>())).ReturnsAsync(records);
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<Paycycle>("PAYCYCLE", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(records);
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<Paycycle>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(records);
 
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                  x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
                  .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
 
-
-                dataAccessorMock.Setup(acc => acc.SelectAsync("LDM.GUID", It.IsAny<string>())).ReturnsAsync(ldmGuidPaycyle.ToArray());
-
-                dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
-                {
-                    var result = new Dictionary<string, RecordKeyLookupResult>();
-                    foreach (var recordKeyLookup in recordKeyLookups)
-                    {
-                        var record = _allPayCycles.Where(e => e.Code == recordKeyLookup.PrimaryKey).FirstOrDefault();
-                        result.Add(record.Guid,
-                            new RecordKeyLookupResult() { Guid = record.Guid });
-                    }
-                    return Task.FromResult(result);
-                });
-
-                dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<GuidLookup[]>())).Returns<GuidLookup[]>(recordKeyLookups =>
-                {
-                    var result = new Dictionary<string, GuidLookupResult>();
-                    foreach (var recordKeyLookup in recordKeyLookups)
-                    {
-                        var record = _allPayCycles.Where(e => e.Guid == recordKeyLookup.Guid).FirstOrDefault();
-                        result.Add(record.Guid,
-                          new GuidLookupResult() { PrimaryKey = record.Code });
-                    }
-                    return Task.FromResult(result);
-                });
+                //dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
+                //{
+                //    var result = new Dictionary<string, RecordKeyLookupResult>();
+                //    foreach (var recordKeyLookup in recordKeyLookups)
+                //    {
+                //        var record = _allPayCycles.Where(e => e.Code == recordKeyLookup.PrimaryKey).FirstOrDefault();
+                //        result.Add(record.Guid,
+                //            new RecordKeyLookupResult() { Guid = record.Guid });
+                //    }
+                //    return Task.FromResult(result);
+                //});
 
                 return new HumanResourcesReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object,
                      loggerMock.Object);

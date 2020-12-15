@@ -17,7 +17,7 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
         /// <returns>Collection of financial aid funds</returns>
-        Task<Tuple<IEnumerable<FinancialAidFund>, int>> GetFinancialAidFundsAsync(int offset, int limit, bool bypassCache);
+        Task<Tuple<IEnumerable<FinancialAidFund>, int>> GetFinancialAidFundsAsync(int offset, int limit, string code, string source, string aidType, List<string> classifications, string categoryId, bool bypassCache);
 
         Task<FinancialAidFund> GetFinancialAidFundByIdAsync(string id);
 

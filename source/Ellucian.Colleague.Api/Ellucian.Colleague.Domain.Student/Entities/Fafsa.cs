@@ -183,6 +183,14 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public bool HasIsirResults { get; set; }
         public bool HasIsirResultsOriginal { get; set; }
         public bool IsPellEligibleOriginal { get; set; }
+        public string FafsaMaritalStatus { get; set; }
+        public string ProfileMaritalStatus { get; set; }
+        public int? ApplicantFamilySize { get; set; }
+        public int? ParentFamilySize { get; set; }
+        public int? ApplicantNumberInCollege { get; set; }
+        public int? ParentNoInCollege { get; set; }
+        public string FatherEducationLevel { get; set; }
+        public string MotherEducationLevel { get; set; }
 
         /// <summary>
         /// Constructor for FinancialAidApplication object used for Ethos Data Model APIs.

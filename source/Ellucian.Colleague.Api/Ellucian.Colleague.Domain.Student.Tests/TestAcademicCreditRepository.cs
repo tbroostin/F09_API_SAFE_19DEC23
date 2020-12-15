@@ -23,8 +23,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         private IDictionary<string, AcademicCredit> acadcredsbyid = new Dictionary<string, AcademicCredit>();
 
         private string[,] credArray = {
-//acad  cred   course                                         gpa                  ----grade----   course   sec           cmpl  midterm grades         Grading  Sec   Ad   Ad gpa
-//      id     name         title                    status  cred   type  term     let  val  pts       id     id    CEUs   cred  MT1 MT2 MT3 MT4 MT5 MT6  Type  No    Cred Cred
+    //acad  cred   course                                         gpa                  ----grade----   course   sec           cmpl  midterm grades         Grading  Sec   Ad   Ad gpa
+    //      id     name         title                    status  cred   type  term     let  val  pts       id     id    CEUs   cred  MT1 MT2 MT3 MT4 MT5 MT6  Type  No    Cred Cred
         {"1","HIST-100","World History to WWII",        "N","3.00", "I","2009/SP", "A", "4", "12",   "139", "8001","0.00","3.00","A","B","C","A","B","C","G",   "001","",  ""},
         {"2","HIST-200","Intermediate History",         "N","3.00", "I","2009/SP", "B", "3",  "9",    "42", "8002","0.00","3.00","B","C","A","B","C","", "G",   "001","",  ""},
         {"3","BIOL-100","Molecular Biology",            "A","3.00", "C","2009/SP", "B", "3",  "9",   "110", "8003","0.00","3.00","C","A","B","A","", "", "G",   "001","",  ""}, // Status "Add" Type "Cont Ed"
@@ -141,6 +141,14 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         {"122","MATH-300BB","Calculus AP","D","3.00","I","2018/SP","",  "4", "12", "7435", "9002","0.00","3.00", "", "", "", "", "", "","G",   "001", "","3.00"}, //dropped no grade 2017/SP
         {"123","MATH-300BB","Calculus AP","N","3.00","I","2018/FA","A", "4", "12", "7435", "9002","0.00","3.00", "", "", "", "", "", "","G",   "001", "","3.00"}, //COMPLETED course for 2018/FA
         {"124","MATH-300BB","Calculus AP","N","3.00","I","2019/SP","",  "",  "0",  "7435", "9002","0.00","0.00", "", "", "", "", "", "","G",   "001", "","0.00"}, //INPROGRESS course for 2019/SP
+
+        //credits for in.list.order tests
+        {"130","FREN-100","fRENCH BASICS",             "N","3.00","I","2015/FA","",  "",  "0",  "7441", "9003","0.00","0.00", "", "", "", "", "", "","G",   "001", "","0.00"},
+        {"131","HIND-100","HINDI BASICS",              "N","3.00", "I","2015/FA","",  "",  "0",     "7443", "9004","0.00","0.00", "", "", "", "", "", "","UG",   "001", "",""},
+        {"129","POLI-100","POLI BASICS",               "N","3.00", "I","2015/FA","A",  "4",  "12",     "155", "9005","3.00","3.00", "", "", "", "", "", "","UG",   "001", "","3.00"},
+        {"128","HUMT-100","HUMANITY BASICS",           "N","3.00", "I","2015/FA","B",  "3",  "9",     "7445", "9006","3.00","3.00", "A", "B", "C", "", "", "","UG",   "001", "","3.00"},
+        {"127","CRIM-100","CRIM BASICS",               "N","3.00", "I","2015/FA","",  "",  "0",     "7446", "9007","0.00","0.00", "", "", "", "", "", "","UG",   "001", "",""},
+
         };
         public async Task<IEnumerable<AcademicCredit>> GetAsync(ICollection<string> ids, bool bestFit = false, bool filter = true, bool includeDrops = false)
         {
@@ -265,394 +273,401 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
         private async Task PopulateAsync()
         {
-            TestCourseRepository courserepo = new TestCourseRepository();
-            ICollection<Grade> gradelist = await new TestGradeRepository().GetAsync();
-            Dictionary<string, Course> courses = new Dictionary<string, Course>();
-            IEnumerable<Term> termlist = new TestTermRepository().Get();
-            Dictionary<string, Term> terms = new Dictionary<string, Term>();
-            IDictionary<string, CreditType> types = new Dictionary<string, CreditType>();
-            IDictionary<string, string> localTypes = new Dictionary<string, string>();
-            IDictionary<string, CreditStatus> statuses = new Dictionary<string, CreditStatus>();
-            IDictionary<string, GradingType> gradingTypes = new Dictionary<string, GradingType>();
-
-            types.Add("I", CreditType.Institutional);
-            types.Add("C", CreditType.ContinuingEducation);
-            types.Add("TR", CreditType.Transfer);
-            types.Add("O", CreditType.Other);
-
-            localTypes.Add("I", "IN");
-            localTypes.Add("C", "CE");
-            localTypes.Add("TR", "TRN");
-            localTypes.Add("O", "OTH");
-
-            statuses.Add("N", CreditStatus.New);
-            statuses.Add("A", CreditStatus.Add);
-            statuses.Add("D", CreditStatus.Dropped);
-            statuses.Add("W", CreditStatus.Withdrawn);
-            statuses.Add("X", CreditStatus.Deleted);
-            statuses.Add("C", CreditStatus.Cancelled);
-            statuses.Add("PR", CreditStatus.Preliminary);
-            statuses.Add("TR", CreditStatus.TransferOrNonCourse);
-            statuses.Add("NC", CreditStatus.TransferOrNonCourse);
-
-            gradingTypes.Add("G", GradingType.Graded);
-            gradingTypes.Add("P", GradingType.PassFail);
-            gradingTypes.Add("A", GradingType.Audit);
-
-            foreach (Course c in courserepo.GetAsync().Result)
+            try
             {
-                try
-                {
-                    courses.Add(c.Id, c);
-                }
-                catch
-                {
-                    // Tired of re-running this to figure out which one broke it.
-                    throw new Exception("Problem in TestCourseRepository.  Course " + c.Id.ToString() + " exists multiple times.");
-                }
-            }
+                TestCourseRepository courserepo = new TestCourseRepository();
+                ICollection<Grade> gradelist = await new TestGradeRepository().GetAsync();
+                Dictionary<string, Course> courses = new Dictionary<string, Course>();
+                IEnumerable<Term> termlist = new TestTermRepository().Get();
+                Dictionary<string, Term> terms = new Dictionary<string, Term>();
+                IDictionary<string, CreditType> types = new Dictionary<string, CreditType>();
+                IDictionary<string, string> localTypes = new Dictionary<string, string>();
+                IDictionary<string, CreditStatus> statuses = new Dictionary<string, CreditStatus>();
+                IDictionary<string, GradingType> gradingTypes = new Dictionary<string, GradingType>();
 
-            foreach (Term t in termlist) { terms.Add(t.Code, t); }
+                types.Add("I", CreditType.Institutional);
+                types.Add("C", CreditType.ContinuingEducation);
+                types.Add("TR", CreditType.Transfer);
+                types.Add("O", CreditType.Other);
 
-            int items = credArray.Length / 24;
+                localTypes.Add("I", "IN");
+                localTypes.Add("C", "CE");
+                localTypes.Add("TR", "TRN");
+                localTypes.Add("O", "OTH");
 
-            for (int x = 0; x < items; x++)
-            {
-                if (credArray[x, 0] == "108")
-                {
-                    int k = 0;
-                }
+                statuses.Add("N", CreditStatus.New);
+                statuses.Add("A", CreditStatus.Add);
+                statuses.Add("D", CreditStatus.Dropped);
+                statuses.Add("W", CreditStatus.Withdrawn);
+                statuses.Add("X", CreditStatus.Deleted);
+                statuses.Add("C", CreditStatus.Cancelled);
+                statuses.Add("PR", CreditStatus.Preliminary);
+                statuses.Add("TR", CreditStatus.TransferOrNonCourse);
+                statuses.Add("NC", CreditStatus.TransferOrNonCourse);
 
-                var courseId = credArray[x, 10];
-                Course c = null;
+                gradingTypes.Add("G", GradingType.Graded);
+                gradingTypes.Add("P", GradingType.PassFail);
+                gradingTypes.Add("A", GradingType.Audit);
 
-                try
-                {
-                    if (!string.IsNullOrEmpty(courseId))
-                    {
-                        c = courses[courseId];
-                    }
-                }
-                catch (Exception)
-                {
-                    throw new Exception("Could not find " + courseId + " in the courses dictionary");
-                }
-                //if (c.ToString() == "ENGL-101")
-                //{
-                //    Console.WriteLine();
-                //}
-
-                // Build the academic credit object
-                string acadcredid = credArray[x, 0];
-                string sectionid = credArray[x, 11];
-                AcademicCredit ac = null;
-                if (c != null)
-                {
-                    ac = new AcademicCredit(acadcredid, c, sectionid);
-                }
-                else
-                {
-                    ac = new AcademicCredit(acadcredid);
-                }
-
-                // These are all the same for now
-                try
-                {
-                    ac.Credit = decimal.Parse(credArray[x, 4]);
-                }
-                catch
-                {
-                    ac.Credit = 0m;
-                }
-                // For now only the Passing grade will have attempted = 0. The rest will match the credits.
-                ac.AttemptedCredit = credArray[x, 7] != "P" ? ac.Credit : 0;
-                try
-                {
-                    ac.CompletedCredit = decimal.Parse(credArray[x, 13]);
-                }
-                catch
-                {
-                    ac.CompletedCredit = null;
-                }
-                try
-                {
-                    ac.GpaCredit = decimal.Parse(credArray[x, 4]);
-                }
-                catch
-                {
-                    ac.GpaCredit = null;
-                }
-
-
-                ac.GradePoints = decimal.Parse(credArray[x, 9]);
-                try
-                {
-                    ac.AdjustedCredit = decimal.Parse(credArray[x, 22]);
-                }
-                catch
+                foreach (Course c in courserepo.GetAsync().Result)
                 {
                     try
                     {
-                        ac.AdjustedCredit = decimal.Parse(credArray[x, 4]);
+                        courses.Add(c.Id, c);
                     }
                     catch
                     {
-                        ac.AdjustedCredit = 0m;
+                        // Tired of re-running this to figure out which one broke it.
+                        throw new Exception("Problem in TestCourseRepository.  Course " + c.Id.ToString() + " exists multiple times.");
                     }
                 }
 
-                try
+                foreach (Term t in termlist) { terms.Add(t.Code, t); }
+
+                int items = credArray.Length / 24;
+
+                for (int x = 0; x < items; x++)
                 {
-                    ac.AdjustedGpaCredit = decimal.Parse(credArray[x, 23]);
-                }
-                catch
-                {
+                    if (credArray[x, 0] == "108")
+                    {
+                        int k = 0;
+                    }
+
+                    var courseId = credArray[x, 10];
+                    Course c = null;
+
                     try
                     {
-                        ac.AdjustedGpaCredit = decimal.Parse(credArray[x, 4]);
-                    }
-                    catch
-                    {
-                        ac.AdjustedGpaCredit = 0m;
-                    }
-                }
-
-                ac.AdjustedGradePoints = decimal.Parse(credArray[x, 9]);
-
-                ac.ContinuingEducationUnits = decimal.Parse(credArray[x, 12]);
-                if (c != null)
-                {
-                    ac.CourseName = c.ToString();
-                }
-                else
-                {
-                    ac.CourseName = "";
-                }
-
-                // Allow this one to be replaced, and flag one as replaced.
-                // Normally both flags default to false.
-                if (ac.CourseName == "MUSC*210")
-                {
-                    ac.CanBeReplaced = true;
-                    ac.RepeatAcademicCreditIds = new List<string> { "65", "66" };
-                    if (ac.Id == "65")
-                    {
-                        ac.ReplacedStatus = ReplacedStatus.Replaced;
-                    }
-                }
-
-                // This one can be replaced, replacement is in progress (but the academichistory class figures that out)
-                if (ac.CourseName == "MUSC*211")
-                {
-                    ac.CanBeReplaced = true;
-                    ac.RepeatAcademicCreditIds = new List<string> { "67", "68" };
-                }
-                // Also mark MATH-460 as a course that can be replaced.  In this case it won't be replaced because the only possibility is a credit that is incomplete and has been dropped.
-                if (ac.CourseName == "MATH*460")
-                    ac.CanBeReplaced = true;
-
-                if (credArray[x, 6] == "")
-                    ac.TermCode = null;
-                else ac.TermCode = terms[credArray[x, 6]].Code;
-
-                if (ac.TermCode == "2009/SP")
-                {
-                    ac.EndDate = new DateTime(2009, 5, 11);
-                    ac.StartDate = new DateTime(2009, 1, 20);
-                }
-                if (ac.TermCode == "2009/FA")
-                {
-                    ac.EndDate = new DateTime(2009, 12, 11);
-                    ac.StartDate = new DateTime(2009, 8, 20);
-                }
-                if (ac.TermCode == "2010/SP")
-                {
-                    ac.EndDate = new DateTime(2010, 5, 11);
-                    ac.StartDate = new DateTime(2010, 1, 20);
-                }
-
-                if (ac.Id == "61") // HU-1000 institutional, in progress credit
-                {
-                    // No term on this item, so give it a start date and leave end date null 
-                    ac.StartDate = new DateTime(2009, 10, 1);
-                }
-
-                if (ac.Id == "62") // MUSC-208 institutional, never graded, must have end date. (Logic above does not put dates on 2011/FA term items)
-                {
-                    ac.StartDate = new DateTime(2011, 8, 1);
-                    ac.EndDate = new DateTime(2011, 12, 15);
-                }
-
-                // to test the bestFit, map the start and end dates of the two credits with 
-                // null term codes into 2009/WI arbitrarily since credArray has no date info
-                if (credArray[x, 0] == "39" || credArray[x, 0] == "40")
-                {
-                    ac.StartDate = new DateTime(2008, 12, 29);
-                    ac.EndDate = new DateTime(2009, 1, 19);
-                }
-
-                // Because the department of the academic credit's course is no longer used on the academic credit, make some adjustments to the
-                // departments on some specific academic credits so that the tests continue to pass. There will continue to be some academic credits
-                // (such as COMM-200) that have a different department in the acad cred vs the department on the course.
-                switch (credArray[x, 0])
-                {
-                    case "1":
-                        ac.AddDepartment("POLI");               // HIST-100
-                        ac.AddDepartment("HIST");
-                        break;
-                    case "10":
-                        ac.AddDepartment("POLI");               // HIST-400
-                        ac.AddDepartment("HIST");
-                        break;
-                    case "15":
-                        ac.AddDepartment("MDLL");               // SPAN-100
-                        break;
-                    case "20":
-                        ac.AddDepartment("MDLL");               // SPAN-300
-                        break;
-                    case "21":
-                        ac.AddDepartment("PERF");               // DANC-100
-                        break;
-                    case "22":
-                        ac.AddDepartment("PERF");               // DANC-200
-                        break;
-                    default:
-                        if (ac.SubjectCode != null)
+                        if (!string.IsNullOrEmpty(courseId))
                         {
-                            ac.AddDepartment(ac.SubjectCode);       // All others will just have the subject code also be the department. 
+                            c = courses[courseId];
                         }
-                        break;
-                }
-                if (c != null)
-                {
-                    ac.CourseLevelCode = c.CourseLevelCodes.First();  // in real life this would come from the section, thence to the stc, not from the course directly.
-                    ac.AcademicLevelCode = c.AcademicLevelCode;           // ditto
-                    ac.SubjectCode = c.SubjectCode;
-                }
+                    }
+                    catch (Exception)
+                    {
+                        throw new Exception("Could not find " + courseId + " in the courses dictionary");
+                    }
+                    //if (c.ToString() == "ENGL-101")
+                    //{
+                    //    Console.WriteLine();
+                    //}
 
-                ac.SectionNumber = credArray[x, 21];
+                    // Build the academic credit object
+                    string acadcredid = credArray[x, 0];
+                    string sectionid = credArray[x, 11];
+                    AcademicCredit ac = null;
+                    if (c != null)
+                    {
+                        ac = new AcademicCredit(acadcredid, c, sectionid);
+                    }
+                    else
+                    {
+                        ac = new AcademicCredit(acadcredid);
+                    }
 
-                if (!string.IsNullOrEmpty(credArray[x, 7]))
-                {
-                    ac.VerifiedGrade = gradelist.First(gl => gl.Id == credArray[x, 7]);
-                    ac.GradeSchemeCode = ac.VerifiedGrade.GradeSchemeCode;  // duplicate domain objects here?
-                    ac.VerifiedGradeTimestamp = new DateTimeOffset(new DateTime(), new TimeSpan(0, 0, 0));
-                }
-                if (ac.Id == "36" || ac.Id == "37")
-                {
-                    // These are ungraded credits so they cannot get their grade scheme from their grade.
-                    // If grade scheme is not provided their sort order will be 2 not 4 (in progress).
-                    ac.GradeSchemeCode = "UG";
-                }
-
-                // add any midterm grades to the academic credit
-                if (!string.IsNullOrEmpty(credArray[x, 14])) { ac.AddMidTermGrade(new MidTermGrade(1, credArray[x, 14], new DateTime())); }
-                if (!string.IsNullOrEmpty(credArray[x, 15])) { ac.AddMidTermGrade(new MidTermGrade(2, credArray[x, 15], new DateTime())); }
-                if (!string.IsNullOrEmpty(credArray[x, 16])) { ac.AddMidTermGrade(new MidTermGrade(3, credArray[x, 16], new DateTime())); }
-                if (!string.IsNullOrEmpty(credArray[x, 17])) { ac.AddMidTermGrade(new MidTermGrade(4, credArray[x, 17], new DateTime())); }
-                if (!string.IsNullOrEmpty(credArray[x, 18])) { ac.AddMidTermGrade(new MidTermGrade(5, credArray[x, 18], new DateTime())); }
-                if (!string.IsNullOrEmpty(credArray[x, 19])) { ac.AddMidTermGrade(new MidTermGrade(6, credArray[x, 19], new DateTime())); }
-
-                var xxx = credArray[x, 5];
-                if (types.Keys.Contains(credArray[x, 5]))
-                {
-                    ac.Type = types[credArray[x, 5]];
-                }
-                else
-                {
-                    ac.Type = CreditType.Other;
-                }
-
-                if (localTypes.Keys.Contains(credArray[x, 5]))
-                {
-                    ac.LocalType = localTypes[credArray[x, 5]];
-                }
-                else
-                {
-                    ac.LocalType = "OTH";
-                }
-
-                // status 
-                if (statuses.Keys.Contains(credArray[x, 3]))
-                {
-
-                    ac.Status = statuses[credArray[x, 3]];
-                }
-                else
-                {
-                    ac.Status = CreditStatus.Unknown;
-                }
-                if (gradingTypes.Keys.Contains(credArray[x, 20]))
-                {
-                    ac.GradingType = gradingTypes[credArray[x, 20]];
-                }
-
-                //ac.Title = c.Title;
-                ac.StudentCourseSectionId = credArray[x, 0];
+                    // These are all the same for now
+                    try
+                    {
+                        ac.Credit = decimal.Parse(credArray[x, 4]);
+                    }
+                    catch
+                    {
+                        ac.Credit = 0m;
+                    }
+                    // For now only the Passing grade will have attempted = 0. The rest will match the credits.
+                    ac.AttemptedCredit = credArray[x, 7] != "P" ? ac.Credit : 0;
+                    try
+                    {
+                        ac.CompletedCredit = decimal.Parse(credArray[x, 13]);
+                    }
+                    catch
+                    {
+                        ac.CompletedCredit = null;
+                    }
+                    try
+                    {
+                        ac.GpaCredit = decimal.Parse(credArray[x, 4]);
+                    }
+                    catch
+                    {
+                        ac.GpaCredit = null;
+                    }
 
 
-                // The course name index is outdated and won't get you what you want
-                // in the case of courses that have multiple credits.  It's only
-                // there for backward compatibility for tests written a long time ago.
-                // Caveat emptor.
+                    ac.GradePoints = decimal.Parse(credArray[x, 9]);
+                    try
+                    {
+                        ac.AdjustedCredit = decimal.Parse(credArray[x, 22]);
+                    }
+                    catch
+                    {
+                        try
+                        {
+                            ac.AdjustedCredit = decimal.Parse(credArray[x, 4]);
+                        }
+                        catch
+                        {
+                            ac.AdjustedCredit = 0m;
+                        }
+                    }
 
-                if (!acadcreds.Keys.Contains(ac.CourseName))
-                {
-                    acadcreds.Add(ac.CourseName, ac);
+                    try
+                    {
+                        ac.AdjustedGpaCredit = decimal.Parse(credArray[x, 23]);
+                    }
+                    catch
+                    {
+                        try
+                        {
+                            ac.AdjustedGpaCredit = decimal.Parse(credArray[x, 4]);
+                        }
+                        catch
+                        {
+                            ac.AdjustedGpaCredit = 0m;
+                        }
+                    }
+
+                    ac.AdjustedGradePoints = decimal.Parse(credArray[x, 9]);
+
+                    ac.ContinuingEducationUnits = decimal.Parse(credArray[x, 12]);
+                    if (c != null)
+                    {
+                        ac.CourseName = c.ToString();
+                    }
+                    else
+                    {
+                        ac.CourseName = "";
+                    }
+
+                    // Allow this one to be replaced, and flag one as replaced.
+                    // Normally both flags default to false.
+                    if (ac.CourseName == "MUSC*210")
+                    {
+                        ac.CanBeReplaced = true;
+                        ac.RepeatAcademicCreditIds = new List<string> { "65", "66" };
+                        if (ac.Id == "65")
+                        {
+                            ac.ReplacedStatus = ReplacedStatus.Replaced;
+                        }
+                    }
+
+                    // This one can be replaced, replacement is in progress (but the academichistory class figures that out)
+                    if (ac.CourseName == "MUSC*211")
+                    {
+                        ac.CanBeReplaced = true;
+                        ac.RepeatAcademicCreditIds = new List<string> { "67", "68" };
+                    }
+                    // Also mark MATH-460 as a course that can be replaced.  In this case it won't be replaced because the only possibility is a credit that is incomplete and has been dropped.
+                    if (ac.CourseName == "MATH*460")
+                        ac.CanBeReplaced = true;
+
+                    if (credArray[x, 6] == "")
+                        ac.TermCode = null;
+                    else ac.TermCode = terms[credArray[x, 6]].Code;
+
+                    if (ac.TermCode == "2009/SP")
+                    {
+                        ac.EndDate = new DateTime(2009, 5, 11);
+                        ac.StartDate = new DateTime(2009, 1, 20);
+                    }
+                    if (ac.TermCode == "2009/FA")
+                    {
+                        ac.EndDate = new DateTime(2009, 12, 11);
+                        ac.StartDate = new DateTime(2009, 8, 20);
+                    }
+                    if (ac.TermCode == "2010/SP")
+                    {
+                        ac.EndDate = new DateTime(2010, 5, 11);
+                        ac.StartDate = new DateTime(2010, 1, 20);
+                    }
+
+                    if (ac.Id == "61") // HU-1000 institutional, in progress credit
+                    {
+                        // No term on this item, so give it a start date and leave end date null 
+                        ac.StartDate = new DateTime(2009, 10, 1);
+                    }
+
+                    if (ac.Id == "62") // MUSC-208 institutional, never graded, must have end date. (Logic above does not put dates on 2011/FA term items)
+                    {
+                        ac.StartDate = new DateTime(2011, 8, 1);
+                        ac.EndDate = new DateTime(2011, 12, 15);
+                    }
+
+                    // to test the bestFit, map the start and end dates of the two credits with 
+                    // null term codes into 2009/WI arbitrarily since credArray has no date info
+                    if (credArray[x, 0] == "39" || credArray[x, 0] == "40")
+                    {
+                        ac.StartDate = new DateTime(2008, 12, 29);
+                        ac.EndDate = new DateTime(2009, 1, 19);
+                    }
+
+                    // Because the department of the academic credit's course is no longer used on the academic credit, make some adjustments to the
+                    // departments on some specific academic credits so that the tests continue to pass. There will continue to be some academic credits
+                    // (such as COMM-200) that have a different department in the acad cred vs the department on the course.
+                    switch (credArray[x, 0])
+                    {
+                        case "1":
+                            ac.AddDepartment("POLI");               // HIST-100
+                            ac.AddDepartment("HIST");
+                            break;
+                        case "10":
+                            ac.AddDepartment("POLI");               // HIST-400
+                            ac.AddDepartment("HIST");
+                            break;
+                        case "15":
+                            ac.AddDepartment("MDLL");               // SPAN-100
+                            break;
+                        case "20":
+                            ac.AddDepartment("MDLL");               // SPAN-300
+                            break;
+                        case "21":
+                            ac.AddDepartment("PERF");               // DANC-100
+                            break;
+                        case "22":
+                            ac.AddDepartment("PERF");               // DANC-200
+                            break;
+                        default:
+                            if (ac.SubjectCode != null)
+                            {
+                                ac.AddDepartment(ac.SubjectCode);       // All others will just have the subject code also be the department. 
+                            }
+                            break;
+                    }
+                    if (c != null)
+                    {
+                        ac.CourseLevelCode = c.CourseLevelCodes.First();  // in real life this would come from the section, thence to the stc, not from the course directly.
+                        ac.AcademicLevelCode = c.AcademicLevelCode;           // ditto
+                        ac.SubjectCode = c.SubjectCode;
+                    }
+
+                    ac.SectionNumber = credArray[x, 21];
+
+                    if (!string.IsNullOrEmpty(credArray[x, 7]))
+                    {
+                        ac.VerifiedGrade = gradelist.First(gl => gl.Id == credArray[x, 7]);
+                        ac.GradeSchemeCode = ac.VerifiedGrade.GradeSchemeCode;  // duplicate domain objects here?
+                        ac.VerifiedGradeTimestamp = new DateTimeOffset(new DateTime(), new TimeSpan(0, 0, 0));
+                    }
+                    if (ac.Id == "36" || ac.Id == "37")
+                    {
+                        // These are ungraded credits so they cannot get their grade scheme from their grade.
+                        // If grade scheme is not provided their sort order will be 2 not 4 (in progress).
+                        ac.GradeSchemeCode = "UG";
+                    }
+
+                    // add any midterm grades to the academic credit
+                    if (!string.IsNullOrEmpty(credArray[x, 14])) { ac.AddMidTermGrade(new MidTermGrade(1, credArray[x, 14], new DateTime())); }
+                    if (!string.IsNullOrEmpty(credArray[x, 15])) { ac.AddMidTermGrade(new MidTermGrade(2, credArray[x, 15], new DateTime())); }
+                    if (!string.IsNullOrEmpty(credArray[x, 16])) { ac.AddMidTermGrade(new MidTermGrade(3, credArray[x, 16], new DateTime())); }
+                    if (!string.IsNullOrEmpty(credArray[x, 17])) { ac.AddMidTermGrade(new MidTermGrade(4, credArray[x, 17], new DateTime())); }
+                    if (!string.IsNullOrEmpty(credArray[x, 18])) { ac.AddMidTermGrade(new MidTermGrade(5, credArray[x, 18], new DateTime())); }
+                    if (!string.IsNullOrEmpty(credArray[x, 19])) { ac.AddMidTermGrade(new MidTermGrade(6, credArray[x, 19], new DateTime())); }
+
+                    var xxx = credArray[x, 5];
+                    if (types.Keys.Contains(credArray[x, 5]))
+                    {
+                        ac.Type = types[credArray[x, 5]];
+                    }
+                    else
+                    {
+                        ac.Type = CreditType.Other;
+                    }
+
+                    if (localTypes.Keys.Contains(credArray[x, 5]))
+                    {
+                        ac.LocalType = localTypes[credArray[x, 5]];
+                    }
+                    else
+                    {
+                        ac.LocalType = "OTH";
+                    }
+
+                    // status 
+                    if (statuses.Keys.Contains(credArray[x, 3]))
+                    {
+
+                        ac.Status = statuses[credArray[x, 3]];
+                    }
+                    else
+                    {
+                        ac.Status = CreditStatus.Unknown;
+                    }
+                    if (gradingTypes.Keys.Contains(credArray[x, 20]))
+                    {
+                        ac.GradingType = gradingTypes[credArray[x, 20]];
+                    }
+
+                    //ac.Title = c.Title;
+                    ac.StudentCourseSectionId = credArray[x, 0];
+
+
+                    // The course name index is outdated and won't get you what you want
+                    // in the case of courses that have multiple credits.  It's only
+                    // there for backward compatibility for tests written a long time ago.
+                    // Caveat emptor.
+
+                    if (!acadcreds.Keys.Contains(ac.CourseName))
+                    {
+                        acadcreds.Add(ac.CourseName, ac);
+                    }
+                    acadcredsbyid.Add(ac.Id, ac);
+
+                    // Set additional properties for rule adapter testing
+                    switch (credArray[x, 0])
+                    {
+                        case "99":
+                            ac.AcademicLevelCode = "UG";
+                            ac.StudentId = "0001234";
+                            ac.Mark = "ABCD";
+                            ac.FinalGradeId = "A";
+                            break;
+                        default:
+                            break;
+                    }
+
                 }
-                acadcredsbyid.Add(ac.Id, ac);
 
-                // Set additional properties for rule adapter testing
-                switch (credArray[x, 0])
-                {
-                    case "99":
-                        ac.AcademicLevelCode = "UG";
-                        ac.StudentId = "0001234";
-                        ac.Mark = "ABCD";
-                        ac.FinalGradeId = "A";
-                        break;
-                    default:
-                        break;
-                }
+                //Noncourses
 
+                //Reasonable ones
+                string noncourseacadcredid1 = "1001";
+                AcademicCredit nc = new AcademicCredit(noncourseacadcredid1);
+                nc.Status = CreditStatus.Preliminary;
+                // nc.Title = "Preliminary equivalent eval for placement test";
+                nc.Type = CreditType.Other;
+                nc.LocalType = localTypes["O"];
+                nc.AddDepartment("HIST");
+                nc.Credit = 2m;
+                acadcreds.Add("NONCOURSE1", nc);
+                acadcredsbyid.Add("1001", nc);
+
+                string noncourseacadcredid2 = "1002";
+                AcademicCredit nc2 = new AcademicCredit(noncourseacadcredid2);
+                nc2.Status = CreditStatus.TransferOrNonCourse;
+                nc2.Type = CreditType.Transfer;
+                nc2.LocalType = localTypes["TR"];
+                nc.AddDepartment("ENGL");
+                nc.Credit = 3m;
+                acadcreds.Add("NONCOURSE2", nc2);
+                acadcredsbyid.Add("1002", nc2);
+
+
+                // Strange statuses
+
+                //N    New                    N   1
+                //A    Add                    A   2
+                //D    Dropped                D   3
+                //W    Withdrawn              W   4
+                //X    Deleted                X   5
+                //C    Cancelled              C   6
+                //PR   Preliminary Equiv Eval PR  8
+                //TR   Transfer Equiv Eval    TR  7
+                //NC   Noncourse Equivalency  NC  7
             }
-
-            //Noncourses
-
-            //Reasonable ones
-            string noncourseacadcredid1 = "1001";
-            AcademicCredit nc = new AcademicCredit(noncourseacadcredid1);
-            nc.Status = CreditStatus.Preliminary;
-            // nc.Title = "Preliminary equivalent eval for placement test";
-            nc.Type = CreditType.Other;
-            nc.LocalType = localTypes["O"];
-            nc.AddDepartment("HIST");
-            nc.Credit = 2m;
-            acadcreds.Add("NONCOURSE1", nc);
-            acadcredsbyid.Add("1001", nc);
-
-            string noncourseacadcredid2 = "1002";
-            AcademicCredit nc2 = new AcademicCredit(noncourseacadcredid2);
-            nc2.Status = CreditStatus.TransferOrNonCourse;
-            nc2.Type = CreditType.Transfer;
-            nc2.LocalType = localTypes["TR"];
-            nc.AddDepartment("ENGL");
-            nc.Credit = 3m;
-            acadcreds.Add("NONCOURSE2", nc2);
-            acadcredsbyid.Add("1002", nc2);
-
-
-            // Strange statuses
-
-            //N    New                    N   1
-            //A    Add                    A   2
-            //D    Dropped                D   3
-            //W    Withdrawn              W   4
-            //X    Deleted                X   5
-            //C    Cancelled              C   6
-            //PR   Preliminary Equiv Eval PR  8
-            //TR   Transfer Equiv Eval    TR  7
-            //NC   Noncourse Equivalency  NC  7
+            catch(Exception ex)
+            {
+                throw ex;
+            }
 
         }
 

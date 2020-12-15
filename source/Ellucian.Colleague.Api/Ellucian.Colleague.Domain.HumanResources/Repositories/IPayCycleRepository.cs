@@ -1,4 +1,4 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2020 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +10,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
 {
     public interface IPayCycleRepository
     {
-        Task<IEnumerable<PayCycle>> GetPayCyclesAsync();
+        /// <summary>
+        /// Get all PayCycle objects, built from database data
+        /// </summary>
+        /// <param name="lookbackDate">A optional date which is used to filter previous pay periods with end dates prior to this date.</param>
+        /// <returns></returns>
+        Task<IEnumerable<PayCycle>> GetPayCyclesAsync(DateTime? lookbackDate = null);
     }
 }

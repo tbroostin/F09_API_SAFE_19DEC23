@@ -34,6 +34,12 @@ namespace Ellucian.Colleague.Dtos
         public GuidObject2 CommodityCode { get; set; }
 
         /// <summary>
+        /// The fixed asset designation associated with the line item.
+        /// </summary>
+        [JsonProperty("fixedAssetDesignation", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public GuidObject2 fixedAssetDesignation { get; set; }
+
+        /// <summary>
         /// The vendor part number for the line item.
         /// </summary>
         [JsonProperty("partNumber", DefaultValueHandling = DefaultValueHandling.Ignore)]

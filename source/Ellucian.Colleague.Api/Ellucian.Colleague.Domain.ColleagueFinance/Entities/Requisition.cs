@@ -25,6 +25,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         public string Number { get { return number; } }
 
         /// <summary>
+        /// The requistion type (procurement, eprocurement, etc.)
+        /// </summary>
+        public string Type { get; set; }
+
+        /// <summary>
         /// The requisition desired date
         /// </summary>
         public DateTime? DesiredDate { get; set; }
@@ -221,6 +226,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         public string VendorPreferredAddressId { get; set; }
         public string VendorAlternativeAddressId { get; set; }
         public bool UseAltAddress { get; set; }
+
+        /// <summary>
+        /// List of email addresses - confirmation email notifications would be sent to these email addresses on create / update .
+        /// </summary>
+        public List<string> ConfirmationEmailAddresses { get; set; }
 
         /// <summary>
         /// This constructor initializes the requisition domain entity

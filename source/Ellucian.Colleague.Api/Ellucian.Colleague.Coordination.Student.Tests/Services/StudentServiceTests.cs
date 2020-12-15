@@ -3506,7 +3506,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task StudentCohort_GetAllStudentCohorts()
             {
                 studentReferenceDataRepositoryMock.Setup(i => i.GetAllStudentCohortAsync(It.IsAny<bool>())).ReturnsAsync(studentCohortEntities);
-                var actuals = await studentService.GetAllStudentCohortsAsync(It.IsAny<bool>());
+                var actuals = await studentService.GetAllStudentCohortsAsync( It.IsAny<Dtos.Filters.CodeItemFilter>(), It.IsAny<bool>() );
 
                 Assert.IsNotNull(actuals);
 

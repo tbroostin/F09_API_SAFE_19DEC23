@@ -1,4 +1,5 @@
-﻿/*Copyright 2019 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2019-2020 Ellucian Company L.P. and its affiliates.*/
+using System;
 using System.Collections.Generic;
 
 namespace Ellucian.Colleague.Dtos.HumanResources
@@ -18,6 +19,12 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         /// by the provided EmployeeSupervisorId.
         /// </summary>
         public List<string> EmployeeIds { get; set; }
+
+        /// <summary>
+        /// The lookup start date, all records with end date before this date will not be retrieved.
+        /// If none specified, the endpoint will retrieve all available information
+        /// </summary>
+        public DateTime? LookupStartDate { get; set; }
 
     }
 }

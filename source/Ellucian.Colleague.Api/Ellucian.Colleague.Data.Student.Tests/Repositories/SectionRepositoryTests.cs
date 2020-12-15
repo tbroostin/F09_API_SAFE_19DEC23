@@ -10066,6 +10066,292 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
         }
 
+        [TestClass]
+        public class SectionRepository_GetInstantEnrollmentSectionsAsync:SectionRepositoryTests
+        {
+            SectionRepository sectionRepo;
+            Collection<RegUsers> regUsersCollection= new Collection<RegUsers>();
+            //Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<IColleagueTransactionInvoker> mockManager;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                MainInitialize();
+
+                //mock datareader for STWEB.DEFAULTS
+                var stWebDflt = BuildStwebDefaults(); //has regUserId = REGUSERID
+                dataReaderMock.Setup(r => r.ReadRecordAsync<StwebDefaults>("ST.PARMS", It.IsAny<string>(), It.IsAny<bool>())).Returns<string, string, bool>(
+                    (param, id, repl) => Task.FromResult((stWebDflt.Recordkey == id) ? stWebDflt : null)
+                    );
+
+
+                //mock datareader for bulk read REG.USERS
+                regUsersCollection.Add(new RegUsers() { Recordkey = "REGUSERID", RguRegControls = new List<string>() { "REGCTLID-1", "REGCTLID-2" } });
+                dataReaderMock.Setup<Task<Collection<RegUsers>>>(dr => dr.BulkReadRecordAsync<RegUsers>("REG.USERS", It.IsAny<string>(), true)).ReturnsAsync(new Collection<RegUsers>(regUsersCollection));
+
+                //mock transaction invoker
+                 mockManager = new Mock<IColleagueTransactionInvoker>();
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(mockManager.Object);
+                GetIESectionsListResponse wlResp = new GetIESectionsListResponse() { SectionIds=new List<string>() { "1" ,"2"} };
+                mockManager.Setup(mgr => mgr.ExecuteAsync<GetIESectionsListRequest, GetIESectionsListResponse>(It.IsAny<GetIESectionsListRequest>())).ReturnsAsync(wlResp);
+
+                var sectionStatuses = new ApplValcodes();
+                sectionStatuses.ValsEntityAssociation = new List<ApplValcodesVals>();
+                sectionStatuses.ValsEntityAssociation.Add(new ApplValcodesVals("A", "Active", "1", "A", "", "", ""));
+                sectionStatuses.ValsEntityAssociation.Add(new ApplValcodesVals("I", "Inactive", "2", "I", "", "", ""));
+                sectionStatuses.ValsEntityAssociation.Add(new ApplValcodesVals("C", "Cancelled", "", "C", "", "", ""));
+                dataReaderMock.Setup(r => r.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "SECTION.STATUSES", true)).Returns(Task.FromResult(sectionStatuses));
+
+                //MOCK DATAREADER FOR reg.controls
+                var regCtl1 = new RegControls();
+                regCtl1.Recordkey = "REGCTLID-1";
+                regCtl1.RgcSectionLookupCriteria = new List<string>() { "criteria-1", "criteria-2" };
+
+
+                var regCtl2 = new RegControls();
+                regCtl2.Recordkey = "REGCTLID-2";
+
+                var regCtl3 = new RegControls();
+                regCtl3.Recordkey = "REGCTLID-3";
+                regCtl3.RgcSectionLookupCriteria = new List<string>() { "criteria-3"};
+                dataReaderMock.Setup<Task<Collection<RegControls>>>(cacc => cacc.BulkReadRecordAsync<RegControls>("REG.CONTROLS", "", true)).ReturnsAsync(new Collection<RegControls>() {regCtl1, regCtl2, regCtl3 });
+
+
+                //mock datareader for select course.sections
+                var sectionIdsFromLookupCriteria = new string[] { "1" };
+                dataReaderMock.Setup(acc => acc.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), "criteria-1 criteria-2")).ReturnsAsync(sectionIdsFromLookupCriteria);
+
+                 sectionIdsFromLookupCriteria = new string[] { "2" };
+                dataReaderMock.Setup(acc => acc.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), "criteria-3")).ReturnsAsync(sectionIdsFromLookupCriteria);
+
+
+                var csData = new Collection<CourseSections>()
+                {
+                    new CourseSections()
+                    {
+                        Recordkey = "1",
+                        SecCourse = "1",
+                        SecNo = "01",
+                        SecStartDate = DateTime.Today.AddDays(30),
+                        SecMinCred = 3m,
+                        SecCeus = null,
+                        SecShortTitle = "Sec 1",
+                        SecCredType = "IN",
+                        SecPortalSite = string.Empty,
+                        SecStatusesEntityAssociation = new List<CourseSectionsSecStatuses>()
+                        {
+                            new CourseSectionsSecStatuses(DateTime.Today, "A")
+                        },
+                        SecDepartmentsEntityAssociation = new List<CourseSectionsSecDepartments>()
+                        {
+                            new CourseSectionsSecDepartments("BUSN", 100M)
+                        },
+                        SecCourseLevels = new List<string>() { "100" },
+                        SecAcadLevel = "CE"
+                    },
+                    new CourseSections()
+                    {
+                        Recordkey = "2",
+                        SecCourse = "1",
+                        SecNo = "02",
+                        SecStartDate = DateTime.Today.AddDays(30),
+                        SecMinCred = 3m,
+                        SecCeus = null,
+                        SecShortTitle = "Sec 2",
+                        SecCredType = "IN",
+                        SecPortalSite = string.Empty,
+                        SecStatusesEntityAssociation = new List<CourseSectionsSecStatuses>()
+                        {
+                            new CourseSectionsSecStatuses(DateTime.Today, "A")
+                        },
+                        SecDepartmentsEntityAssociation = new List<CourseSectionsSecDepartments>()
+                        {
+                            new CourseSectionsSecDepartments("BUSN", 100M)
+                        },
+                        SecCourseLevels = new List<string>() { "100" },
+                        SecAcadLevel = "CE"
+                    }
+                };
+                var bulkReadOutput = new BulkReadOutput<CourseSections>()
+                {
+                    BulkRecordsRead = csData,
+                    InvalidKeys = null,
+                    InvalidRecords = null
+                };
+                dataReaderMock.Setup(acc => acc.BulkReadRecordWithInvalidKeysAndRecordsAsync<CourseSections>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(bulkReadOutput);
+
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+            }
+
+            [TestMethod]
+            public async Task IE_SectionFromCTX_MatchesWithRegControl()
+            {
+               IEnumerable<Section> sections= await sectionRepo.GetInstantEnrollmentSectionsAsync();
+                Assert.IsNotNull(sections);
+                Assert.AreEqual(2, sections.Count());
+                Assert.AreEqual("1", sections.ToList()[0].Id);
+                Assert.AreEqual("2", sections.ToList()[1].Id);
+            }
+
+            //when REG CONTROL criteria does not work on sections from CTX
+            [TestMethod]
+            public async Task IE_SectionFromCTX_DoesNotMatchesWithRegControl()
+            {
+                var sectionIdsFromLookupCriteria = new string[] {  };
+                dataReaderMock.Setup(acc => acc.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(sectionIdsFromLookupCriteria);
+
+                IEnumerable<Section> sections = await sectionRepo.GetInstantEnrollmentSectionsAsync();
+                Assert.IsNotNull(sections);
+                Assert.AreEqual(0, sections.Count());
+            }
+            //When REG CONTROL CRITERIA RETURNS null
+            [TestMethod]
+            public async Task IE_SectionFromCTX_DoesNotMatchesWithRegControl_AndReturnsNull()
+            {
+                string[] sectionIdsFromLookupCriteria = null;
+                dataReaderMock.Setup(acc => acc.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(sectionIdsFromLookupCriteria);
+
+                IEnumerable<Section> sections = await sectionRepo.GetInstantEnrollmentSectionsAsync();
+                Assert.AreEqual(0, sections.Count());
+
+            }
+
+            //When CTX return null sections
+            [TestMethod]
+            public async Task IE_SectionsFromCTX_IsNull()
+            {
+                GetIESectionsListResponse wlResponse = new GetIESectionsListResponse() { SectionIds = null };
+                mockManager.Setup(mgr => mgr.ExecuteAsync<GetIESectionsListRequest, GetIESectionsListResponse>(It.IsAny<GetIESectionsListRequest>())).ReturnsAsync(wlResponse);
+                IEnumerable<Section> sections = await sectionRepo.GetInstantEnrollmentSectionsAsync();
+                Assert.IsNotNull(sections);
+                Assert.AreEqual(0, sections.Count());
+            }
+            //When CTX return empty sections
+            [TestMethod]
+            public async Task IE_SectionsFromCTX_IsEmpty()
+            {
+                GetIESectionsListResponse wlResp = new GetIESectionsListResponse() { SectionIds = new List<string>() };
+                mockManager.Setup(mgr => mgr.ExecuteAsync<GetIESectionsListRequest, GetIESectionsListResponse>(It.IsAny<GetIESectionsListRequest>())).ReturnsAsync(wlResp);
+                IEnumerable<Section> sections = await sectionRepo.GetInstantEnrollmentSectionsAsync();
+                Assert.IsNotNull(sections);
+                Assert.AreEqual(0, sections.Count());
+            }
+
+            //When CTX returns empty sections but reguser returns more
+            [TestMethod]
+            public async Task IE_EmptySectionsFromCTX_regUserHaveSections()
+            {
+                GetIESectionsListResponse wlResponse = new GetIESectionsListResponse() { SectionIds = new List<string>() };
+                mockManager.Setup(mgr => mgr.ExecuteAsync<GetIESectionsListRequest, GetIESectionsListResponse>(It.IsAny<GetIESectionsListRequest>())).ReturnsAsync(wlResponse);
+                string[] sectionIdsFromLookupCriteria = new string[] { "4","5" };
+                dataReaderMock.Setup(acc => acc.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(sectionIdsFromLookupCriteria);
+                IEnumerable<Section> sections = await sectionRepo.GetInstantEnrollmentSectionsAsync();
+                Assert.IsNotNull(sections);
+                Assert.AreEqual(0, sections.Count());
+
+            }
+            //When CTX return sections but reguser have null sectionss
+            [TestMethod]
+            public async Task IE_SectionsFromCTX_RegUsersHaveSections_Is_Null()
+            {
+                var mockManager = new Mock<IColleagueTransactionInvoker>();
+                string[] sectionIdsFromLookupCriteria = null;
+                dataReaderMock.Setup(acc => acc.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(sectionIdsFromLookupCriteria);
+                IEnumerable<Section> sections = await sectionRepo.GetInstantEnrollmentSectionsAsync();
+                Assert.IsNotNull(sections);
+                Assert.AreEqual(0, sections.Count());
+            }
+
+
+            //When CTX  returns  sections but reguser is empty
+            [TestMethod]
+            public async Task IE_SectionsFromCTX_RegUsersHaveEmptySections()
+            {
+                var mockManager = new Mock<IColleagueTransactionInvoker>();
+                string[] sectionIdsFromLookupCriteria = new string[] { };
+                dataReaderMock.Setup(acc => acc.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(sectionIdsFromLookupCriteria);
+                IEnumerable<Section> sections = await sectionRepo.GetInstantEnrollmentSectionsAsync();
+                Assert.IsNotNull(sections);
+                Assert.AreEqual(0, sections.Count());
+            }
+            //When CTX returns sections but there is no REG.USER on CEWP (nameless is used)
+            [TestMethod]
+            public async Task IE_NoRegUsers_NamelessUsed()
+            {
+              
+                StwebDefaults stwebDefaults = new StwebDefaults();
+                stwebDefaults.Recordkey = "STWEB.DEFAULTS";
+                stwebDefaults.StwebRegUsersId = "";
+                dataReaderMock.Setup(r => r.ReadRecordAsync<StwebDefaults>("ST.PARMS", It.IsAny<string>(), It.IsAny<bool>())).Returns<string, string, bool>(
+                    (param, id, repl) => Task.FromResult(stwebDefaults)
+                    );
+                regUsersCollection.Clear();
+                regUsersCollection.Add(new RegUsers() { Recordkey = "NAMELESS", RguRegControls = new List<string>() { "REGCTLID-3" } });
+                dataReaderMock.Setup<Task<Collection<RegUsers>>>(dr => dr.BulkReadRecordAsync<RegUsers>("REG.USERS", It.IsAny<string>(), true)).ReturnsAsync(new Collection<RegUsers>(regUsersCollection));
+                //validate REG.USERS is queried with NAMELESS REG.USER.ID and sections are returned for NAMELESS criteria
+                IEnumerable<Section> sections = await sectionRepo.GetInstantEnrollmentSectionsAsync();
+                Assert.IsNotNull(sections);
+                Assert.AreEqual(2, sections.Count());
+                Assert.AreEqual("2", sections.ToList()[1].Id);
+
+            }
+            //When REG.USERS record does not exist
+            [TestMethod]
+            public async Task IE_NoRegUsersRecordExist_ReturnsNull()
+            {
+
+                StwebDefaults stwebDefaults = new StwebDefaults();
+                stwebDefaults.Recordkey = "STWEB.DEFAULTS";
+                stwebDefaults.StwebRegUsersId = "DoesNotExist";
+                dataReaderMock.Setup(r => r.ReadRecordAsync<StwebDefaults>("ST.PARMS", It.IsAny<string>(), It.IsAny<bool>())).Returns<string, string, bool>(
+                    (param, id, repl) => Task.FromResult(stwebDefaults)
+                    );
+                //When no REG.USERS record, assume datareader returns null
+                dataReaderMock.Setup<Task<Collection<RegUsers>>>(dr => dr.BulkReadRecordAsync<RegUsers>("REG.USERS", It.IsAny<string>(), true)).ReturnsAsync(null);
+
+                IEnumerable<Section> sections = await sectionRepo.GetInstantEnrollmentSectionsAsync();
+                Assert.IsNotNull(sections);
+                Assert.AreEqual(2, sections.Count());
+                Assert.AreEqual("1", sections.ToList()[0].Id);
+                Assert.AreEqual("2", sections.ToList()[1].Id);
+
+            }
+            //When REG.USERS record exist but there are no corresponding REG.CONTROL.
+            [TestMethod]
+            public async Task IE_RegControls_isNull()
+            {
+
+                dataReaderMock.Setup<Task<Collection<RegControls>>>(cacc => cacc.BulkReadRecordAsync<RegControls>("REG.CONTROLS", "", true)).ReturnsAsync(null);
+
+                IEnumerable<Section> sections = await sectionRepo.GetInstantEnrollmentSectionsAsync();
+                Assert.AreEqual(2, sections.Count());
+                Assert.AreEqual("1", sections.ToList()[0].Id);
+                Assert.AreEqual("2", sections.ToList()[1].Id);
+            }
+            //When  REG.CONTROL exist but there is no corresponding lookup criteria
+            [TestMethod]
+            public async Task IE_RegControlsExist_NoLookupCriteria()
+            {
+
+                StwebDefaults stwebDefaults = new StwebDefaults();
+                stwebDefaults.Recordkey = "STWEB.DEFAULTS";
+                stwebDefaults.StwebRegUsersId = "WEBREG";
+                dataReaderMock.Setup(r => r.ReadRecordAsync<StwebDefaults>("ST.PARMS", It.IsAny<string>(), It.IsAny<bool>())).Returns<string, string, bool>(
+                    (param, id, repl) => Task.FromResult(stwebDefaults)
+                    );
+
+                regUsersCollection.Clear();
+                regUsersCollection.Add(new RegUsers() { Recordkey = "WEBREG", RguRegControls = new List<string>() { "REGCTLID-2" } });
+                dataReaderMock.Setup<Task<Collection<RegUsers>>>(dr => dr.BulkReadRecordAsync<RegUsers>("REG.USERS", It.IsAny<string>(), true)).ReturnsAsync(new Collection<RegUsers>(regUsersCollection));
+
+                IEnumerable<Section> sections = await sectionRepo.GetInstantEnrollmentSectionsAsync();
+                Assert.AreEqual(2, sections.Count());
+                Assert.AreEqual("1", sections.ToList()[0].Id);
+                Assert.AreEqual("2", sections.ToList()[1].Id);
+            }
+        }
+
 
         #region Private helper methods - static so they can be used in any of the above subclasses
 

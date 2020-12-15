@@ -14,7 +14,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
     /// <summary>
     /// Adapter for mapping from the voucher entity to the voucher DTO.
     /// </summary>
-    public class Voucher2EntityToDtoAdapter : AutoMapperAdapter<Ellucian.Colleague.Domain.ColleagueFinance.Entities.Voucher, Ellucian.Colleague.Dtos.ColleagueFinance.Voucher>
+    public class Voucher2EntityToDtoAdapter : AutoMapperAdapter<Ellucian.Colleague.Domain.ColleagueFinance.Entities.Voucher, Ellucian.Colleague.Dtos.ColleagueFinance.Voucher2>
     {
         public Voucher2EntityToDtoAdapter(IAdapterRegistry adapterRegistry, ILogger logger)
             : base(adapterRegistry, logger)
@@ -84,6 +84,16 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
             }
             voucherDto.StatusDate = Source.StatusDate;
             voucherDto.ApType = Source.ApType;
+
+            voucherDto.ConfirmationEmailAddresses = new List<string>();
+            if ((Source.ConfirmationEmailAddresses != null) && (Source.ConfirmationEmailAddresses.Count > 0))
+            {
+                foreach (var item in Source.ConfirmationEmailAddresses)
+                {
+                    voucherDto.ConfirmationEmailAddresses.Add(item);
+                }
+            }
+
 
             voucherDto.LineItems = new List<Dtos.ColleagueFinance.LineItem>();
             voucherDto.Approvers = new List<Dtos.ColleagueFinance.Approver>();

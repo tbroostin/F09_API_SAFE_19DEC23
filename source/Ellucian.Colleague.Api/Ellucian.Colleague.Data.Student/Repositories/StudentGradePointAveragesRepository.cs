@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Student.DataContracts;
@@ -341,31 +341,110 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 return null;
             }
-            List<StudentAcademicCredentialProgramInfo> list = new List<StudentAcademicCredentialProgramInfo>();
-            var acadCredDCs = await DataReader.BulkReadRecordAsync<AcadCredentials>(markAcadCredIds.Distinct().ToArray());
 
-            if(acadCredDCs != null || acadCredDCs.Any())
+            List<StudentAcademicCredentialProgramInfo> list = new List<StudentAcademicCredentialProgramInfo>();
+            List<RepositoryError> _errors = new List<RepositoryError>();
+
+            try
             {
-                foreach (var acadCredDC in acadCredDCs)
+                var acadCredDCs = await DataReader.BulkReadRecordWithInvalidKeysAsync<AcadCredentials>( markAcadCredIds.Distinct().ToArray() );
+
+                if( acadCredDCs.InvalidKeys != null && acadCredDCs.InvalidKeys.Any() )
                 {
-                    if(!string.IsNullOrEmpty(acadCredDC.AcadAcadProgram) && !string.IsNullOrEmpty(acadCredDC.AcadPersonId))
+                    foreach( var invalidKey in acadCredDCs.InvalidKeys )
                     {
-                        var studProgramId = string.Join("*", acadCredDC.AcadPersonId, acadCredDC.AcadAcadProgram);
-                        var studProg = await DataReader.ReadRecordAsync<StudentPrograms>(studProgramId );
-                        if(studProg != null)
+                        //Log that error, don't throw. err5 per specs
+                        string errorMessage = string.Format( "student-grade-point-averages: ACAD.CREDENTIALS '{0}' does not exist, credential omitted from earnedDegrees.", invalidKey );
+                        logger.Error( errorMessage );
+                    }
+                }
+
+                if( acadCredDCs.BulkRecordsRead != null || acadCredDCs.BulkRecordsRead.Any() )
+                {
+                    var stProgIds = acadCredDCs.BulkRecordsRead.Where( i => !string.IsNullOrEmpty( i.AcadPersonId ) && !string.IsNullOrEmpty( i.AcadAcadProgram ) )
+                                               .Select( p => string.Join( "*", p.AcadPersonId, p.AcadAcadProgram ) ).ToList();
+                    if( stProgIds != null && stProgIds.Any() )
+                    {
+                        var stProgRecs = await DataReader.BulkReadRecordAsync<StudentPrograms>( stProgIds.Distinct().ToArray() );
+
+                        if( stProgRecs != null && stProgRecs.Any() )
                         {
-                            StudentAcademicCredentialProgramInfo studentCredentialsProgramInfo = new StudentAcademicCredentialProgramInfo();
-                            studentCredentialsProgramInfo.AcadCcdDate = acadCredDC.AcadCcdDate.FirstOrDefault().HasValue? acadCredDC.AcadCcdDate.FirstOrDefault().Value : default(DateTime?);
-                            studentCredentialsProgramInfo.AcadDegreeDate = acadCredDC.AcadDegreeDate.HasValue ? acadCredDC.AcadDegreeDate.Value : default(DateTime?);
-                            studentCredentialsProgramInfo.AcademicAcadProgram = acadCredDC.AcadAcadProgram;
-                            studentCredentialsProgramInfo.AcademicCredentialsId = acadCredDC.Recordkey;
-                            studentCredentialsProgramInfo.AcadPersonId = acadCredDC.AcadPersonId;
-                            studentCredentialsProgramInfo.StudentProgramGuid = studProg.RecordGuid;
-                            list.Add(studentCredentialsProgramInfo);
+                            foreach( var acadCredDC in acadCredDCs.BulkRecordsRead )
+                            {
+                                if( !string.IsNullOrEmpty( acadCredDC.AcadAcadProgram ) && !string.IsNullOrEmpty( acadCredDC.AcadPersonId ) )
+                                {
+                                    var studProgramId = string.Join( "*", acadCredDC.AcadPersonId, acadCredDC.AcadAcadProgram );
+                                    var studProg = stProgRecs.FirstOrDefault( i => i.Recordkey.Equals( studProgramId, StringComparison.InvariantCultureIgnoreCase ) );
+                                    if( studProg != null )
+                                    {
+                                        StudentAcademicCredentialProgramInfo studentCredentialsProgramInfo = new StudentAcademicCredentialProgramInfo();
+                                        studentCredentialsProgramInfo.AcadCcdDate = acadCredDC.AcadCcdDate.FirstOrDefault().HasValue ? acadCredDC.AcadCcdDate.FirstOrDefault().Value : default( DateTime? );
+                                        studentCredentialsProgramInfo.AcadDegreeDate = acadCredDC.AcadDegreeDate.HasValue ? acadCredDC.AcadDegreeDate.Value : default( DateTime? );
+                                        studentCredentialsProgramInfo.AcademicAcadProgram = acadCredDC.AcadAcadProgram;
+                                        studentCredentialsProgramInfo.AcademicCredentialsId = acadCredDC.Recordkey;
+                                        studentCredentialsProgramInfo.AcadPersonId = acadCredDC.AcadPersonId;
+                                        studentCredentialsProgramInfo.StudentProgramGuid = studProg.RecordGuid;
+                                        list.Add( studentCredentialsProgramInfo );
+                                    }
+                                    else
+                                    {
+                                        //err7 per specs
+                                        string message = string.Format( "student-grade-point-averages: STUDENT.PROGRAMS '{0}' does not exist for ACAD.CREDENTIALS '{1}', credential omitted from earnedDegrees.", studProgramId, acadCredDC.Recordkey );
+                                        RepositoryError error = new RepositoryError( acadCredDC.RecordGuid, acadCredDC.Recordkey, "Bad.Data", message );
+                                        _errors.Add( error );
+                                    }
+                                }
+                                else if( string.IsNullOrEmpty( acadCredDC.AcadAcadProgram ) )
+                                {
+                                    //err6 per specs
+                                    string message = string.Format( "student-grade-point-averages: ACAD.ACAD.PROGRAMS not populated for ACAD.CREDENTIALS '{0}', credential omitted from earnedDegrees.", acadCredDC.Recordkey );
+                                    RepositoryError error = new RepositoryError( acadCredDC.RecordGuid, acadCredDC.Recordkey, "Bad.Data", message );
+                                    _errors.Add( error );
+                                }
+                            }
+
+                            if( _errors.Any() )
+                            {
+                                exception.AddErrors( _errors );
+                                throw exception;
+                            }
+                        }
+                        else
+                        {
+                            //err7 per specs
+                            foreach( var stProgId in stProgIds.ToList() )
+                            {
+                                try
+                                {
+                                    string[] key = stProgId.Split( new string[] { "*" }, StringSplitOptions.None );
+                                    string stId = key[ 0 ];
+                                    string acadacadId = key[ 1 ];
+                                    var record = acadCredDCs.BulkRecordsRead.FirstOrDefault( i => i.AcadPersonId.Equals( stId, StringComparison.InvariantCultureIgnoreCase ) && i.AcadAcadProgram.Equals( key[ 1 ], StringComparison.InvariantCultureIgnoreCase ) );
+                                    string message = string.Format( "student-grade-point-averages: STUDENT.PROGRAMS '{0}' does not exist for ACAD.CREDENTIALS '{1}', credential omitted from earnedDegrees.", stProgId, record.Recordkey );
+                                    logger.Error( message );
+                                }
+                                catch( Exception e )
+                                {
+                                    //Do Nothing, don't error out.
+                                    logger.Error( e.Message );
+                                }
+                            }
                         }
                     }
                 }
             }
+            catch(RepositoryException e)
+            {
+                //Don't throw exception but just log.
+                if(e.Errors != null && e.Errors.Any())
+                {
+                    e.Errors.ToList().ForEach( er =>
+                     {
+                         logger.Error( er.Message );
+                     } );
+                }
+            }
+
             return list;
         }
 

@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -15,6 +15,8 @@ using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.DtoProperties;
+using Ellucian.Colleague.Dtos.Filters;
+using Ellucian.Colleague.Dtos.EnumProperties;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
@@ -27,7 +29,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private readonly IInstitutionRepository _institutionRepository;
         private readonly IConfigurationRepository _configurationRepository;
         private readonly ILogger _logger;
-        //private const string _dataOrigin = "Colleague";
+
 
         public PersonExternalEducationService(IAdapterRegistry adapterRegistry, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository,
             IInstitutionsAttendRepository institutionsAttendRepository, IReferenceDataRepository referenceDataRepository, IPersonRepository personRepository,
@@ -41,7 +43,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             _logger = logger;
             _configurationRepository = configurationRepository;
         }
-     
+
         /// <summary>
         /// Gets all PersonExternalEducation
         /// </summary>
@@ -49,32 +51,77 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="limit">Limit for paging results</param>
         /// <param name="personExternalEducationFilter">filter criteria</param>
         /// <param name="personFilterGuid">person Filter - Guid for SAVE.LIST.PARMS which contains a savedlist of person IDs</param>
+        /// <param name="personByInstitutionType">filter to retrieve information for a specific person at institution's of a specific type</param>
         /// <param name="bypassCache">Flag to bypass cache</param>
         /// <returns>Collection of <see cref="PersonExternalEducation">personExternalEducation</see> objects</returns>          
         public async Task<Tuple<IEnumerable<Dtos.PersonExternalEducation>, int>> GetPersonExternalEducationAsync(int offset, int limit,
-            Ellucian.Colleague.Dtos.PersonExternalEducation personExternalEducationFilter = null, string personFilterGuid = "", bool bypassCache = false)
+            Ellucian.Colleague.Dtos.PersonExternalEducation personExternalEducationFilter = null, string personFilterGuid = "",
+            PersonByInstitutionType personByInstitutionType = null, bool bypassCache = false)
         {
             this.CheckViewExternalEducationPermission();
 
             var externalEducationsCollection = new List<Dtos.PersonExternalEducation>();
-
+           
+            #region filters
+            
+            var filterPersonIds = new List<string>().ToArray();
             var personId = string.Empty;
-            string[] filterPersonIds = new List<string>().ToArray();
+            var personByInstitutionTypePersonId = string.Empty;
+            InstType? typeFilter = null;
+            
             try
             {
+                #region person id filter
                 if (personExternalEducationFilter != null)
                 {
                     if (personExternalEducationFilter.Person != null && !string.IsNullOrEmpty(personExternalEducationFilter.Person.Id))
                     {
-                        personId = await _personRepository.GetPersonIdFromGuidAsync(personExternalEducationFilter.Person.Id);
+                        personId = await _personRepository.GetPersonIdForNonCorpOnly(personExternalEducationFilter.Person.Id);
                         if (string.IsNullOrEmpty(personId))
                         {
                             return new Tuple<IEnumerable<Dtos.PersonExternalEducation>, int>(new List<Dtos.PersonExternalEducation>(), 0);
                         }
                     }
                 }
+                #endregion
 
+                #region personByInstitutionType named query
+                if (personByInstitutionType != null)
+                {
+                    if (((personByInstitutionType.Person != null  && !string.IsNullOrEmpty(personByInstitutionType.Person.Id))
+                        && (personByInstitutionType.Type == null))
+                        ||
+                        ((personByInstitutionType.Person == null || string.IsNullOrEmpty(personByInstitutionType.Person.Id))
+                        && (personByInstitutionType.Type != null)))
+                    {
+                        return new Tuple<IEnumerable<Dtos.PersonExternalEducation>, int>(new List<Dtos.PersonExternalEducation>(), 0);
 
+                    }
+
+                    if (personByInstitutionType.Person != null && !string.IsNullOrEmpty(personByInstitutionType.Person.Id))
+                    {
+                        personByInstitutionTypePersonId = await _personRepository.GetPersonIdFromGuidAsync(personByInstitutionType.Person.Id);
+                        if (string.IsNullOrEmpty(personByInstitutionTypePersonId))
+                        {
+                            return new Tuple<IEnumerable<Dtos.PersonExternalEducation>, int>(new List<Dtos.PersonExternalEducation>(), 0);
+                        }
+                    }
+                    if (personByInstitutionType.Type != null)
+                    {
+                        switch (personByInstitutionType.Type)
+                        {
+                            case EducationalInstitutionType.PostSecondarySchool:
+                                typeFilter = InstType.College;
+                                break;
+                            case EducationalInstitutionType.SecondarySchool:
+                                typeFilter = InstType.HighSchool;
+                                break;
+                        }
+                    }
+                }
+                #endregion 
+
+                #region personFilter named query
                 if (!string.IsNullOrEmpty(personFilterGuid))
                 {
                     var personFilterKeys = (await _referenceDataRepository.GetPersonIdsByPersonFilterGuidAsync(personFilterGuid));
@@ -87,16 +134,20 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         return new Tuple<IEnumerable<Dtos.PersonExternalEducation>, int>(new List<Dtos.PersonExternalEducation>(), 0);
                     }
                 }
+                #endregion
             }
             catch (Exception)
             {
                 return new Tuple<IEnumerable<Dtos.PersonExternalEducation>, int>(new List<Dtos.PersonExternalEducation>(), 0);
             }
+            #endregion
 
+            #region retrieve data
             Tuple<IEnumerable<Domain.Base.Entities.InstitutionsAttend>, int> institutionAttendEntitiesTuple = null;
             try
             {
-                institutionAttendEntitiesTuple = await _institutionsAttendRepository.GetInstitutionsAttendAsync(offset, limit, personId, filterPersonIds, personFilterGuid, bypassCache);
+                institutionAttendEntitiesTuple = await _institutionsAttendRepository.GetInstitutionsAttendAsync(offset, limit, personId, filterPersonIds, personFilterGuid,
+                    personByInstitutionTypePersonId, typeFilter, bypassCache);
             }
             catch (RepositoryException ex)
             {
@@ -108,7 +159,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 return new Tuple<IEnumerable<Dtos.PersonExternalEducation>, int>(new List<Dtos.PersonExternalEducation>(), 0);
 
             }
+            #endregion
 
+            #region build response
             var institutionAttendEntities = institutionAttendEntitiesTuple.Item1;
             var totalCount = institutionAttendEntitiesTuple.Item2;
 
@@ -124,6 +177,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     externalEducationsCollection.Add(ConvertInstitutionAttendEntityToDto(acadCred, personGuidCollection, bypassCache));
                 }
             }
+            #endregion
+
             if (IntegrationApiException != null)
             {
                 throw IntegrationApiException;

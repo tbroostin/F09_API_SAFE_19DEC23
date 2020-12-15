@@ -129,6 +129,20 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     try
                     {
                         var officeHours = await GetFacultyOfficeHoursAsync(id);
+
+                        //Remove any faculty office hour if it's in past or in future
+                        if (officeHours.Any())
+                        {
+                            foreach (var officeHour in officeHours.ToList())
+                            {
+                                if (officeHour.OfficeEndDate.HasValue && officeHour.OfficeStartDate.HasValue &&
+                                (officeHour.OfficeEndDate.Value.Date < DateTimeOffset.UtcNow.Date || officeHour.OfficeStartDate.Value.Date > DateTimeOffset.UtcNow.Date))
+                                {
+                                    officeHours.Remove(officeHour);
+                                }
+                            }
+                        }
+
                         Domain.Student.Entities.FacultyOfficeHours facOfficeHours = new Domain.Student.Entities.FacultyOfficeHours()
                         {
                             FacultyId = id,

@@ -390,31 +390,36 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 			}
 			if (source.Status != null && source.Status.Detail != null && !string.IsNullOrEmpty(source.Status.Detail.Id))
 			{
-				try
+				// Only extract status ID for incomplete, waived, or received.  Otherwise, the status property
+				// will be unset when it gets to the actual updating of the MAILING record in Colleague.
+				if (source.Status.Type != AdmissionApplicationSupportingItemsType.Notreceived)
 				{
-					var statusEntity = (await _referenceDataRepository.GetCorrStatusesAsync(bypassCache)).FirstOrDefault(cs => cs.Guid == source.Status.Detail.Id);
-					if (statusEntity == null)
+					try
 					{
-						IntegrationApiExceptionAddError(string.Format("Status type not found for id {0}.", source.Status.Detail.Id),
-							"Validation.Exception", guid, secondaryKey);
-					}
-					status = statusEntity.Code;
-					statusAction = statusEntity.Action;
-					if (source.Status != null && source.Status.Type != AdmissionApplicationSupportingItemsType.NotSet)
-					{
-						if ((statusAction != "1" && statusAction != "0" && source.Status.Type != AdmissionApplicationSupportingItemsType.Incomplete)
-							|| (statusAction == "1" && source.Status.Type != AdmissionApplicationSupportingItemsType.Received)
-							|| (statusAction == "0" && source.Status.Type != AdmissionApplicationSupportingItemsType.Waived))
+						var statusEntity = (await _referenceDataRepository.GetCorrStatusesAsync(bypassCache)).FirstOrDefault(cs => cs.Guid == source.Status.Detail.Id);
+						if (statusEntity == null)
 						{
-							IntegrationApiExceptionAddError(string.Format("status.type of '{0}' doesn't match the type for status.detail.id of '{1}'.", source.Status.Type.ToString(), source.Status.Detail.Id),
-							"Validation.Exception", guid, secondaryKey);
+							IntegrationApiExceptionAddError(string.Format("Status type not found for id {0}.", source.Status.Detail.Id),
+								"Validation.Exception", guid, secondaryKey);
+						}
+						status = statusEntity.Code;
+						statusAction = statusEntity.Action;
+						if (source.Status != null && source.Status.Type != AdmissionApplicationSupportingItemsType.NotSet)
+						{
+							if ((statusAction != "1" && statusAction != "0" && source.Status.Type != AdmissionApplicationSupportingItemsType.Incomplete)
+								|| (statusAction == "1" && source.Status.Type != AdmissionApplicationSupportingItemsType.Received)
+								|| (statusAction == "0" && source.Status.Type != AdmissionApplicationSupportingItemsType.Waived))
+							{
+								IntegrationApiExceptionAddError(string.Format("status.type of '{0}' doesn't match the type for status.detail.id of '{1}'.", source.Status.Type.ToString(), source.Status.Detail.Id),
+								"Validation.Exception", guid, secondaryKey);
+							}
 						}
 					}
-				}
-				catch (Exception)
-				{
-					IntegrationApiExceptionAddError(string.Format("Status type not found for id {0}.", source.Status.Detail.Id),
-							"Validation.Exception", guid, secondaryKey);
+					catch (Exception)
+					{
+						IntegrationApiExceptionAddError(string.Format("Status type not found for id {0}.", source.Status.Detail.Id),
+								"Validation.Exception", guid, secondaryKey);
+					}
 				}
 			}
 			else
@@ -431,6 +436,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 								{
 									status = statusEntity.Code;
 									statusAction = statusEntity.Action;
+								}
+								break;
+							}
+						case AdmissionApplicationSupportingItemsType.Notreceived:
+							{
+								var statusEntity = statusEntities.FirstOrDefault(cs => cs.Action != "1" && cs.Action != "0");
+								if (statusEntity != null)
+								{
+									status = string.Empty;
+									statusAction = string.Empty;
 								}
 								break;
 							}

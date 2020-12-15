@@ -68,7 +68,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                    VendorId = "0000190",
                    VendorName = "Basic Office Supply",
                    Amount = 10.00m,
-                   
+
                    PurchaseOrders = new List<PurchaseOrderLinkSummary>()
                    {
                        new PurchaseOrderLinkSummary()
@@ -115,7 +115,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 Status = VoucherStatus.InProgress
             };
 
-            voucherServiceMock.Setup(r => r.GetVoucherSummariesAsync (It.IsAny<string>())).ReturnsAsync(voucherSummaryCollection);
+            voucherServiceMock.Setup(r => r.GetVoucherSummariesAsync(It.IsAny<string>())).ReturnsAsync(voucherSummaryCollection);
             voucherServiceMock.Setup(r => r.GetVoucherAsync(It.IsAny<string>())).ReturnsAsync(voucher);
             voucherServiceMock.Setup(r => r.GetVoucher2Async(It.IsAny<string>())).ReturnsAsync(voucher2);
 
@@ -199,7 +199,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             var Voucher = await voucherController.GetVoucherAsync(voucher.VoucherId);
             Assert.IsNotNull(Voucher);
         }
-        
+
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task VouchersController_GetVoucherAsync_VoucherId_Asnull()
@@ -210,7 +210,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             var Voucher = await voucherController.GetVoucherAsync(voucher.VoucherId);
             Assert.IsNotNull(Voucher);
         }
-        
+
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task VouchersController_GetVoucherAsync_VoucherId_AsEmpty()
@@ -221,7 +221,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             var Voucher = await voucherController.GetVoucherAsync(voucher.VoucherId);
             Assert.IsNotNull(Voucher);
         }
-        
+
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task VouchersController_GetVoucherAsync_ArgumentNullException()
@@ -229,7 +229,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             voucherServiceMock.Setup(r => r.GetVoucherAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentNullException());
             await voucherController.GetVoucherAsync(voucher.VoucherId);
         }
-        
+
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task VouchersController_GetVoucherAsync_KeyNotFoundException()
@@ -337,6 +337,88 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         }
 
         #endregion
+
+        #region qapi
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VouchersController_GetVouchersByVendorAndInvoiceNoAsync_ArgumentNullException()
+        {
+            await voucherController.GetVouchersByVendorAndInvoiceNoAsync(null,null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VouchersController_GetVouchersByVendorAndInvoiceNoAsync_VendorIsNull_ArgumentNullException()
+        {
+            await voucherController.GetVouchersByVendorAndInvoiceNoAsync(null, "1234");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VouchersController_GetVouchersByVendorAndInvoiceNoAsync_InvoiceNoIsNull_ArgumentNullException()
+        {
+            await voucherController.GetVouchersByVendorAndInvoiceNoAsync("0000123", null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VouchersController_GetVouchersByVendorAndInvoiceNoAsync_EmptyParams_ArgumentNullException()
+        {
+            await voucherController.GetVouchersByVendorAndInvoiceNoAsync(string.Empty, string.Empty);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VouchersController_GetVouchersByVendorAndInvoiceNoAsync_Service_ArgumentNullException()
+        {
+            var invoiceNumber = "IN12345";
+            var vendorId = "0001234";
+
+            voucherServiceMock.Setup(r => r.GetVouchersByVendorAndInvoiceNoAsync(It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new ArgumentNullException());
+
+            await voucherController.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNumber);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VouchersController_GetVouchersByVendorAndInvoiceNoAsync_Exception()
+        {
+            var invoiceNumber = "IN12345";
+            var vendorId = "0001234";
+            
+            voucherServiceMock.Setup(r => r.GetVouchersByVendorAndInvoiceNoAsync(It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new Exception());
+
+            await voucherController.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNumber);
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VouchersController_GetVouchersByVendorAndInvoiceNoAsync_PermissionException()
+        {
+            var invoiceNumber = "IN12345";
+            var vendorId = "0001234";
+
+            voucherServiceMock.Setup(r => r.GetVouchersByVendorAndInvoiceNoAsync(It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+
+            await voucherController.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNumber);
+        }
+
+        [TestMethod]
+        public async Task VouchersController_GetVouchersByVendorAndInvoiceNoAsync()
+        {
+            var invoiceNumber = "IN12345";
+            var vendorId = "0001234";
+
+            List<Voucher2> voucherList = new List<Voucher2>();
+            voucherList.Add(voucher2);
+
+            voucherServiceMock.Setup(r => r.GetVouchersByVendorAndInvoiceNoAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(voucherList);
+            var result = await voucherController.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNumber);
+
+            Assert.IsNotNull(result);
+        }
+        #endregion  
     }
 
 
@@ -423,8 +505,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
     }
 
     #endregion
-    
-   #region Reimburse Myself Tests
+
+    #region Reimburse Myself Tests
 
     [TestClass]
     public class GetReimbursePersonAddressForVoucherAsyncTests
@@ -435,7 +517,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         private Mock<ILogger> _loggerMock;
 
         private VouchersController _vouchersController;
-        
+
         private Dtos.ColleagueFinance.VendorsVoucherSearchResult resultsDto;
 
         [TestInitialize]
@@ -447,7 +529,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             _vouchersServiceMock = new Mock<IVoucherService>();
             _loggerMock = new Mock<ILogger>();
 
-            
+
             BuildData();
             _vouchersServiceMock.Setup(s => s.GetReimbursePersonAddressForVoucherAsync()).ReturnsAsync(resultsDto);
             _vouchersController = new VouchersController(_vouchersServiceMock.Object, _loggerMock.Object)
@@ -458,7 +540,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
         private void BuildData()
         {
-            
+
             resultsDto = new Ellucian.Colleague.Dtos.ColleagueFinance.VendorsVoucherSearchResult
             {
                 VendorId = "0000192",
@@ -488,7 +570,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         {
             var results = await _vouchersController.GetReimbursePersonAddressForVoucherAsync();
             Assert.IsNotNull(results);
-            
+
             var actualDto = results;
             Assert.AreEqual(resultsDto.VendorId, actualDto.VendorId);
             Assert.AreEqual(resultsDto.VendorNameLines, actualDto.VendorNameLines);
@@ -507,7 +589,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         {
             var results = await _vouchersController.GetReimbursePersonAddressForVoucherAsync();
         }
-        
+
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task VouchersController_GetReimbursePersonAddressForVoucherAsync_ArgumentNullException()
@@ -565,7 +647,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
     #endregion
 
-   #region VOID
+    #region VOID
     [TestClass]
     public class VoucherVoidTests
     {
@@ -691,6 +773,69 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
             Assert.IsNotNull(result);
         }
+    }
+    #endregion
+
+    #region Query
+    [TestClass]
+    public class VoucherQueryTests
+    {
+        public TestContext TestContext { get; set; }
+
+        private Mock<IVoucherService> _vouchersServiceMock;
+        private Mock<ILogger> _loggerMock;
+
+        private VouchersController _vouchersController;
+
+        private Dtos.ColleagueFinance.VendorsVoucherSearchResult resultsDto;
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.DeploymentDirectory, "App_Data"));
+
+            _vouchersServiceMock = new Mock<IVoucherService>();
+            _loggerMock = new Mock<ILogger>();
+
+
+            BuildData();
+            _vouchersServiceMock.Setup(s => s.GetReimbursePersonAddressForVoucherAsync()).ReturnsAsync(resultsDto);
+            _vouchersController = new VouchersController(_vouchersServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+        }
+
+        private void BuildData()
+        {
+
+            resultsDto = new Ellucian.Colleague.Dtos.ColleagueFinance.VendorsVoucherSearchResult
+            {
+                VendorId = "0000192",
+                VendorNameLines = new List<string>() { "Blue Cross Office supply" },
+                VendorMiscName = null,
+                AddressLines = new List<string>() { "PO Box 69845" },
+                City = "Minneapolis",
+                State = "MN",
+                Zip = "55430",
+                Country = "",
+                FormattedAddress = "PO Box 69845 Minneapolis MN 55430",
+                AddressId = "143"
+            };
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            _vouchersController = null;
+            _loggerMock = null;
+            _vouchersServiceMock = null;
+            resultsDto = null;
+        }
+
+
+        
     }
     #endregion
 

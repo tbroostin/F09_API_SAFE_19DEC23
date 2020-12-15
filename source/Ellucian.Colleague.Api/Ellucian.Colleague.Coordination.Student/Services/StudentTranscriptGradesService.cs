@@ -15,6 +15,8 @@ using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos;
 using System.Net;
+using Microsoft.Practices.EnterpriseLibrary.Common.Utility;
+using Ellucian.Colleague.Domain.Student.Entities;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -26,13 +28,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private readonly IGradeRepository _gradeRepository;
         private readonly IPersonRepository _personRepository;
         private readonly IStudentTranscriptGradesRepository _studentTranscriptGradesRepository;
-
+        private readonly ITermRepository _termRepository;
         public StudentTranscriptGradesService(
             IStudentTranscriptGradesRepository studentTranscriptGradesRepository,
             IReferenceDataRepository referenceDataRepository,
             IStudentReferenceDataRepository studentReferenceDataRepository,
             IPersonRepository personRepository,
             IGradeRepository gradeRepository,
+            ITermRepository termRepository,
             IAdapterRegistry adapterRegistry,
             ICurrentUserFactory currentUserFactory,
             IRoleRepository roleRepository,
@@ -45,6 +48,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             _studentReferenceDataRepository = studentReferenceDataRepository;
             _personRepository = personRepository;
             _gradeRepository = gradeRepository;
+            _termRepository = termRepository;
         }
 
         #region GET Methods
@@ -59,10 +63,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.StudentTranscriptGrades>, int>> GetStudentTranscriptGradesAsync(int offset, int limit,
             Dtos.StudentTranscriptGrades criteriaFilter, bool bypassCache = false)
         {
+
+            if( !await CheckViewStudentTranscriptGradesPermission() )
+            {
+                throw new PermissionsException( "User " + CurrentUser.UserId + " does not have permission to view student transcript grades." );
+            }
+
             string studentGuid = string.Empty;
+            string academicPeriodGuid= string.Empty;
+            
             if (criteriaFilter != null)
             {
-                studentGuid = criteriaFilter.Student != null ? criteriaFilter.Student.Id : string.Empty;
+                studentGuid = ( criteriaFilter.Student != null && !string.IsNullOrEmpty( criteriaFilter.Student.Id ) ) ? criteriaFilter.Student.Id : string.Empty;
+                academicPeriodGuid = ( criteriaFilter.AcademicPeriod != null && !string.IsNullOrEmpty( criteriaFilter.AcademicPeriod.Id ) ) ? criteriaFilter.AcademicPeriod.Id : string.Empty;
             }
 
             string studentId = string.Empty;
@@ -70,25 +83,40 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 try
                 {
-                    studentId = await _personRepository.GetPersonIdFromGuidAsync(studentGuid);
+                    studentId = await _personRepository.GetPersonIdFromGuidAsync( studentGuid );
+                    if( string.IsNullOrEmpty( studentId ) )
+                        return new Tuple<IEnumerable<Dtos.StudentTranscriptGrades>, int>( new List<Dtos.StudentTranscriptGrades>(), 0 );
                 }
                 catch
                 {
-                    return new Tuple<IEnumerable<Dtos.StudentTranscriptGrades>, int>(new List<Dtos.StudentTranscriptGrades>(), 0);
+                    return new Tuple<IEnumerable<Dtos.StudentTranscriptGrades>, int>( new List<Dtos.StudentTranscriptGrades>(), 0 );
                 }
-                if (string.IsNullOrEmpty(studentId))
-                    return new Tuple<IEnumerable<Dtos.StudentTranscriptGrades>, int>(new List<Dtos.StudentTranscriptGrades>(), 0);
+            }
+
+            string academicPeriodId = string.Empty;
+            if( !string.IsNullOrEmpty( academicPeriodGuid ) )
+            {
+                try
+                {
+                    if( string.IsNullOrWhiteSpace( academicPeriodGuid ) )
+                    {
+                        return new Tuple<IEnumerable<Dtos.StudentTranscriptGrades>, int>( new List<Dtos.StudentTranscriptGrades>(), 0 );
+                    }
+
+                    academicPeriodId = await _termRepository.GetAcademicPeriodsCodeFromGuidAsync( academicPeriodGuid );
+                    if( string.IsNullOrEmpty( academicPeriodId ) )
+                        return new Tuple<IEnumerable<Dtos.StudentTranscriptGrades>, int>( new List<Dtos.StudentTranscriptGrades>(), 0 );
+                }
+                catch( Exception )
+                {
+                    return new Tuple<IEnumerable<Dtos.StudentTranscriptGrades>, int>( new List<Dtos.StudentTranscriptGrades>(), 0 );
+                }
             }
 
             var studentTranscriptGrades = new List<Dtos.StudentTranscriptGrades>();
             try
             {
-                if (!await CheckViewStudentTranscriptGradesPermission())
-                {
-                    throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view student transcript grades.");
-                }
-
-                var studentTranscriptGradesEntities = await _studentTranscriptGradesRepository.GetStudentTranscriptGradesAsync(offset, limit, studentId, bypassCache);
+                var studentTranscriptGradesEntities = await _studentTranscriptGradesRepository.GetStudentTranscriptGradesAsync(offset, limit, studentId, academicPeriodId, bypassCache);
                 if (studentTranscriptGradesEntities != null && studentTranscriptGradesEntities.Item1.Any())
                 {
                     studentTranscriptGrades = (await BuildStudentTranscriptGradesDtoAsync(studentTranscriptGradesEntities.Item1, bypassCache)).ToList();
@@ -153,7 +181,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             var studentTranscriptGradesEntity = await _studentTranscriptGradesRepository.GetStudentTranscriptGradesByGuidAsync(guid);
 
-            StudentTranscriptGradesAdjustments studentTranscriptGradesAdjustments = null;
+            Dtos.StudentTranscriptGradesAdjustments studentTranscriptGradesAdjustments = null;
             try
             {
                 studentTranscriptGradesAdjustments = (await BuildStudentTranscriptGradesAdjustmentsDtoAsync(studentTranscriptGradesEntity, bypassCache));
@@ -178,7 +206,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="StudentTranscriptGradesAdjustments">The <see cref="StudentTranscriptGradesAdjustments">studentTranscriptGradesAdjustments</see> entity to update in the database.</param>
         /// <returns>The newly updated <see cref="StudentTranscriptGrades">studentTranscriptGrades</see></returns>
-        public async Task<Dtos.StudentTranscriptGrades> UpdateStudentTranscriptGradesAdjustmentsAsync(StudentTranscriptGradesAdjustments studentTranscriptGradesAdjustments, bool bypassCache = true)
+        public async Task<Dtos.StudentTranscriptGrades> UpdateStudentTranscriptGradesAdjustmentsAsync(Dtos.StudentTranscriptGradesAdjustments studentTranscriptGradesAdjustments, bool bypassCache = true)
         {
             if (studentTranscriptGradesAdjustments == null)
                 throw new ArgumentNullException("StudentTranscriptGradesAdjustments", "Must provide a StudentTranscriptGradesAdjustments for update");
@@ -257,6 +285,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             Dictionary<string, string> sectionGuidCollection = null;
             Dictionary<string, string> courseGuidCollection = null;
             Dictionary<string, string> studentCourseSectionGuidCollection = null;
+            Dictionary<string, string> studentTermsGuidCollection = null;
 
             try
             {
@@ -306,12 +335,23 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 IntegrationApiExceptionAddError(ex.Message);
             }
 
+            //Term GUID collection
+            try
+            {
+                var termIds = sources.Where( t => !string.IsNullOrWhiteSpace( t.Term ) ).Select( i => i.Term ).Distinct().ToList();
+                studentTermsGuidCollection = await _termRepository.GetGuidsCollectionAsync( termIds );
+            }
+            catch(Exception ex)
+            {
+                IntegrationApiExceptionAddError( ex.Message );
+            }
+
             foreach (var source in sources)
             {
                 try
                 {
                     studentTranscriptGrade.Add(await ConvertStudentTranscriptGradesEntityToDtoAsync(source,
-                        personGuidCollection, sectionGuidCollection, courseGuidCollection, studentCourseSectionGuidCollection, bypassCache));
+                        personGuidCollection, sectionGuidCollection, courseGuidCollection, studentCourseSectionGuidCollection, studentTermsGuidCollection, bypassCache ) );
                 }
                 catch (Exception ex)
                 {
@@ -353,11 +393,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="source">StudentTranscriptGrades domain entity</param>
         /// <returns>StudentTranscriptGrades DTO</returns>
-        private async Task<StudentTranscriptGrades> ConvertStudentTranscriptGradesEntityToDtoAsync(Domain.Student.Entities.StudentTranscriptGrades source,
+        private async Task<Dtos.StudentTranscriptGrades> ConvertStudentTranscriptGradesEntityToDtoAsync(Domain.Student.Entities.StudentTranscriptGrades source,
             Dictionary<string, string> personGuidCollection,
             Dictionary<string, string> sectionGuidCollection,
             Dictionary<string, string> courseGuidCollection,
             Dictionary<string, string> studentCourseSecGuidCollection,
+            Dictionary<string, string> studentTermsGuidCollection,
             bool bypassCache = false)
         {
 
@@ -379,6 +420,29 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 studentTranscriptGrade.RecordedOn = source.VerifiedGradeDate.Value;
             studentTranscriptGrade.ChangeDetails = await ConvertEntityToStudentTranscriptGradesChangeDetailsCollectionAsync(source.StudentTranscriptGradesHistory,
                 source.Guid, source.Id, bypassCache);
+            //STC.TERM (academicPeriod)
+            if(!string.IsNullOrEmpty(source.Term))
+            {
+                try
+                {
+                    var termGuid = string.Empty;
+                    if( studentTermsGuidCollection != null && studentTermsGuidCollection.TryGetValue( source.Term, out termGuid ) )
+                    {
+                        if( string.IsNullOrEmpty( termGuid ) )
+                        {
+                            IntegrationApiExceptionAddError( string.Format( "No GUID found for academic period id : '{0}'", source.Term ), guid: source.Guid, id: source.Id, httpStatusCode: HttpStatusCode.NotFound );
+                        }
+                        else
+                        {
+                            studentTranscriptGrade.AcademicPeriod = new GuidObject2( termGuid );
+                        }
+                    }
+                }
+                catch
+                {
+                    IntegrationApiExceptionAddError( string.Format( "No GUID found for academic period id : '{0}'", source.Term ), guid: source.Guid, id: source.Id, httpStatusCode: HttpStatusCode.NotFound );
+                }
+            }
 
             return studentTranscriptGrade;
         }
@@ -393,7 +457,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="studentTranscriptGradesAdjustmentsId">Id for StudentTranscriptGrades</param>
         /// <param name="studentTranscriptGradesAdjustmentsDto">DTO for StudentTranscriptGradesAdjustments</param>
         /// <returns></returns>
-        private async Task<Domain.Student.Entities.StudentTranscriptGradesAdjustments> ConvertStudentTranscriptGradesAdjustmentsDtoToEntityAsync(string studentTranscriptGradesAdjustmentsId, StudentTranscriptGradesAdjustments studentTranscriptGradesAdjustmentsDto, bool bypassCache)
+        private async Task<Domain.Student.Entities.StudentTranscriptGradesAdjustments> ConvertStudentTranscriptGradesAdjustmentsDtoToEntityAsync(string studentTranscriptGradesAdjustmentsId, Dtos.StudentTranscriptGradesAdjustments studentTranscriptGradesAdjustmentsDto, bool bypassCache)
         {
             var studentTranscriptGradesAdjustment = new Domain.Student.Entities.StudentTranscriptGradesAdjustments(studentTranscriptGradesAdjustmentsId, studentTranscriptGradesAdjustmentsDto.Id);
             var detail = studentTranscriptGradesAdjustmentsDto.Detail;

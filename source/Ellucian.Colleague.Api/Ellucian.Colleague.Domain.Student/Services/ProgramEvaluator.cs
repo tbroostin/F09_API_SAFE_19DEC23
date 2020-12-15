@@ -288,12 +288,27 @@ namespace Ellucian.Colleague.Domain.Student.Services
                 SortedMasterResultsBySortSpecification = new Dictionary<string,List<AcadResult>>();
 
             }
-           
             foreach (Group g in sortgrps)
             {
+                List<AcadResult> masterResultForInListOrder = new List<AcadResult>();
                 if (!string.IsNullOrEmpty(g.SortSpecificationId) && sortedCreditsDict != null && sortedCreditsDict.ContainsKey(g.SortSpecificationId) && sortedCreditsDict[g.SortSpecificationId] != null && !SortedMasterResultsBySortSpecification.ContainsKey(g.SortSpecificationId))
                 {
                     SortedMasterResultsBySortSpecification.Add(g.SortSpecificationId, ConstructResultSet(sortedCreditsDict[g.SortSpecificationId], PlannedCourses, false));
+                }
+                //if group have IN.LIST.ORDER and syntax have FROM COURSES -- This will cover Type 31 and type 32 syntax like Take x credits from <courses> or Take x courses from <courses>
+                if(g.InListOrder && g.FromCourses.Any())
+                {
+                    //if academic credits were sorted based upon sortspecification or DEFAULT was provided
+                    if(SortedMasterResultsBySortSpecification!=null && SortedMasterResultsBySortSpecification.ContainsKey(g.SortSpecificationId))
+                    {
+                        //call 2nd level of sorting which will re-sort on basis of courses listed in from courses
+                        masterResultForInListOrder = SortOnBasisOfInListOrder(SortedMasterResultsBySortSpecification[g.SortSpecificationId], g.FromCourses);
+                    }
+                    else
+                    {
+                        //if academic credits were sorted as default
+                        masterResultForInListOrder = SortOnBasisOfInListOrder(MasterResults, g.FromCourses);
+                    }
                 }
 
                 // If the Requirement or Subrequirement to which this group belongs is already satisfied, 
@@ -354,11 +369,20 @@ namespace Ellucian.Colleague.Domain.Student.Services
 
                 // Select Academic Credits and Planned Courses to evaluate against the group
                 List<AcadResult> AGCsToEvalThisGroup = new List<AcadResult>();
-                if (!string.IsNullOrEmpty(g.SortSpecificationId) && SortedMasterResultsBySortSpecification != null && SortedMasterResultsBySortSpecification.ContainsKey(g.SortSpecificationId))
+
+                //send list of credits and planned courses for evaluation after those were re-sorted due to IN.LIST.ORDER
+                if(masterResultForInListOrder!=null && masterResultForInListOrder.Any() && g.InListOrder)
+                {
+                    AGCsToEvalThisGroup = ConstructResultSet(masterResultForInListOrder, g, UseTracker, OverridesThisGroup);
+
+                }
+                //if not IN.LIST.ORDER then maybe sortspecification
+                else if (!string.IsNullOrEmpty(g.SortSpecificationId) && SortedMasterResultsBySortSpecification != null && SortedMasterResultsBySortSpecification.ContainsKey(g.SortSpecificationId))
                 {
                     var sortedMasterResultsForSpec = SortedMasterResultsBySortSpecification[g.SortSpecificationId];
                     AGCsToEvalThisGroup = ConstructResultSet(sortedMasterResultsForSpec, g, UseTracker, OverridesThisGroup );
                 }
+                //if not IN.LIST.ORDER or sortspecification then utilize default order of master list
                 else
                 {
                     AGCsToEvalThisGroup = ConstructResultSet(MasterResults, g, UseTracker, OverridesThisGroup);
@@ -729,7 +753,7 @@ namespace Ellucian.Colleague.Domain.Student.Services
 
             return ProgramResult;
         }
-      
+
         /// <summary>
         /// After an optimizing pass over the results, the service layer may decide to rerun the evaluation
         /// without applying any credits/courses to groups or subrequirements that are not needed by adding
@@ -1393,7 +1417,87 @@ namespace Ellucian.Colleague.Domain.Student.Services
 
             }
         }
+        /// <summary>
+        /// This is going to sort the acadmic credits on basis of the order of course ids in from courses.
+        /// IN.LIST.ORDER is 2nd level of sort after the first sort on academic credits and planned courses is already done on basis of sort definition on group or the default sorting.
+        /// </summary>
+        /// <param name="masterResults">this master result is already sorted on sort definition on group or default sorting mechanism</param>
+        /// <param name="fromCourses"></param>
+        /// <returns></returns>
+        private List<AcadResult> SortOnBasisOfInListOrder(List<AcadResult> masterResults, List<string> fromCourses)
+        {
+            Dictionary<AcadResult, int> indexedMasterResults = new Dictionary<AcadResult, int>();
+            List<AcadResult> sortedMasterResults = new List<AcadResult>();
+            if (fromCourses == null || !fromCourses.Any())
+            {
+                return masterResults;
+            }
+            if (masterResults == null || !masterResults.Any())
+            {
+                return masterResults;
+            }
+            
+            try
+            {
+                //assigning a index value to each entry in masterresult
+                foreach (AcadResult result in masterResults)
+                {
+                        //initial assignment are all with MaxValue. 
+                        indexedMasterResults.Add(result , int.MaxValue);
+                }
+                int indexValue = 1;
+                //assign index to academic credits and planned courses based upon the sequence in from courses list
+                foreach (string course in fromCourses)
+                {
+                    //find all the academic credits that have same course as is in the list
+                    List<AcadResult> academicCrditResults = masterResults.Where(m => m.GetCourse()!=null && m.GetCourse().Id == course).ToList();
+                    if (academicCrditResults != null && academicCrditResults.Any())
+                    {
+                        //all those academic credits are given same index value
+                        foreach (AcadResult result in academicCrditResults)
+                        {
+                            try
+                            {
+                                //we don't want to re-enter new index value if it is already there. An example of this is when a From Courses have same course in a list repeated eg: FROM HIST-100 POLI-100 FREN-100 POLI-100. Take first index value of POLI-100
+                                if (indexedMasterResults[result] == int.MaxValue)
+                                {
+                                    indexedMasterResults[result] = indexValue;
+                                }
+                            }
+                            catch
+                            {
 
+                            }
+                        }
+                    }
+                    indexValue += 1;
+                }
+                //create a masterlist that will have completed, inprogress , planned in order
+
+                //push all completed first, sorted on the order of index provided that were in from list. Remember TE and NE are always considered as completed.
+                IEnumerable<KeyValuePair<AcadResult, int>> completedCredits = indexedMasterResults.Where(i => i.Key.GetAcadCred()!=null && i.Key.GetAcadCred().IsCompletedCredit == true && i.Value< int.MaxValue).OrderBy(i => i.Value);
+                sortedMasterResults.AddRange(completedCredits.Select(i => i.Key));
+                //push all inprogress courses
+                IEnumerable<KeyValuePair<AcadResult, int>> inprogressCredits = indexedMasterResults.Where(i => i.Key.GetAcadCred()!=null && i.Key.GetAcadCred().IsCompletedCredit == false && i.Value<int.MaxValue).OrderBy(i => i.Value);
+                sortedMasterResults.AddRange(inprogressCredits.Select(i => i.Key));
+
+                //push all planned courses
+                IEnumerable<KeyValuePair<AcadResult, int>> orderedPlannedCourses = indexedMasterResults.Where(i => i.Key.GetAcadCred() == null && i.Value <int.MaxValue).OrderBy(i => i.Value);
+                sortedMasterResults.AddRange(orderedPlannedCourses.Select(i => i.Key));
+
+                //push all the remaining completed , inprogress credits and planned courses that were not in from list. Basically push all the remaining courses from masterlist that were not in from courses list.
+                //this list is not to be in order of the status but should be in same sequence as were initially available.
+                IEnumerable<KeyValuePair<AcadResult, int>> notInFromListCredits = indexedMasterResults.Where(i => i.Value == int.MaxValue);
+                sortedMasterResults.AddRange(notInFromListCredits.Select(i => i.Key));
+
+                return sortedMasterResults;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "exception occured while doing IN.LIST.ORDER");
+                return masterResults;
+            }
+        }
 
     }
 

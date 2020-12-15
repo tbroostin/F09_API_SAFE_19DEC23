@@ -269,5 +269,52 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 throw CreateHttpResponseException("Unable to void the voucher.", HttpStatusCode.BadRequest);
             }
         }
+
+        /// <summary>
+        /// Retrieves list of vouchers
+        /// </summary>
+        /// <param name="vendorId">Vendor id</param>
+        /// <param name="invoiceNo">Invoice number</param>
+        /// <returns>List of <see cref="Voucher2">Vouchers</see></returns>
+        /// <accessComments>
+        /// Requires permission VIEW.VOUCHER.
+        /// </accessComments>
+        public async Task<IEnumerable<Voucher2>> GetVouchersByVendorAndInvoiceNoAsync(string vendorId, string invoiceNo)
+        {
+            if (string.IsNullOrEmpty(vendorId))
+            {
+                string message = "vendor Id must be specified.";
+                logger.Error(message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+
+            if (string.IsNullOrEmpty(invoiceNo))
+            {
+                string message = "invoice number must be specified.";
+                logger.Error(message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+
+            try
+            {
+                var voucherIds = await voucherService.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNo);
+                return voucherIds;
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex.Message);
+                throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException anex)
+            {
+                logger.Error(anex, anex.Message);
+                throw CreateHttpResponseException("Invalid argument to query the voucher.", HttpStatusCode.BadRequest);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw CreateHttpResponseException();
+            }
+        }
     }
 }

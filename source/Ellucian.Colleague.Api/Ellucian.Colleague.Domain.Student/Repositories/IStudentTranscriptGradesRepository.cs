@@ -10,7 +10,7 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
 {
     public interface IStudentTranscriptGradesRepository : IEthosExtended
     {
-        Task<Tuple<IEnumerable<StudentTranscriptGrades>, int>> GetStudentTranscriptGradesAsync(int offset, int limit, string student = "", bool bypassCache = false);
+        Task<Tuple<IEnumerable<StudentTranscriptGrades>, int>> GetStudentTranscriptGradesAsync(int offset, int limit, string student = "", string academicPeriodId = "", bool bypassCache = false);
         Task<StudentTranscriptGrades> GetStudentTranscriptGradesByGuidAsync(string guid);
         Task<string> GetStudentTranscriptGradesIdFromGuidAsync(string guid);
         Task<StudentTranscriptGrades> GetStudentTranscriptGradesByIdAsync(string id);

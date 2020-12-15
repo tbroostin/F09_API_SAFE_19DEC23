@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Filters;
+using Ellucian.Colleague.Coordination.Base.Adapters;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -57,7 +58,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             var ethnicityCollection = await _referenceDataRepository.EthnicitiesAsync();
 
             // Get the right adapter for the type mapping
-            var ethnicityDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.Ethnicity, Ethnicity>();
+            var ethnicityDtoAdapter = new EthnicityEntityAdapter(_adapterRegistry, _logger);
 
             // Map the ethnicity entity to the program DTO
             var ethnicityDtoCollection = new List<Ethnicity>();
@@ -69,7 +70,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             return ethnicityDtoCollection;
         }
 
-        /// <remarks>For use with Ellucian EEDM Version 4</remarks>
+        /// <remarks>For use with Ellucian EEDM Version 6</remarks>
         /// <summary>
         /// Retrieves all ethnicities. If the request header "Cache-Control" attribute is set to "no-cache" the data returned will be pulled fresh from the database, otherwise cached data is returned.
         /// </summary>

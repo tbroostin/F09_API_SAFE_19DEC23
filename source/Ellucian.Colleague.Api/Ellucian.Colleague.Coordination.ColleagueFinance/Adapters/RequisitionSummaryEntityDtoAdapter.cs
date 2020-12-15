@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Web.Adapters;
 using slf4net;
 
@@ -21,7 +21,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
             AddMappingDependency<Domain.ColleagueFinance.Entities.RequisitionStatus, Dtos.ColleagueFinance.RequisitionStatus>();
 
             AddMappingDependency<Domain.ColleagueFinance.Entities.PurchaseOrderSummary, Dtos.ColleagueFinance.PurchaseOrderLinkSummary>();
-            
+
+            AddMappingDependency<Domain.ColleagueFinance.Entities.Approver, Dtos.ColleagueFinance.Approver>();
         }
     }
 }

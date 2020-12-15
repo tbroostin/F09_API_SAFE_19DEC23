@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -63,7 +63,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             catch (Exception ex)
             {
-                logger.Info("Error reading PERSON.ST record for person ID " + personId + " exception message: " + ex.Message);
+                logger.Error("Error reading PERSON.ST record for person ID " + personId + " exception message: " + ex.Message);
             }
 
             // If there is no PERSON.ST record for this person in Colleague return no restrictions. 
@@ -172,10 +172,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         PersonRestriction stuRestriction = new PersonRestriction(restriction.Recordkey, restriction.StrStudent, restriction.StrRestriction, restriction.StrStartDate, restriction.StrEndDate, restriction.StrSeverity, restriction.StrPrtlDisplayFlag);
                         personRestrictions.Add(stuRestriction);
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
-                        var inString = "Student Restriction Id: " + restriction.Recordkey + ", Student Id: " + restriction.StrStudent + ", Restriction Id: " + restriction.StrRestriction;
-                        LogDataError("Student Restriction", restriction.Recordkey, restriction, e, inString);
+                        var inString = "Student Restriction Id: " + restriction.Recordkey + ", Student Id: " + restriction.StrStudent + ", Restriction Id: " + restriction.StrRestriction + " is not valid.";
+                        logger.Error(inString);
                     }
                 }
             }

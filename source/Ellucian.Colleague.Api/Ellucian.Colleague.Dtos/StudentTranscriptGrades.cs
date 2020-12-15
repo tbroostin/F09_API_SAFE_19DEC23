@@ -28,6 +28,13 @@ namespace Ellucian.Colleague.Dtos
         public StudentTranscriptGradesCourseDtoProperty Course { get; set; }
 
         /// <summary>
+        /// The academic period to which the transcript grade has been assigned.
+        /// </summary>
+        [JsonProperty( "academicPeriod", DefaultValueHandling = DefaultValueHandling.Ignore )]
+        [FilterProperty( "criteria" )]
+        public GuidObject2 AcademicPeriod { get; set; }
+
+        /// <summary>
         /// The grade entered.
         /// </summary>
         [JsonProperty("grade", DefaultValueHandling = DefaultValueHandling.Ignore)]

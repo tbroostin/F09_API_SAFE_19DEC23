@@ -12,6 +12,6 @@ namespace Ellucian.Colleague.Domain.Base.Entities
     [Serializable]
     public enum MaritalStatusType
     {
-        Single, Married, Divorced, Widowed, Separated, Correction
+        Single, Married, Divorced, Widowed, Separated, Other
     }
 }

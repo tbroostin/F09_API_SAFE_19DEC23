@@ -53,8 +53,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// Gets the PersonPositionWages based on the permissions of the current user/proxy of the current user.
         /// </summary>
         /// <param name="effectivePersonId">Optional parameter for effective personId</param>
+        /// <param name="lookupStartDate">lookup start date, all records with end date before this date will not be retrieved</param>
         /// <returns>A collection of PersonPositionWage objects</returns>
-        public async Task<IEnumerable<PersonPositionWage>> GetPersonPositionWagesAsync(string effectivePersonId = null)
+        public async Task<IEnumerable<PersonPositionWage>> GetPersonPositionWagesAsync(string effectivePersonId = null, DateTime? lookupStartDate = null)
         {
             if (effectivePersonId == null)
             {
@@ -101,7 +102,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 }
             }
 
-            var personPositionWageEntities = await personPositionWageRepository.GetPersonPositionWagesAsync(userAndSubordinateIds.Distinct());
+            var personPositionWageEntities = await personPositionWageRepository.GetPersonPositionWagesAsync(userAndSubordinateIds.Distinct(), lookupStartDate);
 
             if (personPositionWageEntities == null)
             {

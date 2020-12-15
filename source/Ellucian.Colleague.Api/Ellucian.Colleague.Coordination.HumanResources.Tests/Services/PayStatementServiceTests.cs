@@ -205,9 +205,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             personBenefitDeductionRepositoryMock.Setup(r => r.GetPersonBenefitDeductionsAsync(It.IsAny<IEnumerable<string>>()))
                 .Returns<IEnumerable<string>>(personIds => testPersonBenefitDeductionData.GetPersonBenefitDeductionsAsync(personIds));
 
-            personEmploymentStatusRepositoryMock.Setup(r => r.GetPersonEmploymentStatusesAsync(It.IsAny<IEnumerable<string>>()))
-                .Callback<IEnumerable<string>>(ids => testPersonEmploymentStatusData.personEmploymentStatusRecords.ForEach(r => r.personId = ids.First()))
-                .Returns<IEnumerable<string>>(ids => testPersonEmploymentStatusData.GetPersonEmploymentStatusesAsync(ids));
+            personEmploymentStatusRepositoryMock.Setup(r => r.GetPersonEmploymentStatusesAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<DateTime?>()))
+                //.Callback<IEnumerable<string>, DateTime?>(ids => testPersonEmploymentStatusData.personEmploymentStatusRecords.ForEach(r => r.personId = ids.First()))
+                .Returns<IEnumerable<string>>(ids => testPersonEmploymentStatusData.GetPersonEmploymentStatusesAsync(ids, null));
 
             loggerMock.Setup(l => l.IsErrorEnabled).Returns(true);
 

@@ -1029,6 +1029,37 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                         groupNames.Add(Subreqs[0], groups1);
                         return await BuildTestProgramRequirementsAsync(reqname, requirementNames, SubrequirementNames, groupNames);
                     }
+                       case "PROG.IN.LIST.SORT.ORDER.BB":
+                    {
+                        //PROG.SORT.ORDER.BB - DATASETUP is in devcoll - student_sort/Testing123!
+                        //req-1 (MAJ)  priority 1 with course reuse=N
+                        //excludes  MIN
+                        //has 1 subrequirments with course reuse = N
+                        //Subrequirment 1
+                        //Take 2 groups;
+                        // TAKE 7 courses from FREN-100 GERM-100 HIND-100 ARTH-100 HUMT-100 CRIM-100 POLI-100; //this is without in.lsit.order syntax
+                        //  TAKE 7 courses from FREN-100 GERM-100 HIND-100 ARTH-100 HUMT-100 CRIM-100 POLI-100; IN.LIST.ORDER; (31)
+
+                        string reqname = id;
+
+                        List<string> reqnames = new List<string>();
+                        Dictionary<string, List<string>> Subreq = new Dictionary<string, List<string>>();
+                        Dictionary<string, List<string>> groups = new Dictionary<string, List<string>>();
+
+                        reqnames.Add("REQ-1:N");
+                      
+                        //one sub-requirment for requirment 1 that have 2 group
+                        Subreq.Add("REQ-1", new List<string>() { "REQ-1-SUBREQ-1" });
+                        groups.Add(Subreq["REQ-1"][0], new List<string>() { "GROUP-1-SORT", "GROUP-2-SORT" });
+
+                        
+
+                        ProgramRequirements pr = await BuildTestProgramRequirementsAsync(reqname + "*" + cat, reqnames, Subreq, groups);
+                        //modify settings of requirments here
+                        pr.Requirements[0].RequirementType = requirementTypes.First(rt => rt.Code == "MAJ");
+
+                        return pr;
+                    }
                 default:
                     {
                         string reqname = id;
@@ -1203,1298 +1234,1338 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
         public async Task<Group> BuildGroupAsync(string id, string code, Subrequirement s)
         {
-
-            // For convenience, dictionaries of courses, departments, etc.
-            // I should probably rewrite these to just use the get methods, but I find this looks cleaner.
-            // I think we can spare the k of memory.
-
-            Dictionary<string, Course> courses = new Dictionary<string, Course>();
-            Dictionary<string, Grade> grades = new Dictionary<string, Grade>();
-
-            foreach (Course c in (await courserepo.GetAsync())) { courses.Add(c.SubjectCode + "-" + c.Number, c); }
-            foreach (Grade g in (await graderepo.GetAsync())) { grades.Add(g.Id, g); }
-
-
-            Group group1 = new Group("100", code, s);
-
-            //group1.Id = "100";  //default
-
-
-            //group1.MaxCreditsRule = new Rule();
-            group1.AllowedGrades = new List<Grade>();
-            group1.ButNotCourses = new List<string>();
-            group1.ButNotCourseLevels = new List<string>();
-            group1.ButNotDepartments = new List<string>();
-            group1.ButNotSubjects = new List<string>();
-            group1.FromCourses = new List<string>();
-            group1.FromLevels = new List<string>();
-            group1.FromDepartments = new List<string>();
-            group1.FromSubjects = new List<string>();
-            group1.Courses = new List<string>();
-            group1.FromCoursesException = new List<string>();
-
-            #region Specific Tests Group Data
-
-
-            // Add logic to enable re-use of group number in group test. 
-            // If the code has the character X, assume the part before the X is the code
-            // that will be found in the switch, and the part after the X makes it unique 
-            // for the test verification.
-            code = code.Split('X').ToList().ElementAt(0);
-
-            code = code.Replace("Group", "Test");
-            switch (code)
+            try
             {
-                case "Test1":
-                    {
-                        // TAKE ENGL*101
-                        group1.Id = "10001";
-                        group1.Courses.Add(courses["ENGL-101"].Id);
-                        group1.GroupType = GroupType.TakeAll;
-                        break;
-                    }
 
-                case "Test2":
-                    {
-                        // TAKE 1 COURSE; FROM ENGL*101, ENGL*102
-                        group1.Id = "10002";
-                        group1.MinCourses = 1;
-                        group1.FromCourses.Add(courses["ENGL-101"].Id);
-                        group1.FromCourses.Add(courses["ENGL-102"].Id);
-                        group1.GroupType = GroupType.TakeSelected;
-                        break;
-                    }
+                // For convenience, dictionaries of courses, departments, etc.
+                // I should probably rewrite these to just use the get methods, but I find this looks cleaner.
+                // I think we can spare the k of memory.
 
-                case "Test3":
-                    {
-                        // TAKE ENGL*101, ENGL*102 
-                        group1.Id = "10003";
-                        group1.Courses.Add(courses["ENGL-101"].Id);
-                        group1.Courses.Add(courses["ENGL-102"].Id);
-                        group1.GroupType = GroupType.TakeAll;
-                        break;
-                    }
+                Dictionary<string, Course> courses = new Dictionary<string, Course>();
+                Dictionary<string, Grade> grades = new Dictionary<string, Grade>();
+
+                foreach (Course c in (await courserepo.GetAsync())) { courses.Add(c.SubjectCode + "-" + c.Number, c); }
+                foreach (Grade g in (await graderepo.GetAsync())) { grades.Add(g.Id, g); }
 
 
-                case "Test4":
-                    {
-                        // TAKE 2 COURSES; FROM ENGL*101, ENGL*102 
-                        group1.Id = "10004";
-                        group1.MinCourses = 2;
-                        group1.FromCourses.Add(courses["ENGL-101"].Id);
-                        group1.FromCourses.Add(courses["ENGL-102"].Id);
-                        group1.GroupType = GroupType.TakeSelected;
-                        break;
-                    }
-                case "Test5":
-                    {
-                        // TAKE 2 COURSES
-                        group1.Id = "10005";
-                        group1.MinCourses = 2;
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test6":
-                    {
-                        // TAKE 1 COURSE; FROM DEPARTMENT MATH
-                        group1.Id = "10006";
-                        group1.MinCourses = 1;
-                        group1.FromDepartments.Add("MATH");
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test7":
-                    {
-                        // TAKE 1 COURSE; FROM DEPARTMENT MATH; MINIMUM 1 DEPARTMENT
-                        group1.Id = "10007";
-                        group1.MinCourses = 1;
-                        group1.FromDepartments.Add("MATH");
-                        group1.MinDepartments = 1;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test8":
-                    {
-                        // TAKE 1 COURSE; FROM DEPARTMENTS MATH, ENGL
-                        group1.Id = "10008";
-                        group1.MinCourses = 1;
-                        group1.FromDepartments.Add("MATH");
-                        group1.FromDepartments.Add("ENGL");
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test9":
-                    {
-                        // TAKE 1 COURSE; FROM DEPARTMENTS MATH, ENGL; MINIMUM 1 DEPARTMENT
-                        group1.Id = "10009";
-                        group1.MinCourses = 1;
-                        group1.FromDepartments.Add("MATH");
-                        group1.FromDepartments.Add("ENGL");
-                        group1.MinDepartments = 1;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test10":
-                    {
-                        // TAKE 2 COURSES; MINIMUM 2 DEPARTMENTS
-                        group1.Id = "10010";
-                        group1.MinCourses = 2;
-                        group1.MinDepartments = 2;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test11":
-                    {
-                        // TAKE 1 COURSE; FROM LEVEL 200 
-                        group1.Id = "10011";
-                        group1.MinCourses = 1;
-                        group1.FromLevels.Add("200");
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test12":
-                    {
-                        // TAKE 2 COURSES; FROM LEVELS 100, 200 
-                        group1.Id = "10012";
-                        group1.MinCourses = 2;
-                        group1.FromLevels.Add("100");
-                        group1.FromLevels.Add("200");
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test13":
-                    {
-                        // TAKE 1 COURSE; FROM SUBJECT MATH
-                        group1.Id = "10013";
-                        group1.MinCourses = 1;
-                        group1.FromSubjects.Add("MATH");
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test14":
-                    {
-                        // TAKE 1 COURSE; FROM SUBJECT MATH, ENGL 
-                        group1.Id = "10014";
-                        group1.MinCourses = 1;
-                        group1.FromSubjects.Add("MATH");
-                        group1.FromSubjects.Add("ENGL");
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test15":
-                    {
-                        // TAKE 2 COURSES; MINIMUM 2 SUBJECTS
-                        group1.Id = "10015";
-                        group1.MinCourses = 2;
-                        group1.MinSubjects = 2;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test16":
-                    {
-                        // TAKE 2 COURSES; EXCEPT MATH*100
-                        group1.Id = "10016";
-                        group1.MinCourses = 2;
-                        group1.ButNotCourses.Add(courses["MATH-100"].Id);
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test17":
-                    {
-                        // TAKE 2 COURSES; EXCEPT MATH*100, DANC*200
-                        group1.Id = "10017";
-                        group1.MinCourses = 2;
-                        group1.ButNotCourses.Add(courses["MATH-100"].Id);
-                        group1.ButNotCourses.Add(courses["DANC-200"].Id);
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test18":
-                    {
-                        // TAKE 1 COURSE; FROM SUBJECT MATH; EXCEPT MATH*100
-                        group1.Id = "10018";
-                        group1.MinCourses = 1;
-                        group1.FromSubjects.Add("MATH");
-                        group1.ButNotCourses.Add(courses["MATH-100"].Id);
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test19":
-                    {
-                        // TAKE 1 COURSE; EXCEPT DEPARTMENTS MATH
-                        group1.Id = "10019";
-                        group1.MinCourses = 1;
-                        group1.ButNotDepartments.Add("MATH");
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test20":
-                    {
-                        // TAKE 2 COURSES; EXCEPT DEPARTMENTS MATH, PERF 
-                        group1.Id = "10020";
-                        group1.MinCourses = 2;
-                        group1.ButNotDepartments.Add("MATH");
-                        group1.ButNotDepartments.Add("PERF");
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test21":
-                    {
-                        // TAKE 1 COURSE; EXCEPT SUBJECT MATH
-                        group1.Id = "10021";
-                        group1.MinCourses = 1;
-                        group1.ButNotSubjects.Add("MATH");
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test22":
-                    {
-                        // TAKE 1 COURSE; EXCEPT SUBJECTS ENGL, DANC
-                        group1.Id = "10022";
-                        group1.MinCourses = 1;
-                        group1.ButNotSubjects.Add("ENGL");
-                        group1.ButNotSubjects.Add("DANC");
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test23":
-                    {
-                        // TAKE 1 COURSE; EXCEPT LEVEL 100
-                        group1.Id = "10023";
-                        group1.MinCourses = 1;
-                        group1.ButNotCourseLevels.Add("100");
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test24":
-                    {
-                        // TAKE 1 COURSE; EXCEPT LEVELS 100,200
-                        group1.Id = "10024";
-                        group1.MinCourses = 1;
-                        group1.ButNotCourseLevels.Add("100");
-                        group1.ButNotCourseLevels.Add("200");
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test25":
-                    {
-                        // TAKE 4 CREDITS
-                        group1.Id = "10025";
-                        group1.MinCredits = 4;
-                        group1.GroupType = GroupType.TakeCredits;
-                        break;
-                    }
-                case "Test26":
-                    {
-                        // TAKE 3 CREDITS
-                        group1.Id = "10026";
-                        group1.MinCredits = 3;
-                        group1.GroupType = GroupType.TakeCredits;
-                        break;
-                    }
-                case "Test27":
-                    {
-                        // TAKE 1 COURSE; MINIMUM 4 CREDITS
-                        group1.Id = "10027";
-                        group1.MinCourses = 1;
-                        group1.MinCredits = 4;
-                        group1.GroupType = GroupType.TakeCredits;
-                        break;
-                    }
-                case "Test28":
-                    {
-                        // TAKE 8 CREDITS; MAXIMUM 2 COURSES
-                        group1.Id = "10028";
-                        group1.MinCredits = 8;
-                        group1.MaxCourses = 2;
-                        group1.InternalType = "32";
-                        group1.GroupType = GroupType.TakeCredits;
-                        break;
-                    }
-                case "Test29":
-                    {
-                        // TAKE 4 CREDITS; MAXIMUM 1 COURSE 
-                        group1.Id = "10029";
-                        group1.MinCredits = 4;
-                        group1.MaxCourses = 1;
-                        group1.InternalType = "32";
-                        group1.GroupType = GroupType.TakeCredits;
-                        break;
-                    }
-                case "Test30":
-                    {
-                        // TAKE 2 COURSES; MAXIMUM 1 DEPARTMENT
-                        group1.Id = "10030";
-                        group1.MinCourses = 2;
-                        group1.MaxDepartments = 1;
-                        group1.InternalType = "32";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test31":
-                    {
-                        // TAKE 2 COURSES; MAXIMUM 1 SUBJECT
-                        group1.Id = "10031";
-                        group1.MinCourses = 2;
-                        group1.MaxSubjects = 1;
-                        group1.InternalType = "32";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test32":
-                    {
-                        // TAKE 1 COURSE; MAXIMUM 3 CREDITS
-                        group1.Id = "10032";
-                        group1.MinCourses = 1;
-                        group1.MaxCredits = 3;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test33":
-                    {
-                        // TAKE 2 COURSES; MAXIMUM 6 CREDITS
-                        group1.Id = "10033";
-                        group1.MinCourses = 2;
-                        group1.MaxCredits = 6;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test34":
-                    {
-                        // TAKE 2 COURSES; MAXIMUM 1 COURSE PER SUBJECT 
-                        group1.Id = "10034";
-                        group1.MinCourses = 2;
-                        group1.MaxCoursesPerSubject = 1;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test35":
-                    {
-                        // TAKE 4 COURSES; MAXIMUM 2 COURSES PER SUBJECT
-                        group1.Id = "10035";
-                        group1.MinCourses = 4;
-                        group1.MaxCoursesPerSubject = 2;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test36":
-                    {
-                        // TAKE 4 COURSES; MAXIMUM 1 COURSE PER SUBJECT
-                        group1.Id = "10036";
-                        group1.MinCourses = 4;
-                        group1.MaxCoursesPerSubject = 1;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test37":
-                    {
-                        // TAKE 1 COURSE; MAXIMUM 1 COURSE PER DEPARTMENT
-                        group1.Id = "10037";
-                        group1.MinCourses = 1;
-                        group1.MaxCoursesPerDepartment = 1;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test38":
-                    {
-                        // TAKE 3 COURSES; MAXIMUM 2 COURSES PER DEPARTMENT 
-                        group1.Id = "10038";
-                        group1.MinCourses = 3;
-                        group1.MaxCoursesPerDepartment = 2;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test39":
-                    {
-                        // TAKE 2 COURSES; MAXIMUM 1 100,200 LEVEL COURSES
-                        group1.Id = "10039";
-                        group1.MinCourses = 2;
-                        List<string> mxlevlist = new List<string>();
-                        mxlevlist.Add("100");
-                        mxlevlist.Add("200");
-                        group1.MaxCoursesAtLevels = new MaxCoursesAtLevels(1, mxlevlist);
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test40":
-                    {
-                        // TAKE 2 COURSES; MAXIMUM 3 CREDITS PER COURSE
-                        group1.Id = "10040";
-                        group1.MinCourses = 2;
-                        group1.MaxCreditsPerCourse = 3;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test41":
-                    {
-                        // TAKE 2 COURSES; MAXIMUM 3 CREDITS PER SUBJECT
-                        group1.Id = "10041";
-                        group1.MinCourses = 2;
-                        group1.MaxCreditsPerSubject = 3;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test42":
-                    {
-                        // TAKE 3 COURSES; MAXIMUM 6 CREDITS PER DEPARTMENT
-                        group1.Id = "10042";
-                        group1.MinCourses = 3;
-                        group1.MaxCreditsPerDepartment = 6;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test43":
-                    {
-                        // TAKE 2 COURSES; MAXIMUM 3 100,200 LEVEL CREDITS
-                        group1.Id = "10043";
-                        group1.MinCourses = 2;
-                        List<string> mxlevlist = new List<string>();
-                        mxlevlist.Add("100");
-                        mxlevlist.Add("200");
-                        group1.MaxCreditsAtLevels = new MaxCreditAtLevels(3, mxlevlist);
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test44":
-                    {
-                        // TAKE 6 CREDITS; MINIMUM 3 INST.HOURS
-                        group1.Id = "10044";
-                        group1.MinCredits = 6;
-                        group1.MinInstitutionalCredits = 3;
-                        group1.InternalType = "32";
-                        group1.GroupType = GroupType.TakeCredits;
-                        break;
-                    }
-                case "Test45":
-                    {
-                        // TAKE 2 COURSES; MINIMUM 2 INST.HOURS
-                        group1.Id = "10045";
-                        group1.MinCourses = 2;
-                        group1.MinInstitutionalCredits = 2;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test46":
-                    {
-                        // TAKE 2 COURSES; MINIMUM 4 CREDITS PER COURSE
-                        group1.Id = "10046";
-                        group1.MinCourses = 2;
-                        group1.MinCreditsPerCourse = 4;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test47":
-                    {
-                        // TAKE 2 COURSES FROM SUBJECTS MUSC; MINIMUM 4 CREDITS PER SUBJECT
-                        group1.Id = "10047";
-                        group1.MinCourses = 2;
-                        group1.FromSubjects.Add("MUSC");
-                        group1.MinCreditsPerSubject = 4;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test48":
-                    {
-                        // TAKE 2 COURSES FROM SUBJECTS MATH,PHYS;MINIMUM 4 CREDITS PER SUBJECT
-                        group1.Id = "10048";
-                        group1.MinCourses = 2;
-                        group1.FromSubjects.Add("MATH");
-                        group1.FromSubjects.Add("PHYS");
-                        group1.MinCreditsPerSubject = 4;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test49":
-                    {
-                        // TAKE 2 COURSES FROM SUBJECTS MATH,PHYS;MINIMUM 4 CREDITS PER SUBJECT;MINIMUM 2 SUBJECTS 
-                        group1.Id = "10049";
-                        group1.MinCourses = 2;
-                        group1.FromSubjects.Add("MATH");
-                        group1.FromSubjects.Add("PHYS");
-                        group1.MinCreditsPerSubject = 4;
-                        group1.MinSubjects = 2;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test50":
-                    {
-                        // TAKE 3 COURSES FROM DEPARTMENTS HIST,MATH; MINIMUM 4 CREDITS PER DEPARTMENT
-                        group1.Id = "10050";
-                        group1.MinCourses = 3;
-                        group1.FromDepartments.Add("HIST");
-                        group1.FromDepartments.Add("MATH");
-                        group1.MinCreditsPerDepartment = 4;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test51":
-                    {
-                        // TAKE 4 COURSES FROM DEPARTMENTS HIST,MATH; MINIMUM 2 COURSES PER DEPARTMENT
-                        group1.Id = "10051";
-                        group1.MinCourses = 4;
-                        group1.FromDepartments.Add("HIST");
-                        group1.FromDepartments.Add("MATH");
-                        group1.MinCoursesPerDepartment = 2;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test52":
-                    {
-                        // TAKE 4 COURSES FROM SUBJECTS HIST,MATH; MINIMUM 2 COURSES PER SUBJECT
-                        group1.Id = "10052";
-                        group1.MinCourses = 4;
-                        group1.FromSubjects.Add("MATH");
-                        group1.FromSubjects.Add("HIST");
-                        group1.MinCoursesPerSubject = 2;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test53":
-                    {
-                        // TAKE 2 COURSES; MIN Gpa 2.5 
-                        group1.Id = "10053";
-                        group1.MinCourses = 2;
-                        group1.MinGpa = decimal.Parse("2.5");
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test54":
-                    {
-                        // TAKE 2 COURSES; MIN GRADE A
-                        group1.Id = "10054";
-                        group1.MinCourses = 2;
-                        group1.MinGrade = grades["A"];
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "Test55":
-                    {
-                        // TAKE 2 COURSES; MIN GRADE A,AU,P 
-                        group1.Id = "10055";
-                        group1.MinCourses = 2;
-                        group1.MinGrade = grades["A"];
-                        group1.AllowedGrades.Add(grades["AU"]);
-                        group1.AllowedGrades.Add(grades["P"]);
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
+                Group group1 = new Group("100", code, s);
 
-                case "Test56":
-                    {   // TAKE 1 COURSE FROM RULE MATH100
-                        group1.Id = "10056";
-                        group1.MinCourses = 1;
-                        group1.AcademicCreditRules.Add(new RequirementRule(new Rule<AcademicCredit>("MATH100")));
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-
-                case "Test57":
-                    {
-                        // Take 1 course from dept "PERF"
-                        group1.Id = "10057";
-                        group1.MaxCourses = 1;
-                        group1.MinCourses = 1;
-                        group1.FromDepartments.Add("PERF");
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-
-                    }
-
-                case "Test58":
-                    {
-                        // TAKE ENGL*101, ENGL*102 
-                        group1.Id = "10058";
-                        group1.Courses.Add(courses["ENGL-101"].Id);
-                        group1.Courses.Add(courses["HIST-200"].Id);
-                        group1.GroupType = GroupType.TakeAll;
-                        break;
-                    }
-
-                case "Test59":
-                    {
-                        group1.Id = "10059";
-                        group1.Courses.Add(courses["MATH-201"].Id);
-                        group1.GroupType = GroupType.TakeAll;
-                        break;
-                    }
-
-                case "Test60":
-                    {
-                        // TAKE 2 COURSES FROM SUBJECTS MATH, DANC
-                        group1.Id = "10060";
-                        group1.MinCourses = 2;
-                        group1.FromSubjects.Add("MATH");
-                        group1.FromSubjects.Add("DANC");
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-
-                case "Test61":
-                    {
-                        // TAKE 1 COURSE; FROM DEPARTMENT HIST -- TESTING EQUATED DEPARTMENT
-                        group1.Id = "10061";
-                        group1.MinCourses = 1;
-                        group1.FromDepartments.Add("HIST");
-                        group1.InternalType = "33";
-                        break;
-                    }
-
-                case "Test62":
-                    {
-                        // TAKE 1 COURSE; FROM SUBJECT POLI -- TESTING EQUATED SUBJECT
-                        group1.Id = "10062";
-                        group1.MinCourses = 1;
-                        group1.FromSubjects.Add("POLI");
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-
-                case "Test63":
-                    {
-                        // TAKE 1 COURSE; FROM LEVEL 200  -- TESTING EQUATED LEVEL
-                        group1.Id = "10063";
-                        group1.MinCourses = 1;
-                        group1.FromLevels.Add("200");
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-
-                case "Test64":
-                    {
-                        // TAKE 1 COURSE; FROM DEPARTMENT HIST, BUT NOT POLI --EQUATED COURSE FROM EXCEPT DEPT NOT APPLIED
-                        group1.Id = "10061";
-                        group1.MinCourses = 1;
-                        group1.FromDepartments.Add("HIST");
-                        group1.ButNotDepartments.Add("POLI");
-                        group1.InternalType = "33";
-                        break;
-                    }
-
-                case "Test65":
-                    {
-                        // TAKE 1 COURSE; FROM SUBJECT POLI, BUT NOT HIST -- EQUATED COURSE FROM EXCEPT SUBJECT NOT APPLIED
-                        group1.Id = "10062";
-                        group1.MinCourses = 1;
-                        group1.FromSubjects.Add("POLI");
-                        group1.ButNotSubjects.Add("HIST");
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-
-                case "Test66":
-                    {
-                        // TAKE 1 COURSE; FROM LEVEL 200, BUT NOT LEVEL 100 -- EQUATED COURSE FROM EXCEPT LEVEL NOT APPLIED
-                        group1.Id = "10063";
-                        group1.MinCourses = 1;
-                        group1.FromLevels.Add("200");
-                        group1.ButNotCourseLevels.Add("100");
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-
-                case "Test67":
-                    {
-                        // Take 1 course; from subject HIST with Additional Courses Exception allowing MATH-100 (id 143)
-                        group1.Id = "10067";
-                        group1.MinCourses = 2;
-                        group1.FromSubjects = new List<string>() { "HIST" };
-                        group1.GroupType = GroupType.TakeCourses;
-                        group1.IsModified = true;
-                        group1.FromCoursesException.Add(courses["MATH-100"].Id);
-                        group1.IsWaived = false;
-                        break;
-                    }
-
-                case "Test68":
-                    {
-                        // Take 1 course with rule, Exception allowing MATH-100 (id 143)
-                        group1.Id = "10068";
-                        group1.MinCourses = 2;
-                        group1.AcademicCreditRules.Add(new RequirementRule(new Rule<AcademicCredit>("SUBJENGL")));
-                        group1.GroupType = GroupType.TakeCourses;
-                        group1.IsModified = true;
-                        group1.FromCoursesException.Add(courses["MATH-100"].Id);
-                        group1.IsWaived = false;
-                        break;
-                    }
-
-                case "Test69":
-                    {
-                        // Take 4 credits; from ENGL*101 ENGL*102
-                        group1.Id = "10069";
-                        group1.MinCredits = 4;
-                        group1.FromCourses.Add(courses["ENGL-101"].Id);
-                        group1.FromCourses.Add(courses["ENGL-102"].Id);
-                        group1.GroupType = GroupType.TakeCredits;
-                        group1.IsWaived = false;
-                        break;
-                    }
-
-                case "Test70":
-                    {
-                        // Take 4 Credits; from DEPT HIST; Exception allowing ENGL*101 ENGL*102 
-                        group1.Id = "10070";
-                        group1.MinCredits = 4;
-                        group1.FromDepartments.Add("HIST");
-                        group1.FromCoursesException.Add(courses["ENGL-101"].Id);
-                        group1.FromCoursesException.Add(courses["ENGL-102"].Id);
-                        group1.IsModified = true;
-                        group1.GroupType = GroupType.TakeCredits;
-                        group1.IsWaived = false;
-                        break;
-                    }
-
-                case "Test71":
-                    {
-                        // Take 4 Credits; from ENGL*101 ENGL*102. Exception allowing MATH*201
-                        group1.Id = "10071";
-                        group1.MinCredits = 4;
-                        group1.FromCourses.Add(courses["ENGL-101"].Id);
-                        group1.FromCourses.Add(courses["ENGL-102"].Id);
-                        group1.FromCoursesException.Add(courses["MATH-201"].Id);
-                        group1.IsModified = true;
-                        group1.GroupType = GroupType.TakeCredits;
-                        group1.IsWaived = false;
-                        break;
-                    }
-
-                case "Test72":
-                    {
-                        // TAKE 1 COURSES; MIN Gpa 2.5 
-                        group1.Id = "10072";
-                        group1.MinCourses = 1;
-                        group1.MinGpa = decimal.Parse("2.5");
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-
-                case "Test73":
-                    {
-                        // Take 9 credits; From Subjects ART HIST MUSC DANC ENGL HUMT RELG CERA; Minimum 2 subjects;
-                        group1.Id = "10073";
-                        group1.MinCredits = 9;
-                        group1.MinSubjects = 2;
-                        group1.FromSubjects = new List<string>() { "ART", "HIST", "MUSC", "DANC", "ENGL", "HUMT", "RELG", "CERA" };
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCredits;
-                        group1.IsWaived = false;
-                        break;
-                    }
-
-                case "Test74":
-                    {
-                        // Take 9 credits; From Subjects ART HIST MUSC DANC ENGL HUMT RELG CERA; Minimum 2 departments;
-                        group1.Id = "10074";
-                        group1.MinCredits = 9;
-                        group1.MinDepartments = 2;
-                        group1.FromSubjects = new List<string>() { "ART", "HIST", "MUSC", "DANC", "ENGL", "HUMT", "RELG", "CERA" };
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCredits;
-                        group1.IsWaived = false;
-                        break;
-                    }                    
-
-                case "Test75":
-                    {
-                        // Take 9 credits; From Subjects ART HIST MUSC DANC ENGL HUMT RELG CERA; Minimum 5 courses;
-                        group1.Id = "10075";
-                        group1.MinCredits = 9;
-                        group1.MinCourses = 5;
-                        group1.FromSubjects = new List<string>() { "ART", "HIST", "MUSC", "DANC", "ENGL", "HUMT", "RELG", "CERA" };
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCredits;
-                        group1.IsWaived = false;
-                        break;
-                    }
-
-                case "Test76":
-                    {
-                        // Take 6 Credits; From Subjects ART MUSC RELG;
-                        group1.Id = "10076";
-                        group1.MinCredits = 6;
-                        group1.FromSubjects = new List<string>() { "ART", "MUSC", "RELG", "HU" };
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCredits;
-                        group1.IsWaived = false;
-                        break;
-                    }
-
-                case "Test77":
-                    {
-                        // TAKE 3 COURSES; MAX 2 FROM LEVELS 100, 200 
-                        group1.Id = "10077";
-                        group1.MinCourses = 3;
-                        group1.MaxCoursesAtLevels = new MaxCoursesAtLevels(2, new List<string>() { "100", "200" });
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-
-                case "Test78":
-                    {
-                        // TAKE 16 CREDITS; MAX 8 CREDITS FROM LEVELS 100, 200 
-                        group1.Id = "10078";
-                        group1.MinCredits = 16;
-                        group1.MaxCreditsAtLevels = new MaxCreditAtLevels(9, new List<string>() { "100", "200" });
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-
-                case "Test79":
-                    {
-                        // TAKE 3 CREDITS 
-                        group1.Id = "10079";
-                        group1.MinCredits = 3;
-                        group1.InternalType = "33";
-                        group1.GroupType = GroupType.TakeAll;
-                        break;
-                    }
-
-                case "Math Theory":
-                    {
-                        group1.Id = "10056";
-                        group1.Courses.Add(courses["MATH-100"].Id);
-                        group1.GroupType = GroupType.TakeAll;
-                        break;
-                    }
-                case "Math Practical":
-                    {
-                        group1.Id = "10057";
-                        group1.Courses.Add(courses["MATH-200"].Id);
-                        group1.GroupType = GroupType.TakeAll;
-                        break;
-                    }
-                case "Engl Theory":
-                    {
-                        // TAKE ENGL*101
-                        group1.Id = "10058";
-                        group1.Courses.Add(courses["ENGL-101"].Id);
-                        group1.GroupType = GroupType.TakeAll;
-                        break;
-                    }
-                case "Engl Practical":
-                    {
-                        group1.Id = "10059";
-                        group1.Courses.Add(courses["ENGL-102"].Id);
-                        group1.GroupType = GroupType.TakeAll;
-                        break;
-                    }
-
-                // For RequirementsRepositoryTests 
-
-                //Requirement:          Math Core
-                //Subrequirements:      Math Basic(grp 1)      Math Practical (grps 2&3)(take both)
-                //Groups:     (1) TAKE MATH-100   (2) TAKE 4 CREDITS FROM DEPT MATH  (3)  TAKE 1 COURSE FROM DEPT MATH LEVEL 300,400
-
-                //Requirement:          Engl Core
-                //Subrequirements:      Engl Basic(grp 4)      Humanities (grps 5&6)(take 1)
-                //Groups:     (4) TAKE ENGL-101 and COMP-100   (5) TAKE 1 COURSE FROM (ART-200,DANC-100)   (6)  TAKE 1 COURSE FROM SUBJECT SOCI
+                //group1.Id = "100";  //default
 
 
-                case "ReqTestGrp1":
-                    {
-                        group1.Id = "10061";
-                        group1.Courses.Add(courses["MATH-100"].Id);
-                        group1.GroupType = GroupType.TakeAll;
-                        break;
-                    }
-                case "ReqTestGrp2":
-                    {
-                        group1.Id = "10062";
-                        group1.MinCredits = 4;
-                        group1.FromDepartments.Add("MATH");
-                        group1.GroupType = GroupType.TakeCredits;
-                        break;
-                    }
-                case "ReqTestGrp3":
-                    {
-                        group1.Id = "10063";
-                        group1.MinCourses = 1;
-                        group1.FromDepartments.Add("MATH");
-                        group1.FromLevels.Add("300");
-                        group1.FromLevels.Add("400");
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
+                //group1.MaxCreditsRule = new Rule();
+                group1.AllowedGrades = new List<Grade>();
+                group1.ButNotCourses = new List<string>();
+                group1.ButNotCourseLevels = new List<string>();
+                group1.ButNotDepartments = new List<string>();
+                group1.ButNotSubjects = new List<string>();
+                group1.FromCourses = new List<string>();
+                group1.FromLevels = new List<string>();
+                group1.FromDepartments = new List<string>();
+                group1.FromSubjects = new List<string>();
+                group1.Courses = new List<string>();
+                group1.FromCoursesException = new List<string>();
 
-                case "ReqTestGrp4":
-                    {
-                        group1.Id = "10064";
-                        group1.Courses.Add(courses["ENGL-101"].Id);
-                        group1.Courses.Add(courses["COMP-100"].Id);
-                        group1.GroupType = GroupType.TakeAll;
-                        break;
-                    }
-                case "ReqTestGrp5":
-                    {
-                        group1.Id = "10065";
-                        group1.MinCourses = 1;
-                        group1.FromCourses.Add(courses["ART-200"].Id);
-                        group1.FromCourses.Add(courses["DANC-100"].Id);
-                        group1.GroupType = GroupType.TakeSelected;
-                        break;
-                    }
-                case "ReqTestGrp6":
-                    {
-                        group1.Id = "10066";
-                        group1.MinCourses = 1;
-                        group1.FromSubjects.Add("SOCI");
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-
-                // Cases for groups in coll18dev
-                case "20886":
-                    {
-                        group1.Id = "20886";
-                        group1.Courses.Add(courses["ENGL-1000"].Id);
-                        group1.Courses.Add(courses["ENGL-1001"].Id);
-                        group1.GroupType = GroupType.TakeAll;
-                        break;
-                    }
-                case "20888":
-                    {
-                        group1.Id = "20888";
-                        group1.MinCourses = 1;
-                        group1.FromCourses.Add(courses["MATH-1000"].Id);
-                        group1.FromCourses.Add(courses["MATH-1001"].Id);
-                        group1.GroupType = GroupType.TakeSelected;
-                        break;
-                    }
-                case "20892":
-                    {
-                        group1.Id = "20892";
-                        group1.MinCourses = 4;
-                        group1.FromDepartments.Add("MATH");
-                        group1.FromLevels.Add("100");
-                        group1.FromLevels.Add("200");
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "20895":
-                    {
-                        group1.Id = "20895";
-                        group1.MinCredits = 12;
-                        group1.FromSubjects.Add("MATH");
-                        group1.FromSubjects.Add("COMP");
-                        group1.ButNotCourseLevels.Add("100");
-                        group1.GroupType = GroupType.TakeCredits;
-                        break;
-                    }
-                case "20897":
-                    {
-                        group1.Id = "20897";
-                        group1.MinCourses = 2;
-                        group1.FromCourses.Add(courses["MATH-4000"].Id);
-                        group1.FromCourses.Add(courses["MATH-4001"].Id);
-                        group1.FromCourses.Add(courses["MATH-4002"].Id);
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "20900":
-                    {
-                        group1.Id = "20900";
-                        group1.Courses.Add(courses["HU-1000"].Id);
-                        group1.GroupType = GroupType.TakeAll;
-                        break;
-                    }
-                case "20902":
-                    {
-                        group1.Id = "20902";
-                        group1.Courses.Add(courses["COMM-2000"].Id);
-                        group1.GroupType = GroupType.TakeAll;
-                        break;
-                    }
+                #region Specific Tests Group Data
 
 
-                case "SIMPLE.ANY":
-                    {
-                        group1.Id = "SIMPLE.ANY";
-                        group1.MinCourses = 10;
-                        // accept courses from any level
-                        group1.FromLevels.Add("100");
-                        group1.FromLevels.Add("200");
-                        group1.FromLevels.Add("300");
-                        group1.FromLevels.Add("400");
-                        group1.FromLevels.Add("500");
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
+                // Add logic to enable re-use of group number in group test. 
+                // If the code has the character X, assume the part before the X is the code
+                // that will be found in the switch, and the part after the X makes it unique 
+                // for the test verification.
+                code = code.Split('X').ToList().ElementAt(0);
 
-                case "500ONLY":
-                    {
-                        group1.Id = "500ONLY";
-                        group1.MinCourses = 10;
-                        // accept courses from a level that will not work
-                        group1.FromLevels.Add("500");
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
+                code = code.Replace("Group", "Test");
+                switch (code)
+                {
+                    case "Test1":
+                        {
+                            // TAKE ENGL*101
+                            group1.Id = "10001";
+                            group1.Courses.Add(courses["ENGL-101"].Id);
+                            group1.GroupType = GroupType.TakeAll;
+                            break;
+                        }
 
-                case "100-200ONLY":
-                    {
-                        group1.Id = "100-200ONLY";
-                        group1.MinCourses = 10;
-                        // accept courses from a level that will not work
-                        group1.FromLevels.Add("100");
-                        group1.FromLevels.Add("200");
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
+                    case "Test2":
+                        {
+                            // TAKE 1 COURSE; FROM ENGL*101, ENGL*102
+                            group1.Id = "10002";
+                            group1.MinCourses = 1;
+                            group1.FromCourses.Add(courses["ENGL-101"].Id);
+                            group1.FromCourses.Add(courses["ENGL-102"].Id);
+                            group1.GroupType = GroupType.TakeSelected;
+                            break;
+                        }
 
-                case "MUSC-209":
-                    {
-                        group1.Id = "MUSC-209";
-                        group1.Courses.Add(courses["MUSC-209"].Id);
-                        group1.GroupType = GroupType.TakeAll;
-                        break;
-                    }
+                    case "Test3":
+                        {
+                            // TAKE ENGL*101, ENGL*102 
+                            group1.Id = "10003";
+                            group1.Courses.Add(courses["ENGL-101"].Id);
+                            group1.Courses.Add(courses["ENGL-102"].Id);
+                            group1.GroupType = GroupType.TakeAll;
+                            break;
+                        }
 
-                case "SUBJ_MUSC_3CREDITS":
-                    {
-                        group1.Id = "MUSC-209";
-                        group1.MinCredits = 3;
-                        group1.FromSubjects.Add("MUSC");
-                        group1.GroupType = GroupType.TakeCredits;
-                        break;
-                    }
 
-                case "SUBJ_MUSC_3CREDITS_E":
-                    {
-                        group1.Id = "MUSC-209";
-                        group1.MinCredits = 3;
-                        group1.FromSubjects.Add("MUSC");
-                        group1.GroupType = GroupType.TakeCredits;
-                        group1.Exclusions = new List<string>() {"MAJ", "MIN"};
-                        break;
-                    }
-                case "SUBJ_MUSC_4CREDITS":
-                    {
-                        group1.Id = "MUSC-209-TWO";
-                        group1.MinCredits = 4;
-                        group1.FromSubjects.Add("MUSC");
-                        group1.GroupType = GroupType.TakeCredits;
-                        break;
-                    }
-                case "ZERO_CREDITS_COUNTED":
-                    {
-                        // TAKE 2 COURSES; FROM ENGL*101, ACCT*101 (a course with 0 credits) 
-                        group1.Id = "10000-BB";
-                        group1.MinCourses = 2;
-                        group1.FromCourses.Add(courses["ENGL-101"].Id);
-                        group1.FromCourses.Add(courses["ACCT-101"].Id);
-                        group1.GroupType = GroupType.TakeSelected;
-                        break;
-                    }
-                case "GROUP-1-COURSE-REUSE":
-                    {
-                        //  Take ENGL-200 ENGL-300 COMM-100; (type 30)
-                        group1.Id = "GROUP-1-COURSE-REUSE-BB";
-                        group1.Courses.Add(courses["ENGL-200"].Id);
-                        group1.Courses.Add(courses["ENGL-300"].Id);
-                        group1.Courses.Add(courses["COMM-100"].Id);
-                        group1.GroupType = GroupType.TakeAll;
-                        break;
-                    }
-                case "GROUP-2-COURSE-REUSE":
-                    {
-                        //  Take 2 courses From Department COMM;  (type 32)
-                        group1.Id = "GROUP-2-COURSE-REUSE-BB";
-                        group1.FromDepartments.Add("COMM");
-                        group1.MinCourses = 2;
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "GROUP-3-COURSE-REUSE":
-                    {
-                        //Take 2 courses (type 32)
-                        group1.Id = "GROUP-3-COURSE-REUSE";
-                        group1.MinCourses = 2;
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "GROUP-1-COURSE-REUSE.2":
-                    {
-                        //  Take 1 course from ENGL-200 ENGL-300 (31)
-                        group1.Id = "GROUP-1-COURSE-REUSE-BB.2";
-                        group1.Courses.Add(courses["ENGL-200"].Id);
-                        group1.Courses.Add(courses["ENGL-300"].Id);
-                        group1.MinCourses = 1;
-                        group1.GroupType = GroupType.TakeSelected;
-                        break;
-                    }
-                case "GROUP-2-COURSE-REUSE.2":
-                    {
-                        //  TAKE 3 COURSES FROM COMM;  (33)
-                        group1.Id = "GROUP-2-COURSE-REUSE-BB.2";
-                        group1.FromDepartments.Add("COMM");
-                        group1.MinCourses = 3;
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "GROUP-3-COURSE-REUSE.2":
-                    {
-                        //#take 1 course from COMM-1315 COMM-100 COMM-1321;  (31)
-                        group1.Id = "GROUP-3-COURSE-REUSE-BB.2";
-                        group1.Courses.Add(courses["COMM-1315"].Id);
-                        group1.Courses.Add(courses["COMM-100"].Id);
-                        group1.Courses.Add(courses["COMM-1321"].Id);
+                    case "Test4":
+                        {
+                            // TAKE 2 COURSES; FROM ENGL*101, ENGL*102 
+                            group1.Id = "10004";
+                            group1.MinCourses = 2;
+                            group1.FromCourses.Add(courses["ENGL-101"].Id);
+                            group1.FromCourses.Add(courses["ENGL-102"].Id);
+                            group1.GroupType = GroupType.TakeSelected;
+                            break;
+                        }
+                    case "Test5":
+                        {
+                            // TAKE 2 COURSES
+                            group1.Id = "10005";
+                            group1.MinCourses = 2;
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test6":
+                        {
+                            // TAKE 1 COURSE; FROM DEPARTMENT MATH
+                            group1.Id = "10006";
+                            group1.MinCourses = 1;
+                            group1.FromDepartments.Add("MATH");
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test7":
+                        {
+                            // TAKE 1 COURSE; FROM DEPARTMENT MATH; MINIMUM 1 DEPARTMENT
+                            group1.Id = "10007";
+                            group1.MinCourses = 1;
+                            group1.FromDepartments.Add("MATH");
+                            group1.MinDepartments = 1;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test8":
+                        {
+                            // TAKE 1 COURSE; FROM DEPARTMENTS MATH, ENGL
+                            group1.Id = "10008";
+                            group1.MinCourses = 1;
+                            group1.FromDepartments.Add("MATH");
+                            group1.FromDepartments.Add("ENGL");
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test9":
+                        {
+                            // TAKE 1 COURSE; FROM DEPARTMENTS MATH, ENGL; MINIMUM 1 DEPARTMENT
+                            group1.Id = "10009";
+                            group1.MinCourses = 1;
+                            group1.FromDepartments.Add("MATH");
+                            group1.FromDepartments.Add("ENGL");
+                            group1.MinDepartments = 1;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test10":
+                        {
+                            // TAKE 2 COURSES; MINIMUM 2 DEPARTMENTS
+                            group1.Id = "10010";
+                            group1.MinCourses = 2;
+                            group1.MinDepartments = 2;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test11":
+                        {
+                            // TAKE 1 COURSE; FROM LEVEL 200 
+                            group1.Id = "10011";
+                            group1.MinCourses = 1;
+                            group1.FromLevels.Add("200");
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test12":
+                        {
+                            // TAKE 2 COURSES; FROM LEVELS 100, 200 
+                            group1.Id = "10012";
+                            group1.MinCourses = 2;
+                            group1.FromLevels.Add("100");
+                            group1.FromLevels.Add("200");
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test13":
+                        {
+                            // TAKE 1 COURSE; FROM SUBJECT MATH
+                            group1.Id = "10013";
+                            group1.MinCourses = 1;
+                            group1.FromSubjects.Add("MATH");
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test14":
+                        {
+                            // TAKE 1 COURSE; FROM SUBJECT MATH, ENGL 
+                            group1.Id = "10014";
+                            group1.MinCourses = 1;
+                            group1.FromSubjects.Add("MATH");
+                            group1.FromSubjects.Add("ENGL");
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test15":
+                        {
+                            // TAKE 2 COURSES; MINIMUM 2 SUBJECTS
+                            group1.Id = "10015";
+                            group1.MinCourses = 2;
+                            group1.MinSubjects = 2;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test16":
+                        {
+                            // TAKE 2 COURSES; EXCEPT MATH*100
+                            group1.Id = "10016";
+                            group1.MinCourses = 2;
+                            group1.ButNotCourses.Add(courses["MATH-100"].Id);
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test17":
+                        {
+                            // TAKE 2 COURSES; EXCEPT MATH*100, DANC*200
+                            group1.Id = "10017";
+                            group1.MinCourses = 2;
+                            group1.ButNotCourses.Add(courses["MATH-100"].Id);
+                            group1.ButNotCourses.Add(courses["DANC-200"].Id);
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test18":
+                        {
+                            // TAKE 1 COURSE; FROM SUBJECT MATH; EXCEPT MATH*100
+                            group1.Id = "10018";
+                            group1.MinCourses = 1;
+                            group1.FromSubjects.Add("MATH");
+                            group1.ButNotCourses.Add(courses["MATH-100"].Id);
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test19":
+                        {
+                            // TAKE 1 COURSE; EXCEPT DEPARTMENTS MATH
+                            group1.Id = "10019";
+                            group1.MinCourses = 1;
+                            group1.ButNotDepartments.Add("MATH");
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test20":
+                        {
+                            // TAKE 2 COURSES; EXCEPT DEPARTMENTS MATH, PERF 
+                            group1.Id = "10020";
+                            group1.MinCourses = 2;
+                            group1.ButNotDepartments.Add("MATH");
+                            group1.ButNotDepartments.Add("PERF");
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test21":
+                        {
+                            // TAKE 1 COURSE; EXCEPT SUBJECT MATH
+                            group1.Id = "10021";
+                            group1.MinCourses = 1;
+                            group1.ButNotSubjects.Add("MATH");
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test22":
+                        {
+                            // TAKE 1 COURSE; EXCEPT SUBJECTS ENGL, DANC
+                            group1.Id = "10022";
+                            group1.MinCourses = 1;
+                            group1.ButNotSubjects.Add("ENGL");
+                            group1.ButNotSubjects.Add("DANC");
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test23":
+                        {
+                            // TAKE 1 COURSE; EXCEPT LEVEL 100
+                            group1.Id = "10023";
+                            group1.MinCourses = 1;
+                            group1.ButNotCourseLevels.Add("100");
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test24":
+                        {
+                            // TAKE 1 COURSE; EXCEPT LEVELS 100,200
+                            group1.Id = "10024";
+                            group1.MinCourses = 1;
+                            group1.ButNotCourseLevels.Add("100");
+                            group1.ButNotCourseLevels.Add("200");
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test25":
+                        {
+                            // TAKE 4 CREDITS
+                            group1.Id = "10025";
+                            group1.MinCredits = 4;
+                            group1.GroupType = GroupType.TakeCredits;
+                            break;
+                        }
+                    case "Test26":
+                        {
+                            // TAKE 3 CREDITS
+                            group1.Id = "10026";
+                            group1.MinCredits = 3;
+                            group1.GroupType = GroupType.TakeCredits;
+                            break;
+                        }
+                    case "Test27":
+                        {
+                            // TAKE 1 COURSE; MINIMUM 4 CREDITS
+                            group1.Id = "10027";
+                            group1.MinCourses = 1;
+                            group1.MinCredits = 4;
+                            group1.GroupType = GroupType.TakeCredits;
+                            break;
+                        }
+                    case "Test28":
+                        {
+                            // TAKE 8 CREDITS; MAXIMUM 2 COURSES
+                            group1.Id = "10028";
+                            group1.MinCredits = 8;
+                            group1.MaxCourses = 2;
+                            group1.InternalType = "32";
+                            group1.GroupType = GroupType.TakeCredits;
+                            break;
+                        }
+                    case "Test29":
+                        {
+                            // TAKE 4 CREDITS; MAXIMUM 1 COURSE 
+                            group1.Id = "10029";
+                            group1.MinCredits = 4;
+                            group1.MaxCourses = 1;
+                            group1.InternalType = "32";
+                            group1.GroupType = GroupType.TakeCredits;
+                            break;
+                        }
+                    case "Test30":
+                        {
+                            // TAKE 2 COURSES; MAXIMUM 1 DEPARTMENT
+                            group1.Id = "10030";
+                            group1.MinCourses = 2;
+                            group1.MaxDepartments = 1;
+                            group1.InternalType = "32";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test31":
+                        {
+                            // TAKE 2 COURSES; MAXIMUM 1 SUBJECT
+                            group1.Id = "10031";
+                            group1.MinCourses = 2;
+                            group1.MaxSubjects = 1;
+                            group1.InternalType = "32";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test32":
+                        {
+                            // TAKE 1 COURSE; MAXIMUM 3 CREDITS
+                            group1.Id = "10032";
+                            group1.MinCourses = 1;
+                            group1.MaxCredits = 3;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test33":
+                        {
+                            // TAKE 2 COURSES; MAXIMUM 6 CREDITS
+                            group1.Id = "10033";
+                            group1.MinCourses = 2;
+                            group1.MaxCredits = 6;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test34":
+                        {
+                            // TAKE 2 COURSES; MAXIMUM 1 COURSE PER SUBJECT 
+                            group1.Id = "10034";
+                            group1.MinCourses = 2;
+                            group1.MaxCoursesPerSubject = 1;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test35":
+                        {
+                            // TAKE 4 COURSES; MAXIMUM 2 COURSES PER SUBJECT
+                            group1.Id = "10035";
+                            group1.MinCourses = 4;
+                            group1.MaxCoursesPerSubject = 2;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test36":
+                        {
+                            // TAKE 4 COURSES; MAXIMUM 1 COURSE PER SUBJECT
+                            group1.Id = "10036";
+                            group1.MinCourses = 4;
+                            group1.MaxCoursesPerSubject = 1;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test37":
+                        {
+                            // TAKE 1 COURSE; MAXIMUM 1 COURSE PER DEPARTMENT
+                            group1.Id = "10037";
+                            group1.MinCourses = 1;
+                            group1.MaxCoursesPerDepartment = 1;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test38":
+                        {
+                            // TAKE 3 COURSES; MAXIMUM 2 COURSES PER DEPARTMENT 
+                            group1.Id = "10038";
+                            group1.MinCourses = 3;
+                            group1.MaxCoursesPerDepartment = 2;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test39":
+                        {
+                            // TAKE 2 COURSES; MAXIMUM 1 100,200 LEVEL COURSES
+                            group1.Id = "10039";
+                            group1.MinCourses = 2;
+                            List<string> mxlevlist = new List<string>();
+                            mxlevlist.Add("100");
+                            mxlevlist.Add("200");
+                            group1.MaxCoursesAtLevels = new MaxCoursesAtLevels(1, mxlevlist);
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test40":
+                        {
+                            // TAKE 2 COURSES; MAXIMUM 3 CREDITS PER COURSE
+                            group1.Id = "10040";
+                            group1.MinCourses = 2;
+                            group1.MaxCreditsPerCourse = 3;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test41":
+                        {
+                            // TAKE 2 COURSES; MAXIMUM 3 CREDITS PER SUBJECT
+                            group1.Id = "10041";
+                            group1.MinCourses = 2;
+                            group1.MaxCreditsPerSubject = 3;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test42":
+                        {
+                            // TAKE 3 COURSES; MAXIMUM 6 CREDITS PER DEPARTMENT
+                            group1.Id = "10042";
+                            group1.MinCourses = 3;
+                            group1.MaxCreditsPerDepartment = 6;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test43":
+                        {
+                            // TAKE 2 COURSES; MAXIMUM 3 100,200 LEVEL CREDITS
+                            group1.Id = "10043";
+                            group1.MinCourses = 2;
+                            List<string> mxlevlist = new List<string>();
+                            mxlevlist.Add("100");
+                            mxlevlist.Add("200");
+                            group1.MaxCreditsAtLevels = new MaxCreditAtLevels(3, mxlevlist);
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test44":
+                        {
+                            // TAKE 6 CREDITS; MINIMUM 3 INST.HOURS
+                            group1.Id = "10044";
+                            group1.MinCredits = 6;
+                            group1.MinInstitutionalCredits = 3;
+                            group1.InternalType = "32";
+                            group1.GroupType = GroupType.TakeCredits;
+                            break;
+                        }
+                    case "Test45":
+                        {
+                            // TAKE 2 COURSES; MINIMUM 2 INST.HOURS
+                            group1.Id = "10045";
+                            group1.MinCourses = 2;
+                            group1.MinInstitutionalCredits = 2;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test46":
+                        {
+                            // TAKE 2 COURSES; MINIMUM 4 CREDITS PER COURSE
+                            group1.Id = "10046";
+                            group1.MinCourses = 2;
+                            group1.MinCreditsPerCourse = 4;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test47":
+                        {
+                            // TAKE 2 COURSES FROM SUBJECTS MUSC; MINIMUM 4 CREDITS PER SUBJECT
+                            group1.Id = "10047";
+                            group1.MinCourses = 2;
+                            group1.FromSubjects.Add("MUSC");
+                            group1.MinCreditsPerSubject = 4;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test48":
+                        {
+                            // TAKE 2 COURSES FROM SUBJECTS MATH,PHYS;MINIMUM 4 CREDITS PER SUBJECT
+                            group1.Id = "10048";
+                            group1.MinCourses = 2;
+                            group1.FromSubjects.Add("MATH");
+                            group1.FromSubjects.Add("PHYS");
+                            group1.MinCreditsPerSubject = 4;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test49":
+                        {
+                            // TAKE 2 COURSES FROM SUBJECTS MATH,PHYS;MINIMUM 4 CREDITS PER SUBJECT;MINIMUM 2 SUBJECTS 
+                            group1.Id = "10049";
+                            group1.MinCourses = 2;
+                            group1.FromSubjects.Add("MATH");
+                            group1.FromSubjects.Add("PHYS");
+                            group1.MinCreditsPerSubject = 4;
+                            group1.MinSubjects = 2;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test50":
+                        {
+                            // TAKE 3 COURSES FROM DEPARTMENTS HIST,MATH; MINIMUM 4 CREDITS PER DEPARTMENT
+                            group1.Id = "10050";
+                            group1.MinCourses = 3;
+                            group1.FromDepartments.Add("HIST");
+                            group1.FromDepartments.Add("MATH");
+                            group1.MinCreditsPerDepartment = 4;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test51":
+                        {
+                            // TAKE 4 COURSES FROM DEPARTMENTS HIST,MATH; MINIMUM 2 COURSES PER DEPARTMENT
+                            group1.Id = "10051";
+                            group1.MinCourses = 4;
+                            group1.FromDepartments.Add("HIST");
+                            group1.FromDepartments.Add("MATH");
+                            group1.MinCoursesPerDepartment = 2;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test52":
+                        {
+                            // TAKE 4 COURSES FROM SUBJECTS HIST,MATH; MINIMUM 2 COURSES PER SUBJECT
+                            group1.Id = "10052";
+                            group1.MinCourses = 4;
+                            group1.FromSubjects.Add("MATH");
+                            group1.FromSubjects.Add("HIST");
+                            group1.MinCoursesPerSubject = 2;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test53":
+                        {
+                            // TAKE 2 COURSES; MIN Gpa 2.5 
+                            group1.Id = "10053";
+                            group1.MinCourses = 2;
+                            group1.MinGpa = decimal.Parse("2.5");
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test54":
+                        {
+                            // TAKE 2 COURSES; MIN GRADE A
+                            group1.Id = "10054";
+                            group1.MinCourses = 2;
+                            group1.MinGrade = grades["A"];
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "Test55":
+                        {
+                            // TAKE 2 COURSES; MIN GRADE A,AU,P 
+                            group1.Id = "10055";
+                            group1.MinCourses = 2;
+                            group1.MinGrade = grades["A"];
+                            group1.AllowedGrades.Add(grades["AU"]);
+                            group1.AllowedGrades.Add(grades["P"]);
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
 
-                        group1.MinCourses = 1;
-                        group1.GroupType = GroupType.TakeSelected;
-                        break;
-                    }
-                case "GROUP-4-COURSE-REUSE.2":
-                    {
-                        //#TAKE 1 COURSE FROM department ART;  (33)
+                    case "Test56":
+                        {   // TAKE 1 COURSE FROM RULE MATH100
+                            group1.Id = "10056";
+                            group1.MinCourses = 1;
+                            group1.AcademicCreditRules.Add(new RequirementRule(new Rule<AcademicCredit>("MATH100")));
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
 
-                        group1.Id = "GROUP-4-COURSE-REUSE-BB.2";
-                        group1.FromDepartments.Add("ART");
-                        group1.MinCourses = 1;
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "GROUP-5-COURSE-REUSE.2":
-                    {
-                        //Take 3 courses
-                        group1.Id = "GROUP-5-COURSE-REUSE-BB.2";
-                        group1.MinCourses = 3;
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "TAKE_0_CREDITS":
-                    {
-                        // TAKE 0 CREDITS
-                        group1.Id = "TAKE0CREDITS";
-                        group1.MinCredits = 0;
-                        group1.GroupType = GroupType.TakeCredits;
-                        break;
-                    }
-                case "GROUP-1-REPEAT":
-                    {
-                        //TAKE 3 COURSE FROM MATH (33)
-                        group1.Id = "GROUP-1-REPEAT";
-                        group1.FromDepartments.Add("MATH");
-                        group1.MinCourses = 3;
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "GROUP-2-REPEAT":
-                    {
-                        //TAKE MATH-300BB (TYPE 30)
-                        group1.Id = "GROUP-2-REPEAT";
-                        group1.Courses.Add(courses["MATH-300BB"].Id);
-                        group1.GroupType = GroupType.TakeAll;
-                        break;
+                    case "Test57":
+                        {
+                            // Take 1 course from dept "PERF"
+                            group1.Id = "10057";
+                            group1.MaxCourses = 1;
+                            group1.MinCourses = 1;
+                            group1.FromDepartments.Add("PERF");
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
 
-                    }
-                case "GROUP-3-REPEAT":
-                    {
-                        //TAKE 30 COURSES;
-                        group1.Id = "GROUP-3-REPEAT";
-                        group1.MinCourses = 30;
-                        group1.GroupType = GroupType.TakeCourses;
-                        break;
-                    }
-                case "GROUP-1-RELEASE":
-                    {
-                        //TAKE 2 CREDITS FROM DEPT PERF (32)
-                        group1.Id = "GROUP-1-RELEASE";
-                        group1.FromDepartments.Add("PERF");
-                        group1.MinCredits = 2;
-                        group1.GroupType = GroupType.TakeCredits;
-                        break;
-                    }
-                case "GROUP-2-RELEASE":
-                    {
-                        //TAKE 2 CREDITS FROM DANC-100 DANC-101  (31)
-                        group1.Id = "GROUP-2-RELEASE";
-                        group1.Courses.Add(courses["DANC-100"].Id);
-                        group1.Courses.Add(courses["DANC-101"].Id);
-                        group1.MinCredits = 2;
-                        group1.GroupType = GroupType.TakeCredits;
-                        break;
+                        }
 
-                    }
-                case "GROUP-3-RELEASE":
-                    {
-                        //TAKE 2 CREDITS FROM DANC-101 DANC-102 ENGL-201 (31)
-                        group1.Id = "GROUP-3-RELEASE";
-                        group1.Courses.Add(courses["DANC-101"].Id);
-                        group1.Courses.Add(courses["DANC-102"].Id);
-                        group1.Courses.Add(courses["ENGL-201"].Id);
-                        group1.MinCredits = 2;
-                        group1.GroupType = GroupType.TakeCredits;
-                        break;
+                    case "Test58":
+                        {
+                            // TAKE ENGL*101, ENGL*102 
+                            group1.Id = "10058";
+                            group1.Courses.Add(courses["ENGL-101"].Id);
+                            group1.Courses.Add(courses["HIST-200"].Id);
+                            group1.GroupType = GroupType.TakeAll;
+                            break;
+                        }
 
-                    }
-                case "GROUP-4-RELEASE":
-                    {
-                        //TAKE 4 CREDITS FROM DANC-100 DANC-101 DANC-102  ENGL-201 (31)
-                        group1.Id = "GROUP-4-RELEASE";
-                        group1.Courses.Add(courses["DANC-100"].Id);
-                        group1.Courses.Add(courses["DANC-101"].Id);
-                        group1.Courses.Add(courses["DANC-102"].Id);
-                        group1.Courses.Add(courses["ENGL-201"].Id);
-                        group1.MinCredits = 4;
-                        group1.GroupType = GroupType.TakeCredits;
-                        break;
+                    case "Test59":
+                        {
+                            group1.Id = "10059";
+                            group1.Courses.Add(courses["MATH-201"].Id);
+                            group1.GroupType = GroupType.TakeAll;
+                            break;
+                        }
 
-                    }
-                default:
-                    {
-                        // oh come now
-                        throw new NotImplementedException("Specified group id " + code + " not found in Build Group switch statement in TestProgramRequirementsRepository");
-                    }
+                    case "Test60":
+                        {
+                            // TAKE 2 COURSES FROM SUBJECTS MATH, DANC
+                            group1.Id = "10060";
+                            group1.MinCourses = 2;
+                            group1.FromSubjects.Add("MATH");
+                            group1.FromSubjects.Add("DANC");
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
 
+                    case "Test61":
+                        {
+                            // TAKE 1 COURSE; FROM DEPARTMENT HIST -- TESTING EQUATED DEPARTMENT
+                            group1.Id = "10061";
+                            group1.MinCourses = 1;
+                            group1.FromDepartments.Add("HIST");
+                            group1.InternalType = "33";
+                            break;
+                        }
+
+                    case "Test62":
+                        {
+                            // TAKE 1 COURSE; FROM SUBJECT POLI -- TESTING EQUATED SUBJECT
+                            group1.Id = "10062";
+                            group1.MinCourses = 1;
+                            group1.FromSubjects.Add("POLI");
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+
+                    case "Test63":
+                        {
+                            // TAKE 1 COURSE; FROM LEVEL 200  -- TESTING EQUATED LEVEL
+                            group1.Id = "10063";
+                            group1.MinCourses = 1;
+                            group1.FromLevels.Add("200");
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+
+                    case "Test64":
+                        {
+                            // TAKE 1 COURSE; FROM DEPARTMENT HIST, BUT NOT POLI --EQUATED COURSE FROM EXCEPT DEPT NOT APPLIED
+                            group1.Id = "10061";
+                            group1.MinCourses = 1;
+                            group1.FromDepartments.Add("HIST");
+                            group1.ButNotDepartments.Add("POLI");
+                            group1.InternalType = "33";
+                            break;
+                        }
+
+                    case "Test65":
+                        {
+                            // TAKE 1 COURSE; FROM SUBJECT POLI, BUT NOT HIST -- EQUATED COURSE FROM EXCEPT SUBJECT NOT APPLIED
+                            group1.Id = "10062";
+                            group1.MinCourses = 1;
+                            group1.FromSubjects.Add("POLI");
+                            group1.ButNotSubjects.Add("HIST");
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+
+                    case "Test66":
+                        {
+                            // TAKE 1 COURSE; FROM LEVEL 200, BUT NOT LEVEL 100 -- EQUATED COURSE FROM EXCEPT LEVEL NOT APPLIED
+                            group1.Id = "10063";
+                            group1.MinCourses = 1;
+                            group1.FromLevels.Add("200");
+                            group1.ButNotCourseLevels.Add("100");
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+
+                    case "Test67":
+                        {
+                            // Take 1 course; from subject HIST with Additional Courses Exception allowing MATH-100 (id 143)
+                            group1.Id = "10067";
+                            group1.MinCourses = 2;
+                            group1.FromSubjects = new List<string>() { "HIST" };
+                            group1.GroupType = GroupType.TakeCourses;
+                            group1.IsModified = true;
+                            group1.FromCoursesException.Add(courses["MATH-100"].Id);
+                            group1.IsWaived = false;
+                            break;
+                        }
+
+                    case "Test68":
+                        {
+                            // Take 1 course with rule, Exception allowing MATH-100 (id 143)
+                            group1.Id = "10068";
+                            group1.MinCourses = 2;
+                            group1.AcademicCreditRules.Add(new RequirementRule(new Rule<AcademicCredit>("SUBJENGL")));
+                            group1.GroupType = GroupType.TakeCourses;
+                            group1.IsModified = true;
+                            group1.FromCoursesException.Add(courses["MATH-100"].Id);
+                            group1.IsWaived = false;
+                            break;
+                        }
+
+                    case "Test69":
+                        {
+                            // Take 4 credits; from ENGL*101 ENGL*102
+                            group1.Id = "10069";
+                            group1.MinCredits = 4;
+                            group1.FromCourses.Add(courses["ENGL-101"].Id);
+                            group1.FromCourses.Add(courses["ENGL-102"].Id);
+                            group1.GroupType = GroupType.TakeCredits;
+                            group1.IsWaived = false;
+                            break;
+                        }
+
+                    case "Test70":
+                        {
+                            // Take 4 Credits; from DEPT HIST; Exception allowing ENGL*101 ENGL*102 
+                            group1.Id = "10070";
+                            group1.MinCredits = 4;
+                            group1.FromDepartments.Add("HIST");
+                            group1.FromCoursesException.Add(courses["ENGL-101"].Id);
+                            group1.FromCoursesException.Add(courses["ENGL-102"].Id);
+                            group1.IsModified = true;
+                            group1.GroupType = GroupType.TakeCredits;
+                            group1.IsWaived = false;
+                            break;
+                        }
+
+                    case "Test71":
+                        {
+                            // Take 4 Credits; from ENGL*101 ENGL*102. Exception allowing MATH*201
+                            group1.Id = "10071";
+                            group1.MinCredits = 4;
+                            group1.FromCourses.Add(courses["ENGL-101"].Id);
+                            group1.FromCourses.Add(courses["ENGL-102"].Id);
+                            group1.FromCoursesException.Add(courses["MATH-201"].Id);
+                            group1.IsModified = true;
+                            group1.GroupType = GroupType.TakeCredits;
+                            group1.IsWaived = false;
+                            break;
+                        }
+
+                    case "Test72":
+                        {
+                            // TAKE 1 COURSES; MIN Gpa 2.5 
+                            group1.Id = "10072";
+                            group1.MinCourses = 1;
+                            group1.MinGpa = decimal.Parse("2.5");
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+
+                    case "Test73":
+                        {
+                            // Take 9 credits; From Subjects ART HIST MUSC DANC ENGL HUMT RELG CERA; Minimum 2 subjects;
+                            group1.Id = "10073";
+                            group1.MinCredits = 9;
+                            group1.MinSubjects = 2;
+                            group1.FromSubjects = new List<string>() { "ART", "HIST", "MUSC", "DANC", "ENGL", "HUMT", "RELG", "CERA" };
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCredits;
+                            group1.IsWaived = false;
+                            break;
+                        }
+
+                    case "Test74":
+                        {
+                            // Take 9 credits; From Subjects ART HIST MUSC DANC ENGL HUMT RELG CERA; Minimum 2 departments;
+                            group1.Id = "10074";
+                            group1.MinCredits = 9;
+                            group1.MinDepartments = 2;
+                            group1.FromSubjects = new List<string>() { "ART", "HIST", "MUSC", "DANC", "ENGL", "HUMT", "RELG", "CERA" };
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCredits;
+                            group1.IsWaived = false;
+                            break;
+                        }
+
+                    case "Test75":
+                        {
+                            // Take 9 credits; From Subjects ART HIST MUSC DANC ENGL HUMT RELG CERA; Minimum 5 courses;
+                            group1.Id = "10075";
+                            group1.MinCredits = 9;
+                            group1.MinCourses = 5;
+                            group1.FromSubjects = new List<string>() { "ART", "HIST", "MUSC", "DANC", "ENGL", "HUMT", "RELG", "CERA" };
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCredits;
+                            group1.IsWaived = false;
+                            break;
+                        }
+
+                    case "Test76":
+                        {
+                            // Take 6 Credits; From Subjects ART MUSC RELG;
+                            group1.Id = "10076";
+                            group1.MinCredits = 6;
+                            group1.FromSubjects = new List<string>() { "ART", "MUSC", "RELG", "HU" };
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCredits;
+                            group1.IsWaived = false;
+                            break;
+                        }
+
+                    case "Test77":
+                        {
+                            // TAKE 3 COURSES; MAX 2 FROM LEVELS 100, 200 
+                            group1.Id = "10077";
+                            group1.MinCourses = 3;
+                            group1.MaxCoursesAtLevels = new MaxCoursesAtLevels(2, new List<string>() { "100", "200" });
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+
+                    case "Test78":
+                        {
+                            // TAKE 16 CREDITS; MAX 8 CREDITS FROM LEVELS 100, 200 
+                            group1.Id = "10078";
+                            group1.MinCredits = 16;
+                            group1.MaxCreditsAtLevels = new MaxCreditAtLevels(9, new List<string>() { "100", "200" });
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+
+                    case "Test79":
+                        {
+                            // TAKE 3 CREDITS 
+                            group1.Id = "10079";
+                            group1.MinCredits = 3;
+                            group1.InternalType = "33";
+                            group1.GroupType = GroupType.TakeAll;
+                            break;
+                        }
+
+                    case "Math Theory":
+                        {
+                            group1.Id = "10056";
+                            group1.Courses.Add(courses["MATH-100"].Id);
+                            group1.GroupType = GroupType.TakeAll;
+                            break;
+                        }
+                    case "Math Practical":
+                        {
+                            group1.Id = "10057";
+                            group1.Courses.Add(courses["MATH-200"].Id);
+                            group1.GroupType = GroupType.TakeAll;
+                            break;
+                        }
+                    case "Engl Theory":
+                        {
+                            // TAKE ENGL*101
+                            group1.Id = "10058";
+                            group1.Courses.Add(courses["ENGL-101"].Id);
+                            group1.GroupType = GroupType.TakeAll;
+                            break;
+                        }
+                    case "Engl Practical":
+                        {
+                            group1.Id = "10059";
+                            group1.Courses.Add(courses["ENGL-102"].Id);
+                            group1.GroupType = GroupType.TakeAll;
+                            break;
+                        }
+
+                    // For RequirementsRepositoryTests 
+
+                    //Requirement:          Math Core
+                    //Subrequirements:      Math Basic(grp 1)      Math Practical (grps 2&3)(take both)
+                    //Groups:     (1) TAKE MATH-100   (2) TAKE 4 CREDITS FROM DEPT MATH  (3)  TAKE 1 COURSE FROM DEPT MATH LEVEL 300,400
+
+                    //Requirement:          Engl Core
+                    //Subrequirements:      Engl Basic(grp 4)      Humanities (grps 5&6)(take 1)
+                    //Groups:     (4) TAKE ENGL-101 and COMP-100   (5) TAKE 1 COURSE FROM (ART-200,DANC-100)   (6)  TAKE 1 COURSE FROM SUBJECT SOCI
+
+
+                    case "ReqTestGrp1":
+                        {
+                            group1.Id = "10061";
+                            group1.Courses.Add(courses["MATH-100"].Id);
+                            group1.GroupType = GroupType.TakeAll;
+                            break;
+                        }
+                    case "ReqTestGrp2":
+                        {
+                            group1.Id = "10062";
+                            group1.MinCredits = 4;
+                            group1.FromDepartments.Add("MATH");
+                            group1.GroupType = GroupType.TakeCredits;
+                            break;
+                        }
+                    case "ReqTestGrp3":
+                        {
+                            group1.Id = "10063";
+                            group1.MinCourses = 1;
+                            group1.FromDepartments.Add("MATH");
+                            group1.FromLevels.Add("300");
+                            group1.FromLevels.Add("400");
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+
+                    case "ReqTestGrp4":
+                        {
+                            group1.Id = "10064";
+                            group1.Courses.Add(courses["ENGL-101"].Id);
+                            group1.Courses.Add(courses["COMP-100"].Id);
+                            group1.GroupType = GroupType.TakeAll;
+                            break;
+                        }
+                    case "ReqTestGrp5":
+                        {
+                            group1.Id = "10065";
+                            group1.MinCourses = 1;
+                            group1.FromCourses.Add(courses["ART-200"].Id);
+                            group1.FromCourses.Add(courses["DANC-100"].Id);
+                            group1.GroupType = GroupType.TakeSelected;
+                            break;
+                        }
+                    case "ReqTestGrp6":
+                        {
+                            group1.Id = "10066";
+                            group1.MinCourses = 1;
+                            group1.FromSubjects.Add("SOCI");
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+
+                    // Cases for groups in coll18dev
+                    case "20886":
+                        {
+                            group1.Id = "20886";
+                            group1.Courses.Add(courses["ENGL-1000"].Id);
+                            group1.Courses.Add(courses["ENGL-1001"].Id);
+                            group1.GroupType = GroupType.TakeAll;
+                            break;
+                        }
+                    case "20888":
+                        {
+                            group1.Id = "20888";
+                            group1.MinCourses = 1;
+                            group1.FromCourses.Add(courses["MATH-1000"].Id);
+                            group1.FromCourses.Add(courses["MATH-1001"].Id);
+                            group1.GroupType = GroupType.TakeSelected;
+                            break;
+                        }
+                    case "20892":
+                        {
+                            group1.Id = "20892";
+                            group1.MinCourses = 4;
+                            group1.FromDepartments.Add("MATH");
+                            group1.FromLevels.Add("100");
+                            group1.FromLevels.Add("200");
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "20895":
+                        {
+                            group1.Id = "20895";
+                            group1.MinCredits = 12;
+                            group1.FromSubjects.Add("MATH");
+                            group1.FromSubjects.Add("COMP");
+                            group1.ButNotCourseLevels.Add("100");
+                            group1.GroupType = GroupType.TakeCredits;
+                            break;
+                        }
+                    case "20897":
+                        {
+                            group1.Id = "20897";
+                            group1.MinCourses = 2;
+                            group1.FromCourses.Add(courses["MATH-4000"].Id);
+                            group1.FromCourses.Add(courses["MATH-4001"].Id);
+                            group1.FromCourses.Add(courses["MATH-4002"].Id);
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "20900":
+                        {
+                            group1.Id = "20900";
+                            group1.Courses.Add(courses["HU-1000"].Id);
+                            group1.GroupType = GroupType.TakeAll;
+                            break;
+                        }
+                    case "20902":
+                        {
+                            group1.Id = "20902";
+                            group1.Courses.Add(courses["COMM-2000"].Id);
+                            group1.GroupType = GroupType.TakeAll;
+                            break;
+                        }
+
+
+                    case "SIMPLE.ANY":
+                        {
+                            group1.Id = "SIMPLE.ANY";
+                            group1.MinCourses = 10;
+                            // accept courses from any level
+                            group1.FromLevels.Add("100");
+                            group1.FromLevels.Add("200");
+                            group1.FromLevels.Add("300");
+                            group1.FromLevels.Add("400");
+                            group1.FromLevels.Add("500");
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+
+                    case "500ONLY":
+                        {
+                            group1.Id = "500ONLY";
+                            group1.MinCourses = 10;
+                            // accept courses from a level that will not work
+                            group1.FromLevels.Add("500");
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+
+                    case "100-200ONLY":
+                        {
+                            group1.Id = "100-200ONLY";
+                            group1.MinCourses = 10;
+                            // accept courses from a level that will not work
+                            group1.FromLevels.Add("100");
+                            group1.FromLevels.Add("200");
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+
+                    case "MUSC-209":
+                        {
+                            group1.Id = "MUSC-209";
+                            group1.Courses.Add(courses["MUSC-209"].Id);
+                            group1.GroupType = GroupType.TakeAll;
+                            break;
+                        }
+
+                    case "SUBJ_MUSC_3CREDITS":
+                        {
+                            group1.Id = "MUSC-209";
+                            group1.MinCredits = 3;
+                            group1.FromSubjects.Add("MUSC");
+                            group1.GroupType = GroupType.TakeCredits;
+                            break;
+                        }
+
+                    case "SUBJ_MUSC_3CREDITS_E":
+                        {
+                            group1.Id = "MUSC-209";
+                            group1.MinCredits = 3;
+                            group1.FromSubjects.Add("MUSC");
+                            group1.GroupType = GroupType.TakeCredits;
+                            group1.Exclusions = new List<string>() { "MAJ", "MIN" };
+                            break;
+                        }
+                    case "SUBJ_MUSC_4CREDITS":
+                        {
+                            group1.Id = "MUSC-209-TWO";
+                            group1.MinCredits = 4;
+                            group1.FromSubjects.Add("MUSC");
+                            group1.GroupType = GroupType.TakeCredits;
+                            break;
+                        }
+                    case "ZERO_CREDITS_COUNTED":
+                        {
+                            // TAKE 2 COURSES; FROM ENGL*101, ACCT*101 (a course with 0 credits) 
+                            group1.Id = "10000-BB";
+                            group1.MinCourses = 2;
+                            group1.FromCourses.Add(courses["ENGL-101"].Id);
+                            group1.FromCourses.Add(courses["ACCT-101"].Id);
+                            group1.GroupType = GroupType.TakeSelected;
+                            break;
+                        }
+                    case "GROUP-1-COURSE-REUSE":
+                        {
+                            //  Take ENGL-200 ENGL-300 COMM-100; (type 30)
+                            group1.Id = "GROUP-1-COURSE-REUSE-BB";
+                            group1.Courses.Add(courses["ENGL-200"].Id);
+                            group1.Courses.Add(courses["ENGL-300"].Id);
+                            group1.Courses.Add(courses["COMM-100"].Id);
+                            group1.GroupType = GroupType.TakeAll;
+                            break;
+                        }
+                    case "GROUP-2-COURSE-REUSE":
+                        {
+                            //  Take 2 courses From Department COMM;  (type 32)
+                            group1.Id = "GROUP-2-COURSE-REUSE-BB";
+                            group1.FromDepartments.Add("COMM");
+                            group1.MinCourses = 2;
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "GROUP-3-COURSE-REUSE":
+                        {
+                            //Take 2 courses (type 32)
+                            group1.Id = "GROUP-3-COURSE-REUSE";
+                            group1.MinCourses = 2;
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "GROUP-1-COURSE-REUSE.2":
+                        {
+                            //  Take 1 course from ENGL-200 ENGL-300 (31)
+                            group1.Id = "GROUP-1-COURSE-REUSE-BB.2";
+                            group1.Courses.Add(courses["ENGL-200"].Id);
+                            group1.Courses.Add(courses["ENGL-300"].Id);
+                            group1.MinCourses = 1;
+                            group1.GroupType = GroupType.TakeSelected;
+                            break;
+                        }
+                    case "GROUP-2-COURSE-REUSE.2":
+                        {
+                            //  TAKE 3 COURSES FROM COMM;  (33)
+                            group1.Id = "GROUP-2-COURSE-REUSE-BB.2";
+                            group1.FromDepartments.Add("COMM");
+                            group1.MinCourses = 3;
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "GROUP-3-COURSE-REUSE.2":
+                        {
+                            //#take 1 course from COMM-1315 COMM-100 COMM-1321;  (31)
+                            group1.Id = "GROUP-3-COURSE-REUSE-BB.2";
+                            group1.Courses.Add(courses["COMM-1315"].Id);
+                            group1.Courses.Add(courses["COMM-100"].Id);
+                            group1.Courses.Add(courses["COMM-1321"].Id);
+
+                            group1.MinCourses = 1;
+                            group1.GroupType = GroupType.TakeSelected;
+                            break;
+                        }
+                    case "GROUP-4-COURSE-REUSE.2":
+                        {
+                            //#TAKE 1 COURSE FROM department ART;  (33)
+
+                            group1.Id = "GROUP-4-COURSE-REUSE-BB.2";
+                            group1.FromDepartments.Add("ART");
+                            group1.MinCourses = 1;
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "GROUP-5-COURSE-REUSE.2":
+                        {
+                            //Take 3 courses
+                            group1.Id = "GROUP-5-COURSE-REUSE-BB.2";
+                            group1.MinCourses = 3;
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "TAKE_0_CREDITS":
+                        {
+                            // TAKE 0 CREDITS
+                            group1.Id = "TAKE0CREDITS";
+                            group1.MinCredits = 0;
+                            group1.GroupType = GroupType.TakeCredits;
+                            break;
+                        }
+                    case "GROUP-1-REPEAT":
+                        {
+                            //TAKE 3 COURSE FROM MATH (33)
+                            group1.Id = "GROUP-1-REPEAT";
+                            group1.FromDepartments.Add("MATH");
+                            group1.MinCourses = 3;
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "GROUP-2-REPEAT":
+                        {
+                            //TAKE MATH-300BB (TYPE 30)
+                            group1.Id = "GROUP-2-REPEAT";
+                            group1.Courses.Add(courses["MATH-300BB"].Id);
+                            group1.GroupType = GroupType.TakeAll;
+                            break;
+
+                        }
+                    case "GROUP-3-REPEAT":
+                        {
+                            //TAKE 30 COURSES;
+                            group1.Id = "GROUP-3-REPEAT";
+                            group1.MinCourses = 30;
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+                        }
+                    case "GROUP-1-RELEASE":
+                        {
+                            //TAKE 2 CREDITS FROM DEPT PERF (32)
+                            group1.Id = "GROUP-1-RELEASE";
+                            group1.FromDepartments.Add("PERF");
+                            group1.MinCredits = 2;
+                            group1.GroupType = GroupType.TakeCredits;
+                            break;
+                        }
+                    case "GROUP-2-RELEASE":
+                        {
+                            //TAKE 2 CREDITS FROM DANC-100 DANC-101  (31)
+                            group1.Id = "GROUP-2-RELEASE";
+                            group1.Courses.Add(courses["DANC-100"].Id);
+                            group1.Courses.Add(courses["DANC-101"].Id);
+                            group1.MinCredits = 2;
+                            group1.GroupType = GroupType.TakeCredits;
+                            break;
+
+                        }
+                    case "GROUP-3-RELEASE":
+                        {
+                            //TAKE 2 CREDITS FROM DANC-101 DANC-102 ENGL-201 (31)
+                            group1.Id = "GROUP-3-RELEASE";
+                            group1.Courses.Add(courses["DANC-101"].Id);
+                            group1.Courses.Add(courses["DANC-102"].Id);
+                            group1.Courses.Add(courses["ENGL-201"].Id);
+                            group1.MinCredits = 2;
+                            group1.GroupType = GroupType.TakeCredits;
+                            break;
+
+                        }
+                    case "GROUP-4-RELEASE":
+                        {
+                            //TAKE 4 CREDITS FROM DANC-100 DANC-101 DANC-102  ENGL-201 (31)
+                            group1.Id = "GROUP-4-RELEASE";
+                            group1.Courses.Add(courses["DANC-100"].Id);
+                            group1.Courses.Add(courses["DANC-101"].Id);
+                            group1.Courses.Add(courses["DANC-102"].Id);
+                            group1.Courses.Add(courses["ENGL-201"].Id);
+                            group1.MinCredits = 4;
+                            group1.GroupType = GroupType.TakeCredits;
+                            break;
+
+                        }
+                    case "GROUP-1-SORT":
+                        {
+                            //TAKE 7 COURSES FROM FREN-100 GERM-100 HIND-100 ARTH-100 HUMT-100 CRIM-100 POLI-100;  (31)
+                            group1.Id = "GROUP-1-SORT";
+                            group1.FromCourses.Add(courses["FREN-100"].Id);
+                            group1.FromCourses.Add(courses["GERM-100"].Id);
+                            group1.FromCourses.Add(courses["HIND-100"].Id);
+                            group1.FromCourses.Add(courses["ARTH-100"].Id);
+                            group1.FromCourses.Add(courses["HUMT-100"].Id);
+                            group1.FromCourses.Add(courses["CRIM-100"].Id);
+                            group1.FromCourses.Add(courses["POLI-100"].Id);
+                            group1.MinCourses = 7;
+                            group1.GroupType = GroupType.TakeCourses;
+                            break;
+
+                        }
+                    case "GROUP-2-SORT":
+                        {
+                            //TAKE 7 COURSES 4 CREDITS FROM FREN-100 GERM-100 HIND-100 ARTH-100 HUMT-100 CRIM-100 POLI-100; IN.LIST.ORDER;
+                            group1.Id = "GROUP-2-SORT";
+                            group1.FromCourses.Add(courses["FREN-100"].Id);
+                            group1.FromCourses.Add(courses["GERM-100"].Id);
+                            group1.FromCourses.Add(courses["HIND-100"].Id);
+                            group1.FromCourses.Add(courses["ARTH-100"].Id);
+                            group1.FromCourses.Add(courses["HUMT-100"].Id);
+                            group1.FromCourses.Add(courses["CRIM-100"].Id);
+                            group1.FromCourses.Add(courses["POLI-100"].Id);
+                            group1.MinCourses = 7;
+                            group1.GroupType = GroupType.TakeCourses;
+                            group1.InListOrder = true;
+                            break;
+
+                        }
+                    default:
+                        {
+                            // oh come now
+                            throw new NotImplementedException("Specified group id " + code + " not found in Build Group switch statement in TestProgramRequirementsRepository");
+                        }
+
+                }
+
+                #endregion
+                return group1;
             }
-
-            #endregion
-            return group1;
+            catch(Exception ex)
+            {
+                throw;
+            }
         }
 
         public ProgramRequirements Get(string program, string catalog)

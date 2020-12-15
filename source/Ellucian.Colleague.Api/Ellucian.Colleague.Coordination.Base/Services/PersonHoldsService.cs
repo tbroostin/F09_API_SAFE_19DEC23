@@ -299,10 +299,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             //Do required fields & empty or null id check
             CheckForRequiredFields(personHoldDto);
-
-            //For POST this will return null
-            personHoldEnityId = await _personHoldsRepository.GetStudentHoldIdFromGuidAsync(personHoldDto.Id);
-
+            
             //Check start date is before end date
             if (personHoldDto.StartOn > personHoldDto.EndOn)
             {

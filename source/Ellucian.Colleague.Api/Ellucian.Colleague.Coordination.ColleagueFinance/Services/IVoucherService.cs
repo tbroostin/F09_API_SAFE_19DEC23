@@ -54,5 +54,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="voucherVoidRequest">The voucher void request DTO.</param>        
         /// <returns>The voucher void response DTO.</returns>
         Task<Ellucian.Colleague.Dtos.ColleagueFinance.VoucherVoidResponse> VoidVoucherAsync(Ellucian.Colleague.Dtos.ColleagueFinance.VoucherVoidRequest voucherVoidRequest);
+
+        /// <summary>
+        /// Get the list of voucher's by vendor id and invoice number.
+        /// </summary>
+        /// <param name="vendorId">Vendor Id</param>
+        /// <param name="invoiceNo">Invoice number</param>
+        /// <returns>List of <see cref="Voucher2">Vouchers</see></returns>
+        Task<IEnumerable<Voucher2>> GetVouchersByVendorAndInvoiceNoAsync(string vendorId, string invoiceNo);
     }
 }

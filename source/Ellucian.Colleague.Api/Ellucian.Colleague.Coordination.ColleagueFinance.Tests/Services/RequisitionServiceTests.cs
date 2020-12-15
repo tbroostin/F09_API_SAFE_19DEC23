@@ -17,6 +17,7 @@ using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
@@ -698,6 +699,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             private Domain.Base.Entities.Address addressEntity;
             private IEnumerable<VendorTerm> vendorTerms;
             private IEnumerable<Domain.ColleagueFinance.Entities.CommodityCode> commodityCodes;
+            private IEnumerable<Domain.ColleagueFinance.Entities.FxaTransferFlags> fxaFlags;
             private IEnumerable<Domain.ColleagueFinance.Entities.CommodityUnitType> unitTypes;
             private IEnumerable<Domain.Base.Entities.CommerceTaxCode> commerceTaxCodes;
             private LineItem lineItem;
@@ -802,6 +804,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new Domain.ColleagueFinance.Entities.CommodityCode(guid, "1", "description")
                 };
 
+                fxaFlags = new List<Domain.ColleagueFinance.Entities.FxaTransferFlags>()
+                {
+                    new Domain.ColleagueFinance.Entities.FxaTransferFlags(guid, "1", "description")
+                };
+
                 unitTypes = new List<Domain.ColleagueFinance.Entities.CommodityUnitType>()
                 {
                     new Domain.ColleagueFinance.Entities.CommodityUnitType(guid, "1", "description")
@@ -818,6 +825,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 {
                     Comments = "comments",
                     CommodityCode = "1",
+                    FixedAssetsFlag = "1",
                     DesiredDate = DateTime.Now,
                     ExpectedDeliveryDate = DateTime.Now.AddDays(10),
                     InvoiceNumber = "1",
@@ -882,7 +890,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     MiscAddress = new List<string>() { "Address1" },
                     VendorTerms = "1",
                     Comments = "comments",
-                    InternalComments = "internal Comments"
+                    InternalComments = "internal Comments",
+                    Type="procurement"
                 };
             }
 
@@ -901,6 +910,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetFreeOnBoardTypesAsync(It.IsAny<bool>())).ReturnsAsync(freeOnBoardTypes);
                 colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetVendorTermsAsync(It.IsAny<bool>())).ReturnsAsync(vendorTerms);
                 colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(commodityCodes);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(fxaFlags);
                 colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(unitTypes);
                 foreach (var record in shipToDestinations)
                 {
@@ -920,6 +930,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 foreach (var record in commodityCodes)
                 {
                     colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetCommodityCodeGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
+
+                foreach (var record in fxaFlags)
+                {
+                    colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetFxaTransferFlagGuidAsync(record.Code)).ReturnsAsync(record.Guid);
                 }
 
                 foreach (var record in unitTypes)
@@ -1192,6 +1207,20 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             [TestMethod]
             [ExpectedException(typeof(RepositoryException))]
+            public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_Exception_Unable_To_Retrieve_fxaflag()
+            {
+                requisition.IntgAltShipCountry = null;
+                requisition.MiscCountry = null;
+                requisition.AltShippingState = "AV";
+                requisition.AltShippingCountry = "CAN";
+                requisition.VendorId = null;
+                requisition.IntgCorpPerIndicator = null;
+                colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetFxaTransferFlagGuidAsync(It.IsAny<String>())).ThrowsAsync(new RepositoryException());
+                await requisitionService.GetRequisitionsByGuidAsync(guid);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
             public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_KeyNotFoundException_On_Invalid_CommodityCode()
             {
 
@@ -1200,6 +1229,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 requisition.IntgCorpPerIndicator = "P"; // Invalid data to cover default case of switch in code.
                 lineItem.CommodityCode = "2";
                 colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetCommodityCodeGuidAsync(lineItem.CommodityCode)).ThrowsAsync(new RepositoryException());
+                await requisitionService.GetRequisitionsByGuidAsync(guid);
+            }
+
+            [TestMethod]
+            public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_KeyNotFoundException_On_Invalid_fxaflag()
+            {
+
+                requisition.IntgSubmittedBy = null;
+                requisition.IntgAltShipCountry = "AUS";
+                requisition.IntgCorpPerIndicator = "P"; // Invalid data to cover default case of switch in code.
+                lineItem.FixedAssetsFlag = "2";
+                colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetFxaTransferFlagGuidAsync(lineItem.CommodityCode)).ThrowsAsync(new RepositoryException());
                 await requisitionService.GetRequisitionsByGuidAsync(guid);
             }
 
@@ -1353,6 +1394,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             private List<VendorTerm> vendorTerms;
             private List<FundsAvailable> fundsAvailable;
             private List<CommodityCode> commoditycodes;
+            private List<FxaTransferFlags> fxaFlagss;
             private List<CommodityUnitType> unitTypes;
             private List<Domain.Base.Entities.CommerceTaxCode> taxcodes;
             private IEnumerable<Domain.Base.Entities.Country> countries;
@@ -1460,6 +1502,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 commoditycodes = new List<CommodityCode>() { new CommodityCode(guid, "1", "desc") };
 
+                fxaFlagss = new List<FxaTransferFlags>() { new FxaTransferFlags(guid, "1", "desc") };
+
                 unitTypes = new List<CommodityUnitType>() { new CommodityUnitType(guid, "1", "desc") };
 
                 taxcodes = new List<Domain.Base.Entities.CommerceTaxCode>() { new Domain.Base.Entities.CommerceTaxCode(guid, "1", "desc") };
@@ -1470,6 +1514,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 {
                     Comments = "comments",
                     CommodityCode = "1",
+                    FixedAssetsFlag = "1",
                     DesiredDate = DateTime.Now,
                     ExpectedDeliveryDate = DateTime.Now.AddDays(10),
                     InvoiceNumber = "1",
@@ -1506,6 +1551,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 {
                     Id = guid,
                     SubmittedBy = new Dtos.GuidObject2(guid),
+                    Type = Dtos.EnumProperties.RequisitionTypes.Eprocurement,
                     Buyer = new Dtos.GuidObject2(guid),
                     TransactionDate = DateTime.Today,
                     RequestedOn = DateTime.Today,
@@ -1574,6 +1620,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                             DesiredDate = DateTime.Today,
                             UnitPrice = new Dtos.DtoProperties.Amount2DtoProperty() { Value = 1000, Currency = Dtos.EnumProperties.CurrencyIsoCode.USD },
                             CommodityCode = new Dtos.GuidObject2(guid),
+                            fixedAssetDesignation = new Dtos.GuidObject2(guid),
                             UnitOfMeasure = new Dtos.GuidObject2(guid),
                             Comments = new List<Dtos.CommentsDtoProperty>() { new Dtos.CommentsDtoProperty() { Type = Dtos.EnumProperties.CommentTypes.Printed, Comment = "comment"} },
                             TradeDiscount = new Dtos.TradeDiscountDtoProperty()
@@ -1651,7 +1698,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 };
             }
 
-            private void InitializeMock()
+            private async void  InitializeMock()
             {
 
                 getRequisitions.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.ViewRequisitions));
@@ -1677,6 +1724,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetFreeOnBoardTypesAsync(It.IsAny<bool>())).ReturnsAsync(freeOnBoardTypes);
                 colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetVendorTermsAsync(It.IsAny<bool>())).ReturnsAsync(vendorTerms);
                 colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(commoditycodes);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(fxaFlagss);
                 colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(unitTypes);
                 foreach (var record in accountsPayableSources)
                 {
@@ -1703,6 +1751,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetCommodityCodeGuidAsync(record.Code)).ReturnsAsync(record.Guid);
                 }
 
+                foreach (var record in fxaFlagss)
+                {
+                    colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetFxaTransferFlagGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
+
                 foreach (var record in unitTypes)
                 {
                     colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetCommodityUnitTypeGuidAsync(record.Code)).ReturnsAsync(record.Guid);
@@ -1713,6 +1766,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     referenceDataRepositoryMock.Setup(f => f.GetCommerceTaxCodeGuidAsync(record.Code)).ReturnsAsync(record.Guid);
                 }
                 accountFundsAvailableRepo.Setup(a => a.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(fundsAvailable);
+                var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();
+                generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
             }
 
             #endregion
@@ -1930,6 +1985,28 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             [TestMethod]
             [ExpectedException(typeof(Exception))]
+            public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_ManualVendorDetails_Type_noName()
+            {
+                dtoRequistion.Vendor = new Dtos.VendorDtoProperty() { };
+                dtoRequistion.Vendor.ManualVendorDetails = new Dtos.ManualVendorDetailsDtoProperty();
+                dtoRequistion.Vendor.ManualVendorDetails.Name = "Jack";
+                dtoRequistion.Vendor.ManualVendorDetails.Type = null;
+                await requisitionService.CreateRequisitionsAsync(dtoPostRequistion);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
+            public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_ManualVendorDetails_Name_NoType()
+            {
+                dtoRequistion.Vendor = new Dtos.VendorDtoProperty() { };
+                dtoRequistion.Vendor.ManualVendorDetails = new Dtos.ManualVendorDetailsDtoProperty();
+                dtoRequistion.Vendor.ManualVendorDetails.Name = "";
+                dtoRequistion.Vendor.ManualVendorDetails.Type = Dtos.EnumProperties.ManualVendorType.Organization;
+                await requisitionService.CreateRequisitionsAsync(dtoPostRequistion);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_VendorTerm_Notfound()
             {
                 dtoRequistion.PaymentTerms = new Dtos.GuidObject2(Guid.NewGuid().ToString());
@@ -1946,6 +2023,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             [TestMethod]
             [ExpectedException(typeof(Exception))]
+            public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_FixedAssetDesignation_Null()
+            {
+                colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetFxaTransferFlagsAsync(true)).ReturnsAsync(null);
+                await requisitionService.CreateRequisitionsAsync(dtoPostRequistion);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_CommodityUnitTypes_Null()
             {
                 colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetCommodityUnitTypesAsync(true)).ReturnsAsync(null);
@@ -1957,6 +2042,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_CommodityCode_Notfound()
             {
                 dtoRequistion.LineItems.FirstOrDefault().CommodityCode.Id = Guid.NewGuid().ToString();
+                await requisitionService.CreateRequisitionsAsync(dtoPostRequistion);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
+            public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_FixedAssetDesignation_Notfound()
+            {
+                dtoRequistion.LineItems.FirstOrDefault().fixedAssetDesignation.Id = Guid.NewGuid().ToString();
                 await requisitionService.CreateRequisitionsAsync(dtoPostRequistion);
             }
 

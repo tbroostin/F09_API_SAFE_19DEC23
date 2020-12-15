@@ -31,6 +31,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         public CreateLeaveRequestStatusRequest actualCreateLeaveRequestStatusRequest;
         public UpdateLeaveRequestRequest actualUpdateLeaveRequestRequest;
 
+        public DateTime startDate;
+        public DateTime endDate;
+
         public EmployeeLeaveRequestRepository BuildRepository()
         {
             loggerMock.Setup(l => l.IsErrorEnabled).Returns(true);
@@ -60,15 +63,17 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                             LrApproverName = rec.ApproverName
                         }).ToList()
                     )));
+
+
             #endregion
 
             #region LEAVE.REQUEST.DETAIL
             dataReaderMock.Setup(d => d.SelectAsync("LEAVE.REQUEST.DETAIL", "WITH LRD.LEAVE.REQUEST.ID EQ ?", It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>()))
              .Returns<string, string, string[], string, bool, int>((f, c, values, p, r, s) =>
                      Task.FromResult((TestEmployeeLeaveRequestRepository.leaveRequestDetailRecords == null) ? null :
-                         TestEmployeeLeaveRequestRepository.leaveRequestDetailRecords                     
+                         TestEmployeeLeaveRequestRepository.leaveRequestDetailRecords
                          .Select(rec => rec.Id).ToArray()
-               
+
       ));
             dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.LeaveRequestDetail>(It.IsAny<string[]>(), It.IsAny<bool>()))
             .Returns<string[], bool>((ids, b) => Task.FromResult(TestEmployeeLeaveRequestRepository.leaveRequestDetailRecords == null ? null :
@@ -89,7 +94,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             dataReaderMock.Setup(d => d.SelectAsync("LEAVE.REQUEST.STATUS", "WITH LRS.LEAVE.REQUEST.ID EQ ?", It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>()))
             .Returns<string, string, string[], string, bool, int>((f, c, values, p, r, s) =>
                     Task.FromResult((testData.leaveRequestStatusRecords == null) ? null :
-                        testData.leaveRequestStatusRecords                   
+                        testData.leaveRequestStatusRecords
                         .Select(rec => rec.Id).ToArray()
                     ));
 
@@ -123,7 +128,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                         LastName = "Brown",
                         FirstName = "Jennifer",
                         MiddleName = ""
-                    }                    
+                    }
                }));
             #endregion
             // To Do : Incude LEAVE.REQUEST.COMMENTS
@@ -220,6 +225,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             employeeIds = new List<string>() { employeeId };
             leaveRequestId = testData.leaveRequestRecords[1].Id;
             repositoryUnderTest = BuildRepository();
+            startDate = DateTime.Today;
+            endDate = DateTime.Today.AddDays(4);
         }
 
         [TestClass]
@@ -512,7 +519,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 Assert.AreEqual(expected.StartDate, actual.StartDate);
                 Assert.AreEqual(expected.EndDate, actual.EndDate);
                 Assert.AreEqual(expected.ApproverId, actual.ApproverId);
-                Assert.IsTrue(string.IsNullOrWhiteSpace( actual.ApproverName));
+                Assert.IsTrue(string.IsNullOrWhiteSpace(actual.ApproverName));
                 Assert.AreEqual(expected.Status, actual.Status);
 
                 CollectionAssert.AreEqual(expected.LeaveRequestDetails, actual.LeaveRequestDetails);
@@ -632,7 +639,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                     );
 
                 #region LEAVE.REQUEST.DETAIL
-                dataReaderMock.Setup(d => d.SelectAsync("LEAVE.REQUEST.DETAIL", It.IsAny <string>()))
+                dataReaderMock.Setup(d => d.SelectAsync("LEAVE.REQUEST.DETAIL", It.IsAny<string>()))
                 .ReturnsAsync(TestEmployeeLeaveRequestRepository.leaveRequestDetailRecords.Where(lrd => lrd.LeaveRequestId == newlyCreatedLeaveRequestId)
                        .Select(rec => rec.Id).ToArray());
 
@@ -975,6 +982,136 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 
                 await repositoryUnderTest.UpdateLeaveRequestAsync(inputLeaveRequestHelper);
                 transManagerMock.Verify(t => t.ExecuteAsync<UpdateLeaveRequestRequest, UpdateLeaveRequestResponse>(It.Is<UpdateLeaveRequestRequest>(r => this.CompareUpdateRequest(r, inputLeaveRequestHelper.LeaveRequest))));
+            }
+        }
+
+
+        [TestClass]
+        public class GetLeaveRequestsForTimeEntryAsyncTests : EmployeeLeaveRequestRepositoryTests
+        {
+            public async Task<IEnumerable<LeaveRequest>> getExpected()
+            {
+                return await testData.GetLeaveRequestsForTimeEntryAsync(startDate, endDate, employeeIds);
+            }
+
+            public async Task<IEnumerable<LeaveRequest>> getActual()
+            {
+                return await repositoryUnderTest.GetLeaveRequestsForTimeEntryAsync(startDate, endDate, employeeIds);
+            }
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                EmployeeLeaveRequestRepositoryTestsInitialize();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetLeaveRequestsForTimeEntryAsync_NullEmployeeIdsTest()
+            {
+                employeeIds = null;
+                await getActual();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetLeaveRequestsForTimeEntryAsync_EmptyEmployeeIdsTest()
+            {
+                employeeIds = new List<string>();
+                await getActual();
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task GetLeaveRequestsForTimeEntryAsync_NoLeaveRequestKeysTest()
+            {
+                dataReaderMock.Setup(d => d.SelectAsync("LEAVE.REQUEST", "WITH LR.EMPLOYEE.ID EQ ?", It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>()))
+               .Returns<string, string, string[], string, bool, int>((f, c, values, p, r, s) =>
+                            Task.FromResult<string[]>(
+                                null
+                            ));
+
+                await getActual();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task GetLeaveRequestsForTimeEntryAsync_NoLeaveRequestDetailKeysTest()
+            {
+                dataReaderMock.Setup(d => d.SelectAsync("LEAVE.REQUEST.DETAIL", "WITH LRD.LEAVE.REQUEST.ID EQ ?", It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>()))
+                .Returns<string, string, string[], string, bool, int>((f, c, values, p, r, s) =>
+                            Task.FromResult<string[]>(
+                                null
+                            ));
+
+                await getActual();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task GetLeaveRequestsForTimeEntryAsync_NoLeaveRequestStatusKeysTest()
+            {
+                dataReaderMock.Setup(d => d.SelectAsync("LEAVE.REQUEST.STATUS", "WITH LRS.LEAVE.REQUEST.ID EQ ?", It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>()))
+                .Returns<string, string, string[], string, bool, int>((f, c, values, p, r, s) =>
+                            Task.FromResult<string[]>(
+                                null
+                            ));
+
+                await getActual();
+            }
+
+            [TestMethod]
+            public async Task GetLeaveRequestsForTimeEntryAsync_ExpectedEqualsActualTest()
+            {
+                dataReaderMock.Setup(d => d.SelectAsync("LEAVE.REQUEST", "WITH LR.EMPLOYEE.ID EQ ?", It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>()))
+                .Returns<string, string, string[], string, bool, int>((f, c, values, p, r, s) =>
+                Task.FromResult((testData.leaveRequestsForTimeEntry == null) ? null :
+                    testData.leaveRequestsForTimeEntry
+                    .Select(rec => rec.Id).ToArray()
+            ));
+
+                dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.LeaveRequest>(It.IsAny<string[]>(), It.IsAny<bool>()))
+               .Returns<string[], bool>((ids, b) => Task.FromResult(testData.leaveRequestsForTimeEntry == null ? null :
+                   new Collection<DataContracts.LeaveRequest>(
+                       testData.leaveRequestsForTimeEntry
+                       .Where(rec => ids.Contains(rec.Id))
+                       .Select(rec => new DataContracts.LeaveRequest()
+                       {
+                           Recordkey = rec.Id,
+                           LrPerleaveId = rec.PerLeaveId,
+                           LrEmployeeId = rec.EmployeeId,
+                           LrStartDate = rec.StartDate,
+                           LrEndDate = rec.EndDate,
+                           LrApproverId = rec.ApproverId,
+                           LrApproverName = rec.ApproverName
+                       }).ToList()
+                   )));
+
+                var expected = await getExpected();
+                var actual = await getActual();
+
+                Assert.AreEqual(expected.Count(), actual.Count());
+                for (int i = 0; i < expected.Count(); i++)
+                {
+                    Assert.AreEqual(expected.ElementAt(i).Id, actual.ElementAt(i).Id);
+                    Assert.AreEqual(expected.ElementAt(i).PerLeaveId, actual.ElementAt(i).PerLeaveId);
+                    Assert.AreEqual(expected.ElementAt(i).EmployeeId, actual.ElementAt(i).EmployeeId);
+                    Assert.AreEqual(expected.ElementAt(i).StartDate, actual.ElementAt(i).StartDate);
+                    Assert.AreEqual(expected.ElementAt(i).EndDate, actual.ElementAt(i).EndDate);
+                    Assert.AreEqual(expected.ElementAt(i).Status, actual.ElementAt(i).Status);
+                    Assert.AreEqual(expected.ElementAt(i).ApproverId, actual.ElementAt(i).ApproverId);
+                    Assert.IsTrue(string.IsNullOrWhiteSpace(actual.ElementAt(i).ApproverName));
+
+                    CollectionAssert.AreEqual(expected.ElementAt(i).LeaveRequestDetails, actual.ElementAt(i).LeaveRequestDetails);
+                }
+            }
+
+            [TestCleanup]
+            public void CleanUp()
+            {
+                testData = null;
+                repositoryUnderTest = null;
             }
         }
 

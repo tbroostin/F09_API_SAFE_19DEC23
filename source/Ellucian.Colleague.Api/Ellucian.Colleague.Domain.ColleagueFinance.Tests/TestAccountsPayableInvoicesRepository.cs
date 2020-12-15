@@ -80,6 +80,16 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             {   "10",   "3",            "Outlets",              "14",       "208.09",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN9876",       "TaxForm",  "TaxFormCode",  "TFLocation",       "Install the covers."},
             {   "10",   "4",            "Outlets",              "14",       "208.09",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN9876",       "TaxForm",  "TaxFormCode",  "TFLocation",       "Install the covers."},
             {   "10",   "18",           "Outlets",              "14",       "208.09",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN9876",       "TaxForm",  "TaxFormCode",  "TFLocation",       "Install the covers."},
+            {   "10",   "11",           "Outlets",              "14",       "208.09",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN9876",       "TaxForm",  "TaxFormCode",  "TFLocation",       "Install the covers."},
+            {   "10",   "13",           "Outlets",              "14",       "208.09",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN9876",       "TaxForm",  "TaxFormCode",  "TFLocation",       "Install the covers."},
+            {   "10",   "14",           "Outlets",              "14",       "208.09",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN9876",       "TaxForm",  "TaxFormCode",  "TFLocation",       "Install the covers."},
+            {   "10",   "15",           "Outlets",              "14",       "208.09",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN9876",       "TaxForm",  "TaxFormCode",  "TFLocation",       "Install the covers."},
+            {   "10",   "16",           "Outlets",              "14",       "208.09",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN9876",       "TaxForm",  "TaxFormCode",  "TFLocation",       "Install the covers."},
+            {   "10",   "21",           "Outlets",              "14",       "208.09",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN9876",       "TaxForm",  "TaxFormCode",  "TFLocation",       "Install the covers."},
+            {   "10",   "25",           "Outlets",              "14",       "208.09",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN9876",       "TaxForm",  "TaxFormCode",  "TFLocation",       "Install the covers."},
+            {   "10",   "26",           "Outlets",              "14",       "208.09",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN9876",       "TaxForm",  "TaxFormCode",  "TFLocation",       "Install the covers."},
+            {   "10",   "27",           "Outlets",              "14",       "208.09",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN9876",       "TaxForm",  "TaxFormCode",  "TFLocation",       "Install the covers."},
+            {   "10",   "30",           "Outlets",              "14",       "208.09",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN9876",       "TaxForm",  "TaxFormCode",  "TFLocation",       "Install the covers."},
             {   "10",   "19",           "Outlets",              "14",       "208.09",   "rock",         "VP",           "543.21",       "1/3/2015",             "IN9876",       "TaxForm",  "TaxFormCode",  "TFLocation",       "Install the covers."}
         };
 
@@ -496,6 +506,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         }
 
         Task<VoucherVoidResponse> IVoucherRepository.VoidVoucherAsync(VoucherVoidRequest voucherVoidRequest)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<Voucher>> GetVouchersByVendorAndInvoiceNoAsync(string vendorId, string invoiceNo)
         {
             throw new NotImplementedException();
         }

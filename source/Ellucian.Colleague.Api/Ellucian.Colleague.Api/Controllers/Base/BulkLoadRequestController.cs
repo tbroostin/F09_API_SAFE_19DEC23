@@ -1,4 +1,4 @@
-﻿//Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -22,6 +22,7 @@ using Ellucian.Web.Http.Filters;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Http.Routes;
+using Ellucian.Web.Http.Models;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -72,11 +73,24 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                     IntegrationApiUtility.GetDefaultApiError("ApplicationId is a required property.")));
             }
 
+            Guid guidOutput;
+            if (!Guid.TryParse(bulkLoadRequestDto.RequestorTrackingId, out guidOutput))
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("RequestorTrackingId",
+                   IntegrationApiUtility.GetDefaultApiError("Must provide a valid GUID for RequestorTrackingId.")));
+            }
+            if (!Guid.TryParse(bulkLoadRequestDto.ApplicationId, out guidOutput))
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("ApplicationId",
+                   IntegrationApiUtility.GetDefaultApiError("Must provide a valid GUID for ApplicationId.")));
+            }
+
+
             try
             {
                 var ethosRouteInfo = GetEthosResourceRouteInfo();
                 bulkLoadRequestDto.ResourceName = ethosRouteInfo.ResourceName;
-                
+
                 var routeData = ActionContext.Request.GetRouteData();
                 if (string.IsNullOrEmpty(bulkLoadRequestDto.Representation) || bulkLoadRequestDto.Representation.Contains("application/json"))
                 {
@@ -149,15 +163,55 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <summary>
         ///  Get the status of the bulk request
         /// </summary>
-        /// <param name="id">Guid of the bulk request to get</param>
-        /// <returns>The requested <see cref="BulkLoadGet">Person</see></returns>
+        /// <param name="criteria">filter</param>
+        /// <param name="guid">guid</param>
+        /// <returns>The requested <see cref="BulkLoadGet">object</see></returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [EedmResponseFilter]
-        public async Task<Dtos.BulkLoadGet> GetBulkLoadRequestStatusAsync(string id)
+        [ValidateQueryStringFilter()]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.BulkLoadGet)), FilteringFilter(IgnoreFiltering = true)]
+        public async Task<Dtos.BulkLoadGet> GetBulkLoadRequestStatusAsync(QueryStringFilter criteria, [FromUri] string guid = null)
         {
+
+            var filter = GetFilterObject<Dtos.BulkLoadGet>(_logger, "criteria");
+
+            if (CheckForEmptyFilterParameters())
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("Null requestorTrackingId",
+                    IntegrationApiUtility.GetDefaultApiError("requestorTrackingId is a required filter.")));
+            }
+
+            var id = filter.RequestorTrackingId;
+
+            // if the filter is empty, do we have a guid in the URL?
+            if (string.IsNullOrEmpty(id))
+            {
+                id = guid;
+            }
+
+            if (string.IsNullOrEmpty(id))
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("Null requestorTrackingId",
+                    IntegrationApiUtility.GetDefaultApiError("requestorTrackingId is a required property.")));
+            }
+
+            var routeData = ActionContext.Request.GetRouteData();
+            string permissionCode = string.Empty;
+            object objPermissionCodeValue;
+            routeData.Route.Defaults.TryGetValue("permissionCode", out objPermissionCodeValue);
+            if (objPermissionCodeValue != null)
+            {
+                permissionCode = objPermissionCodeValue.ToString();
+            }
+            else
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("Null PermissionCode",
+                    IntegrationApiUtility.GetDefaultApiError("PermissionCode is not set on route.")));
+            }
+
             try
             {
-                return await _bulkLoadRequestService.GetBulkLoadRequestStatus(id);
+                return await _bulkLoadRequestService.GetBulkLoadRequestStatus(GetRouteResourceName(), id, permissionCode);
             }
             catch (PermissionsException e)
             {

@@ -3484,6 +3484,128 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
         }
 
+
+        /// <summary>
+        /// Test class for CipCode codes
+        /// </summary>
+        [TestClass]
+        public class CipCodeTests
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ILogger> loggerMock;
+            IEnumerable<CipCode> _CipCodeCollection;
+            string codeItemName;
+            ApiSettings apiSettings;
+
+            StudentReferenceDataRepository referenceDataRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+                apiSettings = new ApiSettings("TEST");
+
+                // Build responses used for mocking
+                _CipCodeCollection = new List<CipCode>()
+                {
+                    new CipCode("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "AT", "Athletic", 2020),
+                    new CipCode("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "AC", "Academic", 2020),
+                    new CipCode("d2253ac7-9931-4560-b42f-1fccd43c952e", "CU", "Cultural", 2020)
+                };
+
+                // Build repository
+                referenceDataRepo = BuildValidReferenceDataRepository();
+                codeItemName = referenceDataRepo.BuildFullCacheKey("AllHedmCipCodes");
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                _CipCodeCollection = null;
+                referenceDataRepo = null;
+            }
+
+            [TestMethod]
+            public async Task GetsCipCodeCacheAsync()
+            {
+                var result = await referenceDataRepo.GetCipCodesAsync(false);
+
+                for (int i = 0; i < _CipCodeCollection.Count(); i++)
+                {
+                    Assert.AreEqual(_CipCodeCollection.ElementAt(i).Guid, result.ElementAt(i).Guid);
+                    Assert.AreEqual(_CipCodeCollection.ElementAt(i).Code, result.ElementAt(i).Code);
+                    Assert.AreEqual(_CipCodeCollection.ElementAt(i).Description, result.ElementAt(i).Description);
+                    Assert.AreEqual(_CipCodeCollection.ElementAt(i).RevisionYear, result.ElementAt(i).RevisionYear);
+                }
+            }
+
+            [TestMethod]
+            public async Task GetsCipCodeNonCacheAsync()
+            {
+                var result = await referenceDataRepo.GetCipCodesAsync(true);
+
+                for (int i = 0; i < _CipCodeCollection.Count(); i++)
+                {
+                    Assert.AreEqual(_CipCodeCollection.ElementAt(i).Guid, result.ElementAt(i).Guid);
+                    Assert.AreEqual(_CipCodeCollection.ElementAt(i).Code, result.ElementAt(i).Code);
+                    Assert.AreEqual(_CipCodeCollection.ElementAt(i).Description, result.ElementAt(i).Description);
+                    Assert.AreEqual(_CipCodeCollection.ElementAt(i).RevisionYear, result.ElementAt(i).RevisionYear);
+                }
+            }
+
+            private StudentReferenceDataRepository BuildValidReferenceDataRepository()
+            {
+                // transaction factory mock
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                // Cache Provider Mock
+                cacheProviderMock = new Mock<ICacheProvider>();
+                // Set up data accessor for mocking 
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+
+                // Set up dataAccessorMock as the object for the DataAccessor
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                // Setup response to CipCode read
+                var entityCollection = new Collection<Cip>(_CipCodeCollection.Select(record =>
+                    new Data.Student.DataContracts.Cip()
+                    {
+                        Recordkey = record.Code,
+                        CipDesc = record.Description,
+                        CipRevisionYear = record.RevisionYear,
+                        RecordGuid = record.Guid
+                    }).ToList());
+
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<Cip>("CIP", "", true))
+                    .ReturnsAsync(entityCollection);
+
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                    .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+
+                dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
+                {
+                    var result = new Dictionary<string, RecordKeyLookupResult>();
+                    foreach (var recordKeyLookup in recordKeyLookups)
+                    {
+                        var entity = _CipCodeCollection.Where(e => e.Code == recordKeyLookup.PrimaryKey).FirstOrDefault();
+                        result.Add(string.Join("+", new string[] { "CipCode", entity.Code }),
+                            new RecordKeyLookupResult() { Guid = entity.Guid });
+                    }
+                    return Task.FromResult(result);
+                });
+
+                // Construct repository
+                referenceDataRepo = new StudentReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+                return referenceDataRepo;
+            }
+        }
+
         [TestClass]
         public class CourseLevels
         {
@@ -6650,6 +6772,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 }
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.MealPlans>("MEAL.PLANS",  It.IsAny<GuidLookup[]>(), It.IsAny<bool>())).ReturnsAsync(records);
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.MealPlans>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(records);
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.MealPlans>("MEAL.PLANS", "", true)).ReturnsAsync(records);
 
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                  x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
@@ -10533,6 +10656,20 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
+            public async Task GetFinancialAidYearsGuidAsync()
+            {
+                var result = await referenceDataRepo.GetFinancialAidYearsGuidAsync( "CODE1" );
+                Assert.IsNotNull( result );
+            }
+
+            [TestMethod]
+            public async Task GetFinancialAidYearAsync()
+            {
+                var result = await referenceDataRepo.GetFinancialAidYearAsync( "bb66b971-3ee0-4477-9bb7-539721f93434" );
+                Assert.IsNotNull( result );
+            }
+
+            [TestMethod]
             public async Task FinancialAidReferenceDataRepository_GetFinancialAidYearsAsync_False()
             {
                 var results = await referenceDataRepo.GetFinancialAidYearsAsync(false);
@@ -10734,13 +10871,451 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
 
         [TestClass]
+        public class EducationGoals
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ILogger> loggerMock;
+            IEnumerable<Ellucian.Colleague.Domain.Student.Entities.EducationGoal> allEducationGoals;
+            ApplValcodes educationGoalsValcodeResponse;
+            string valcodeName;
+            ApiSettings apiSettings;
+            StudentReferenceDataRepository referenceDataRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+
+                // Build responses used for mocking
+                allEducationGoals = new TestStudentReferenceDataRepository().GetAllEducationGoalsAsync().Result;
+
+                educationGoalsValcodeResponse = BuildValcodeResponse(allEducationGoals);
+
+                // Build repository
+                referenceDataRepo = BuildValidReferenceDataRepository();
+                valcodeName = referenceDataRepo.BuildFullCacheKey("ST_EDUCATION.GOALS");
+
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                   x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                   .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                educationGoalsValcodeResponse = null;
+                allEducationGoals = null;
+                referenceDataRepo = null;
+            }
+
+            [TestMethod]
+            public async Task StudentReferenceDataRepo_GetEducationGoals()
+            {
+                var repo = await referenceDataRepo.GetAllEducationGoalsAsync();
+
+                for (int i = 0; i < allEducationGoals.Count(); i++)
+                {
+                    Assert.AreEqual(allEducationGoals.ElementAt(i).Code, repo.ElementAt(i).Code);
+                    Assert.AreEqual(allEducationGoals.ElementAt(i).Description, repo.ElementAt(i).Description);
+                }
+            }
+
+            [TestMethod]
+            public async Task StudentReferenceDataRepo_GetEducationGoalsAsync_WritesToCache()
+            {
+                // Set up local cache mock to respond to cache request:
+                //  -to "Contains" request, return "false" to indicate item is not in cache
+                //  -to cache "Get" request, return null so we know it's reading from the "repository"
+                cacheProviderMock.Setup(x => x.Contains(valcodeName, null)).Returns(false);
+                cacheProviderMock.Setup(x => x.Get(valcodeName, null)).Returns(null);
+
+                // return a valid response to the data accessor request
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(educationGoalsValcodeResponse);
+
+                // But after data accessor read, set up mocking so we can verify the list of CapSizes was written to the cache
+                cacheProviderMock.Setup(x => x.AddAndUnlockSemaphore(valcodeName, It.IsAny<Object>(), It.IsAny<SemaphoreSlim>(), It.IsAny<CacheItemPolicy>(), null)).Verifiable();
+
+                // Verify that CapSizes were returned, which means they came from the "repository".
+                Assert.IsTrue((await referenceDataRepo.GetAllEducationGoalsAsync()).Count() == allEducationGoals.Count());
+
+                // Verify that the CapSizes was added to the cache after it was read from the repository
+                cacheProviderMock.Verify(m => m.AddAndUnlockSemaphore(valcodeName, It.IsAny<Object>(), It.IsAny<SemaphoreSlim>(), It.IsAny<CacheItemPolicy>(), null));
+            }
+
+            [TestMethod]
+            public async Task StudentReferenceDataRepo_GetEducationGoalsAsync_Cached()
+            {
+                object lockHandle = null;
+                // Set up local cache mock to respond to cache request:
+                //  -to "Contains" request, return "false" to indicate item is not in cache
+                //  -to cache "Get" request, return null so we know it's getting data from "repository"
+                cacheProviderMock.Setup(x => x.Contains(valcodeName, null)).Returns(false);
+                cacheProviderMock.Setup(x => x.GetAndLock(valcodeName, out lockHandle, null)).Returns(null);
+
+                // Get these codes to populate the cache
+                var EducationGoals = (await referenceDataRepo.GetAllEducationGoalsAsync());
+                // Assert the drop reasons are returned
+                Assert.IsTrue((await referenceDataRepo.GetAllEducationGoalsAsync()).Count() == allEducationGoals.Count());
+                // Make sure we can verify that it's in the cache
+                cacheProviderMock.Setup(x => x.Contains(valcodeName, null)).Returns(true);
+                var EducationGoalTuple = new Tuple<object, SemaphoreSlim>(EducationGoals, new SemaphoreSlim(1, 1));
+                cacheProviderMock.Setup(x => x.GetAndLockSemaphoreAsync(valcodeName, null)).ReturnsAsync(EducationGoalTuple).Verifiable();
+
+                // Verify that the drop reasons are now retrieved from cache
+                EducationGoals = (await referenceDataRepo.GetAllEducationGoalsAsync());
+                cacheProviderMock.Verify(m => m.GetAndLockSemaphoreAsync(valcodeName, null));
+            }
+
+            private T GetCache<T>(ICacheProvider cacheProvider, string key)
+                where T : class
+            {
+                object cache = cacheProvider.Get(key, null);
+                return cache as T;
+            }
+
+            private StudentReferenceDataRepository BuildValidReferenceDataRepository()
+            {
+                // transaction factory mock
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                // Cache Mock
+                //localCacheMock = new Mock<ObjectCache>();
+                // Cache Provider Mock
+                cacheProviderMock = new Mock<ICacheProvider>();
+                // Set up data accessor for mocking 
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+                apiSettings = new ApiSettings("TEST");
+
+                // Set up dataAccessorMock as the object for the DataAccessor
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                // Setup response to cap size valcode read
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "EDUCATION.GOALS", true)).ReturnsAsync(educationGoalsValcodeResponse);
+
+                // Construct repository
+                referenceDataRepo = new StudentReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+                return referenceDataRepo;
+            }
+
+            private ApplValcodes BuildValcodeResponse(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.EducationGoal> educationGoals)
+            {
+                ApplValcodes applValcodeResponse = new ApplValcodes();
+                applValcodeResponse.ValsEntityAssociation = new List<ApplValcodesVals>();
+                string specialProcessingCode = "";
+                foreach (var item in educationGoals)
+                {
+                    applValcodeResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, specialProcessingCode, item.Code, "", "", ""));
+                }
+                return applValcodeResponse;
+            }
+        }
+
+        [TestClass]
+        public class RegistrationReasons
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ILogger> loggerMock;
+            IEnumerable<Ellucian.Colleague.Domain.Student.Entities.RegistrationReason> allRegistrationReasons;
+            ApplValcodes registrationReasonsValcodeResponse;
+            string valcodeName;
+            ApiSettings apiSettings;
+            StudentReferenceDataRepository referenceDataRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+
+                // Build responses used for mocking
+                allRegistrationReasons = new TestStudentReferenceDataRepository().GetRegistrationReasonsAsync().Result;
+
+                registrationReasonsValcodeResponse = BuildValcodeResponse(allRegistrationReasons);
+
+                // Build repository
+                referenceDataRepo = BuildValidReferenceDataRepository();
+                valcodeName = referenceDataRepo.BuildFullCacheKey("ST_REG.REASONS");
+
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                   x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                   .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                registrationReasonsValcodeResponse = null;
+                allRegistrationReasons = null;
+                referenceDataRepo = null;
+            }
+
+            [TestMethod]
+            public async Task StudentReferenceDataRepo_GetRegistrationReasons()
+            {
+                var repo = await referenceDataRepo.GetRegistrationReasonsAsync();
+
+                for (int i = 0; i < allRegistrationReasons.Count(); i++)
+                {
+                    Assert.AreEqual(allRegistrationReasons.ElementAt(i).Code, repo.ElementAt(i).Code);
+                    Assert.AreEqual(allRegistrationReasons.ElementAt(i).Description, repo.ElementAt(i).Description);
+                }
+            }
+
+            [TestMethod]
+            public async Task StudentReferenceDataRepo_GetRegistrationReasonsAsync_WritesToCache()
+            {
+                // Set up local cache mock to respond to cache request:
+                //  -to "Contains" request, return "false" to indicate item is not in cache
+                //  -to cache "Get" request, return null so we know it's reading from the "repository"
+                cacheProviderMock.Setup(x => x.Contains(valcodeName, null)).Returns(false);
+                cacheProviderMock.Setup(x => x.Get(valcodeName, null)).Returns(null);
+
+                // return a valid response to the data accessor request
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(registrationReasonsValcodeResponse);
+
+                // But after data accessor read, set up mocking so we can verify the list of CapSizes was written to the cache
+                cacheProviderMock.Setup(x => x.AddAndUnlockSemaphore(valcodeName, It.IsAny<Object>(), It.IsAny<SemaphoreSlim>(), It.IsAny<CacheItemPolicy>(), null)).Verifiable();
+
+                // Verify that CapSizes were returned, which means they came from the "repository".
+                Assert.IsTrue((await referenceDataRepo.GetRegistrationReasonsAsync()).Count() == allRegistrationReasons.Count());
+
+                // Verify that the CapSizes was added to the cache after it was read from the repository
+                cacheProviderMock.Verify(m => m.AddAndUnlockSemaphore(valcodeName, It.IsAny<Object>(), It.IsAny<SemaphoreSlim>(), It.IsAny<CacheItemPolicy>(), null));
+            }
+
+            [TestMethod]
+            public async Task StudentReferenceDataRepo_GetRegistrationReasonsAsync_Cached()
+            {
+                object lockHandle = null;
+                // Set up local cache mock to respond to cache request:
+                //  -to "Contains" request, return "false" to indicate item is not in cache
+                //  -to cache "Get" request, return null so we know it's getting data from "repository"
+                cacheProviderMock.Setup(x => x.Contains(valcodeName, null)).Returns(false);
+                cacheProviderMock.Setup(x => x.GetAndLock(valcodeName, out lockHandle, null)).Returns(null);
+
+                // Get these codes to populate the cache
+                var RegistrationReasons = (await referenceDataRepo.GetRegistrationReasonsAsync());
+                // Assert the drop reasons are returned
+                Assert.IsTrue((await referenceDataRepo.GetRegistrationReasonsAsync()).Count() == allRegistrationReasons.Count());
+                // Make sure we can verify that it's in the cache
+                cacheProviderMock.Setup(x => x.Contains(valcodeName, null)).Returns(true);
+                var RegistrationReasonTuple = new Tuple<object, SemaphoreSlim>(RegistrationReasons, new SemaphoreSlim(1, 1));
+                cacheProviderMock.Setup(x => x.GetAndLockSemaphoreAsync(valcodeName, null)).ReturnsAsync(RegistrationReasonTuple).Verifiable();
+
+                // Verify that the drop reasons are now retrieved from cache
+                RegistrationReasons = (await referenceDataRepo.GetRegistrationReasonsAsync());
+                cacheProviderMock.Verify(m => m.GetAndLockSemaphoreAsync(valcodeName, null));
+            }
+
+            private T GetCache<T>(ICacheProvider cacheProvider, string key)
+                where T : class
+            {
+                object cache = cacheProvider.Get(key, null);
+                return cache as T;
+            }
+
+            private StudentReferenceDataRepository BuildValidReferenceDataRepository()
+            {
+                // transaction factory mock
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                // Cache Mock
+                //localCacheMock = new Mock<ObjectCache>();
+                // Cache Provider Mock
+                cacheProviderMock = new Mock<ICacheProvider>();
+                // Set up data accessor for mocking 
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+                apiSettings = new ApiSettings("TEST");
+
+                // Set up dataAccessorMock as the object for the DataAccessor
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                // Setup response to cap size valcode read
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "REG.REASONS", true)).ReturnsAsync(registrationReasonsValcodeResponse);
+
+                // Construct repository
+                referenceDataRepo = new StudentReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+                return referenceDataRepo;
+            }
+
+            private ApplValcodes BuildValcodeResponse(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.RegistrationReason> registrationReasons)
+            {
+                ApplValcodes applValcodeResponse = new ApplValcodes();
+                applValcodeResponse.ValsEntityAssociation = new List<ApplValcodesVals>();
+                string specialProcessingCode = "";
+                foreach (var item in registrationReasons)
+                {
+                    applValcodeResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, specialProcessingCode, item.Code, "", "", ""));
+                }
+                return applValcodeResponse;
+            }
+        }
+
+        [TestClass]
+        public class RegistrationMarketingSources
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ILogger> loggerMock;
+            IEnumerable<Ellucian.Colleague.Domain.Student.Entities.RegistrationMarketingSource> allRegistrationMarketingSources;
+            ApplValcodes RegistrationMarketingSourcesValcodeResponse;
+            string valcodeName;
+            ApiSettings apiSettings;
+            StudentReferenceDataRepository referenceDataRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+
+                // Build responses used for mocking
+                allRegistrationMarketingSources = new TestStudentReferenceDataRepository().GetRegistrationMarketingSourcesAsync().Result;
+
+                RegistrationMarketingSourcesValcodeResponse = BuildValcodeResponse(allRegistrationMarketingSources);
+
+                // Build repository
+                referenceDataRepo = BuildValidReferenceDataRepository();
+                valcodeName = referenceDataRepo.BuildFullCacheKey("ST_REG.MARKETING.SOURCES");
+
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                   x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                   .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                RegistrationMarketingSourcesValcodeResponse = null;
+                allRegistrationMarketingSources = null;
+                referenceDataRepo = null;
+            }
+
+            [TestMethod]
+            public async Task StudentReferenceDataRepo_GetRegistrationMarketingSources()
+            {
+                var repo = await referenceDataRepo.GetRegistrationMarketingSourcesAsync();
+
+                for (int i = 0; i < allRegistrationMarketingSources.Count(); i++)
+                {
+                    Assert.AreEqual(allRegistrationMarketingSources.ElementAt(i).Code, repo.ElementAt(i).Code);
+                    Assert.AreEqual(allRegistrationMarketingSources.ElementAt(i).Description, repo.ElementAt(i).Description);
+                }
+            }
+
+            [TestMethod]
+            public async Task StudentReferenceDataRepo_GetRegistrationMarketingSourcesAsync_WritesToCache()
+            {
+                // Set up local cache mock to respond to cache request:
+                //  -to "Contains" request, return "false" to indicate item is not in cache
+                //  -to cache "Get" request, return null so we know it's reading from the "repository"
+                cacheProviderMock.Setup(x => x.Contains(valcodeName, null)).Returns(false);
+                cacheProviderMock.Setup(x => x.Get(valcodeName, null)).Returns(null);
+
+                // return a valid response to the data accessor request
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(RegistrationMarketingSourcesValcodeResponse);
+
+                // But after data accessor read, set up mocking so we can verify the list of CapSizes was written to the cache
+                cacheProviderMock.Setup(x => x.AddAndUnlockSemaphore(valcodeName, It.IsAny<Object>(), It.IsAny<SemaphoreSlim>(), It.IsAny<CacheItemPolicy>(), null)).Verifiable();
+
+                // Verify that CapSizes were returned, which means they came from the "repository".
+                Assert.IsTrue((await referenceDataRepo.GetRegistrationMarketingSourcesAsync()).Count() == allRegistrationMarketingSources.Count());
+
+                // Verify that the CapSizes was added to the cache after it was read from the repository
+                cacheProviderMock.Verify(m => m.AddAndUnlockSemaphore(valcodeName, It.IsAny<Object>(), It.IsAny<SemaphoreSlim>(), It.IsAny<CacheItemPolicy>(), null));
+            }
+
+            [TestMethod]
+            public async Task StudentReferenceDataRepo_GetRegistrationMarketingSourcesAsync_Cached()
+            {
+                object lockHandle = null;
+                // Set up local cache mock to respond to cache request:
+                //  -to "Contains" request, return "false" to indicate item is not in cache
+                //  -to cache "Get" request, return null so we know it's getting data from "repository"
+                cacheProviderMock.Setup(x => x.Contains(valcodeName, null)).Returns(false);
+                cacheProviderMock.Setup(x => x.GetAndLock(valcodeName, out lockHandle, null)).Returns(null);
+
+                // Get these codes to populate the cache
+                var RegistrationMarketingSources = (await referenceDataRepo.GetRegistrationMarketingSourcesAsync());
+                // Assert the drop reasons are returned
+                Assert.IsTrue((await referenceDataRepo.GetRegistrationMarketingSourcesAsync()).Count() == allRegistrationMarketingSources.Count());
+                // Make sure we can verify that it's in the cache
+                cacheProviderMock.Setup(x => x.Contains(valcodeName, null)).Returns(true);
+                var RegistrationMarketingSourceTuple = new Tuple<object, SemaphoreSlim>(RegistrationMarketingSources, new SemaphoreSlim(1, 1));
+                cacheProviderMock.Setup(x => x.GetAndLockSemaphoreAsync(valcodeName, null)).ReturnsAsync(RegistrationMarketingSourceTuple).Verifiable();
+
+                // Verify that the drop reasons are now retrieved from cache
+                RegistrationMarketingSources = (await referenceDataRepo.GetRegistrationMarketingSourcesAsync());
+                cacheProviderMock.Verify(m => m.GetAndLockSemaphoreAsync(valcodeName, null));
+            }
+
+            private T GetCache<T>(ICacheProvider cacheProvider, string key)
+                where T : class
+            {
+                object cache = cacheProvider.Get(key, null);
+                return cache as T;
+            }
+
+            private StudentReferenceDataRepository BuildValidReferenceDataRepository()
+            {
+                // transaction factory mock
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                // Cache Mock
+                //localCacheMock = new Mock<ObjectCache>();
+                // Cache Provider Mock
+                cacheProviderMock = new Mock<ICacheProvider>();
+                // Set up data accessor for mocking 
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+                apiSettings = new ApiSettings("TEST");
+
+                // Set up dataAccessorMock as the object for the DataAccessor
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                // Setup response to cap size valcode read
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "REG.MARKETING.SOURCES", true)).ReturnsAsync(RegistrationMarketingSourcesValcodeResponse);
+
+                // Construct repository
+                referenceDataRepo = new StudentReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+                return referenceDataRepo;
+            }
+
+            private ApplValcodes BuildValcodeResponse(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.RegistrationMarketingSource> RegistrationMarketingSources)
+            {
+                ApplValcodes applValcodeResponse = new ApplValcodes();
+                applValcodeResponse.ValsEntityAssociation = new List<ApplValcodesVals>();
+                string specialProcessingCode = "";
+                foreach (var item in RegistrationMarketingSources)
+                {
+                    applValcodeResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, specialProcessingCode, item.Code, "", "", ""));
+                }
+                return applValcodeResponse;
+            }
+        }
+
+        [TestClass]
         public class EducationGoalsRepositoryTests
         {
             Mock<IColleagueTransactionFactory> transFactoryMock;
             Mock<ICacheProvider> cacheProviderMock;
             Mock<IColleagueDataReader> dataAccessorMock;
             Mock<ILogger> loggerMock;
-            IEnumerable<EducationGoals> allEducationGoals;
+            IEnumerable<Domain.Student.Entities.EducationGoals> allEducationGoals;
             ApplValcodes educationalGoalsValcodeResponse;
             string domainEntityNameName;
             ApiSettings apiSettings;
@@ -10891,7 +11466,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 return referenceDataRepo;
             }
 
-            private ApplValcodes BuildValcodeResponse(IEnumerable<EducationGoals> educationalGoals)
+            private ApplValcodes BuildValcodeResponse(IEnumerable<Domain.Student.Entities.EducationGoals> educationalGoals)
             {
                 ApplValcodes educationalGoalsResponse = new ApplValcodes();
                 educationalGoalsResponse.ValsEntityAssociation = new List<ApplValcodesVals>();
@@ -10902,6 +11477,5 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 return educationalGoalsResponse;
             }
         }
-
     }
 }

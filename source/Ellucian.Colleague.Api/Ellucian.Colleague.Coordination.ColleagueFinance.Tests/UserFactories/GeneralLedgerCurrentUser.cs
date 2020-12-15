@@ -430,5 +430,26 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories
                 }
             }
         }
+
+        public class InitiatorProcurementUser : ICurrentUserFactory
+        {
+            public ICurrentUser CurrentUser
+            {
+                get
+                {
+                    return new CurrentUser(new Claims()
+                    {
+                        PersonId = "0000143",
+                        ControlId = "123",
+                        Name = "Johnny",
+                        SecurityToken = "321",
+                        SessionTimeout = 30,
+                        UserName = "ProcurementUser",
+                        Roles = new List<string>() { "CREATE.UPDATE.DOC" },
+                        SessionFixationId = "abc123"
+                    });
+                }
+            }
+        }
     }
 }

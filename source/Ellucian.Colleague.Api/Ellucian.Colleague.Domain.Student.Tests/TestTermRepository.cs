@@ -325,5 +325,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         {
             throw new NotImplementedException();
         }
+
+        public Task<Dictionary<string, string>> GetGuidsCollectionAsync( IEnumerable<string> ids )
+        {
+            throw new NotImplementedException();
+        }
     }
 }

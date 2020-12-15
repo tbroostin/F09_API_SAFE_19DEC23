@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -46,6 +46,7 @@ using SocialMediaType = Ellucian.Colleague.Domain.Base.Entities.SocialMediaType;
 using SocialMediaTypeCategory = Ellucian.Colleague.Domain.Base.Entities.SocialMediaTypeCategory;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Data.Colleague.DataContracts;
+using System.Net;
 
 namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 {
@@ -1897,6 +1898,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var personPins = new List<PersonPin>();
                 personPins.Add(personPin);
                 personRepoMock.Setup(repo => repo.GetPersonPinsAsync(It.IsAny<string[]>())).ReturnsAsync(personPins);
+                var personUserName = new PersonUserName("0000011", "testUsername");
+                var personUserNames = new List<PersonUserName>();
+                personUserNames.Add(personUserName);
+                personRepoMock.Setup(repo => repo.GetPersonUserNamesAsync(It.IsAny<string[]>())).ReturnsAsync(personUserNames);
 
                 refRepoMock.Setup(repo => repo.GetPrivacyStatusesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(
@@ -2798,9 +2803,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     }
                 };
                 int counter = 1;
-                foreach (var person in people)
+                foreach (var singlePerson in people)
                 {
-                    person.AddPersonAlt(new PersonAlt(counter.ToString(), "ELEV"));
+                    singlePerson.AddPersonAlt(new PersonAlt(counter.ToString(), "ELEV"));
                     counter++;
                 }
                 personIds = new List<string>() { "1", "2" };
@@ -2942,9 +2947,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     }
                 };
                 int counter = 1;
-                foreach (var person in people)
+                foreach (var singlePerson in people)
                 {
-                    person.AddPersonAlt(new PersonAlt(counter.ToString(), "ELEV"));
+                    singlePerson.AddPersonAlt(new PersonAlt(counter.ToString(), "ELEV"));
                     counter++;
                 }
                 personIds = new List<string>() { "1", "2" };
@@ -3034,7 +3039,278 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     personCredentials, It.IsAny<bool>());
                 // Assert
                 Assert.IsNotNull(actuals);
-                Assert.AreEqual(0, actuals.Item2);
+                Assert.AreEqual( 0, actuals.Item2 );
+            }
+        }
+
+        #endregion
+
+        #region GetPersonsCredentials4_GET_ALL
+
+        [TestClass]
+        public class GetPersonsCredentials4_GET_ALL: CurrentUserSetup
+        {
+            private string personId = "0000011";
+            private string personGuid = "5674f28b-b216-4055-b236-81a922d93b4c";
+
+            private Mock<IPersonRepository> personRepoMock;
+            private IPersonRepository personRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository personBaseRepo;
+            private Mock<IReferenceDataRepository> refRepoMock;
+            private IReferenceDataRepository refRepo;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private PersonService personService;
+            private ILogger logger;
+            private IEnumerable<Domain.Base.Entities.PersonIntegration> people; 
+            private Ellucian.Colleague.Domain.Base.Entities.Person person;
+
+            private IEnumerable<string> personIds;
+            private IEnumerable<PersonPin> personPins;
+            private Tuple<IEnumerable<string>, int> peopleIdsTuple;
+            private Mock<IRoleRepository> roleRepoMock;
+            private IRoleRepository roleRepo;
+            private ICurrentUserFactory currentUserFactory;
+            private Ellucian.Colleague.Domain.Entities.Permission permissionViewAnyPerson;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                personRepoMock = new Mock<IPersonRepository>();
+                personRepo = personRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                personBaseRepo = personBaseRepoMock.Object;
+                refRepoMock = new Mock<IReferenceDataRepository>();
+                refRepo = refRepoMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                roleRepoMock = new Mock<IRoleRepository>();
+                roleRepo = roleRepoMock.Object;
+                logger = new Mock<ILogger>().Object;
+
+                // Mock person response from the person repository
+                BuildData();
+
+                personRepoMock.Setup( repo => repo.GetPersonGuidsAsync( It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>() ) ).ReturnsAsync( peopleIdsTuple );
+
+                personRepoMock.Setup( repo => repo.GetPersonCredentialsIntegrationByGuidNonCachedAsync( peopleIdsTuple.Item1 ) ).ReturnsAsync( people );
+
+                // International Parameters Host Country
+                personRepoMock.Setup( repo => repo.GetHostCountryAsync() ).ReturnsAsync( "USA" );
+
+                // Set up current user
+                currentUserFactory = new CurrentUserSetup.PersonUserFactory();
+
+                // Mock permissions
+                permissionViewAnyPerson = new Ellucian.Colleague.Domain.Entities.Permission( BasePermissionCodes.ViewAnyPerson );
+                personRole.AddPermission( permissionViewAnyPerson );
+                roleRepoMock.Setup( rpm => rpm.Roles ).Returns( new List<Role>() { personRole } );
+
+                personService = new PersonService( adapterRegistry, personRepo, personBaseRepo, refRepo, null, null, null, null, currentUserFactory, roleRepo, logger );
+            }
+
+            private void BuildData()
+            {
+                people = new List<Domain.Base.Entities.PersonIntegration>()
+                {
+                    new Domain.Base.Entities.PersonIntegration("1", "Mouse")
+                    {
+                        Guid = "5674f28b-b216-4055-b236-81a922d93b4c",
+                        Prefix = "Mr.",
+                        FirstName = "Mickey",
+                        MiddleName = "Lee",
+                        GovernmentId = "111-11-1111"
+                    },
+                     new Domain.Base.Entities.PersonIntegration("2", "Brown")
+                    {
+                        Guid = "1674f28b-b216-4055-b236-81a922d93b4a",
+                        Prefix = "Mr.",
+                        FirstName = "Charlie",
+                        MiddleName = "Lee",
+                        GovernmentId = "222-22-2222"
+                    }
+                };
+                int counter = 1;
+                foreach( var singlePerson in people )
+                {
+                    singlePerson.AddPersonAlt( new PersonAlt( counter.ToString(), "ELEV" ) );
+                    counter++;
+                }
+                personIds = new List<string>() { "1", "2" };
+                peopleIdsTuple = new Tuple<IEnumerable<string>, int>( personIds, personIds.Count() );
+
+                personPins = new List<PersonPin>
+                {
+                    new PersonPin("1", "PersonUserId1"),
+                    new PersonPin("2", "PersonUserId2")
+                };
+                personRepoMock.Setup( repo => repo.GetPersonPinsAsync( It.IsAny<string[]>() ) ).ReturnsAsync( personPins );
+                person = new Domain.Base.Entities.Person( personId, "Brown" );
+                person.Guid = personGuid;
+                person.Prefix = "Mr.";
+                person.FirstName = "Ricky";
+                person.MiddleName = "Lee";
+                person.GovernmentId = "111-11-1111";
+                person.AddPersonAlt( new PersonAlt( "22908", "ELEV" ) );
+
+                personRepoMock.Setup( repo => repo.GetPersonCredentialByGuidNonCachedAsync( personGuid ) ).ReturnsAsync( person );
+                refRepoMock.Setup( repo => repo.GetAlternateIdTypesAsync( It.IsAny<bool>() ) ).ReturnsAsync( new List<AltIdTypes>()
+                {
+                    new AltIdTypes("AE44FE48-2534-480B-8618-5480617CE74A", "ELEV2", "Elevate ID 2"),
+                    new AltIdTypes("D525E2B2-CD7D-4995-93F0-97DA468EBE90", "GOVID2", "Government ID 2")
+                } );
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                adapterRegistry = null;
+                personRepo = null;
+                personBaseRepo = null;
+                refRepo = null;
+                roleRepo = null;
+                personService = null;
+                personRole = null;
+            }
+
+            [TestMethod]
+            public async Task GetAllPersonCredentials3()
+            {
+                personRepoMock.Setup( repo => repo.GetFilteredPerson2GuidsAsync( It.IsAny<int>(), It.IsAny<int>(),
+                     It.IsAny<bool>(), null, null ) ).ReturnsAsync( peopleIdsTuple );
+
+                // Act--get person
+                var personCredentials = new PersonCredential3();
+                var actuals = await personService.GetAllPersonCredentials4Async( It.IsAny<int>(), It.IsAny<int>(),
+                    personCredentials, It.IsAny<bool>() );
+                // Assert
+                Assert.IsNotNull( actuals );
+                Assert.AreEqual( 2, actuals.Item1.Count() );
+
+                foreach( var actual in actuals.Item1 )
+                {
+                    var expected = people.FirstOrDefault( i => i.Guid.Equals( actual.Id, StringComparison.OrdinalIgnoreCase ) );
+                    Assert.IsNotNull(expected);
+                    var cred = actual.Credentials.FirstOrDefault( c => c.Type == Credential3Type.TaxIdentificationNumber ).Value;
+                    Assert.AreEqual( expected.GovernmentId, cred );
+                }
+            }
+
+            [TestMethod]
+            public async Task GetAllPersonCredentials3_WithCriteria()
+            {
+                PersonFilterCriteria personFilterCriteria = new PersonFilterCriteria();
+                personFilterCriteria.AlternativeCredentials = null;
+                personRepoMock.Setup( repo => repo.GetFilteredPerson2GuidsAsync( It.IsAny<int>(), It.IsAny<int>(),
+                     It.IsAny<bool>(),It.IsAny< PersonFilterCriteria>(), null ) ).ReturnsAsync( peopleIdsTuple );
+
+                // Act--get person
+                var personCredentials = new PersonCredential3()
+                {
+                    Credentials = new List<Credential3DtoProperty>()
+                    {
+                        new Credential3DtoProperty()
+                        {
+                            Type = Credential3Type.TaxIdentificationNumber,
+                            Value = "111-11-1111"
+                        }
+                    },
+                    AlternativeCredentials = new List<AlternativeCredentials>()
+                    {
+                        new AlternativeCredentials()
+                        {
+                            Type = new GuidObject2("AE44FE48-2534-480B-8618-5480617CE74A"),
+                            Value = "ELEV2"
+                        }
+                    }
+                };
+                var actuals = await personService.GetAllPersonCredentials4Async( It.IsAny<int>(), It.IsAny<int>(),
+                    personCredentials, It.IsAny<bool>() );
+                // Assert
+                Assert.IsNotNull( actuals );
+                Assert.AreEqual( 2, actuals.Item1.Count() );
+
+                foreach( var actual in actuals.Item1 )
+                {
+                    var expected = people.FirstOrDefault( i => i.Guid.Equals( actual.Id, StringComparison.OrdinalIgnoreCase ) );
+                    Assert.IsNotNull( expected );
+                    var cred = actual.Credentials.FirstOrDefault( c => c.Type == Credential3Type.TaxIdentificationNumber ).Value;
+                    Assert.AreEqual( expected.GovernmentId, cred );
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof( RepositoryException ) )]
+            public async Task GetAllPersonCredentials3_RepositoryException()
+            {
+                var message = "Repository error message.";
+                personRepoMock.Setup( repo => repo.GetFilteredPerson2GuidsAsync( It.IsAny<int>(), It.IsAny<int>(),
+                     It.IsAny<bool>(), null, null ) ).ThrowsAsync( new RepositoryException(message));
+
+                // Act--get person                
+                var actuals = await personService.GetAllPersonCredentials4Async( It.IsAny<int>(), It.IsAny<int>(), null, It.IsAny<bool>() );               
+            }
+
+            [TestMethod]
+            [ExpectedException( typeof( Exception ) )]
+            public async Task GetAllPersonCredentials3_Exception()
+            {
+                var message = "Repository error message.";
+                personRepoMock.Setup( repo => repo.GetFilteredPerson2GuidsAsync( It.IsAny<int>(), It.IsAny<int>(),
+                     It.IsAny<bool>(), null, null ) ).ThrowsAsync( new Exception( message ) );
+
+                // Act--get person                
+                var actuals = await personService.GetAllPersonCredentials4Async( It.IsAny<int>(), It.IsAny<int>(), null, It.IsAny<bool>() );
+            }
+
+            [TestMethod]
+            public async Task GetPersonCredential4ByGuidAsync()
+            {
+                var actuals = await personService.GetPersonCredential4ByGuidAsync( personGuid );
+                // Assert
+                Assert.IsNotNull( actuals );
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetPersonCredential4ByGuidAsync_Null_Id_ArgumentNullException()
+            {
+                var actuals = await personService.GetPersonCredential4ByGuidAsync( string.Empty );
+            }
+
+            [TestMethod]
+            public async Task GetPersonCredential4ByGuidAsync_ArgumentNullException()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.NotFound;
+                personRepoMock.Setup( repo => repo.GetPersonCredentialByGuidNonCachedAsync( personGuid ) ).ThrowsAsync( new ArgumentNullException() );
+
+                try
+                {
+                    var actuals = await personService.GetPersonCredential4ByGuidAsync( personGuid );
+                }
+                catch( IntegrationApiException e )
+                {
+                    statusCode = e.HttpStatusCode;
+                }
+                Assert.AreEqual( HttpStatusCode.NotFound, statusCode );
+            }
+
+            [TestMethod]
+            public async Task GetPersonCredential4ByGuidAsync_PersonEntity_Null_IntegrationApiException()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.NotFound;
+
+                personRepoMock.Setup( repo => repo.GetPersonCredentialByGuidNonCachedAsync( personGuid ) ).ReturnsAsync( null );
+                try
+                {
+                    var actuals = await personService.GetPersonCredential4ByGuidAsync( personGuid );
+                }
+                catch( IntegrationApiException e )
+                {
+                    statusCode = e.HttpStatusCode;
+                }
+                Assert.AreEqual( HttpStatusCode.NotFound, statusCode );
             }
         }
 
@@ -13452,7 +13728,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     Assert.AreEqual(expected.Number, actual.Number);
                     Assert.AreEqual(expected.CountryCallingCode, actual.CountryCallingCode);
                     Assert.AreEqual(expected.Extension, actual.Extension);
-                    Assert.AreEqual(expected.Preference, actual.Preference);
                     Assert.AreEqual(expected.Type.PhoneType, actual.Type.PhoneType);
                 }
 
@@ -13727,9 +14002,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 personRepositoryMock.Setup(i => i.Create2Async(It.IsAny<PersonIntegration>(), It.IsAny<IEnumerable<Domain.Base.Entities.Address>>(), phones, It.IsAny<int>())).ReturnsAsync(personIntegrationReturned);
 
-                personDto.Phones = new List<PersonPhoneDtoProperty>()
+                personDto.Phones = new List<PersonPhone2DtoProperty>()
                 {
-                    new PersonPhoneDtoProperty()
+                    new PersonPhone2DtoProperty()
                     {
                          CountryCallingCode = "1",
                          Number = "111-111-1111"
@@ -13762,9 +14037,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 personRepositoryMock.Setup(i => i.Create2Async(It.IsAny<PersonIntegration>(), It.IsAny<IEnumerable<Domain.Base.Entities.Address>>(), phones, It.IsAny<int>())).ReturnsAsync(personIntegrationReturned);
 
-                personDto.Phones = new List<PersonPhoneDtoProperty>()
+                personDto.Phones = new List<PersonPhone2DtoProperty>()
                 {
-                    new PersonPhoneDtoProperty()
+                    new PersonPhone2DtoProperty()
                     {
                          CountryCallingCode = "1",
                          Number = "" ,
@@ -13798,9 +14073,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 personRepositoryMock.Setup(i => i.Create2Async(It.IsAny<PersonIntegration>(), It.IsAny<IEnumerable<Domain.Base.Entities.Address>>(), phones, It.IsAny<int>())).ReturnsAsync(personIntegrationReturned);
 
-                personDto.Phones = new List<PersonPhoneDtoProperty>()
+                personDto.Phones = new List<PersonPhone2DtoProperty>()
                 {
-                    new PersonPhoneDtoProperty()
+                    new PersonPhone2DtoProperty()
                     {
                          CountryCallingCode = "1",
                          Number = "1234" ,
@@ -13834,9 +14109,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 personRepositoryMock.Setup(i => i.Create2Async(It.IsAny<PersonIntegration>(), It.IsAny<IEnumerable<Domain.Base.Entities.Address>>(), phones, It.IsAny<int>())).ReturnsAsync(personIntegrationReturned);
 
-                personDto.Phones = new List<PersonPhoneDtoProperty>()
+                personDto.Phones = new List<PersonPhone2DtoProperty>()
                 {
-                    new PersonPhoneDtoProperty()
+                    new PersonPhone2DtoProperty()
                     {
                          CountryCallingCode = "1",
                          Number = "1234" ,
@@ -13876,11 +14151,11 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                         Value = "testUsername"
                     }
                 };
-                // Mock the response for getting a Person Pin 
-                var personPin = new PersonPin("0000011", "WrongUsername");
-                var personPins = new List<PersonPin>();
-                personPins.Add(personPin);
-                personRepositoryMock.Setup(repo => repo.GetPersonPinsAsync(It.IsAny<string[]>())).ReturnsAsync(personPins);
+                // Mock the response for getting a Person User Name 
+                var personUserName = new PersonUserName("0000011", "WrongUsername");
+                var personUserNames = new List<PersonUserName>();
+                personUserNames.Add(personUserName);
+                personRepositoryMock.Setup(repo => repo.GetPersonUserNamesAsync(It.IsAny<string[]>())).ReturnsAsync(personUserNames);
 
                 try
                 {
@@ -14061,50 +14336,50 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 }
                 personDto.Addresses = addressesCollection;
 
-                var phoneList = new List<PersonPhoneDtoProperty>()
+                var phoneList = new List<PersonPhone2DtoProperty>()
                 {
-                    new PersonPhoneDtoProperty()
+                    new PersonPhone2DtoProperty()
                     {
                         CountryCallingCode = "01",
                          Extension = "1",
                          Number = "111-111-1111",
-                         Preference = PersonPreference.Primary,
+                         //Preference = PersonPreference.Primary,
                          Type = new PersonPhoneTypeDtoProperty()
                          {
                              Detail = new GuidObject2("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1"),
                              PhoneType = PersonPhoneTypeCategory.Home
                          }
                     },
-                    new PersonPhoneDtoProperty()
+                    new PersonPhone2DtoProperty()
                     {
                         CountryCallingCode = "02",
                          Extension = "2",
                          Number = "222-222-2222",
-                         Preference = PersonPreference.Primary,
+                         //Preference = PersonPreference.Primary,
                          Type = new PersonPhoneTypeDtoProperty()
                          {
                              Detail = new GuidObject2("b6def2cc-cc95-4d0e-a32c-940fbbc2d689"),
                              PhoneType = PersonPhoneTypeCategory.Mobile
                          }
                     },
-                    new PersonPhoneDtoProperty()
+                    new PersonPhone2DtoProperty()
                     {
                         CountryCallingCode = "03",
                          Extension = "3",
                          Number = "333-333-3333",
-                         Preference = PersonPreference.Primary,
+                         //Preference = PersonPreference.Primary,
                          Type = new PersonPhoneTypeDtoProperty()
                          {
                              Detail = new GuidObject2("f60e7b27-a3e3-4c92-9d36-f3cae27b724b"),
                              PhoneType = PersonPhoneTypeCategory.Vacation
                          }
                     },
-                    new PersonPhoneDtoProperty()
+                    new PersonPhone2DtoProperty()
                     {
                         CountryCallingCode = "04",
                          Extension = "4444",
                          Number = "444-444-4444",
-                         Preference = PersonPreference.Primary,
+                         //Preference = PersonPreference.Primary,
                          Type = new PersonPhoneTypeDtoProperty()
                          {
                              Detail = new GuidObject2("30e231cf-a199-4c9a-af01-be2e69b607c9"),
@@ -14532,6 +14807,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var personPins = new List<PersonPin>();
                 personPins.Add(personPin);
                 personRepoMock.Setup(repo => repo.GetPersonPinsAsync(It.IsAny<string[]>())).ReturnsAsync(personPins);
+                var personUserName = new PersonUserName("0000011", "testUsername");
+                var personUserNames = new List<PersonUserName>();
+                personUserNames.Add(personUserName);
+                personRepoMock.Setup(repo => repo.GetPersonUserNamesAsync(It.IsAny<string[]>())).ReturnsAsync(personUserNames);
 
                 refRepoMock.Setup(repo => repo.GetPrivacyStatusesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(

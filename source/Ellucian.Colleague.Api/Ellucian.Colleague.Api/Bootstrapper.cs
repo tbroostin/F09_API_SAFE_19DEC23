@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Converters;
 using Ellucian.Colleague.Configuration;
 using Ellucian.Colleague.Data.Base;
@@ -135,6 +135,10 @@ namespace Ellucian.Colleague.Api
 
             // [4] setup api settings (depends on settings, logging, and common components)
             container.RegisterType<IApiSettingsRepository, ApiSettingsRepository>();
+
+            // [5] required repository for extendedRouteContraint used for extensibility
+            container.RegisterType<IExtendRepository, ExtendRepository>();
+
             var apiSettings = new ApiSettings("null");
             try
             {

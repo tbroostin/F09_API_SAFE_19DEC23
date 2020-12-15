@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Runtime.Serialization.Json;
 using Ellucian.Colleague.Data.FinancialAid.DataContracts;
+using Ellucian.Colleague.Data.FinancialAid.Transactions;
 using Ellucian.Colleague.Domain.FinancialAid.Entities;
 using Ellucian.Colleague.Domain.FinancialAid.Repositories;
 using Ellucian.Data.Colleague;
@@ -123,6 +124,36 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                     }
                 }
             }
+
+            //Get InformedBorrower status
+            // call transaction
+            var informedBorrowerItems = new List<InformedBorrowerItem>();
+            foreach (var faYear in studentRecordData.FaSaYears)
+            {
+                var request = new GetInformedBorrowerRequest();
+                request.StudentId = studentId;
+                request.FaYear = faYear;
+                var informedBorrowerItem = new InformedBorrowerItem();
+                informedBorrowerItem.FaYear = faYear;
+
+                var response = await transactionInvoker.ExecuteAsync<GetInformedBorrowerRequest, GetInformedBorrowerResponse>(request);
+
+                if (response != null)
+                {
+                    if (response.AInfBorrResult == "Y")
+                    {
+                        informedBorrowerItem.IsInformedBorrowerComplete = true;
+                        informedBorrowerItems.Add(informedBorrowerItem);
+                    }
+                    else
+                    {
+                        informedBorrowerItem.IsInformedBorrowerComplete = false;
+                        informedBorrowerItems.Add(informedBorrowerItem);
+                    }
+                }
+            }
+
+            studentLoanSummary.InformedBorrowerItem = informedBorrowerItems;
 
             //Get StudentLoanHistory
             // Do I have any ISIR.NSLDS records already read?

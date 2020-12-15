@@ -228,14 +228,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             CheckViewBlanketPurchaseOrdersPermission();
 
-            // Get the GL Configuration to get the name of the full GL account access role
-            // and also provides the information to format the GL accounts
-            var glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
-            if (glConfiguration == null)
-            {
-                throw new ArgumentNullException("glConfiguration", "glConfiguration cannot be null");
-            }
-
             int totalRecords = 0;
             var orderNumber = (criteriaObj != null && !string.IsNullOrEmpty(criteriaObj.OrderNumber)) ? criteriaObj.OrderNumber : string.Empty;
             var blanketPurchaseOrdersCollection = new List<Ellucian.Colleague.Dtos.BlanketPurchaseOrders>();
@@ -245,8 +237,16 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 var blanketPurchaseOrderEntities = await blanketPurchaseOrderRepository.GetBlanketPurchaseOrdersAsync(offset, limit, orderNumber);
 
                 totalRecords = blanketPurchaseOrderEntities.Item2;
-                if (blanketPurchaseOrderEntities.Item1 != null)
+                if (blanketPurchaseOrderEntities.Item1 != null && blanketPurchaseOrderEntities.Item1.Any())
                 {
+                    // Get the GL Configuration to get the name of the full GL account access role
+                    // and also provides the information to format the GL accounts
+                    var glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
+                    if (glConfiguration == null)
+                    {
+                        throw new ArgumentNullException("glConfiguration", "glConfiguration cannot be null");
+                    }
+
                     var projectIds = blanketPurchaseOrderEntities.Item1
                                  .SelectMany(t => t.GlDistributions)
                                  .Where(p => !(string.IsNullOrEmpty(p.ProjectId)))

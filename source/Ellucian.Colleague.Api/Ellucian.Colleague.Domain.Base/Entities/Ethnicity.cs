@@ -13,11 +13,11 @@ namespace Ellucian.Colleague.Domain.Base.Entities
     [Serializable]
     public class Ethnicity : GuidCodeItem
     {
-        private EthnicityType _type;
+        private EthnicityType? _type;
         /// <summary>
         /// Ethnicity Type for the ethnicity
         /// </summary>
-        public EthnicityType Type { get { return _type; } }
+        public EthnicityType? Type { get { return _type; } }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Ethnicity"/> class.
@@ -25,7 +25,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// <param name="code">The code.</param>
         /// <param name="description">The description.</param>
         /// <param name="type">The ethnicity type</param>
-        public Ethnicity(string guid, string code, string description, EthnicityType type)
+        public Ethnicity(string guid, string code, string description, EthnicityType? type)
             : base(guid, code, description)
         {
             _type = type;

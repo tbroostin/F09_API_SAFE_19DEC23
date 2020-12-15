@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Base.Utility;
@@ -275,23 +275,37 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 parameters.Add(utility.BuildReportParameter("Box4Amt", GetAmountFromBoxList(taxFormBoxesList, "4")));
                 parameters.Add(utility.BuildReportParameter("Box5Amt", GetAmountFromBoxList(taxFormBoxesList, "5")));
                 parameters.Add(utility.BuildReportParameter("Box6Amt", GetAmountFromBoxList(taxFormBoxesList, "6")));
-                parameters.Add(utility.BuildReportParameter("Box7Amt", GetAmountFromBoxList(taxFormBoxesList, "7")));
                 parameters.Add(utility.BuildReportParameter("Box8Amt", GetAmountFromBoxList(taxFormBoxesList, "8")));
-                parameters.Add(utility.BuildReportParameter("Box9", pdfData.IsDirectResale ? "X" : ""));
                 parameters.Add(utility.BuildReportParameter("Box10Amt", GetAmountFromBoxList(taxFormBoxesList, "10")));
-                parameters.Add(utility.BuildReportParameter("Box11Amt", pdfData.ForeignTaxPaid ?? ""));
-                parameters.Add(utility.BuildReportParameter("Box12Amt", pdfData.BoxCountry ?? ""));
+                parameters.Add(utility.BuildReportParameter("Box11Amt", pdfData.ForeignTaxPaid ?? ""));        
                 parameters.Add(utility.BuildReportParameter("Box13Amt", GetAmountFromBoxList(taxFormBoxesList, "13")));
                 parameters.Add(utility.BuildReportParameter("Box14Amt", GetAmountFromBoxList(taxFormBoxesList, "14")));
-                parameters.Add(utility.BuildReportParameter("Box15aAmt", GetAmountFromBoxList(taxFormBoxesList, "15A")));
-                parameters.Add(utility.BuildReportParameter("Box15bAmt", GetAmountFromBoxList(taxFormBoxesList, "15B")));
-                parameters.Add(utility.BuildReportParameter("Box16Amt", GetAmountFromBoxList(taxFormBoxesList, "16")));
-                parameters.Add(utility.BuildReportParameter("Box16bAmt", ""));
-                parameters.Add(utility.BuildReportParameter("Box17", pdfData.StatePayerNumber == null ? "" : pdfData.StatePayerNumber));
-                parameters.Add(utility.BuildReportParameter("Box17b", ""));
-                parameters.Add(utility.BuildReportParameter("Box18Amt", GetAmountFromBoxList(taxFormBoxesList, "18")));
-                parameters.Add(utility.BuildReportParameter("Box18bAmt", ""));
 
+                if (pdfData.TaxYear == "2020")
+                {
+                    parameters.Add(utility.BuildReportParameter("Box7", pdfData.IsDirectResale ? "X" : ""));
+                    parameters.Add(utility.BuildReportParameter("Box9Amt", GetAmountFromBoxList(taxFormBoxesList, "9")));
+                    parameters.Add(utility.BuildReportParameter("Box12Amt", GetAmountFromBoxList(taxFormBoxesList, "12")));
+                    parameters.Add(utility.BuildReportParameter("Box15Amt", GetAmountFromBoxList(taxFormBoxesList, "15")));
+                    parameters.Add(utility.BuildReportParameter("Box15bAmt", ""));
+                    parameters.Add(utility.BuildReportParameter("Box16", pdfData.StatePayerNumber == null ? "" : pdfData.StatePayerNumber));
+                    parameters.Add(utility.BuildReportParameter("Box16b", ""));
+                    parameters.Add(utility.BuildReportParameter("Box17Amt", GetAmountFromBoxList(taxFormBoxesList, "17")));
+                    parameters.Add(utility.BuildReportParameter("Box17bAmt", ""));
+                } else
+                {
+                    parameters.Add(utility.BuildReportParameter("Box7Amt", GetAmountFromBoxList(taxFormBoxesList, "7")));
+                    parameters.Add(utility.BuildReportParameter("Box9", pdfData.IsDirectResale ? "X" : ""));
+                    parameters.Add(utility.BuildReportParameter("Box12Amt", pdfData.BoxCountry ?? ""));
+                    parameters.Add(utility.BuildReportParameter("Box15aAmt", GetAmountFromBoxList(taxFormBoxesList, "15A")));
+                    parameters.Add(utility.BuildReportParameter("Box15bAmt", GetAmountFromBoxList(taxFormBoxesList, "15B")));
+                    parameters.Add(utility.BuildReportParameter("Box16Amt", GetAmountFromBoxList(taxFormBoxesList, "16")));
+                    parameters.Add(utility.BuildReportParameter("Box16bAmt", ""));
+                    parameters.Add(utility.BuildReportParameter("Box17", pdfData.StatePayerNumber == null ? "" : pdfData.StatePayerNumber));
+                    parameters.Add(utility.BuildReportParameter("Box17b", ""));
+                    parameters.Add(utility.BuildReportParameter("Box18Amt", GetAmountFromBoxList(taxFormBoxesList, "18")));
+                    parameters.Add(utility.BuildReportParameter("Box18bAmt", ""));
+                }             
 
                 // Set the report parameters
                 report.SetParameters(parameters);
@@ -316,6 +330,140 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to generate 1099-Misc report.");
+                throw;
+            }
+            finally
+            {
+                report.DataSources.Clear();
+                report.ReleaseSandboxAppDomain();
+                report.Dispose();
+            }
+            return renderedBytes;
+        }
+
+        /// <summary>
+        /// Retrieves a Form1099NecPdfData DTO.
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the 1099-NCEC.</param>
+        /// <param name="recordId">The record ID where the 1099-NEC pdf data is stored</param>
+        /// <returns>Form1099NecPdfData domain entity</returns>
+        public async Task<Form1099NecPdfData> Get1099NecPdfDataAsync(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "Person ID must be specified.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("recordId", "Record ID must be specified.");
+
+            if (!(HasPermission(ColleagueFinancePermissionCodes.View1099NEC) && CurrentUser.IsPerson(personId)))
+            {
+                throw new PermissionsException("Insufficient access to 1099-NEC data.");
+            }
+
+            try
+            {
+                // Call the repository to get all the data to print in the pdf.
+                var taxFormPdfData = await this.taxFormPdfDataRepository.GetForm1099NecPdfDataAsync(personId, recordId);
+
+                // Validate that the domain entity recipient ID is the same as the person ID requested.
+                if (personId != taxFormPdfData.RecipientId)
+                {
+                    throw new PermissionsException("Insufficient access to 1099-NEC data.");
+                }
+
+                return taxFormPdfData;
+            }
+            catch (Exception e)
+            {
+                // Log the error and throw the exception that was given.
+                logger.Error(e, e.Message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Populates the 1099-MISC PDF with the supplied data.
+        /// </summary>
+        /// <param name="pdfData">1099-MISC PDF data</param>
+        /// <param name="documentPath">Path to the PDF template</param>
+        /// <returns>Byte array containing PDF data for the 1099-MISC tax form</returns>
+        public byte[] Populate1099NecPdf(Form1099NecPdfData pdfData, string documentPath)
+        {
+            if (pdfData == null)
+            {
+                throw new ArgumentNullException("pdfData");
+            }
+            if (string.IsNullOrEmpty(documentPath))
+            {
+                throw new ArgumentNullException("pathToReport");
+            }
+
+            byte[] renderedBytes;
+            var report = new LocalReport();
+
+            try
+            {
+                report.ReportPath = documentPath;
+                report.SetBasePermissionsForSandboxAppDomain(new System.Security.PermissionSet(System.Security.Permissions.PermissionState.Unrestricted));
+                report.EnableExternalImages = true;
+
+                // Specify the report parameters
+                var utility = new ReportUtility();
+                var parameters = new List<ReportParameter>();
+
+                parameters.Add(utility.BuildReportParameter("Year2", pdfData.TaxYear.Substring(2)));
+                parameters.Add(utility.BuildReportParameter("PayersName", pdfData.PayerName));
+                parameters.Add(utility.BuildReportParameter("PayersNameAddr1", pdfData.PayerAddressLine1));
+                parameters.Add(utility.BuildReportParameter("PayersNameAddr2", pdfData.PayerAddressLine2));
+                parameters.Add(utility.BuildReportParameter("PayersNameAddr3", pdfData.PayerAddressLine3));
+                parameters.Add(utility.BuildReportParameter("PayersNameAddr4", pdfData.PayerAddressLine4));
+                parameters.Add(utility.BuildReportParameter("RecipientsName", pdfData.RecipientsName));
+                parameters.Add(utility.BuildReportParameter("RecipientAddress1", pdfData.RecipientSecondName));
+                parameters.Add(utility.BuildReportParameter("RecipientAddress2", pdfData.RecipientAddr1));
+                parameters.Add(utility.BuildReportParameter("RecipientAddress3", pdfData.RecipientAddr2));
+                parameters.Add(utility.BuildReportParameter("RecipientAddress4", pdfData.RecipientAddr3));
+
+                parameters.Add(utility.BuildReportParameter("CorrectedForm", pdfData.IsCorrected ? "X" : ""));
+
+                parameters.Add(utility.BuildReportParameter("PayersEIN", pdfData.PayersEin));
+                parameters.Add(utility.BuildReportParameter("RecipientsEIN", pdfData.Ein));
+                parameters.Add(utility.BuildReportParameter("FATCAFiling", ""));
+                parameters.Add(utility.BuildReportParameter("AccountNumber", pdfData.AccountNumber));
+
+                var taxFormBoxesList = pdfData.TaxFormBoxesList;
+                parameters.Add(utility.BuildReportParameter("Box1Amt", GetAmountFromBoxList(taxFormBoxesList, "1")));
+                parameters.Add(utility.BuildReportParameter("Box4Amt", GetAmountFromBoxList(taxFormBoxesList, "4")));
+                parameters.Add(utility.BuildReportParameter("Box5Amt", GetAmountFromBoxList(taxFormBoxesList, "5")));
+                parameters.Add(utility.BuildReportParameter("Box5bAmt", ""));
+                parameters.Add(utility.BuildReportParameter("Box6", pdfData.StatePayerNumber == null ? "" : pdfData.StatePayerNumber));
+                parameters.Add(utility.BuildReportParameter("Box6b", ""));
+                parameters.Add(utility.BuildReportParameter("Box7Amt", GetAmountFromBoxList(taxFormBoxesList, "7")));
+                parameters.Add(utility.BuildReportParameter("Box7bAmt", ""));
+
+
+                // Set the report parameters
+                report.SetParameters(parameters);
+
+                // Set up some options for the report
+                string mimeType = string.Empty;
+                string encoding;
+                string fileNameExtension;
+                Warning[] warnings;
+                string[] streams;
+
+                // Render the report as a byte array
+                renderedBytes = report.Render(
+                    ReportType,
+                    DeviceInfo,
+                    out mimeType,
+                    out encoding,
+                    out fileNameExtension,
+                    out streams,
+                    out warnings);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to generate 1099-Nec report.");
                 throw;
             }
             finally

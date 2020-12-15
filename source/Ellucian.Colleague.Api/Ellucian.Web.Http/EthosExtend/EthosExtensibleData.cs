@@ -1,4 +1,4 @@
-﻿// Copyright 2017 - 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -41,6 +41,11 @@ namespace Ellucian.Web.Http.EthosExtend
         /// List of the extended data for this resource and version 
         /// </summary>
         public IList<EthosExtensibleDataRow> ExtendedDataList { get; set; }
+
+        /// <summary>
+        /// List of the filter criteria for this resource and version 
+        /// </summary>
+        public IList<EthosExtensibleDataFilter> ExtendedDataFilterList { get; set; }
 
     }
 }

@@ -52,6 +52,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         Task<CoursePage2> Search2Async(CourseSearchCriteria criteria, int pageSize, int pageIndex);
         Task<IEnumerable<Dtos.Student.Course>> GetCoursesByIdAsync(IEnumerable<string> courseIds);
+        /// <summary>
+        /// Instant Enrollment Course Search
+        /// </summary>
+        /// <param name="criteria"></param>
+        /// <param name="pageSize"></param>
+        /// <param name="pageIndex"></param>
+        /// <returns></returns>
+        Task<SectionPage> InstantEnrollmentSearchAsync(InstantEnrollmentCourseSearchCriteria criteria, int pageSize, int pageIndex);
 
         /// <summary>
         /// Section Search
@@ -79,5 +87,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         Task<Dtos.Course5> UpdateCourse5Async(Dtos.Course5 course, bool bypassCache);
         Task<Dtos.Course5> CreateCourse5Async(Dtos.Course5 course, bool bypassCache);
         Task<Tuple<IEnumerable<Dtos.Course5>, int>> GetCourses5Async(int offset, int limit, bool bypassCache, string subject, string number, List<string> academicLevel, List<string> owningInstitutionUnits, List<string> titles, List<string> instructionalMethods, string schedulingStartOn, string schedulingEndOn, string topic, List<string> categories, string activeOn);
+        
     }
 }

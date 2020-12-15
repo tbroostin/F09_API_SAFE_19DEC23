@@ -126,7 +126,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var finalGradeDate = studentAcadCred.StcVerifiedGradeDate != null ? studentAcadCred.StcVerifiedGradeDate : studentAcadCred.StudentAcadCredChgdate;
 
             var finalGrade = string.IsNullOrEmpty(studentAcadCred.StcFinalGrade) ?
-                                    null : 
+                                    null :
                                     new TermGrade(studentAcadCred.StcFinalGrade, finalGradeDate, studentAcadCred.StudentAcadCredChgopr);
 
             var sectionRegistrationResponse = new SectionRegistrationResponse(studentAcadCred.RecordGuid, studentId, sectionId, statusCode, gradeScheme, passAudit, new List<RegistrationMessage>());
@@ -271,7 +271,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     return new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>(), 0);
                 }
-                if(limitingKeys == null)
+                if (limitingKeys == null)
                 {
                     limitingKeys = stAcadCredLimitingKeys;
                 }
@@ -378,8 +378,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <param name="sectionInstructor"></param>
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<SectionRegistrationResponse>, int>> GetSectionRegistrations3Async(int offset,
-            int limit, SectionRegistrationResponse sectReg, string acadPeriod, string sectionInstructor)
-        {            
+            int limit, SectionRegistrationResponse sectReg, string acadPeriod, string sectionInstructor, 
+            Tuple<string, List<string>> registrationStatusesByAcademicPeriod = null)
+        {
             var sectionRegistrations = new List<SectionRegistrationResponse>();
             var totalCount = 0;
             string[] limitingKeys = null;
@@ -405,7 +406,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     offset,
                     limit,
                     AllSectionRegistrationsCacheTimeout,
-                    async () => {
+                    async () =>
+                    {
                         var studentAcadCredCriteria = string.Empty;
                         bool hasValidatedRecordsForStudent = false;
                         bool hasFilterOrNamedQuery = false;
@@ -425,7 +427,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
 
                         // academicPeriod named query
-                        if (!string.IsNullOrWhiteSpace(acadPeriod))
+                        if ((!string.IsNullOrWhiteSpace(acadPeriod))
+                         || (registrationStatusesByAcademicPeriod != null))
                         {
                             hasFilterOrNamedQuery = true;
                             if (hasValidatedRecordsForStudent == false)
@@ -438,8 +441,45 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 }
                                 hasValidatedRecordsForStudent = true;
                             }
-                            studentAcadCredCriteria = string.Format("WITH STC.TERM EQ '{0}'", acadPeriod);
+
+                            if (!string.IsNullOrWhiteSpace(acadPeriod))
+                            {
+                                studentAcadCredCriteria = string.Format("WITH STC.TERM EQ '{0}'", acadPeriod);
+                            }
+
                         }
+
+                        if (registrationStatusesByAcademicPeriod != null)
+                        {
+                            hasFilterOrNamedQuery = true;
+
+                            if (!string.IsNullOrEmpty(registrationStatusesByAcademicPeriod.Item1))
+                            {
+                                if (!string.IsNullOrEmpty(studentAcadCredCriteria))
+                                {
+                                    studentAcadCredCriteria += " AND ";
+                                }
+
+                                studentAcadCredCriteria += string.Format("WITH STC.TERM EQ '{0}'", registrationStatusesByAcademicPeriod.Item1);
+                            }
+
+                            string studentAcadCredStatus = string.Empty;
+
+                            if ((registrationStatusesByAcademicPeriod.Item2 != null) && (registrationStatusesByAcademicPeriod.Item2.Any()))
+                            {        
+                                foreach (var statusCode in registrationStatusesByAcademicPeriod.Item2)
+                                {
+                                    studentAcadCredStatus += string.Format("'{0}'", statusCode);
+                                }
+
+                                if (!string.IsNullOrEmpty(studentAcadCredStatus))
+                                {
+                                    studentAcadCredCriteria = string.Format("{0} AND WITH STC.CURRENT.STATUS EQ {1}", studentAcadCredCriteria, studentAcadCredStatus.Trim());
+                                }
+                            }
+                            
+                        }
+
 
                         // section filter
                         if (sectReg != null && !string.IsNullOrEmpty(sectReg.SectionId))
@@ -596,36 +636,101 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 //Array.Sort(limitingKeys);
                 var sublist = keyCacheObject.Sublist.ToArray();
 
-                var studentAcadCredsPage =
-                    await DataReader.BulkReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", sublist);
+                //var studentAcadCredsPage =
+                //    await DataReader.BulkReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", sublist);
+                var studentAcadCredData = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<StudentAcadCred>(sublist.ToArray());
 
-                var scsKey = studentAcadCredsPage.Select(s => s.StcStudentCourseSec).Distinct();
-                var studentCourseSecs = await DataReader.BulkReadRecordAsync<StudentCourseSec>(scsKey.ToArray());
-
-                if (studentCourseSecs.Count() != sublist.Count())
+                Collection<StudentAcadCred> studentAcadCredsPage = null;
+                List<string> scsKey = null;
+                if (!studentAcadCredData.Equals(default(BulkReadOutput<DataContracts.StudentAcadCred>)))
                 {
-                    var courseSecIds = studentCourseSecs.Select(scs => scs.Recordkey);
-                    var missingIds = scsKey.Except(courseSecIds);
-                    StringBuilder sb = new StringBuilder();
-                    sb.Append("Unable to provide all section registrations.  Entity: 'STUDENT.ACAD.CRED' referencing an invalid STC.STUDENT.COURSE.SEC record");
-                    sb.Append(", ");
-                    missingIds.ToList().ForEach(id =>
+
+                    if ((studentAcadCredData.InvalidKeys != null && studentAcadCredData.InvalidKeys.Any())
+                             || (studentAcadCredData.InvalidRecords != null && studentAcadCredData.InvalidRecords.Any()))
                     {
-                        var stcRec = studentAcadCredsPage.Where(sc => sc.StcStudentCourseSec == id).FirstOrDefault();
-                        sb.Append(string.Format("Entity 'STUDENT.ACAD.CRED', ID: '{0}', Guid '{1}' references invalid data. ", stcRec.Recordkey, stcRec.RecordGuid));
-                        sb.Append(string.Concat("Record not found, Entity: ‘STUDENT.COURSE.SEC’, ID: '", id, "'"));
-                        sb.Append(" ");
-                    });
-                    var repositoryError = new RepositoryException("Error(s) reading data from STUDENT.ACAD.CRED");
-                    repositoryError.AddError(new RepositoryError("sectionRegistrations.Id", sb.ToString()));
-                    throw repositoryError;
+                        var repositoryException = new RepositoryException();
+
+                        if (studentAcadCredData.InvalidKeys.Any())
+                        {
+                            repositoryException.AddErrors(studentAcadCredData.InvalidKeys
+                                .Select(key => new RepositoryError("Bad.Data",
+                                string.Format("Unable to locate the following key '{0}'. Entity: 'STUDENT.ACAD.CRED'.", key.ToString()))));
+                        }
+                        if (studentAcadCredData.InvalidRecords.Any())
+                        {
+                            repositoryException.AddErrors(studentAcadCredData.InvalidRecords
+                               .Select(r => new RepositoryError("Bad.Data",
+                               string.Format("Error: '{0}'. Entity: 'STUDENT.ACAD.CRED'.  RecordKey: '{1}'", r.Value, r.Key))
+                               { SourceId = r.Key}));
+                        }
+                        throw repositoryException;
+                    }
+
+                    studentAcadCredsPage = studentAcadCredData.BulkRecordsRead;
+                    if (studentAcadCredsPage != null)
+                    {
+                        scsKey = studentAcadCredsPage.Select(s => s.StcStudentCourseSec).Distinct().ToList();
+                    }
+                }
+                if (scsKey == null || scsKey.Count() == 0)
+                {
+                    return new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>(), 0);
                 }
 
-                var crsSecIds = studentCourseSecs.Select(i => i.ScsCourseSection);
+                var studentCourseSecData = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<StudentCourseSec>(scsKey.ToArray());
 
-                var courseSections = await DataReader.BulkReadRecordAsync<CourseSections>(crsSecIds.Distinct().ToArray());
+                Collection<CourseSections> courseSections = null;
+                Collection<StudentCourseSec> studentCourseSecs = null;
 
-                //RepositoryException exception = null;
+                if (!studentCourseSecData.Equals(default(BulkReadOutput<DataContracts.StudentCourseSec>)))
+                {
+
+                   if ((studentCourseSecData.InvalidKeys != null && studentCourseSecData.InvalidKeys.Any())
+                            || (studentCourseSecData.InvalidRecords != null && studentCourseSecData.InvalidRecords.Any()))
+                    {
+                        var repositoryException = new RepositoryException();
+
+                        if (studentCourseSecData.InvalidKeys.Any())
+                        {
+                            repositoryException.AddErrors(studentCourseSecData.InvalidKeys
+                                .Select(key => new RepositoryError("Bad.Data",
+                                string.Format("Unable to locate the following key '{0}'. Entity: 'STUDENT.COURSE.SEC'.", key.ToString()))));
+                        }
+                        if (studentCourseSecData.InvalidRecords.Any())
+                        {
+                            repositoryException.AddErrors(studentCourseSecData.InvalidRecords
+                               .Select(r => new RepositoryError("Bad.Data",
+                               string.Format("Error: '{0}'. Entity: 'STUDENT.COURSE.SEC.", r.Value))
+                               { SourceId = r.Key }));
+                        }
+                        throw repositoryException;
+                    }
+
+                    studentCourseSecs = studentCourseSecData.BulkRecordsRead;
+
+                    if (studentCourseSecs.Count() != sublist.Count())
+                    {
+                        var courseSecIds = studentCourseSecs.Select(scs => scs.Recordkey).ToList();
+                        var missingIds = scsKey.Except(courseSecIds);
+                        StringBuilder sb = new StringBuilder();
+                        sb.Append("Unable to provide all section registrations.  Entity: 'STUDENT.ACAD.CRED' referencing an invalid STC.STUDENT.COURSE.SEC record");
+                        sb.Append(", ");
+                        missingIds.ToList().ForEach(id =>
+                        {
+                            var stcRec = studentAcadCredsPage.Where(sc => sc.StcStudentCourseSec == id).FirstOrDefault();
+                            sb.Append(string.Format("Entity 'STUDENT.ACAD.CRED', ID: '{0}', Guid '{1}' references invalid data. ", stcRec.Recordkey, stcRec.RecordGuid));
+                            sb.Append(string.Concat("Record not found, Entity: ‘STUDENT.COURSE.SEC’, ID: '", id, "'"));
+                            sb.Append(" ");
+                        });
+                        var repositoryError = new RepositoryException("Error(s) reading data from STUDENT.ACAD.CRED");
+                        repositoryError.AddError(new RepositoryError("sectionRegistrations.Id", sb.ToString()));
+                        throw repositoryError;
+                    }
+
+                    var crsSecIds = studentCourseSecs.Select(i => i.ScsCourseSection);
+                    courseSections = await DataReader.BulkReadRecordAsync<CourseSections>(crsSecIds.Distinct().ToArray());
+                }
+               
                 foreach (var studentAcadCred in studentAcadCredsPage)
                 {
                     try
@@ -711,7 +816,19 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         public async Task<SectionRegistrationResponse> GetSectionRegistrationById2Async(string id)
         {
             // Read original STUDENT.ACAD.CRED to get the actual Status Code for the section.
-            var studentAcadCred = await DataReader.ReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", id);
+            StudentAcadCred studentAcadCred = null;
+            try
+            {
+                studentAcadCred = await DataReader.ReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", id);
+            }
+            catch (Exception ex)
+            {
+                var exception = new RepositoryException();
+                exception.AddError(
+                    new RepositoryError("Bad Data", string.Format("Error: {0}. Entity: 'STUDENT.ACAD.CRED'.  RecordKey: '{1}'", ex.Message, id))
+                    { SourceId = id });
+                throw exception;
+            }
             if (studentAcadCred == null)
             {
                 throw new KeyNotFoundException(string.Concat("Record not found, Entity: ‘STUDENT.ACAD.CRED’, Record ID: '", id, "'"));
@@ -741,8 +858,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             catch (Exception ex)
             {
-                var exception = new RepositoryException("Unexpected repository error");
-                exception.AddError(new RepositoryError("sectionRegistrations.id", string.Format("Error(s) processing STUDENT.ACAD.CRED record '{0}' with guid '{1}'.  Error: {2}", studentAcadCred.Recordkey, studentAcadCred.RecordGuid, ex.Message)));
+                var exception = new RepositoryException();
+                exception.AddError(new RepositoryError("Bad.Data", string.Format("Error(s) processing STUDENT.ACAD.CRED record '{0}' with guid '{1}'.  Error: {2}", studentAcadCred.Recordkey, studentAcadCred.RecordGuid, ex.Message)));
                 throw exception;
             }
         }
@@ -754,7 +871,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <param name="studentCourseSecs"></param>
         /// <param name="courseSections"></param>
         /// <returns></returns>
-        private SectionRegistrationResponse BuildSectionRegistrationResponse(StudentAcadCred studentAcadCred, Collection<StudentCourseSec> studentCourseSecs, 
+        private SectionRegistrationResponse BuildSectionRegistrationResponse(StudentAcadCred studentAcadCred, Collection<StudentCourseSec> studentCourseSecs,
             Collection<CourseSections> courseSections)
         {
             var studentId = studentAcadCred.StcPersonId;
@@ -781,7 +898,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 statusCode = studentAcadCred.StcStatus.ElementAt(0);
             }
 
-            if(studentAcadCred.StcStatusDate != null && studentAcadCred.StcStatusDate.Any())
+            if (studentAcadCred.StcStatusDate != null && studentAcadCred.StcStatusDate.Any())
             {
                 statusDate = studentAcadCred.StcStatusDate.ElementAt(0);
             }
@@ -840,7 +957,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 var statusDateList = new List<Tuple<string, DateTime?>>();
                 studentAcadCred.StcStatusesEntityAssociation.ToList().ForEach(i =>
                 {
-                   if (i.StcStatusDateAssocMember != null && i.StcStatusDateAssocMember.HasValue)
+                    if (i.StcStatusDateAssocMember != null && i.StcStatusDateAssocMember.HasValue)
                     {
                         Tuple<string, DateTime?> statusDateTuple = new Tuple<string, DateTime?>(i.StcStatusAssocMember, i.StcStatusDateAssocMember.Value);
                         statusDateList.Add(statusDateTuple);
@@ -867,6 +984,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         }
 
         #endregion
+
         /// <summary>
         /// Gets midterm grades
         /// </summary>
@@ -876,22 +994,22 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             var midTermGrades = new List<MidTermGrade>();
 
-            if(!string.IsNullOrEmpty(studentCourseSec.ScsMidTermGrade1))
+            if (!string.IsNullOrEmpty(studentCourseSec.ScsMidTermGrade1))
                 midTermGrades.Add(new MidTermGrade(1, studentCourseSec.ScsMidTermGrade1, studentCourseSec.ScsMidGradeDate1, studentCourseSec.StudentCourseSecChgopr));
 
             if (!string.IsNullOrEmpty(studentCourseSec.ScsMidTermGrade2))
                 midTermGrades.Add(new MidTermGrade(2, studentCourseSec.ScsMidTermGrade2, studentCourseSec.ScsMidGradeDate2, studentCourseSec.StudentCourseSecChgopr));
 
-            if(!string.IsNullOrEmpty(studentCourseSec.ScsMidTermGrade3))
+            if (!string.IsNullOrEmpty(studentCourseSec.ScsMidTermGrade3))
                 midTermGrades.Add(new MidTermGrade(3, studentCourseSec.ScsMidTermGrade3, studentCourseSec.ScsMidGradeDate3, studentCourseSec.StudentCourseSecChgopr));
 
-            if(!string.IsNullOrEmpty(studentCourseSec.ScsMidTermGrade4))
+            if (!string.IsNullOrEmpty(studentCourseSec.ScsMidTermGrade4))
                 midTermGrades.Add(new MidTermGrade(4, studentCourseSec.ScsMidTermGrade4, studentCourseSec.ScsMidGradeDate4, studentCourseSec.StudentCourseSecChgopr));
 
-            if(!string.IsNullOrEmpty(studentCourseSec.ScsMidTermGrade5))
+            if (!string.IsNullOrEmpty(studentCourseSec.ScsMidTermGrade5))
                 midTermGrades.Add(new MidTermGrade(5, studentCourseSec.ScsMidTermGrade5, studentCourseSec.ScsMidGradeDate5, studentCourseSec.StudentCourseSecChgopr));
 
-            if(!string.IsNullOrEmpty(studentCourseSec.ScsMidTermGrade6))
+            if (!string.IsNullOrEmpty(studentCourseSec.ScsMidTermGrade6))
                 midTermGrades.Add(new MidTermGrade(6, studentCourseSec.ScsMidTermGrade6, studentCourseSec.ScsMidGradeDate6, studentCourseSec.StudentCourseSecChgopr));
 
             return midTermGrades;
@@ -909,7 +1027,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             importGradesRequest.Grades = new List<Transactions.Grades>();
             importGradesRequest.Guid = request.RegGuid;
             importGradesRequest.SectionRegId = request.StudentAcadCredId;
-            
+
             #region Final Grade
 
             if (request.FinalTermGrade != null)
@@ -1055,7 +1173,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     throw new InvalidOperationException(failureMessage);
                 }
             }
-            
+
             // Process the messages returned by colleague registration
             if (response.Messages == null)
                 response.Messages = new List<RegistrationMessage>();
@@ -1066,12 +1184,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     response.Messages.Add(new RegistrationMessage() { Message = message.InfoMessage, SectionId = message.StatusCode });
                 }
             }
-       
 
-            
+
+
             foreach (var grade in importGradesRequest.Grades)
             {
-                string gradeType = string.IsNullOrEmpty(grade.GradeType) ? string.Empty : grade.GradeType.Substring(0, 1);   
+                string gradeType = string.IsNullOrEmpty(grade.GradeType) ? string.Empty : grade.GradeType.Substring(0, 1);
                 DateTimeOffset? submittedOn = null;
                 if (!string.IsNullOrEmpty(grade.GradeSubmitDate))
                 {
@@ -1086,7 +1204,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         Grade = grade.Grade,
                         GradeChangeReason = grade.GradeChangeReason
                     };
-                    response.FinalTermGrade = finalGrade;                    
+                    response.FinalTermGrade = finalGrade;
                 }
                 #endregion
 
@@ -1129,7 +1247,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                     else
                     {
-                       throw new FormatException(string.Format("The midterm value : {0} is invalid", grade.GradeType));
+                        throw new FormatException(string.Format("The midterm value : {0} is invalid", grade.GradeType));
                     }
                 }
                 #endregion            
@@ -1166,7 +1284,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 updateRequest.SecRegGuid = guid;
             }
-             
+
             updateRequest.RegSections.Add(new RegSections() { SectionIds = request.Section.SectionId, SectionAction = request.Section.Action.ToString(), SectionCredits = request.Section.Credits, SectionDate = request.Section.RegistrationDate });
 
             var extendedDataTuple = GetEthosExtendedDataLists();
@@ -1292,7 +1410,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 updateRequest.SecRegGuid = guid;
             }
             if (string.IsNullOrEmpty(request.StudentAcadCredId))
-            { 
+            {
                 await CheckForExistingRegistration(studentId, sectionId);
             }
             var requestedSection = new RegSections()
@@ -1390,7 +1508,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 InvolvementStartOn = request.InvolvementStartOn,
                 InvolvementEndOn = request.InvolvementEndOn,
-                AcademicLevel =request.Section.AcademicLevelCode,
+                AcademicLevel = request.Section.AcademicLevelCode,
                 Credit = request.Section.Credits,
                 Ceus = request.Section.Ceus,
                 StatusDate = request.Section.RegistrationDate
@@ -1441,11 +1559,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 return await GetGuidFromRecordInfoAsync("GRADES", id);
             }
-            catch(ArgumentNullException)
+            catch (ArgumentNullException)
             {
                 throw;
             }
-            catch(RepositoryException ex)
+            catch (RepositoryException ex)
             {
                 ex.AddError(new RepositoryError("Grade.Guid.NotFound", "guid not found for grade " + id));
                 throw ex;
@@ -1514,7 +1632,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 return false;
             }
-           
+
         }
 
         #region Section Registrations Grade Options
@@ -1533,7 +1651,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             string[] limitingKeys = null;
             string criteria = string.Empty;
 
-            if(request != null && !string.IsNullOrEmpty(request.SectionId))
+            if (request != null && !string.IsNullOrEmpty(request.SectionId))
             {
                 criteria = string.Format("WITH SCS.COURSE.SECTION EQ '{0}' WITH SCS.STUDENT.ACAD.CRED SAVING UNIQUE SCS.STUDENT.ACAD.CRED",
                         request.SectionId);
@@ -1580,7 +1698,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     var repoError = new RepositoryError("sectionRegistration")
                     {
                         Id = stcRec.RecordGuid,
-                        SourceId = string.IsNullOrEmpty(stcRec.Recordkey)? stcRec.Recordkey : string.Empty,
+                        SourceId = string.IsNullOrEmpty(stcRec.Recordkey) ? stcRec.Recordkey : string.Empty,
                         Message = string.Format("Record not found, Entity 'STUDENT.COURSE.SEC', ID: '{0}', Guid '{1}' references invalid data. ",
                                                 stcRec.Recordkey, stcRec.RecordGuid)
                     };
@@ -1656,7 +1774,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             catch (Exception ex)
             {
                 var exception = new RepositoryException("Unexpected repository error");
-                exception.AddError(new RepositoryError(studentAcadCred.RecordGuid, studentAcadCred.Recordkey, string.Format("Error(s) processing STUDENT.ACAD.CRED record '{0}' with guid '{1}'.  Error: {2}", 
+                exception.AddError(new RepositoryError(studentAcadCred.RecordGuid, studentAcadCred.Recordkey, string.Format("Error(s) processing STUDENT.ACAD.CRED record '{0}' with guid '{1}'.  Error: {2}",
                     studentAcadCred.Recordkey, studentAcadCred.RecordGuid, ex.Message)));
                 throw exception;
             }

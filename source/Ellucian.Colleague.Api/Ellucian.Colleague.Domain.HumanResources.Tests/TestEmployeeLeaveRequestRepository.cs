@@ -135,6 +135,32 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 ChangeDate =  DateTime.Today,
                 AddTime = DateTime.Today,
                 ChangeTime = DateTime.Today
+            },
+                    new LeaveRequestStatusRecord()
+            {
+                Id = "7",
+                LeaveRequestId = "14",
+                ActionType = LeaveStatusAction.Approved,
+                ActionerId = "0010351",
+                AddOpr = "0011560",
+                ChangeOpr = "0010351",
+                AddDate = DateTime.Today,
+                ChangeDate =  DateTime.Today,
+                AddTime = DateTime.Today,
+                ChangeTime = DateTime.Today
+            },
+                          new LeaveRequestStatusRecord()
+            {
+                Id = "8",
+                LeaveRequestId = "15",
+                ActionType = LeaveStatusAction.Approved,
+                ActionerId = "0010351",
+                AddOpr = "0011560",
+                ChangeOpr = "0010351",
+                AddDate = DateTime.Today,
+                ChangeDate =  DateTime.Today,
+                AddTime = DateTime.Today,
+                ChangeTime = DateTime.Today
             }
         };
         #endregion
@@ -176,6 +202,17 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                         LeaveRequestId = randomLeaveRequestId,
                         LeaveDate = DateTime.Today,
                         LeaveHours = 8.00m
+                    },
+                          new LeaveRequestDetailRecord()
+                    {
+                        Id = "39", LeaveDate = DateTime.Today, LeaveHours = 4.00m, LeaveRequestId = "14"
+                    },
+                                new LeaveRequestDetailRecord()
+                    {
+                     Id = "40", LeaveDate = DateTime.Today.AddDays(1), LeaveHours = 8.00m, LeaveRequestId = "14"
+                    },
+                                new LeaveRequestDetailRecord()  {
+                    Id = "41", LeaveDate = DateTime.Today, LeaveHours = 4.00m, LeaveRequestId = "15"
                     }
         };
         #endregion
@@ -230,6 +267,40 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 }
             }
         };
+
+        public List<LeaveRequestRecord> leaveRequestsForTimeEntry = new List<LeaveRequestRecord>()
+        {
+                        new LeaveRequestRecord() {
+                        Id = "14",
+                        PerLeaveId ="698",
+                        EmployeeId ="0011560",
+                        ApproverId ="0010351",
+                        ApproverName ="Hadrian O. Racz",
+                        StartDate = DateTime.Today,
+                        EndDate = DateTime.Today.AddDays(1),
+                        Status = LeaveStatusAction.Approved,
+                        LeaveRequestDetailRecords = new List<LeaveRequestDetailRecord>()
+                        {
+                           leaveRequestDetailRecords[5],
+                            leaveRequestDetailRecords[6]
+                        }
+                    },
+                           new LeaveRequestRecord() {
+                        Id = "15",
+                        PerLeaveId ="784",
+                        EmployeeId ="0011560",
+                        ApproverId ="0010351",
+                        ApproverName ="Hadrian O. Racz",
+                        StartDate = DateTime.Today,
+                        EndDate =  DateTime.Today,
+                        Status = LeaveStatusAction.Approved,
+                        LeaveRequestDetailRecords = new List<LeaveRequestDetailRecord>()
+                        {
+                             leaveRequestDetailRecords[7]
+
+                        }
+                    }
+                };
         #endregion
         #endregion
 
@@ -326,7 +397,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             string approverName,
             LeaveStatusAction status,
             List<HumanResources.Entities.LeaveRequestDetail> leaveRequestDetails)
-        {           
+        {
             //To DO: Comments
             var leaveRequestRecordToBeCreated = new LeaveRequestRecord()
             {
@@ -495,6 +566,14 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
         public Task<IEnumerable<HumanResources.Entities.LeaveRequest>> GetLeaveRequestsForSupervisorAsync(string supervisorId)
         {
             throw new NotImplementedException();
+        }
+
+        public async Task<IEnumerable<HumanResources.Entities.LeaveRequest>> GetLeaveRequestsForTimeEntryAsync(DateTime startDate, DateTime endDate, IEnumerable<string> effectivePersonIds)
+        {
+            List<HumanResources.Entities.LeaveRequest> LeaveRequestForTimeEntry = new List<HumanResources.Entities.LeaveRequest>();
+            leaveRequestsForTimeEntry.ForEach(x => LeaveRequestForTimeEntry.Add(BuildLeaveRequestEntity(x)));
+
+            return await Task.FromResult(LeaveRequestForTimeEntry);
         }
         #endregion
     }

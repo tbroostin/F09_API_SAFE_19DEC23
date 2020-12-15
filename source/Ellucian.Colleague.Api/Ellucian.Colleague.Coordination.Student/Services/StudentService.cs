@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -50,11 +50,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private readonly IPlanningStudentRepository _planningStudentRepository;
         private ILogger _logger;
 
-        public StudentService(IAdapterRegistry adapterRegistry, IStudentRepository studentRepository, IPersonRepository personRepository, 
-            IAcademicCreditRepository academicCreditRepository, IAcademicHistoryService academicHistoryService, 
-            ITermRepository termRepository, IRegistrationPriorityRepository priorityRepository, IStudentConfigurationRepository 
+        public StudentService(IAdapterRegistry adapterRegistry, IStudentRepository studentRepository, IPersonRepository personRepository,
+            IAcademicCreditRepository academicCreditRepository, IAcademicHistoryService academicHistoryService,
+            ITermRepository termRepository, IRegistrationPriorityRepository priorityRepository, IStudentConfigurationRepository
             studentConfigurationRepository, IReferenceDataRepository referenceDataRepository,
-            IStudentReferenceDataRepository studentReferenceDataRepository,IConfigurationRepository configurationRepository, 
+            IStudentReferenceDataRepository studentReferenceDataRepository,IConfigurationRepository configurationRepository,
             ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, IStaffRepository staffRepository, ILogger logger,
             IPlanningStudentRepository planningStudentRepository)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, studentRepository, configurationRepository, staffRepository)
@@ -410,7 +410,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new PermissionsException("User does not have permissions to access to this function");
             }
-            
+
             var response =await _studentRepository.OrderTranscriptAsync(requestEntity);
             return response;
         }
@@ -443,17 +443,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             await CheckStudentAdvisorUserAccessAsync(studentId, student.ConvertToStudentAccess());
 
             var transcriptText = await _studentRepository.GetTranscriptAsync(studentId, transcriptGrouping);
+            var transcriptConfiguration = await _studentConfigurationRepository.GetUnofficialTranscriptConfigurationAsync();
 
             // Create the report object, set it's path, and set permissions for the sandboxed app domain in which the report runs to unrestricted
             LocalReport report = new LocalReport();
             report.ReportPath = path;
             report.SetBasePermissionsForSandboxAppDomain(new System.Security.PermissionSet(System.Security.Permissions.PermissionState.Unrestricted));
             report.EnableExternalImages = true;
-            var parameters = new List<ReportParameter>();
-            parameters.Add(new ReportParameter("WatermarkPath", reportWatermarkPath));
-            parameters.Add(new ReportParameter("TranscriptText", transcriptText));
-            report.SetParameters(parameters);
 
+            string fontSize = "9pt"; // Default font size for the report
             // Set up some options for the report
             string mimeType = string.Empty;
             string encoding;
@@ -465,35 +463,61 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             string DeviceInfo;
             try
             {
-                Stopwatch sw = new Stopwatch();
-                sw.Start();
-                //read the device info path in xml document
-                XmlDocument deviceInfoDoc = new XmlDocument();
-                deviceInfoDoc.Load(deviceInfoPath);
-                XmlNode deviceInfoRootNode = deviceInfoDoc.FirstChild;//this is to reach to DeviceInfo tag
-                // read the default settings in xml document
-                XmlDocument defaultDoc = new XmlDocument();
-                defaultDoc.LoadXml(PdfReportConstants.DeviceInfo);
-                XmlNode defaultDeviceInfoRootNode = defaultDoc.FirstChild; // this is to reach to DeviceInfo tag
-                if (defaultDeviceInfoRootNode.HasChildNodes)
+                // Check if the device info should be set form TRFM parameters
+                if (transcriptConfiguration != null && transcriptConfiguration.IsUseTanscriptFormat)
                 {
-                    //loop through all the default settings and if it is not in device info file (UnofficialTranscriptDeviceInfo.txt) then append it to the XMlDocumcent
-                    //otherwise if it is already there then don't worry because default settings or tags could have been overridden by configurable device info file.
-                    foreach (XmlNode childNode in defaultDeviceInfoRootNode.ChildNodes)
+                    fontSize =  transcriptConfiguration.FontSize + "pt";
+                    string pageWidth = transcriptConfiguration.PageWidth;
+                    string pageHeight = transcriptConfiguration.PageHeight;
+
+                    string marginTop = transcriptConfiguration.TopMargin;
+                    string marginLeft = transcriptConfiguration.LeftMargin;
+                    string marginRight = transcriptConfiguration.RightMargin;
+                    string marginBottom = transcriptConfiguration.BottomMargin;
+
+                    DeviceInfo = "<DeviceInfo>" +
+                    " <OutputFormat>PDF</OutputFormat>" +
+                    " <PageWidth>"+ pageWidth + "in</PageWidth>" +
+                    " <PageHeight>" + pageHeight + "in</PageHeight>" +
+                    " <MarginTop>"+ marginTop + "in</MarginTop>" +
+                    " <MarginLeft>" + marginLeft + "in</MarginLeft>" +
+                    " <MarginRight>" + marginRight + "in</MarginRight>" +
+                    " <MarginBottom>" + marginBottom + "in</MarginBottom>" +
+                    " <HumanReadablePDF>True</HumanReadablePDF>" +
+                    "</DeviceInfo>";
+                }
+                else
+                {
+                    Stopwatch sw = new Stopwatch();
+                    sw.Start();
+                    //read the device info path in xml document
+                    XmlDocument deviceInfoDoc = new XmlDocument();
+                    deviceInfoDoc.Load(deviceInfoPath);
+                    XmlNode deviceInfoRootNode = deviceInfoDoc.FirstChild;//this is to reach to DeviceInfo tag
+                                                                          // read the default settings in xml document
+                    XmlDocument defaultDoc = new XmlDocument();
+                    defaultDoc.LoadXml(PdfReportConstants.DeviceInfo);
+                    XmlNode defaultDeviceInfoRootNode = defaultDoc.FirstChild; // this is to reach to DeviceInfo tag
+                    if (defaultDeviceInfoRootNode.HasChildNodes)
                     {
-                        var n = childNode.Name;
-                        XmlNodeList elemList = deviceInfoDoc.GetElementsByTagName(n);
-                        if (elemList == null || elemList.Count == 0)
+                        //loop through all the default settings and if it is not in device info file (UnofficialTranscriptDeviceInfo.txt) then append it to the XMlDocumcent
+                        //otherwise if it is already there then don't worry because default settings or tags could have been overridden by configurable device info file.
+                        foreach (XmlNode childNode in defaultDeviceInfoRootNode.ChildNodes)
                         {
-                            deviceInfoRootNode.AppendChild(deviceInfoDoc.ImportNode(childNode, true));
+                            var n = childNode.Name;
+                            XmlNodeList elemList = deviceInfoDoc.GetElementsByTagName(n);
+                            if (elemList == null || elemList.Count == 0)
+                            {
+                                deviceInfoRootNode.AppendChild(deviceInfoDoc.ImportNode(childNode, true));
+                            }
                         }
                     }
-                }
-                DeviceInfo = deviceInfoDoc.InnerXml;
-                sw.Stop();
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info(string.Format("Elapsed time to read device info and match with defaults by reading XML tags= {0}", sw.ElapsedMilliseconds));
+                    DeviceInfo = deviceInfoDoc.InnerXml;
+                    sw.Stop();
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info(string.Format("Elapsed time to read device info and match with defaults by reading XML tags= {0}", sw.ElapsedMilliseconds));
+                    }
                 }
             }
             catch (Exception e)
@@ -511,6 +535,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 " <HumanReadablePDF>True</HumanReadablePDF>" +
                 "</DeviceInfo>";
             }
+
+            var parameters = new List<ReportParameter>();
+            parameters.Add(new ReportParameter("WatermarkPath", reportWatermarkPath));
+            parameters.Add(new ReportParameter("TranscriptText", transcriptText));
+            parameters.Add(new ReportParameter("ReportFontSize", fontSize));
+            report.SetParameters(parameters);
 
             // Render the report as a byte array
             string ReportType = "PDF";
@@ -590,7 +620,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     Action = (Domain.Student.Entities.RegistrationAction)sectionReg.Action,
                     Credits = sectionReg.Credits,
                     SectionId = sectionReg.SectionId,
-                    DropReasonCode = sectionReg.DropReasonCode                    
+                    DropReasonCode = sectionReg.DropReasonCode
                 });
             }
 
@@ -624,7 +654,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 await CheckUserAccessAsync(studentId);
             }
         }
-      
+
         public async Task<PrivacyWrapper<Dtos.Student.Student>> GetAsync(string id)
         {
             var hasPrivacyRestriction = false;
@@ -642,7 +672,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (!UserIsSelf(id) && !HasProxyAccessForPerson(id))
             {
                 //if appropriate permissions exists then check if student have a privacy code and logged-in user have a staff record with same privacy code.
-                 hasPrivacyRestriction = string.IsNullOrEmpty(studentEntity.PrivacyStatusCode) ? false : !HasPrivacyCodeAccess(studentEntity.PrivacyStatusCode);
+                hasPrivacyRestriction = string.IsNullOrEmpty(studentEntity.PrivacyStatusCode) ? false : !HasPrivacyCodeAccess(studentEntity.PrivacyStatusCode);
             }
             if (hasPrivacyRestriction)
             {
@@ -659,7 +689,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 // Build and return the student dto
                 var studentDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.Student, Dtos.Student.Student>();
-                 student = studentDtoAdapter.MapToType(studentEntity);
+                student = studentDtoAdapter.MapToType(studentEntity);
             }
             return new PrivacyWrapper<Dtos.Student.Student>(student, hasPrivacyRestriction);
         }
@@ -956,18 +986,30 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="bypassCache"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<Dtos.StudentCohort>> GetAllStudentCohortsAsync(bool bypassCache)
+        public async Task<IEnumerable<Dtos.StudentCohort>> GetAllStudentCohortsAsync( Dtos.Filters.CodeItemFilter criteria = null, bool bypassCache = false)
         {
-            IEnumerable<Domain.Student.Entities.StudentCohort> studentCohortEntities = await _studentReferenceDataRepository.GetAllStudentCohortAsync(bypassCache);
+            IEnumerable<Domain.Student.Entities.StudentCohort> entities = await _studentReferenceDataRepository.GetAllStudentCohortAsync(bypassCache);
+            IEnumerable<Domain.Student.Entities.StudentCohort> filteredList = null;
+
             List<Dtos.StudentCohort> studentCohortsDtos = new List<Dtos.StudentCohort>();
 
-            foreach (var studentCohortEntity in studentCohortEntities)
+            if(criteria != null && !string.IsNullOrEmpty( criteria.Code ) )
+            {
+                filteredList = entities.Where( sc => !string.IsNullOrWhiteSpace( sc.Code ) && sc.Code.Equals( criteria.Code, StringComparison.InvariantCultureIgnoreCase ) ).ToList();
+                if(filteredList == null || !filteredList.Any())
+                {
+                    return new List<Dtos.StudentCohort>();
+                }
+                entities = filteredList;
+            }
+
+            foreach (var studentCohortEntity in entities)
             {
                 Dtos.StudentCohort studentCohortDto = BuildStudentCohort(studentCohortEntity);
                 studentCohortsDtos.Add(studentCohortDto);
             }
             return studentCohortsDtos;
-        }       
+        }
 
         /// <summary>
         /// Gets student cohort by guid
@@ -1065,7 +1107,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Dtos.StudentClassification</returns>
         private Dtos.StudentClassification BuildStudentClassificationDto(StudentClassification studentClassificationEntity)
         {
-            Dtos.StudentClassification studentClassificationDto = new Dtos.StudentClassification() 
+            Dtos.StudentClassification studentClassificationDto = new Dtos.StudentClassification()
             {
                 Code = studentClassificationEntity.Code,
                 Description = null,
@@ -1231,7 +1273,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 studentEntity = await _studentRepository.GetDataModelStudentFromGuid2Async(guid);
             }
             catch(KeyNotFoundException)
-            {             
+            {
                 throw new KeyNotFoundException(string.Concat("Student not found for GUID '", guid, "'"));
             }
             catch (RepositoryException)
@@ -1282,7 +1324,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="cohorts">GUID for the groupings of students for reporting/tracking purposes (cohorts) to which the student is associated.</param>
         /// <param name="residency">GUID for the residency type for selecting students.</param>
         /// <returns>A Student DTO <see cref="Dtos.Students">object</see></returns>     
-        public async Task<Tuple<IEnumerable<Dtos.Students>, int>> GetStudentsAsync(int offset, 
+        public async Task<Tuple<IEnumerable<Dtos.Students>, int>> GetStudentsAsync(int offset,
              int limit, bool bypassCache = false, string person = "", string type = "", string cohorts ="", string residency = "")
         {
             try
@@ -1316,7 +1358,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     try
                     {
-                        var allStudentCohorts = (await GetAllStudentCohortsAsync(bypassCache)).ToList();
+                        var allStudentCohorts = (await GetAllStudentCohortsAsync(null, bypassCache)).ToList();
                         if (allStudentCohorts.Any())
                         {
                             var studentCohort = allStudentCohorts.FirstOrDefault(st => st.Id == cohorts);
@@ -1456,7 +1498,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             List<string> types = new List<string>(), residencies = new List<string>(),
                 newTypes = new List<string>(), newResidencies = new List<string>();
             string[] filterPersonIds = new List<string>().ToArray();
-                        
+
             if (!string.IsNullOrEmpty(personFilter))
             {
                 var personFilterKeys = (await _referenceDataRepository.GetPersonIdsByPersonFilterGuidAsync(personFilter));
@@ -1485,7 +1527,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         return new Tuple<IEnumerable<Dtos.Students2>, int>(new List<Dtos.Students2>(), 0);
                     }
                 }
-                
+
                 // types criteria filter
                 if ((criteriaFilter.Types != null) && (criteriaFilter.Types.Any()))
                 {
@@ -1549,9 +1591,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                 }
             }
-            
+
             var studentsEntitiesTuple = await _studentRepository.GetDataModelStudents2Async(offset, limit, bypassCache, filterPersonIds, newPerson, newTypes, newResidencies);
-            
+
             if (studentsEntitiesTuple != null)
             {
                 var studentsEntities = studentsEntitiesTuple.Item1.ToList();
@@ -1651,7 +1693,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (student.StudentAcademicLevels != null)
                 {
                     var cohorts = new List<GuidObject2>();
-                    var allStudentCohorts = (await GetAllStudentCohortsAsync(bypassCache)).ToList();
+                    var allStudentCohorts = (await GetAllStudentCohortsAsync(null, bypassCache)).ToList();
                     if (allStudentCohorts.Any())
                     {
                         foreach (var academicLevel in student.StudentAcademicLevels)

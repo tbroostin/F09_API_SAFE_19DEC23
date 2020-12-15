@@ -111,7 +111,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             // Limit the list of accounts using the filter component criteria. If the data is not filtered,
             // return the finance query object for all the GL accounts assigned to the user.
             string[] filteredUserGlAccounts = await ApplyFilterCriteria(criteria, allGlAccountsForUser);
-
+            
             if (filteredUserGlAccounts != null && filteredUserGlAccounts.Any())
             {
                 // If the fiscal year is open, get the information from GL.ACCTS
@@ -165,7 +165,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     if (glpFyrIds != null && glpFyrIds.Any())
                         glpFyrDataContracts = await BulkReadRecordAsync<GlpFyr>(glpFyrFilename, glpFyrIds);
 
-                    var allGlAccountLineItems = await ProcessAllGlAccountsForClosedYear(glsRecords, glpFyrDataContracts, glsFyrId, glAccountStructure, glClassConfiguration, criteria, personId, fiscalYear, filteredUserGlAccounts, allGlAccountsForUser);
+                    //cf web defaults
+                    var cfWebDefaults = await DataReader.ReadRecordAsync<CfwebDefaults>("CF.PARMS", "CFWEB.DEFAULTS");
+
+                    var allGlAccountLineItems = await ProcessAllGlAccountsForClosedYear(glsRecords, glpFyrDataContracts, glsFyrId, glAccountStructure, glClassConfiguration, criteria, personId, fiscalYear, filteredUserGlAccounts, allGlAccountsForUser, cfWebDefaults);
                     filteredFinanceQueryGlAccountLineItems.AddRange(allGlAccountLineItems);
 
                     #endregion
@@ -519,7 +522,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         #endregion
 
         #region section for closed year
-        private async Task<List<FinanceQueryGlAccountLineItem>> ProcessAllGlAccountsForClosedYear(List<GlsFyr> glsRecords, List<GlpFyr> glpFyrDataContracts, string glsFyrId, GeneralLedgerAccountStructure glAccountStructure, GeneralLedgerClassConfiguration glClassConfiguration, FinanceQueryCriteria criteria, string personId, string fiscalYear, string[] filteredUserGlAccounts, string[] userAllGlAccounts)
+        private async Task<List<FinanceQueryGlAccountLineItem>> ProcessAllGlAccountsForClosedYear(List<GlsFyr> glsRecords, List<GlpFyr> glpFyrDataContracts,
+            string glsFyrId, GeneralLedgerAccountStructure glAccountStructure,
+            GeneralLedgerClassConfiguration glClassConfiguration, FinanceQueryCriteria criteria,
+            string personId, string fiscalYear, string[] filteredUserGlAccounts,
+            string[] userAllGlAccounts, CfwebDefaults cfWebDefaults)
         {
             List<FinanceQueryGlAccountLineItem> allGlAccountLineItems = new List<FinanceQueryGlAccountLineItem>();
             FinanceQueryGlAccountLineItemBuilder financeQueryGlAccountLineItemBuilder = new FinanceQueryGlAccountLineItemBuilder();
@@ -541,7 +548,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     {
 
                         // Create GL account for umbrella and populate budget, actual and encumbrance amounts.
-                        var umbrellaGlAccount = BuildGlAccountEntityWithAmountsForClosedYears(umbrella, GlBudgetPoolType.Umbrella, true, glClassConfiguration, glAccountStructure);
+                        var umbrellaGlAccount = BuildGlAccountEntityWithAmountsForClosedYears(umbrella, GlBudgetPoolType.Umbrella, true, glClassConfiguration, glAccountStructure, cfWebDefaults);
 
                         financeQueryGlAccountLineItemBuilder.AddBudgetPoolGlAccount(umbrellaGlAccount, true);
 
@@ -553,7 +560,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             || (umbrella.EncumbrancesYtd.HasValue && umbrella.EncumbrancesYtd.Value != 0)
                             || (umbrella.EncumbrancesRelievedYtd.HasValue && umbrella.EncumbrancesRelievedYtd.Value != 0))
                         {
-                            var umbrellaPoolee = BuildGlAccountEntityWithAmountsForClosedYears(umbrella, GlBudgetPoolType.Poolee, false, glClassConfiguration, glAccountStructure);
+                            var umbrellaPoolee = BuildGlAccountEntityWithAmountsForClosedYears(umbrella, GlBudgetPoolType.Poolee, false, glClassConfiguration, glAccountStructure, cfWebDefaults);
                             financeQueryGlAccountLineItemBuilder.AddPoolee(umbrella.Recordkey, umbrellaPoolee);
                         }
 
@@ -592,7 +599,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             var umbrellaGlAccount = poolee.GlsBudgetLinkage;
 
                             // Create GL account for poolee and populate budget, actual and encumbrance amounts.
-                            var pooleeGlAccount = BuildGlAccountEntityWithAmountsForClosedYears(poolee, GlBudgetPoolType.Poolee, true, glClassConfiguration, glAccountStructure);
+                            var pooleeGlAccount = BuildGlAccountEntityWithAmountsForClosedYears(poolee, GlBudgetPoolType.Poolee, true, glClassConfiguration, glAccountStructure, cfWebDefaults);
 
                             // Add the poolee to the appropriate pool.
                             var selectedSummaryPool = financeQueryGlAccountLineItemBuilder.FinanceQueryGlAccountLineItems.FirstOrDefault(x => x.GlAccountNumber == umbrellaGlAccount);
@@ -623,7 +630,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                 }
 
                                 // Create the GL account for the umbrella.
-                                var newUmbrellaGlAccount = BuildGlAccountEntityWithAmountsForClosedYears(umbrellaAccount, GlBudgetPoolType.Umbrella, true, glClassConfiguration, glAccountStructure);
+                                var newUmbrellaGlAccount = BuildGlAccountEntityWithAmountsForClosedYears(umbrellaAccount, GlBudgetPoolType.Umbrella, true, glClassConfiguration, glAccountStructure, cfWebDefaults);
 
                                 // flag to check if user has access to umbrella.
                                 bool isUmbrellaVisible = userAllGlAccounts.Contains(umbrellaAccount.Recordkey);
@@ -646,7 +653,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 foreach (var nonPooledAccount in nonPooledAccounts)
                 {
                     // Create GL account for poolee and populate budget, actual and encumbrance amounts.
-                    var nonPooledGlAccount = BuildGlAccountEntityWithAmountsForClosedYears(nonPooledAccount, GlBudgetPoolType.None, true, glClassConfiguration, glAccountStructure);
+                    var nonPooledGlAccount = BuildGlAccountEntityWithAmountsForClosedYears(nonPooledAccount, GlBudgetPoolType.None, true, glClassConfiguration, glAccountStructure, cfWebDefaults);
                     // Add the GL account to the list of finance query Gl account.
                     financeQueryGlAccountLineItemBuilder.AddNonPooledGlAccount(nonPooledGlAccount);
 
@@ -1037,14 +1044,17 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return glAccount;
         }
 
-        private FinanceQueryGlAccount BuildGlAccountEntityWithAmountsForClosedYears(GlsFyr glsFyr, GlBudgetPoolType poolType, bool includeBudgetAmounts, GeneralLedgerClassConfiguration glClassConfiguration, GeneralLedgerAccountStructure glAccountStructure)
+        private FinanceQueryGlAccount BuildGlAccountEntityWithAmountsForClosedYears(GlsFyr glsFyr, GlBudgetPoolType poolType, bool includeBudgetAmounts
+            , GeneralLedgerClassConfiguration glClassConfiguration
+            , GeneralLedgerAccountStructure glAccountStructure
+            , CfwebDefaults cfWebDefaults)
         {
             var glAccount = new FinanceQueryGlAccount(glsFyr.Recordkey, poolType);
             if (includeBudgetAmounts)
             {
                 glAccount.BudgetAmount = CalculateBudgetForGlAccountInClosedYear(glsFyr);
             }
-            glAccount.ActualAmount = poolType == GlBudgetPoolType.Umbrella ? CalculateActualsForUmbrellaInClosedYear(glsFyr) : CalculateActualsForGlAccountInClosedYear(glsFyr, glClassConfiguration, glAccountStructure);
+            glAccount.ActualAmount = poolType == GlBudgetPoolType.Umbrella ? CalculateActualsForUmbrellaInClosedYear(glsFyr) : CalculateActualsForGlAccountInClosedYear(glsFyr, glClassConfiguration, glAccountStructure, cfWebDefaults);
             glAccount.EncumbranceAmount = poolType == GlBudgetPoolType.Umbrella ? CalculateEncumbrancesForUmbrellaInClosedYear(glsFyr) : CalculateEncumbrancesForGlAccountInClosedYear(glsFyr);
 
             return glAccount;
@@ -1058,15 +1068,28 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return budgetAmount;
         }
 
-        private decimal CalculateActualsForGlAccountInClosedYear(GlsFyr glsContract, GeneralLedgerClassConfiguration glClassConfiguration, GeneralLedgerAccountStructure generalLedgerAccountStructure)
+        private decimal CalculateActualsForGlAccountInClosedYear(GlsFyr glsContract, GeneralLedgerClassConfiguration glClassConfiguration, GeneralLedgerAccountStructure generalLedgerAccountStructure, CfwebDefaults cfWebDefaults)
         {
             var actualsAmount = 0m;
             var glClass = GetGlAccountGlClass(glsContract.Recordkey, glClassConfiguration, generalLedgerAccountStructure);
             if (glClass == GlClass.FundBalance)
             {
                 actualsAmount = glsContract.OpenBal.HasValue ? glsContract.OpenBal.Value : 0m;
-                actualsAmount += glsContract.CloseDebits.HasValue ? glsContract.CloseDebits.Value : 0m;
-                actualsAmount -= glsContract.CloseCredits.HasValue ? glsContract.CloseCredits.Value : 0m;
+                bool includeYEClosingAmounts = true;
+                if (cfWebDefaults != null)
+                {                    
+                    if (!string.IsNullOrEmpty(cfWebDefaults.CfwebFqIncludeYeAmounts) && cfWebDefaults.CfwebFqIncludeYeAmounts.Equals("N"))
+                    {
+                        includeYEClosingAmounts = false;
+                    }
+                }
+                //include YE closing amounts to fund balance, if CFWEB.FQ.INCLUDE.YE.AMOUNTS is set to "Y" or null
+                if (includeYEClosingAmounts)
+                {
+                    actualsAmount += glsContract.CloseDebits.HasValue ? glsContract.CloseDebits.Value : 0m;
+                    actualsAmount -= glsContract.CloseCredits.HasValue ? glsContract.CloseCredits.Value : 0m;
+                }
+
 
                 var closedMonthlyDebits = glsContract.Mdebits;
                 if (closedMonthlyDebits != null)

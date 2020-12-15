@@ -32,6 +32,11 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// Gl required flag for Voucher
         /// </summary>
         public bool GlRequiredForVoucher { get; set; }
+
+        /// <summary>
+        /// Is Voucher Approval Needed (true if Voucher Approval Needed Flag in RPYP is (Y)es or (A)uto-Populate)
+        /// </summary>
+        public bool IsVoucherApprovalNeeded { get; set; }
     }
 
 

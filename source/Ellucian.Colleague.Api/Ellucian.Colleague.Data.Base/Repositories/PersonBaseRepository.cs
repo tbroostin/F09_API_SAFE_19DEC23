@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -799,6 +799,22 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
+        /// Determine if the GUID represents a valid person, rather than an institution or corporation
+        /// </summary>
+        /// <param name="personId">potential person GUID</param>
+        /// <returns>Person Record Key if CorpIndicator is false, otherwise returns empty string</returns>
+        public async Task<string> GetPersonIdForNonCorpOnly(string personGuid)
+        {
+            if (string.IsNullOrEmpty(personGuid))
+                return string.Empty;
+            var result = await DataReader.ReadRecordAsync<DataContracts.Person>(new GuidLookup(personGuid));
+            if (result == null)
+                return string.Empty;
+            return result.PersonCorpIndicator == "Y" ? string.Empty : result.Recordkey;
+        }
+
+
+        /// <summary>
         /// Determine if the person is a faculty member
         /// </summary>
         /// <param name="personId">Person ID</param>
@@ -1488,14 +1504,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         else if (cred.Item1.ToLowerInvariant() == "colleagueusername")
                         {
                             colleagueusernameIds = new List<string>();
-                            var ids = (await DataReader.SelectAsync("PERSON.PIN", outIds != null && outIds.Any() ? outIds.ToArray() : null,
-                                                      string.Format("WITH PERSON.PIN.USER.ID = '{0}'", cred.Item2))).ToList();
+                            var ids = (await DataReader.SelectAsync("ORG.ENTITY.ENV", outIds != null && outIds.Any() ? outIds.ToArray() : null,
+                                            string.Format("WITH OEE.USERNAME = '{0}' SAVING OEE.RESOURCE", cred.Item2))).ToList();
                             if (ids == null || !ids.Any())
                             {
                                 return new Tuple<IEnumerable<string>, int>(new List<string>(), 0);
                             }
                             else
                             {
+                                ids = (await DataReader.SelectAsync("ORG.ENTITY", ids.ToArray(), null)).ToList();
                                 colleagueusernameIds.AddRange(ids);
                                 if (ids != null && ids.Any() && elevateIds != null && elevateIds.Any())
                                 {
@@ -1526,18 +1543,18 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 #region AlternativeCredentials
                 if (personFilterCriteria != null && personFilterCriteria.AlternativeCredentials != null && personFilterCriteria.AlternativeCredentials.Any())
                 {
-                    foreach (var cred in personFilterCriteria.AlternativeCredentials)
+                    foreach (var altCred in personFilterCriteria.AlternativeCredentials)
                     {
                         //there is index in alternate Ids so we can use first and then filter the rest. 
                         var altIds = await DataReader.SelectAsync("PERSON", outIds != null && outIds.Any() ? outIds.ToArray() : null,
-                                                 string.Format("WITH PERSON.ALT.IDS EQ '{0}'", cred.Item2));
+                                                 string.Format("WITH PERSON.ALT.IDS EQ '{0}'", altCred.Item2));
                         if (altIds == null || !altIds.Any())
                         {
                             return new Tuple<IEnumerable<string>, int>(new List<string>(), 0);
                         }
                         else
                         {
-                            if (string.IsNullOrEmpty(cred.Item1))
+                            if (string.IsNullOrEmpty(altCred.Item1))
                             {
                                 outIds.AddRange(altIds);
                             }
@@ -1553,7 +1570,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                     {
                                         var personAltEntityAssociations = alternatePerson.PersonAltEntityAssociation;
                                         if ((personAltEntityAssociations != null) && (personAltEntityAssociations.Any())
-                                            && (personAltEntityAssociations.Any(x => x.PersonAltIdTypesAssocMember == cred.Item1.ToUpperInvariant() && x.PersonAltIdsAssocMember == cred.Item2)))
+                                            && (personAltEntityAssociations.Any(x => x.PersonAltIdTypesAssocMember == altCred.Item1.ToUpperInvariant() && x.PersonAltIdsAssocMember == altCred.Item2)))
                                         {
                                             alternatePersonIds.Add(alternatePerson.Recordkey);
                                         }
@@ -2185,7 +2202,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                 string[] subList = null;
 
-                string criteria = "WITH PERSON.CORP.INDICATOR NE 'Y'";
+                string criteria = "WITH PERSON.CORP.INDICATOR NE 'Y' AND WITH LAST.NAME NE ''";
                 //int totalCount = 0;
                 var personGuids = new List<string>();
                 string personFilterKey = string.Empty;
@@ -2413,14 +2430,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                     else if (cred.Item1.ToLowerInvariant() == "colleagueusername")
                                     {
                                         colleagueusernameIds = new List<string>();
-                                        var ids = (await DataReader.SelectAsync("PERSON.PIN", outIds != null && outIds.Any() ? outIds.ToArray() : null,
-                                                                  string.Format("WITH PERSON.PIN.USER.ID = '{0}'", cred.Item2))).ToList();
+                                        var ids = (await DataReader.SelectAsync("ORG.ENTITY.ENV", outIds != null && outIds.Any() ? outIds.ToArray() : null,
+                                            string.Format("WITH OEE.USERNAME = '{0}' SAVING OEE.RESOURCE", cred.Item2))).ToList();
                                         if (ids == null || !ids.Any())
                                         {
                                             return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
                                         }
                                         else
                                         {
+                                            ids = (await DataReader.SelectAsync("ORG.ENTITY", ids.ToArray(), null)).ToList();
                                             colleagueusernameIds.AddRange(ids);
                                             if (ids != null && ids.Any() && elevateIds != null && elevateIds.Any())
                                             {
@@ -3114,7 +3132,21 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     else
                     {
                         var ex = new RepositoryException();
-                        ex.AddError(new Domain.Entities.RepositoryError(string.Format("PERSON record '{0}' is missing a guid.", lookupResult.Key.Split('+')[1])));
+                        Domain.Entities.RepositoryError repoError = null;
+                        var message = string.Empty;
+                        try
+                        {
+                            message = string.Format( "PERSON record '{0}' is missing a guid.", lookupResult.Key.Split( '+' )[ 1 ] );
+                            repoError = new Domain.Entities.RepositoryError( "Bad.Data", message );
+                            repoError.SourceId = lookupResult.Key.Split( '+' )[ 1 ];
+                        }
+                        catch( Exception )
+                        {
+                            message = string.Format( "PERSON record '{0}' is missing a guid.", lookupResult.Key );
+                            repoError = new Domain.Entities.RepositoryError( "Bad.Data", message );
+                            repoError.SourceId = lookupResult.Key;
+                        }                        
+                        ex.AddError( repoError );
                         throw ex;
                     }
                 }

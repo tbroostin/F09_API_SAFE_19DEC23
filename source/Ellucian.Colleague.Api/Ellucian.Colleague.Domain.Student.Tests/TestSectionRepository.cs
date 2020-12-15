@@ -62,7 +62,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
 
 
-        public async Task<ICollection<Section>> BuildSectionsWithPrimaryScetionMeetingsAsync()
+        public async Task<ICollection<Section>> BuildSectionsWithPrimarySectionMeetingsAsync()
         {
 
             List<Section> sections = new List<Section>();
@@ -142,6 +142,12 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         public DateTime GetChangedRegistrationSectionsCacheBuildTime()
         {
             return ChangedRegistrationSectionsCacheBuildTime;
+        }
+
+        private DateTime ChangedInstantEnrollmentSectionsCacheBuildTime = new DateTime();
+        public DateTime GetChangedInstantEnrollmentSectionsCacheBuildTime()
+        {
+            return ChangedInstantEnrollmentSectionsCacheBuildTime;
         }
 
         public Task<IEnumerable<SectionGradeResponse>> ImportGradesAsync(SectionGrades sectionGrades, bool forceNoVerifyFlag, bool checkForLocksFlag, GradesPutCallerTypes callerType)
@@ -284,7 +290,9 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                         {
                             sec = new Section(sectionId.ToString(), course.Id, secNo, startDate, course.MinimumCredits, course.Ceus, title + " " + secNo, "IN", depts, course.CourseLevelCodes.ToList(), course.AcademicLevelCode, statuses);
                         }
-
+                      
+                            sec.Subject = course.SubjectCode;
+                     
                         sec.Guid = Guid.NewGuid().ToString();
                         sec.TermId = code;
                         sec.EndDate = term.EndDate;
@@ -956,6 +964,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     }
                 }
             }
+            //adding a section specific for Instant enrollment
+            OfferingDepartment deptForIE = new OfferingDepartment("ENGL", 100m);
+            Domain.Student.Entities.Section sectionForIE = new Domain.Student.Entities.Section("new-sec-ie-1", "7701", "01", DateTime.Today, 3m, null, "crocheting", "IN", new List<OfferingDepartment>() { deptForIE }, new List<string>(){ "100" }, "A1", statuses);
+            sections.Add(sectionForIE);
             string JsonString = Newtonsoft.Json.JsonConvert.SerializeObject(sections, Newtonsoft.Json.Formatting.None);
 
             return sections;
@@ -1282,6 +1294,11 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
 
         public Task<IEnumerable<StudentWaitlistStatus>> GetStudentWaitlistStatusesAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<Section>> GetInstantEnrollmentSectionsAsync()
         {
             throw new NotImplementedException();
         }

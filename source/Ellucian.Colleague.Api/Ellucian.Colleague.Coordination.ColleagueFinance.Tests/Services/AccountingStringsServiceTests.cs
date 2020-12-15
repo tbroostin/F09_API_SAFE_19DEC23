@@ -539,7 +539,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     _accountingStringService.GetAccountingStringComponentValues3Async(offset, limit, criteria, It.IsAny<DateTime?>(), It.IsAny<bool>());
 
             Assert.IsNotNull(actualsTuple);
-            Assert.AreEqual(0, actualsTuple.Item2);
+            Assert.AreEqual(5, actualsTuple.Item2);
         }
 
         [TestMethod]

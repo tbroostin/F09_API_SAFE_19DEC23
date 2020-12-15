@@ -41,6 +41,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             ColleagueFinanceWebConfiguration cfWebConfigurationEntity =new ColleagueFinanceWebConfiguration();
             var cfWebDefaults = await DataReader.ReadRecordAsync<CfwebDefaults>("CF.PARMS", "CFWEB.DEFAULTS");
             var purchaseDefaults = await DataReader.ReadRecordAsync<PurDefaults>("CF.PARMS", "PUR.DEFAULTS");
+            var attachmentParameters = await DataReader.ReadRecordAsync<CfDocAttachParms>("CF.PARMS", "CF.DOC.ATTACH.PARMS");
+            
             if (cfWebDefaults != null)
             {
                 cfWebConfigurationEntity = new ColleagueFinanceWebConfiguration();
@@ -86,12 +88,23 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 {
                     requestPaymentConfiguration.GlRequiredForVoucher = cfWebDefaults.CfwebCkrGlRequired.ToUpper() == "Y";
                 }
+                if (!string.IsNullOrEmpty(cfWebDefaults.CfwebCkrApprovalFlag))
+                {
+                    requestPaymentConfiguration.IsVoucherApprovalNeeded = cfWebDefaults.CfwebCkrApprovalFlag.ToUpper() == "Y" || cfWebDefaults.CfwebCkrApprovalFlag.ToUpper() == "A";
+                }
                 cfWebConfigurationEntity.RequestPaymentDefaults = requestPaymentConfiguration;
 
                 if (purchaseDefaults!=null)
                 {
                     cfWebConfigurationEntity.PurchasingDefaults = new PurchasingDefaults();
-                    cfWebConfigurationEntity.PurchasingDefaults.DefaultShipToCode = purchaseDefaults.PurShipToCode;                    
+                    cfWebConfigurationEntity.PurchasingDefaults.DefaultShipToCode = purchaseDefaults.PurShipToCode;
+                    cfWebConfigurationEntity.PurchasingDefaults.IsRequisitionApprovalNeeded = purchaseDefaults.PurReqApprovalNeededFlag.ToUpper() == "Y" || purchaseDefaults.PurReqApprovalNeededFlag.ToUpper() == "A";
+                    cfWebConfigurationEntity.PurchasingDefaults.IsPOApprovalNeeded = purchaseDefaults.PurPoApprovalNeededFlag.ToUpper() == "Y" || purchaseDefaults.PurPoApprovalNeededFlag.ToUpper() == "A";
+                }
+
+                if(attachmentParameters != null)
+                {
+                    cfWebConfigurationEntity.VoucherAttachmentCollectionId = attachmentParameters.CfDocAttachVoucherCol;
                 }
 
                 cfWebConfigurationEntity.DefaultAPTypeCode = cfWebDefaults.CfwebApType;

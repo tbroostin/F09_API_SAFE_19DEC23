@@ -237,6 +237,29 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 
         #endregion
 
+        #region FixedAssetDesignations
+        public Task<IEnumerable<ColleagueFinance.Entities.FxaTransferFlags>> GetFxaTransferFlagsAsync(bool ignoreCache)
+        {
+            return Task.FromResult<IEnumerable<ColleagueFinance.Entities.FxaTransferFlags>>(new List<ColleagueFinance.Entities.FxaTransferFlags>()
+                {
+                    new Domain.ColleagueFinance.Entities.FxaTransferFlags("884a59d1-20e5-43af-94e3-f1504230bbbc", "ET", "other")
+                });
+        }
+
+        public async Task<string> GetFxaTransferFlagGuidAsync(string code)
+        {
+            var records = new List<ColleagueFinance.Entities.FxaTransferFlags>()
+                {
+                    new ColleagueFinance.Entities.FxaTransferFlags("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1"),
+                    new ColleagueFinance.Entities.FxaTransferFlags("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2"),
+                    new ColleagueFinance.Entities.FxaTransferFlags("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3"),
+                    new ColleagueFinance.Entities.FxaTransferFlags("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4")
+                };
+            return await Task.FromResult(records.FirstOrDefault(c => c.Code == code).Guid);
+
+        }
+        #endregion
+
         public Task<IEnumerable<ColleagueFinance.Entities.VendorType>> GetVendorTypesAsync(bool ignoreCache)
         {
             return Task.FromResult<IEnumerable<ColleagueFinance.Entities.VendorType>>(new List<ColleagueFinance.Entities.VendorType>()

@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Dtos.Base;
 using System.Collections.Generic;
 
@@ -18,6 +18,7 @@ namespace Ellucian.Colleague.Dtos.Student
         public SectionPage()
             : base()
         {
+            Subjects = new List<Filter>();
             DaysOfWeek = new List<Filter>();
             Locations = new List<Filter>();
             CourseTypes = new List<Filter>();
@@ -40,7 +41,10 @@ namespace Ellucian.Colleague.Dtos.Student
         {
 
         }
-
+        /// <summary>
+        /// Course <see cref="Filter">filter</see> results for Subjects
+        /// </summary>
+        public IEnumerable<Filter> Subjects { get; set; }
         /// <summary>
         /// Section <see cref="Filter">filter</see> results for DaysOfWeek
         /// </summary>

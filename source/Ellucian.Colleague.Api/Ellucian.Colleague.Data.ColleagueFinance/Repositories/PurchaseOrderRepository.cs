@@ -18,6 +18,7 @@ using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
 using Ellucian.Colleague.Domain.Base.Services;
+using System.Collections.ObjectModel;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
@@ -310,6 +311,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             purchaseOrderDomainEntity.DefaultCommodityCode = purchaseOrder.PoDefaultCommodity;
             purchaseOrderDomainEntity.Comments = purchaseOrder.PoPrintedComments;
             purchaseOrderDomainEntity.InternalComments = purchaseOrder.PoComments;
+            purchaseOrderDomainEntity.ConfirmationEmailAddresses = purchaseOrder.PoConfEmailAddresses;
 
             // Add any associated requisitions to the purchase order domain entity
             if ((purchaseOrder.PoReqIds != null) && (purchaseOrder.PoReqIds.Count > 0))
@@ -1678,6 +1680,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         lineItemDomainEntity.VendorPart = lineItem.ItmVendorPart;
 
                         lineItemDomainEntity.CommodityCode = lineItem.ItmCommodityCode;
+                        lineItemDomainEntity.FixedAssetsFlag = lineItem.ItmFixedAssetsFlag;
                         lineItemDomainEntity.TradeDiscountAmount = lineItem.ItmPoTradeDiscAmt;
                         lineItemDomainEntity.TradeDiscountPercentage = lineItem.ItmPoTradeDiscPct;
                         lineItemDomainEntity.RequisitionId = lineItem.ItmReqId;
@@ -2098,6 +2101,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     {
                         ItemsDesc= apLineItem.Description,
                         ItemsCommodityCode = apLineItem.CommodityCode,
+                        ItemsFixedAssetsFlag = apLineItem.FixedAssetsFlag,
                         ItemsPartNumber = apLineItem.VendorPart,
                         // Line items have both expected date and desired date.  We want to use expected date.
                         // ItemsDesiredDate = apLineItem.DesiredDate,
@@ -2236,6 +2240,31 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 var requisitions = await DataReader.BulkReadRecordAsync<DataContracts.Requisitions>("REQUISITIONS", requisitionIds.ToArray());
                 var requistionDictionary = (requisitions != null && requisitions.Any()) ? requisitions.ToDictionary(x => x.Recordkey) : new Dictionary<string, Requisitions>();
 
+                // Read the OPERS records associated with the approval signatures and 
+                // next approvers on the purchase orders, and build approver objects.
+                var operators = new List<string>();
+                Collection<DataContracts.Opers> opersCollection = new Collection<DataContracts.Opers>();
+                // get list of Approvers and next approvers from the entire po records
+
+                var allPoDataApprovers = purchaseOrderData.SelectMany(poContract => poContract.PoAuthorizations).Distinct().ToList();
+                if (allPoDataApprovers != null && allPoDataApprovers.Any(x => x != null))
+                {
+                    operators.AddRange(allPoDataApprovers);
+                }
+
+                var allPoDataNextApprovers = purchaseOrderData.SelectMany(poContract => poContract.PoNextApprovalIds).Distinct().ToList();
+                if (allPoDataNextApprovers != null && allPoDataNextApprovers.Any(x => x != null))
+                {
+                    operators.AddRange(allPoDataNextApprovers);
+                }
+
+                var uniqueOperators = operators.Distinct().ToList();
+                if (uniqueOperators.Count > 0)
+                {
+                    opersCollection = await DataReader.BulkReadRecordAsync<DataContracts.Opers>("UT.OPERS", uniqueOperators.ToArray(), true);
+                }
+
+
                 foreach (PurchaseOrders purchaseOrder in purchaseOrderData)
                 {
                     try
@@ -2252,7 +2281,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         {
                             hierarchyNameDictionary.TryGetValue(purchaseOrder.PoVendor, out VendorName);
                         }
-                        purchaseOrderList.Add(BuildPurchaseOrderSummary(purchaseOrder, requistionDictionary, VendorName, initiatorName, requestorName));
+                        purchaseOrderList.Add(BuildPurchaseOrderSummary(purchaseOrder, requistionDictionary, VendorName, initiatorName, requestorName, opersCollection));
                     }
                     catch (Exception ex)
                     {
@@ -2498,7 +2527,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return hierarchyNameDictionary;
         }
 
-        private PurchaseOrderSummary BuildPurchaseOrderSummary(PurchaseOrders purchaseOrderDataContract, Dictionary<string, Requisitions> requistionDictionary, string vendorName, string initiatorName, string requestorName)
+        private PurchaseOrderSummary BuildPurchaseOrderSummary(PurchaseOrders purchaseOrderDataContract, Dictionary<string, Requisitions> requistionDictionary, string vendorName, string initiatorName, string requestorName, Collection<DataContracts.Opers> opersCollection)
         {
             if (purchaseOrderDataContract == null)
             {
@@ -2526,8 +2555,44 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 RequestorName = requestorName,
                 Amount = purchaseOrderDataContract.PoTotalAmt.HasValue ? purchaseOrderDataContract.PoTotalAmt.Value : 0
             };
+            // build approvers and add to entity
+            if ((purchaseOrderDataContract.PoAuthEntityAssociation != null) && (purchaseOrderDataContract.PoAuthEntityAssociation.Any()))
+            {
+                // Approver object is declared once
+                Approver approver;
+                foreach (var approval in purchaseOrderDataContract.PoAuthEntityAssociation)
+                {
+                    //get opersId for the requisition
+                    var oper = opersCollection.FirstOrDefault(x => x.Recordkey == approval.PoAuthorizationsAssocMember);
+                    if (oper != null)
+                    {
+                        approver = new Approver(oper.Recordkey);
+                        approver.SetApprovalName(oper.SysUserName);
+                        approver.ApprovalDate = approval.PoAuthorizationDatesAssocMember.Value;
+                        purchaseOrderSummaryEntity.AddApprover(approver);
+                    }
+                }
+            }
+            // build next approvers and add to entity
+            if ((purchaseOrderDataContract.PoApprEntityAssociation != null) && (purchaseOrderDataContract.PoApprEntityAssociation.Any()))
+            {
+                // Approver object is declared once
+                Approver approver;
+                foreach (var approval in purchaseOrderDataContract.PoApprEntityAssociation)
+                {
+                    //get opersId for the requisition
+                    var oper = opersCollection.FirstOrDefault(x => x.Recordkey == approval.PoNextApprovalIdsAssocMember);
+                    if (oper != null)
+                    {
+                        approver = new Approver(oper.Recordkey);
+                        approver.SetApprovalName(oper.SysUserName);
+                        purchaseOrderSummaryEntity.AddApprover(approver);
+                    }
+                }
+            }
+
             //  Add any associated vouchers to the purchase order summary domain entity
-            if ((purchaseOrderDataContract.PoVouIds != null) && (purchaseOrderDataContract.PoVouIds.Count > 0))
+            if ((purchaseOrderDataContract.PoVouIds != null) && (purchaseOrderDataContract.PoVouIds.Any()))
             {
                 foreach (var voucherId in purchaseOrderDataContract.PoVouIds)
                 {
@@ -2539,7 +2604,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
 
             //  Add any associated requisitions to the purchase order summary domain entity
-            if ((purchaseOrderDataContract.PoReqIds != null) && (purchaseOrderDataContract.PoReqIds.Count > 0))
+            if ((purchaseOrderDataContract.PoReqIds != null) && (purchaseOrderDataContract.PoReqIds.Any()))
             {
                 foreach (var requisitionId in purchaseOrderDataContract.PoReqIds)
                 {

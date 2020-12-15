@@ -490,7 +490,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             #region Populate VouchersSummary
 
             // Loop through the voucher array and create voucher domain entities
-            string requestorName, requestorPersonId;
+            string requestorName;
             VoucherStatus voucherStatus;
             DateTime date;
 
@@ -547,6 +547,35 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 }
             }
             #endregion
+
+            #region Populate approvers
+            for (var i = 0; i < approversArray.GetLength(0); i++)
+            {
+                approverId = approversArray[i, 0];
+                approvalName = approversArray[i, 1];
+
+                if (approversArray[i, 2] == "null")
+                {
+                    approvalDate = null;
+                }
+                else
+                {
+                    approvalDate = Convert.ToDateTime(approversArray[i, 2]);
+                }
+                approvalVoucherId = approversArray[i, 3];
+                var approverDomainEntity = new Approver(approverId);
+                approverDomainEntity.SetApprovalName(approvalName);
+                approverDomainEntity.ApprovalDate = approvalDate;
+
+                foreach (var voucher in voucherSummaryList)
+                {
+                    if (voucher.Id == approvalVoucherId)
+                    {
+                        voucher.AddApprover(approverDomainEntity);
+                    }
+                }
+            }
+            #endregion
         }
 
         public async Task<IEnumerable<VoucherSummary>> GetVoucherSummariesByPersonIdAsync(string personId)
@@ -572,6 +601,13 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         public Task<VoucherCreateUpdateResponse> UpdateVoucherAsync(VoucherCreateUpdateRequest createUpdateRequest, Voucher originalVoucher)
         {
             throw new NotImplementedException();
+        }
+                
+
+        public async Task<IEnumerable<Voucher>> GetVouchersByVendorAndInvoiceNoAsync(string vendorId, string invoiceNo)
+        {
+            return await Task.Run(() => vouchers.Where(x => x.InvoiceNumber == invoiceNo
+            && x.VendorId == vendorId));
         }
     }
 }

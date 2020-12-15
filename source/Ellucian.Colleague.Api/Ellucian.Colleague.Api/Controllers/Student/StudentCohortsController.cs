@@ -6,9 +6,11 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Filters;
+using Ellucian.Web.Http.Models;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
 using slf4net;
@@ -51,9 +53,10 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Gets all student cohorts
         /// </summary>
         /// <returns></returns>
-        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [ValidateQueryStringFilter(new[] { "code" } ), FilteringFilter(IgnoreFiltering = true)]
+        [QueryStringFilterFilter( "criteria", typeof( Dtos.Filters.CodeItemFilter ) )]
         [EedmResponseFilter]
-        public async Task<IEnumerable<Ellucian.Colleague.Dtos.StudentCohort>> GetStudentCohortsAsync()
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.StudentCohort>> GetStudentCohortsAsync( QueryStringFilter criteria )
         {
             bool bypassCache = false;
             if (Request.Headers.CacheControl != null)
@@ -65,7 +68,15 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
-                var items = await _studentService.GetAllStudentCohortsAsync(bypassCache);
+                //Criteria
+                var criteriaObj = GetFilterObject<Dtos.Filters.CodeItemFilter>( _logger, "criteria" );
+
+                if( CheckForEmptyFilterParameters() )
+                {
+                    return new List<Dtos.StudentCohort>();
+                }
+
+                var items = await _studentService.GetAllStudentCohortsAsync( criteriaObj, bypassCache );
 
                 AddEthosContextProperties(
                     await _studentService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),

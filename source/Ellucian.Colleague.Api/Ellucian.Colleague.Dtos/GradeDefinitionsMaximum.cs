@@ -17,13 +17,13 @@ namespace Ellucian.Colleague.Dtos
         /// <summary>
         /// Globally unique identifier for Scheme
         /// </summary>
-        [DataMember(Name = "scheme")]
+        [DataMember(Name = "scheme", EmitDefaultValue = false)]
         public GradeSchemeProperty GradeScheme { get; set; }
 
         /// <summary>
         /// The literal value or numeric range of the grade
         /// </summary>
-        [DataMember(Name = "grade")]
+        [DataMember(Name = "grade", EmitDefaultValue = false)]
         public GradeItem GradeItem { get; set; }
 
         /// <summary>

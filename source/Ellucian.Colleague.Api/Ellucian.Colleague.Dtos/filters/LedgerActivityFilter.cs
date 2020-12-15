@@ -29,6 +29,14 @@ namespace Ellucian.Colleague.Dtos.Filters
         public GuidObject2 FiscalPeriod { get; set; }
 
         /// <summary>
+        /// The fiscal period during which the activity is posted to the ledger.
+        /// </summary>
+        [JsonProperty("period", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
+        public GuidObject2 Period { get; set; }
+
+
+        /// <summary>
         /// The fiscal year during which the activity is posted to the ledger.
         /// </summary>
         [JsonProperty("fiscalYear", DefaultValueHandling = DefaultValueHandling.Ignore)]

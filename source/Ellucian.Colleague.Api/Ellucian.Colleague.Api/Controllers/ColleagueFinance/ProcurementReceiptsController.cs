@@ -78,7 +78,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 var criteriaValues = GetFilterObject<Dtos.ProcurementReceipts>(_logger, "criteria");
 
                 if (CheckForEmptyFilterParameters())
-                    return new PagedHttpActionResult<IEnumerable<Dtos.ProcurementReceipts>>(new List<Dtos.ProcurementReceipts>(), page, this.Request);
+                    return new PagedHttpActionResult<IEnumerable<Dtos.ProcurementReceipts>>(new List<Dtos.ProcurementReceipts>(), page, 0, this.Request);
 
                 var pageOfItems = await _procurementReceiptsService.GetProcurementReceiptsAsync(page.Offset, page.Limit, criteriaValues, bypassCache);
 

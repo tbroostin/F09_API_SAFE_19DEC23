@@ -13,17 +13,15 @@
   
   FGU-dev
       purpose..............: matches build that is currently deployed to PROJDB18
-      Colleague.Api Version: 1.28.1.5
-      deployed date........: 09/05/20
+      Colleague.Api Version: 1.29.1.9
+      deployed date........: 12/15/20
       deployed commit......: see server for actual commit (this is inside source control)
-      zipped code..........: C:\Program Files (x86)\Ellucian\test18_1.26\F09ColleagueApi\FGU-WebApi-FGU-dev.zip
 
   master
       purpose..............: matches build that is currently deployed to PRODUCTION
-      Colleague.Api Version: 1.26.0.8
-      deployed date........: 02/26/20
-      deployed commit......: 65a5571451e0a6070f7ef8b5ad319af52bf9cddc
-      zipped code..........: C:\Program Files (x86)\Ellucian\Live18_1.26\F09ColleagueApi\FGU-WebApi-master.zip
+      Colleague.Api Version: 1.29.1.9
+      deployed date........: 12/15/20
+      deployed commit......: see server for actual commit (this is inside source control)
 
 **-----------------------------------------------------------------
           Deployment Log
@@ -31,7 +29,11 @@
   02/03/20 PROJDB18 v1.26.0.8 65a5571451e0a6070f7ef8b5ad319af52bf9cddc -upgrade API to v1.26
   02/26/20 LIVE     v1.26.0.8 65a5571451e0a6070f7ef8b5ad319af52bf9cddc -upgrade API to v1.26
   07/30/20 TEST18   v1.26.0.8 118526a29b19d7e66b250d5e175486165538124d -Student Evals Project
-  09/05/20 TEST18   v1.28.1.5 (see server)                             -upgrade API to v1.28
+  09/05/20 TEST18   v1.28.1.5 aed9a805f070469a39ec82e434acf594001ee950 -upgrade API to v1.28
+  09/05/20 PROJDB18 v1.28.1.5 aed9a805f070469a39ec82e434acf594001ee950 -upgrade API to v1.28
+  12/15/20 TEST18   v1.29.1.9                                          -upgrade API to v1.29
+  12/15/20 PROJDB18 v1.29.1.9                                          -upgrade API to v1.29
+  12/15/20 LIVE18   v1.29.1.9                                          -upgrade API to v1.29
 
 **-----------------------------------------------------------------
           Summary of Custom CTX Transactions

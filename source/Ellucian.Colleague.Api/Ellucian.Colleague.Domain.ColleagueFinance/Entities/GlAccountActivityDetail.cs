@@ -70,6 +70,16 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         private readonly List<GlTransaction> transactions = new List<GlTransaction>();
 
         /// <summary>
+        /// Boolean flag indicating if justification note indicator should be shown for the GL Account.
+        /// </summary>
+        public bool ShowJustificationNotes { get; set; }
+
+        /// <summary>
+        /// The justification notes for the GL Account.
+        /// </summary>
+        public string JustificationNotes { get; set; }
+
+        /// <summary>
         /// The constructor that initializes the GL account number activity.
         /// </summary>
         /// <param name="glAccount">The GL account</param>

@@ -475,9 +475,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
         private void CheckViewMealPlanRequestPermission()
         {
-            var hasPermission = HasPermission(StudentPermissionCodes.ViewMealPlanRequest);
-
-            if (!hasPermission)
+            if (!HasPermission(StudentPermissionCodes.ViewMealPlanRequest) && !HasPermission(StudentPermissionCodes.CreateMealPlanRequest))
             {
                 throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view MEAL.PLAN.REQS.INTG.");
             }

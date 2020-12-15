@@ -1,9 +1,10 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
+using Ellucian.Colleague.Domain.Student.Entities.InstantEnrollment;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
@@ -422,6 +423,123 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return configuration;
         }
 
+        /// <summary>
+        /// Get the course catalog configuration information needed for course catalog searches
+        /// </summary>
+        /// <returns>The CourseCatalogConfiguration3 entity</returns>
+        public async Task<CourseCatalogConfiguration> GetCourseCatalogConfiguration3Async()
+        {
+            CourseCatalogConfiguration configuration = await GetOrAddToCacheAsync<CourseCatalogConfiguration>("CourseCatalogConfiguration3",
+               async () =>
+               {
+                   Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
+                   Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults catalogSearchDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults>("CORE.PARMS", "CATALOG.SEARCH.DEFAULTS");
+                   CourseCatalogConfiguration result;
+                   if (stwebDefaults == null)
+                   {
+                       var errorMessage = "Unable to access student web defaults from ST.PARMS. STWEB.DEFAULTS.";
+                       logger.Info(errorMessage);
+                       result = new CourseCatalogConfiguration(null, null);
+                   }
+                   else
+                   {
+                       // Only hide course section fee information if flag is set to No
+                       bool showCatSecOtherFees = string.IsNullOrEmpty(stwebDefaults.StwebShowCatSecOtherFee) || stwebDefaults.StwebShowCatSecOtherFee.ToUpper() != "N";
+                       bool showCatSecBookInformation = !string.IsNullOrEmpty(stwebDefaults.StwebShowBookInformation) && stwebDefaults.StwebShowBookInformation.ToUpper() == "Y" ? true : false;
+                       SelfServiceCourseCatalogSearchView defaultSearchView = SelfServiceCourseCatalogSearchView.SubjectSearch;
+                       if (!string.IsNullOrEmpty(stwebDefaults.StwebUseAdvSearchByDflt) && stwebDefaults.StwebUseAdvSearchByDflt.ToUpper() == "Y")
+                       {
+                           defaultSearchView = SelfServiceCourseCatalogSearchView.AdvancedSearch;
+                       }
+
+                       //override the default view of the course catalog search results to be the section table view when StwebSrchRsltTblVwFlag is yes
+                       SelfServiceCourseCatalogSearchResultView defaultSearchResultView = SelfServiceCourseCatalogSearchResultView.CatalogListing;
+                       if (!string.IsNullOrEmpty(stwebDefaults.StwebSrchRsltTblVwFlag) && stwebDefaults.StwebSrchRsltTblVwFlag.ToUpper() == "Y")
+                       {
+                           defaultSearchResultView = SelfServiceCourseCatalogSearchResultView.SectionListing;
+                       }
+
+                       result = new CourseCatalogConfiguration(stwebDefaults.StwebRegStartDate, stwebDefaults.StwebRegEndDate)
+                       {
+                           ShowCourseSectionFeeInformation = showCatSecOtherFees,
+                           ShowCourseSectionBookInformation = showCatSecBookInformation,
+                           DefaultSelfServiceCourseCatalogSearchView = defaultSearchView,
+                           DefaultSelfServiceCourseCatalogSearchResultView = defaultSearchResultView
+                       };
+                   }
+
+                   if (catalogSearchDefaults == null)
+                   {
+                       var errorMessage = "Unable to access catalog search defaults from CORE.PARMS: CATALOG.SEARCH.DEFAULTS.";
+                       logger.Info(errorMessage);
+                   }
+                   else
+                   {
+                       if (catalogSearchDefaults.ClsdSearchElementsEntityAssociation != null && catalogSearchDefaults.ClsdSearchElementsEntityAssociation.Any())
+                       {
+                           foreach (var filterOption in catalogSearchDefaults.ClsdSearchElementsEntityAssociation)
+                           {
+                               if (filterOption.ClsdSearchElementAssocMember != null)
+                               {
+                                   switch (filterOption.ClsdSearchElementAssocMember.ToUpper())
+                                   {
+                                       case "AVAILABILITY":
+                                           result.AddCatalogFilterOption(CatalogFilterType.Availability, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "LOCATIONS":
+                                           result.AddCatalogFilterOption(CatalogFilterType.Locations, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "TERMS":
+                                           result.AddCatalogFilterOption(CatalogFilterType.Terms, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "DAYS_OF_WEEK":
+                                           result.AddCatalogFilterOption(CatalogFilterType.DaysOfWeek, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "TIMES_OF_DAY":
+                                           result.AddCatalogFilterOption(CatalogFilterType.TimesOfDay, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "TIME_STARTS_ENDS":
+                                           result.AddCatalogFilterOption(CatalogFilterType.TimeStartsEnds, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "INSTRUCTORS":
+                                           result.AddCatalogFilterOption(CatalogFilterType.Instructors, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "ACADEMIC_LEVELS":
+                                           result.AddCatalogFilterOption(CatalogFilterType.AcademicLevels, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "COURSE_LEVELS":
+                                           result.AddCatalogFilterOption(CatalogFilterType.CourseLevels, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "COURSE_TYPES":
+                                           result.AddCatalogFilterOption(CatalogFilterType.CourseTypes, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "TOPICS":
+                                           result.AddCatalogFilterOption(CatalogFilterType.TopicCodes, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "INSTRUCTION_TYPES":
+                                           result.AddCatalogFilterOption(CatalogFilterType.InstructionTypes, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "SYNONYMS":
+                                           result.AddCatalogFilterOption(CatalogFilterType.Synonyms, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       default:
+                                           if (logger.IsInfoEnabled)
+                                           {
+                                               logger.Info("Invalid entry in CATALOG.SEARCH.DEFAULTS " + filterOption.ClsdSearchElementAssocMember);
+                                           }
+                                           break;
+                                   }
+                               }
+                           }
+                       }
+                   }
+                   return result;
+
+               });
+
+            return configuration;
+        }
+
 
         /// <summary>
         /// Retrieves the configuration information needed for registration processing asynchronously.
@@ -497,7 +615,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>NameAddressHierarchy</returns>
         private async Task<NameAddressHierarchy> GetAddressHierarchyAsync(string nameAddressHierarchyCode = _preferredHierarchyCode)
         {
-            if(string.IsNullOrEmpty(nameAddressHierarchyCode))
+            if (string.IsNullOrEmpty(nameAddressHierarchyCode))
             {
                 nameAddressHierarchyCode = _preferredHierarchyCode;
             }
@@ -820,11 +938,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             configuration.EmailGradNotifyPara = webDefaults.StwebGradNotifyPara;
 
             //check for NP CP values
-            if (valCodes == null){
+            if (valCodes == null)
+            {
                 configuration.IsNPCPValuesSetForPrograms = false;
             }
-            else{
-                if (valCodes.ValActionCode2.Count(x => x.ToUpper() == "NP") == 1 && valCodes.ValActionCode2.Count(x => x.ToUpper() == "CP") == 1){
+            else
+            {
+                if (valCodes.ValActionCode2.Count(x => x.ToUpper() == "NP") == 1 && valCodes.ValActionCode2.Count(x => x.ToUpper() == "CP") == 1)
+                {
                     configuration.IsNPCPValuesSetForPrograms = true;
                 }
             }
@@ -832,6 +953,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             // Anticipated date global settings
             configuration.HideAnticipatedCompletionDate =
                     (string.IsNullOrEmpty(daDefaults.DaHideAntCmplDtInSsMp) || daDefaults.DaHideAntCmplDtInSsMp.ToUpper() == "Y") ? false : true;
+
+            // Expand Requirements 
+            configuration.ExpandRequirements = 
+                 string.IsNullOrEmpty(daDefaults.DaExpandRequirements) ? string.Empty : daDefaults.DaExpandRequirements.ToUpper();
 
             return configuration;
         }
@@ -919,5 +1044,235 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 (new GradingTerm(r.ValInternalCodeAssocMember, r.ValExternalRepresentationAssocMember)), Level1CacheTimeoutValue);
         }
 
+        /// <summary>
+        /// Retrieves the configuration information needed for Colleague Self-Service instant enrollment
+        /// </summary>
+        public async Task<InstantEnrollmentConfiguration> GetInstantEnrollmentConfigurationAsync()
+        {
+            InstantEnrollmentConfiguration result;
+            InstantEnrollmentConfiguration configuration = await GetOrAddToCacheAsync<InstantEnrollmentConfiguration>("InstantEnrollmentConfiguration",
+                async () =>
+                {
+                    StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
+                    Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults catalogSearchDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults>("CORE.PARMS", "CATALOG.SEARCH.DEFAULTS");
+                    if (stwebDefaults == null)
+                    {
+                        var errorMessage = "Error while retrieving Colleague Self-Service instant enrollment configuration information; unable to retrieve ST.PARMS > STWEB.DEFAULTS.";
+                        logger.Info(errorMessage);
+                        throw new ApplicationException(errorMessage);
+                    }
+                    else
+                    {
+                        AddNewStudentProgramBehavior behavior = GetAddNewStudentProgramBehaviorFromStwebDefaults(stwebDefaults);
+                        List<AcademicProgramOption> options = new List<AcademicProgramOption>();
+                        if (stwebDefaults.WebCeAcadProgramsEntityAssociation != null)
+                        {
+                            foreach (var webCeAcadProgram in stwebDefaults.WebCeAcadProgramsEntityAssociation)
+                            {
+                                if (webCeAcadProgram != null)
+                                {
+                                    try
+                                    {
+                                        AcademicProgramOption option = new AcademicProgramOption(webCeAcadProgram.StwebCeAcadProgramsAssocMember, webCeAcadProgram.StwebCeCatalogsAssocMember);
+                                        options.Add(option);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        logger.Info(ex, string.Format("Academic program option '{0}' is not a valid academic program option.", webCeAcadProgram.StwebCeAcadProgramsAssocMember));
+                                    }
+                                }
+                            }
+                        }
+
+                        List<DemographicField> demographicFields = new List<DemographicField>();
+                        if (stwebDefaults.StwebIePersonInfoFldsEntityAssociation != null)
+                        {
+                            foreach (var webIePersonInfoFld in stwebDefaults.StwebIePersonInfoFldsEntityAssociation)
+                            {
+                                if (webIePersonInfoFld != null)
+                                {
+                                    try
+                                    {
+                                        if (webIePersonInfoFld.StwebIePiFldCodeAssocMember.ToUpperInvariant() != "ADDRESS_LINES")
+                                        {
+                                            demographicFields.Add(new DemographicField(
+                                                webIePersonInfoFld.StwebIePiFldCodeAssocMember,
+                                                webIePersonInfoFld.StwebIePiFldDescAssocMember,
+                                                ConvertStringToDemographicFieldRequirement(webIePersonInfoFld.StwebIePiFldStatusAssocMember)));
+                                        }
+                                        else
+                                        {
+                                            var requirement = ConvertStringToDemographicFieldRequirement(webIePersonInfoFld.StwebIePiFldStatusAssocMember);
+                                            var additionalLinesRequirement = requirement == DemographicFieldRequirement.Required ? DemographicFieldRequirement.Optional : requirement;
+                                            for (int i = 1; i < 5; i++)
+                                            {
+                                                demographicFields.Add(new DemographicField(
+                                                    "ADDRESS_LINE_" + i.ToString(),
+                                                    "Address Line " + i.ToString(),
+                                                    i == 1 ? requirement : additionalLinesRequirement));
+                                            }
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        logger.Info(ex, string.Format("Demographic field '{0}' is not a valid demographic field.", webIePersonInfoFld.StwebIePiFldCodeAssocMember));
+                                    }
+                                }
+                            }
+                        }
+
+                        string paymentDistributionCode = !string.IsNullOrEmpty(stwebDefaults.StwebCeTenderGlDistCode) ? stwebDefaults.StwebCeTenderGlDistCode : stwebDefaults.StwebTenderGlDistrCode;
+                        string citizenshipHomeCountryCode = stwebDefaults.StwebCitizenHomeCountry;
+                        bool webPaymentsImplemented = !string.IsNullOrEmpty(stwebDefaults.StwebPayImplFlag) && stwebDefaults.StwebPayImplFlag.ToUpperInvariant() == "Y";
+                        string registrationUserRole = stwebDefaults.StwebCeRegUserRole;
+                        DateTime? searchEndDate = stwebDefaults.StwebCeEndDate;
+                        bool showInstantEnrollmentBookstoreLink = !string.IsNullOrEmpty(stwebDefaults.StwebCeShowBkstrLnkFlag) && stwebDefaults.StwebCeShowBkstrLnkFlag.ToUpperInvariant() == "Y";
+
+                        result = new InstantEnrollmentConfiguration(behavior, options, paymentDistributionCode, citizenshipHomeCountryCode, webPaymentsImplemented,
+                            registrationUserRole, searchEndDate, showInstantEnrollmentBookstoreLink, demographicFields);
+                        // Add CE Subjects from CECS into the configuration object
+                        if (stwebDefaults.StwebCeSubjects != null && stwebDefaults.StwebCeSubjects.Any())
+                        {
+                            foreach (var subject in stwebDefaults.StwebCeSubjects)
+                            {
+                                result.AddSubjectCodeToDisplayInCatalog(subject);
+                            }
+                        }
+                        // Add Instant Enrollment catalog search options from CATALOG.SEARCH.DEFAULTS
+                        if (catalogSearchDefaults == null)
+                        {
+                            var errorMessage = "Unable to access Instant Enrollment catalog search defaults from CORE.PARMS: CATALOG.SEARCH.DEFAULTS.";
+                            logger.Info(errorMessage);
+                        }
+                        else
+                        {
+                            if (catalogSearchDefaults.ClsdCeSearchElementsEntityAssociation != null && catalogSearchDefaults.ClsdCeSearchElementsEntityAssociation.Any())
+                            {
+                                foreach (var filterOption in catalogSearchDefaults.ClsdCeSearchElementsEntityAssociation)
+                                {
+                                    if (filterOption != null && !String.IsNullOrEmpty(filterOption.ClsdCeSearchElementAssocMember))
+                                    {
+                                        switch (filterOption.ClsdCeSearchElementAssocMember.ToUpper())
+                                        {
+                                            case "AVAILABILITY":
+                                                result.AddCatalogFilterOption(CatalogFilterType.Availability, filterOption.ClsdCeHideAssocMember.ToUpper() == "Y");
+                                                break;
+                                            case "LOCATIONS":
+                                                result.AddCatalogFilterOption(CatalogFilterType.Locations, filterOption.ClsdCeHideAssocMember.ToUpper() == "Y");
+                                                break;
+                                            case "TERMS":
+                                                result.AddCatalogFilterOption(CatalogFilterType.Terms, filterOption.ClsdCeHideAssocMember.ToUpper() == "Y");
+                                                break;
+                                            case "DAYS_OF_WEEK":
+                                                result.AddCatalogFilterOption(CatalogFilterType.DaysOfWeek, filterOption.ClsdCeHideAssocMember.ToUpper() == "Y");
+                                                break;
+                                            case "TIMES_OF_DAY":
+                                                result.AddCatalogFilterOption(CatalogFilterType.TimesOfDay, filterOption.ClsdCeHideAssocMember.ToUpper() == "Y");
+                                                break;
+                                            case "INSTRUCTORS":
+                                                result.AddCatalogFilterOption(CatalogFilterType.Instructors, filterOption.ClsdCeHideAssocMember.ToUpper() == "Y");
+                                                break;
+                                            case "ACADEMIC_LEVELS":
+                                                result.AddCatalogFilterOption(CatalogFilterType.AcademicLevels, filterOption.ClsdCeHideAssocMember.ToUpper() == "Y");
+                                                break;
+                                            case "COURSE_LEVELS":
+                                                result.AddCatalogFilterOption(CatalogFilterType.CourseLevels, filterOption.ClsdCeHideAssocMember.ToUpper() == "Y");
+                                                break;
+                                            case "COURSE_TYPES":
+                                                result.AddCatalogFilterOption(CatalogFilterType.CourseTypes, filterOption.ClsdCeHideAssocMember.ToUpper() == "Y");
+                                                break;
+                                            case "TOPICS":
+                                                result.AddCatalogFilterOption(CatalogFilterType.TopicCodes, filterOption.ClsdCeHideAssocMember.ToUpper() == "Y");
+                                                break;
+                                            case "INSTRUCTION_TYPES":
+                                                result.AddCatalogFilterOption(CatalogFilterType.InstructionTypes, filterOption.ClsdCeHideAssocMember.ToUpper() == "Y");
+                                                break;
+                                            case "SYNONYMS":
+                                                result.AddCatalogFilterOption(CatalogFilterType.Synonyms, filterOption.ClsdCeHideAssocMember.ToUpper() == "Y");
+                                                break;
+                                            default:
+                                                if (logger.IsInfoEnabled)
+                                                {
+                                                    logger.Info("Invalid entry in CATALOG.SEARCH.DEFAULTS " + filterOption.ClsdCeSearchElementAssocMember);
+                                                }
+                                                break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        return result;
+                    }
+
+                });
+            return configuration;
+        }
+
+        private DemographicFieldRequirement ConvertStringToDemographicFieldRequirement(string demographicFieldRequirement)
+        {
+            if (string.IsNullOrEmpty(demographicFieldRequirement))
+            {
+                throw new ArgumentNullException("dfr", "A demographic field requirement must be specified.");
+            }
+            demographicFieldRequirement = demographicFieldRequirement.ToUpperInvariant();
+            switch (demographicFieldRequirement)
+            {
+                case "R":
+                    return DemographicFieldRequirement.Required;
+                case "O":
+                    return DemographicFieldRequirement.Optional;
+                case "N":
+                    return DemographicFieldRequirement.Hidden;
+                default:
+                    throw new ApplicationException("Demographic field requirement is not a valid value.");
+            }
+        }
+
+        private AddNewStudentProgramBehavior GetAddNewStudentProgramBehaviorFromStwebDefaults(StwebDefaults stwebDefaults)
+        {
+            if (stwebDefaults.StwebCeAddStuPrograms == "ANY")
+            {
+                return AddNewStudentProgramBehavior.Any;
+            }
+            if (stwebDefaults.StwebCeAddStuPrograms == "NEW")
+            {
+                return AddNewStudentProgramBehavior.New;
+            }
+            throw new ApplicationException("STWEB.DEFAULTS > STWEB.CE.ADD.STU.PROGRAMS value '{0}' is not a valid value. Valid values are 'NEW' and 'ANY'.");
+        }
+
+        /// <summary>
+        /// Get the unofficial transcript configurations
+        /// </summary>
+        /// <returns>The Unofficial Transcript Configuration entity</returns>
+        public async Task<UnofficialTranscriptConfiguration> GetUnofficialTranscriptConfigurationAsync()
+        {
+            UnofficialTranscriptConfiguration result = new UnofficialTranscriptConfiguration();
+            UnofficialTranscriptConfiguration configuration = await GetOrAddToCacheAsync<UnofficialTranscriptConfiguration>("UnofficialTranscriptConfiguration",
+           async () =>
+           {
+               StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
+
+               if (stwebDefaults == null)
+               {
+                   var errorMessage = "Unable to access student web defaults from ST.PARMS. STWEB.DEFAULTS.";
+                   logger.Info(errorMessage);
+                   stwebDefaults = new StwebDefaults();
+               }
+               else
+               {
+                   result.IsUseTanscriptFormat = string.IsNullOrEmpty(stwebDefaults.StwebStUtUseFormatFlag) || stwebDefaults.StwebStUtUseFormatFlag.ToUpper() != "N";
+                   result.FontSize = (stwebDefaults.StwebStUtReportFont.HasValue) ? stwebDefaults.StwebStUtReportFont.ToString() : "0";
+                   result.PageHeight = (stwebDefaults.StwebStUtReportHeight.HasValue) ?  stwebDefaults.StwebStUtReportHeight.ToString() : "0";
+                   result.PageWidth = (stwebDefaults.StwebStUtReportWidth.HasValue) ? stwebDefaults.StwebStUtReportWidth.ToString() : "0";
+                   result.TopMargin = (stwebDefaults.StwebStUtReportTMargin.HasValue) ? stwebDefaults.StwebStUtReportTMargin.ToString() : "0";
+                   result.RightMargin = (stwebDefaults.StwebStUtReportRMargin.HasValue) ? stwebDefaults.StwebStUtReportRMargin.ToString() : "0";
+                   result.BottomMargin = (stwebDefaults.StwebStUtReportBMargin.HasValue) ? stwebDefaults.StwebStUtReportBMargin.ToString() : "0";
+                   result.LeftMargin = (stwebDefaults.StwebStUtReportLMargin.HasValue) ? stwebDefaults.StwebStUtReportLMargin.ToString() : "0";
+               }
+               return result;
+           });
+            return configuration;
+        }
     }
 }

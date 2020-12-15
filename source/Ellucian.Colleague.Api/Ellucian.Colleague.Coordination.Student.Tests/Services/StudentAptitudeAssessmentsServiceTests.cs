@@ -197,6 +197,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         SpecialFactors = new List<string>() { "A", "D" },
                         StatusCode = "A",
                         StatusCodeSpProcessing = "2",
+                        StatusCodeSpProcessing2 = "EXP",
                         StatusDate = new DateTime(2017, 12, 11),
                         
                     },

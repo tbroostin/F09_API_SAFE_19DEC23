@@ -170,8 +170,8 @@ namespace Ellucian.Colleague.Api.Controllers
                     acadPeriod.Code : string.Empty;
                 var category = acadPeriod.Category != null && acadPeriod.Category.Type != null ?
                     acadPeriod.Category.Type.ToString() : string.Empty;
-                var startOn = acadPeriod.StartOn.HasValue ? acadPeriod.StartOn.Value : default(DateTime?);
-                var endOn = acadPeriod.EndOn.HasValue ? acadPeriod.EndOn.Value : default(DateTime?);
+                var startOn = acadPeriod.StartOn.HasValue ? acadPeriod.StartOn.Value : default(DateTimeOffset?);
+                var endOn = acadPeriod.EndOn.HasValue ? acadPeriod.EndOn.Value : default( DateTimeOffset? );
 
                 var items = await _academicPeriodService.GetAcademicPeriods4Async(bypassCache, registrationStatus, termCode, category, startOn, endOn, filterQualifiers);
 

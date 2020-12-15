@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +12,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using Ellucian.Colleague.Coordination.Student.Services;
+using Ellucian.Colleague.Coordination.Student.Adapters;
+using Ellucian.Colleague.Domain.Base.Entities;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -464,6 +466,117 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         }
 
         [TestClass]
+        public class StudentConfigurationControllerTests_CourseCatalogConfiguration3
+        {
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+
+            private IStudentConfigurationService configurationService;
+            private Mock<IStudentConfigurationService> configurationServiceMock;
+            private IStudentConfigurationRepository studentConfigurationRepo;
+            private Mock<IStudentConfigurationRepository> studentConfigurationRepoMock;
+            private StudentConfigurationController studentConfigurationController;
+            private Dtos.Student.CourseCatalogConfiguration3 configurationDto;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private ILogger logger;
+            DateTime startTime;
+            DateTime endTime;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+                studentConfigurationRepoMock = new Mock<IStudentConfigurationRepository>();
+                studentConfigurationRepo = studentConfigurationRepoMock.Object;
+                configurationServiceMock = new Mock<IStudentConfigurationService>();
+                configurationService = configurationServiceMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                //adapterRegistry = new Mock<IAdapterRegistry>().Object;
+                logger = new Mock<ILogger>().Object;
+                startTime = DateTime.Now.AddDays(-100);
+                endTime = DateTime.Now.AddDays(-10);
+                configurationDto = BuildCourseCatalogConfigurationDto();
+
+                studentConfigurationController = new StudentConfigurationController(studentConfigurationRepo, adapterRegistry, logger, configurationService);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                studentConfigurationController = null;
+                studentConfigurationRepo = null;
+            }
+
+            [TestMethod]
+            public async Task GetCourseCatalogConfiguration3Async_ReturnConfigDto()
+            {
+                // Mock the service get
+                configurationServiceMock.Setup(svc => svc.GetCourseCatalogConfiguration3Async()).Returns(Task.FromResult(configurationDto));
+
+                // Take Action
+                var configuration = await studentConfigurationController.GetCourseCatalogConfiguration3Async();
+
+                // Test Result
+                Assert.IsTrue(configuration is Dtos.Student.CourseCatalogConfiguration3);
+                Assert.AreEqual(1, configuration.CatalogFilterOptions.Count());
+                Assert.AreEqual(startTime, configuration.EarliestSearchDate);
+                Assert.AreEqual(endTime, configuration.LatestSearchDate);
+                Assert.IsTrue(configuration.ShowCourseSectionBookInformation);
+                Assert.IsTrue(configuration.ShowCourseSectionFeeInformation);
+                Assert.AreEqual(configurationDto.DefaultSelfServiceCourseCatalogSearchView, configuration.DefaultSelfServiceCourseCatalogSearchView);
+                Assert.AreEqual(configurationDto.DefaultSelfServiceCourseCatalogSearchResultView, configuration.DefaultSelfServiceCourseCatalogSearchResultView);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetCourseCatalogConfiguration3Async_AnyException_ReturnsHttpResponseException_BadRequest()
+            {
+                studentConfigurationRepoMock.Setup(repo => repo.GetStudentRequestConfigurationAsync()).Throws(new Exception());
+                var configuration = await studentConfigurationController.GetStudentRequestConfigurationAsync();
+            }
+
+            private Dtos.Student.CourseCatalogConfiguration3 BuildCourseCatalogConfigurationDto()
+            {
+                var config = new Dtos.Student.CourseCatalogConfiguration3()
+                {
+                    CatalogFilterOptions = new List<Dtos.Student.CatalogFilterOption3>()
+                    {
+                        new Dtos.Student.CatalogFilterOption3()
+                        {
+                            Type = Dtos.Student.CatalogFilterType3.TimeStartsEnds,
+                            IsHidden = false
+                        }
+                    },
+                    EarliestSearchDate = startTime,
+                    LatestSearchDate = endTime,
+                    ShowCourseSectionBookInformation = true,
+                    ShowCourseSectionFeeInformation = true,
+                    DefaultSelfServiceCourseCatalogSearchView = Dtos.Student.SelfServiceCourseCatalogSearchView.AdvancedSearch,
+                    DefaultSelfServiceCourseCatalogSearchResultView = Dtos.Student.SelfServiceCourseCatalogSearchResultView.SectionListing
+                };
+                return config;
+            }
+        }
+
+        [TestClass]
         public class StudentConfigurationControllerTests_GetRegistrationConfiguration
         {
             private TestContext testContextInstance;
@@ -740,5 +853,188 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 return studentConfig;
             }
         }
+
+        [TestClass]
+        public class StudentConfigurationControllerTests_GetInstantEnrollmentConfiguration
+        {
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+
+            private IStudentConfigurationService configurationService;
+            private Mock<IStudentConfigurationService> configurationServiceMock;
+            private IStudentConfigurationRepository studentConfigurationRepo;
+            private Mock<IStudentConfigurationRepository> studentConfigurationRepoMock;
+            private StudentConfigurationController studentConfigurationController;
+            private Ellucian.Colleague.Domain.Student.Entities.InstantEnrollment.InstantEnrollmentConfiguration configurationEntity;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private ILogger logger;
+            DateTime startTime;
+            DateTime endTime;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+                studentConfigurationRepoMock = new Mock<IStudentConfigurationRepository>();
+                studentConfigurationRepo = studentConfigurationRepoMock.Object;
+                configurationServiceMock = new Mock<IStudentConfigurationService>();
+                configurationService = configurationServiceMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                //adapterRegistry = new Mock<IAdapterRegistry>().Object;
+                logger = new Mock<ILogger>().Object;
+                startTime = DateTime.Now.AddDays(-100);
+                endTime = DateTime.Now.AddDays(-10);
+
+                studentConfigurationController = new StudentConfigurationController(studentConfigurationRepo, adapterRegistry, logger, configurationService);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                studentConfigurationController = null;
+                studentConfigurationRepo = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public void GetInstantEnrollmentConfigurationAsync_ThrowsWhenDemographicFieldsIsNull()
+            {
+                configurationEntity = new Ellucian.Colleague.Domain.Student.Entities.InstantEnrollment.InstantEnrollmentConfiguration(
+                    Domain.Student.Entities.InstantEnrollment.AddNewStudentProgramBehavior.Any,
+                    new List<Domain.Student.Entities.InstantEnrollment.AcademicProgramOption>()
+                    {
+                        new Domain.Student.Entities.InstantEnrollment.AcademicProgramOption("CE.DFLT", "2014X"),
+                        new Domain.Student.Entities.InstantEnrollment.AcademicProgramOption("CE.SYSTEMASSIGNED", "2016"),
+                    }, "BANK", "US", true, "CEUSER", null, false, null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public void GetInstantEnrollmentConfigurationAsync_ThrowsWhenDemographicFieldsIsEmpty()
+            {
+                configurationEntity = new Ellucian.Colleague.Domain.Student.Entities.InstantEnrollment.InstantEnrollmentConfiguration(
+                    Domain.Student.Entities.InstantEnrollment.AddNewStudentProgramBehavior.Any,
+                    new List<Domain.Student.Entities.InstantEnrollment.AcademicProgramOption>()
+                    {
+                        new Domain.Student.Entities.InstantEnrollment.AcademicProgramOption("CE.DFLT", "2014X"),
+                        new Domain.Student.Entities.InstantEnrollment.AcademicProgramOption("CE.SYSTEMASSIGNED", "2016"),
+                    }, "BANK", "US", true, "CEUSER", null, false, new List<DemographicField>());
+            }
+
+            [TestMethod]
+            public async Task GetInstantEnrollmentConfigurationAsync_ReturnConfigDto()
+            {
+                configurationEntity = new Ellucian.Colleague.Domain.Student.Entities.InstantEnrollment.InstantEnrollmentConfiguration(
+                    Domain.Student.Entities.InstantEnrollment.AddNewStudentProgramBehavior.Any, 
+                    new List<Domain.Student.Entities.InstantEnrollment.AcademicProgramOption>()
+                    {
+                        new Domain.Student.Entities.InstantEnrollment.AcademicProgramOption("CE.DFLT", "2014X"),
+                        new Domain.Student.Entities.InstantEnrollment.AcademicProgramOption("CE.SYSTEMASSIGNED", "2016"),
+                    }, "BANK", "US", true, "CEUSER", null, false, 
+                    new List<DemographicField>()
+                    { 
+                        new DemographicField("FIRST_NAME", "First Name", DemographicFieldRequirement.Required),
+                        new DemographicField("MIDDLE_NAME","Middle Name",DemographicFieldRequirement.Optional),
+                        new DemographicField("LAST_NAME","Last Name",DemographicFieldRequirement.Required),
+                    });
+
+                // Mock the respository get
+                studentConfigurationRepoMock.Setup(repo => repo.GetInstantEnrollmentConfigurationAsync()).Returns(Task.FromResult(configurationEntity));
+
+                // Mock the adapters
+                var configAdapter = new InstantEnrollmentConfigurationEntityToDtoAdapter(adapterRegistry, logger);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.InstantEnrollment.InstantEnrollmentConfiguration, Ellucian.Colleague.Dtos.Student.InstantEnrollment.InstantEnrollmentConfiguration>()).Returns(configAdapter);
+
+                // Take Action
+                var configuration = await studentConfigurationController.GetInstantEnrollmentConfigurationAsync();
+
+                // Test Result
+                Assert.IsTrue(configuration is Dtos.Student.InstantEnrollment.InstantEnrollmentConfiguration);
+                Assert.AreEqual(Dtos.Student.InstantEnrollment.AddNewStudentProgramBehavior.Any, configuration.StudentProgramAssignmentBehavior);
+                Assert.AreEqual(2, configuration.AcademicProgramOptions.Count());
+                Assert.AreEqual("BANK", configuration.PaymentDistributionCode);
+                Assert.AreEqual("US", configuration.CitizenshipHomeCountryCode);
+                Assert.AreEqual(true, configuration.WebPaymentsImplemented);
+                Assert.AreEqual("CEUSER", configuration.RegistrationUserRole);
+                Assert.AreEqual(false, configuration.ShowInstantEnrollmentBookstoreLink);
+                Assert.AreEqual(3, configuration.DemographicFields.Count());
+            }
+
+            [TestMethod]
+            public async Task GetInstantEnrollmentConfigurationAsync_ReturnConfigDto_Other()
+            {
+                configurationEntity = new Ellucian.Colleague.Domain.Student.Entities.InstantEnrollment.InstantEnrollmentConfiguration(Domain.Student.Entities.InstantEnrollment.AddNewStudentProgramBehavior.New,
+                    new List<Domain.Student.Entities.InstantEnrollment.AcademicProgramOption>()
+                    {
+                        new Domain.Student.Entities.InstantEnrollment.AcademicProgramOption("CE.DFLT", "2014X"),
+                        new Domain.Student.Entities.InstantEnrollment.AcademicProgramOption("CE.SYSTEMASSIGNED", "2016"),
+                    }, "BANK", "US", false, "CEUSER", null, true,
+                    new List<DemographicField>()
+                    {
+                        new DemographicField("FIRST_NAME", "First Name", DemographicFieldRequirement.Required),
+                        new DemographicField("MIDDLE_NAME","Middle Name",DemographicFieldRequirement.Optional),
+                        new DemographicField("LAST_NAME","Last Name",DemographicFieldRequirement.Required),
+                    });
+
+
+                // Mock the respository get
+                studentConfigurationRepoMock.Setup(repo => repo.GetInstantEnrollmentConfigurationAsync()).Returns(Task.FromResult(configurationEntity));
+
+                // Mock the adapters
+                var configAdapter = new InstantEnrollmentConfigurationEntityToDtoAdapter(adapterRegistry, logger);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.InstantEnrollment.InstantEnrollmentConfiguration, Ellucian.Colleague.Dtos.Student.InstantEnrollment.InstantEnrollmentConfiguration>()).Returns(configAdapter);
+
+                // Take Action
+                var configuration = await studentConfigurationController.GetInstantEnrollmentConfigurationAsync();
+
+                // Test Result
+                Assert.IsTrue(configuration is Dtos.Student.InstantEnrollment.InstantEnrollmentConfiguration);
+                Assert.AreEqual(Dtos.Student.InstantEnrollment.AddNewStudentProgramBehavior.New, configuration.StudentProgramAssignmentBehavior);
+                Assert.AreEqual(2, configuration.AcademicProgramOptions.Count());
+                Assert.AreEqual("BANK", configuration.PaymentDistributionCode);
+                Assert.AreEqual("US", configuration.CitizenshipHomeCountryCode);
+                Assert.AreEqual(false, configuration.WebPaymentsImplemented);
+                Assert.AreEqual("CEUSER", configuration.RegistrationUserRole);
+                Assert.AreEqual(true, configuration.ShowInstantEnrollmentBookstoreLink);
+                Assert.AreEqual(3, configuration.DemographicFields.Count());
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetGetInstantEnrollmentConfigurationAsyncAsync_AnyException_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    studentConfigurationRepoMock.Setup(repo => repo.GetInstantEnrollmentConfigurationAsync()).Throws(new Exception());
+                    var configuration = await studentConfigurationController.GetInstantEnrollmentConfigurationAsync();
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+
+        }
+
     }
 }

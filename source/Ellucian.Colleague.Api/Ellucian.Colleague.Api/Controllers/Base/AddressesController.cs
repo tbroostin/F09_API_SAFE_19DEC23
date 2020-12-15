@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -12,11 +12,11 @@ using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Api.Licensing;
 using slf4net;
 using Ellucian.Colleague.Configuration.Licensing;
+using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Web.License;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Domain.Exceptions;
@@ -98,7 +98,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="criteria">Address Query Criteria including PersonIds list.</param>
         /// <returns>List of Address Objects <see cref="Ellucian.Colleague.Dtos.Base.Address">Address</see></returns>
-        public IEnumerable<Ellucian.Colleague.Dtos.Base.Address> QueryAddresses(AddressQueryCriteria criteria)
+        /// <accessComments>User must have VIEW.ADDRESS permission or search for their own address(es)</accessComments>
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.Base.Address>> QueryAddressesAsync(AddressQueryCriteria criteria)
         {
             if (criteria.PersonIds == null || criteria.PersonIds.Count() <= 0)
             {
@@ -107,6 +108,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
+                await _addressService.QueryAddressPermissionAsync(criteria.PersonIds);
+
                 var addressDtoCollection = new List<Ellucian.Colleague.Dtos.Base.Address>();
                 var addressCollection = _addressRepository.GetPersonAddressesByIds(criteria.PersonIds.ToList());
                 // Get the right adapter for the type mapping
@@ -121,6 +124,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             catch (PermissionsException pex)
             {
+                _logger.Error(pex.Message, "QueryAddresses error");
                 throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
             }
             catch (Exception e)

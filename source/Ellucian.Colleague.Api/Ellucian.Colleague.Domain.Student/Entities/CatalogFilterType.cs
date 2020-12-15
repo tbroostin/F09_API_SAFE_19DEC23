@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 using System;
 
 namespace Ellucian.Colleague.Domain.Student.Entities
@@ -56,8 +56,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// <summary>
         /// Section Synonyms
         /// </summary>
-        Synonyms
-
-
+        Synonyms,
+        /// <summary>
+        /// Time Starts by and Ends by Filter
+        /// </summary>
+        TimeStartsEnds
     }
 }

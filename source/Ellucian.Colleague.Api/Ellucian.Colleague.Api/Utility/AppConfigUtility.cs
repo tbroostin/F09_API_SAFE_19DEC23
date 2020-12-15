@@ -1,5 +1,6 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.App.Config.Storage.Service.Client;
+using Ellucian.Colleague.Api.Models;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Mvc.Install;
 using Ellucian.Web.Mvc.Install.Backup;
@@ -63,7 +64,14 @@ namespace Ellucian.Colleague.Api.Utility
                 // this is a brand new instance with no setting configured. 
                 // Just return an empty config object. The monitor job will start and if there's any backup config data, it will be restored.
                 // Note: this should not happen for SaaS as the basic connection parms are set as part of provisioning.
-                return new Domain.Base.Entities.BackupConfiguration();
+                var blankConfig = new Domain.Base.Entities.BackupConfiguration()
+                {
+                    Namespace = nameSpace,
+                    ProductId = ApiProductInfo.ProductId,
+                    ProductVersion = ApiProductInfo.ProductVersion,
+                    ConfigVersion = ApiConfigVersion,
+                };
+                return blankConfig;
             }
 
             IApiSettingsRepository apiSettingsRepo = DependencyResolver.Current.GetService<IApiSettingsRepository>();
@@ -78,7 +86,7 @@ namespace Ellucian.Colleague.Api.Utility
                 apiSettings = apiSettingsRepo.Get(backupData.Settings.ProfileName);
             }catch(Exception e)
             {
-                logger.Warn("Exception occurred reading API profile \"" + backupData.Settings.ProfileName + "\".", e);
+                logger.Warn(e, "Exception occurred reading API profile \"" + backupData.Settings.ProfileName + "\".");
             }
 
             backupData.ApiSettings = apiSettings;
@@ -176,7 +184,7 @@ namespace Ellucian.Colleague.Api.Utility
                     }
                     catch (Exception e)
                     {
-                        logger.Error("Could not write bytes to file " + entry.Key, e);
+                        logger.Error(e, "Could not write bytes to file " + entry.Key);
                     }
                 }
             }
@@ -190,6 +198,7 @@ namespace Ellucian.Colleague.Api.Utility
                     AddOrUpdateAppSettings(logger, "IncludeLinkSelfHeaders", apiBackupConfigData.ApiSettings.IncludeLinkSelfHeaders.ToString());
                     AddOrUpdateAppSettings(logger, "EnableConfigBackup", apiBackupConfigData.ApiSettings.EnableConfigBackup.ToString());
                     AddOrUpdateAppSettings(logger, "AttachRequestMaxSize", apiBackupConfigData.ApiSettings.AttachRequestMaxSize.ToString());
+                    AddOrUpdateAppSettings(logger, "DetailedHealthCheckApiEnabled", apiBackupConfigData.ApiSettings.DetailedHealthCheckApiEnabled.ToString());
                 }
                 catch (Exception e)
                 {
@@ -246,7 +255,7 @@ namespace Ellucian.Colleague.Api.Utility
                             }
                             catch(Exception e)
                             {
-                                logger.Error("Could not write to file " + entry.Key, e);
+                                logger.Error(e, "Could not write to file " + entry.Key);
                             }
                         }
                         logger.Info("Resource files replaced.");
@@ -272,7 +281,7 @@ namespace Ellucian.Colleague.Api.Utility
                             }
                             catch (Exception e)
                             {
-                                logger.Error("Could not write to file " + entry.Key, e);
+                                logger.Error(e, "Could not write to file " + entry.Key);
                             }
                         }
                         File.Delete(changeLogPath);
@@ -310,11 +319,383 @@ namespace Ellucian.Colleague.Api.Utility
                     // do nothing, as there are no resource changes in either the instance or the backup config data
                     logger.Info("No action was taken for resource files, since there are no resource file changes in either the instance or the backup config data.");
                 }
+            }
+            logger.Info("API configuration restored/updated successfully.");
+        }
 
+        /// <summary>
+        /// Apply config changes from a valid staging config file.
+        /// This action will occur only once. The staging config file will be archived after it is processed and will not be processed again.
+        /// </summary>
+        /// <returns>True if changes occurred. False if no changes made.</returns>
+        public static bool ApplyStagingConfigFile()
+        {
+            var logger = DependencyResolver.Current.GetService<ILogger>();
+            var stagingConfig = GetStagingConfig(logger);
+            bool changesOccurred = false;
+            if (stagingConfig != null)
+            {
+                logger.Info("Valid staging config file found, applying it...");
+                try
+                {
+                    changesOccurred = AppConfigUtility.UpdateConfigsWithStagingData(logger, stagingConfig);
+                    logger.Info("Staging config file has been processed.");
+                }
+                catch(Exception e)
+                {
+                    logger.Error(e, "Error occurred processing staging config data. ");
+                };
+
+                // archive the staging config file once it's processed, so it doesn't get reapplied evert startup.
+                // this is done even in the event that the processing failed, so the app doesn't get stuck in a loop.
+                ArchiveStagingConfigFile(logger);
+                logger.Info("Staging config file has been archived and will not be processed again on next startup.");
+            }
+            return changesOccurred;
+        }
+
+        /// <summary>
+        /// Similar to the restore method, but the source is the staging config file.
+        /// </summary>
+        /// <param name="logger"></param>
+        /// <param name="stagingConfig"></param>
+        /// <returns>True if changes occurred. False if no changes made.</returns>
+        private static bool UpdateConfigsWithStagingData(ILogger logger, SaasStagingConfiguration stagingConfig)
+        {
+            // Go through each supported config for staging, and update it in the supplied config data if it is present in the staging file.
+            // Document supported staging configs here: 
+            // https://confluence.ellucian.com/display/colleague/Config+Staging+File+Template#ConfigStagingFileTemplate-Supportedstagingconfigsbyproduct
+
+            bool changesOccurred = false;
+
+            // ------- all general settings ------------
+
+            ISettingsRepository settingsRepo = DependencyResolver.Current.GetService<ISettingsRepository>();
+            Settings currentSettings = null;
+
+            // Set log level
+            string logLevelSettingName = "log level";
+            var newLogLevelSetting = GetSettingFromStagingConfigFile(stagingConfig, logLevelSettingName);
+            if (newLogLevelSetting != null && !string.IsNullOrWhiteSpace(newLogLevelSetting.SettingValue))
+            {
+                if (currentSettings == null)
+                {
+                    currentSettings = settingsRepo.Get();
+                }
+                var newLogLevelString = newLogLevelSetting.SettingValue;
+                var oldLogLevel = currentSettings.LogLevel.ToString();
+
+                System.Diagnostics.SourceLevels newLogLevel;
+                if (Enum.TryParse(newLogLevelString, true, out newLogLevel))
+                {
+                    var newSettings = new Settings(currentSettings.ColleagueSettings, newLogLevel) { ProfileName = currentSettings.ProfileName };
+                    currentSettings = newSettings; 
+                    changesOccurred = true;
+                    logger.Info(string.Format("Staging file changes: {0}. Old value={1}; new value={2}", logLevelSettingName, oldLogLevel, newLogLevelString));
+                }
+                else
+                {
+                    logger.Error(string.Format("Staging file changes: Invalid input for setting {0}: {1}", logLevelSettingName, newLogLevelString));
+                }
             }
 
-            logger.Info("API configuration restored/updated successfully.");
+            // Set api settings profile name
+            string apiProfileNameSettingName = "api profile name";
+            var newApiProfileNameSetting = GetSettingFromStagingConfigFile(stagingConfig, apiProfileNameSettingName);
+            if (newApiProfileNameSetting != null && !string.IsNullOrWhiteSpace(newApiProfileNameSetting.SettingValue))
+            {
+                if (currentSettings == null)
+                {
+                    currentSettings = settingsRepo.Get();
+                }
+                var newApiProfileNameString = newApiProfileNameSetting.SettingValue;
+                var oldApiProfileName = currentSettings.ProfileName;
 
+                if (!string.IsNullOrWhiteSpace(newApiProfileNameString))
+                {
+                    var newSettings = new Settings(currentSettings.ColleagueSettings, currentSettings.LogLevel) { ProfileName = newApiProfileNameString };
+                    currentSettings = newSettings;
+                    changesOccurred = true;
+                    logger.Info(string.Format("Staging file changes: {0}. Old value={1}; new value={2}", apiProfileNameSettingName, oldApiProfileName, newApiProfileNameString));
+                }
+                else
+                {
+                    logger.Error(string.Format("Staging file changes: Invalid input for setting {0}: {1}", apiProfileNameSettingName, newApiProfileNameString));
+                }
+            }
+
+            // set shared secret
+            string apiSharedSecretSettingName = "api shared secret";
+            var newApiSharedSecretSetting = GetSettingFromStagingConfigFile(stagingConfig, apiSharedSecretSettingName);
+            if (newApiSharedSecretSetting != null && !string.IsNullOrWhiteSpace(newApiSharedSecretSetting.SettingValue))
+            {
+                if (currentSettings == null)
+                {
+                    currentSettings = settingsRepo.Get();
+                }
+                var newApiSharedSecretString = newApiSharedSecretSetting.SettingValue;
+                string decryptedNewApiSharedSecret = null;
+                try
+                {
+                    decryptedNewApiSharedSecret = Utilities.DecryptString(newApiSharedSecretString);
+                }catch(Exception e)
+                {
+                    logger.Error(e, string.Format("Staging file changes: Decryption failed for {0}, error: {1}", apiSharedSecretSettingName, e.Message));
+                }
+
+                if (!string.IsNullOrWhiteSpace(decryptedNewApiSharedSecret))
+                {
+                    var oldApiSharedSecret = currentSettings.ColleagueSettings.DmiSettings.SharedSecret;
+
+                    var newColleagueSettings = currentSettings.ColleagueSettings;
+                    newColleagueSettings.DmiSettings.SharedSecret = decryptedNewApiSharedSecret;
+                    var newSettings = new Settings(currentSettings.ColleagueSettings, currentSettings.LogLevel) { ProfileName = currentSettings.ProfileName };
+                    currentSettings = newSettings;
+                    changesOccurred = true;
+                    logger.Info(string.Format("Staging file changes: {0}. Old value={1}; new value={2}", apiSharedSecretSettingName, "*notshown*", "*notshown*"));
+                }
+                else
+                {
+                    logger.Error(string.Format("Staging file changes: Invalid input for setting {0}: {1}", apiSharedSecretSettingName, "*not shown*"));
+                }
+            }
+
+            if (currentSettings != null && changesOccurred)
+            {
+                // object currentSettings now has all the new settings applied. Update it.
+                settingsRepo.Update(currentSettings);
+                logger.Info("Staging file changes: updated 'settings' object.");
+
+                //logger.Info("new settings=" + JsonConvert.SerializeObject(currentSettings)); for debugging only, contains plaintext secrets.
+            }            
+
+            // ------ all WEB.API.CONFIG related settings -----------
+
+            IApiSettingsRepository apiSettingsRepo = DependencyResolver.Current.GetService<IApiSettingsRepository>();
+            ApiSettings currentApiSettings = null;
+
+            // Note: the binary file paths are part of the profile setting, which is stored in data base table UT.PARMS WEB.API.CONFIG
+
+            // set report logo file (encoded binary string)
+            var newReportLogoFileSetting = GetSettingFromStagingConfigFile(stagingConfig, "report logo file");
+            if (newReportLogoFileSetting != null && !string.IsNullOrWhiteSpace(newReportLogoFileSetting.SettingValue))
+            {
+                var newReportLogoFileString = newReportLogoFileSetting.SettingValue;
+                if (string.IsNullOrWhiteSpace(newReportLogoFileString))
+                {
+                    logger.Error("Staging file changes: Invalid report logo file setting - value is empty.");
+                }
+                else
+                {
+                    // get report logo path
+                    if (currentSettings == null)
+                    {
+                        currentSettings = settingsRepo.Get();
+                    }
+                    if (currentApiSettings == null)
+                    {
+                        try
+                        {
+                            currentApiSettings = apiSettingsRepo.Get(currentSettings.ProfileName);
+                        }
+                        catch (Exception e)
+                        {
+                            logger.Error(e, "Staging file changes: could not read API profile setting record.");
+                        }
+                    }
+                    string reportLogoPath = null;
+                    if (currentApiSettings != null)
+                    {
+                        reportLogoPath = currentApiSettings.ReportLogoPath;
+                        if (!string.IsNullOrWhiteSpace(reportLogoPath) && !reportLogoPath.StartsWith("~"))
+                        {
+                            reportLogoPath = "~" + reportLogoPath;
+                        }
+                    }
+                    if (string.IsNullOrWhiteSpace(reportLogoPath))
+                    {
+                        reportLogoPath = "~/Images/report-logo.png";
+                        logger.Info("Staging file changes: no current report logo file path is set, using SAAS default - " + reportLogoPath);
+                    }
+
+                    byte[] fileBytes = null;
+                    try
+                    {
+                        fileBytes = Convert.FromBase64String(newReportLogoFileString);
+                    }
+                    catch (Exception e)
+                    {
+                        logger.Error(e, "Staging file changes: Could not base64-decode report logo file string.");
+                    }
+
+                    if (fileBytes != null)
+                    {
+                        try
+                        {
+                            var fileMapPath = HostingEnvironment.MapPath(reportLogoPath); // these paths are relative paths
+                            File.WriteAllBytes(fileMapPath, fileBytes); // this will overwrite existing file of same name.
+                            changesOccurred = true;
+                            logger.Info("Staging file changes: Updated report logo file at " + reportLogoPath);
+                        }
+                        catch (Exception e)
+                        {
+                            logger.Error(e, "Staging file changes: Could not write bytes to report logo file path " + reportLogoPath);
+                        }
+                    }
+                }
+            }
+
+            // set unofficial watermark file (encoded binary string)
+            var newUnofficialWatermarkFileSetting = GetSettingFromStagingConfigFile(stagingConfig, "unofficial watermark file");
+            if (newUnofficialWatermarkFileSetting != null && !string.IsNullOrWhiteSpace(newUnofficialWatermarkFileSetting.SettingValue))
+            {
+                var newUnofficialWatermarkFileString = newUnofficialWatermarkFileSetting.SettingValue;
+                if (string.IsNullOrWhiteSpace(newUnofficialWatermarkFileString))
+                {
+                    logger.Error("Staging file changes: Invalid unofficial watermark file setting - value is empty.");
+                }
+                else
+                {
+                    // get unofficial watermark path
+                    if (currentSettings == null)
+                    {
+                        currentSettings = settingsRepo.Get();
+                    }
+                    if (currentApiSettings == null)
+                    {
+                        try
+                        {
+                            currentApiSettings = apiSettingsRepo.Get(currentSettings.ProfileName);
+                        }
+                        catch (Exception e)
+                        {
+                            logger.Error(e, "Staging file changes: could not read API profile setting record.");
+                        }
+                    }
+                    string unofficialWatermarkPath = null;
+                    if (currentApiSettings != null)
+                    {
+                        unofficialWatermarkPath = currentApiSettings.UnofficialWatermarkPath;
+                        if (!string.IsNullOrWhiteSpace(unofficialWatermarkPath) && !unofficialWatermarkPath.StartsWith("~"))
+                        {
+                            unofficialWatermarkPath = "~" + unofficialWatermarkPath;
+                        }
+                    }
+                    if (string.IsNullOrWhiteSpace(unofficialWatermarkPath))
+                    {
+                        unofficialWatermarkPath = "~/Images/unofficial-watermark.png";
+                        logger.Info("Staging file changes: no current watermark file path is set, using SAAS default - " + unofficialWatermarkPath);
+                    }
+
+                    byte[] fileBytes = null;
+                    try
+                    {
+                        fileBytes = Convert.FromBase64String(newUnofficialWatermarkFileString);
+                    }
+                    catch (Exception e)
+                    {
+                        logger.Error(e, "Staging file changes: Could not base64-decode unofficial watermark file string.");
+                    }
+
+                    if (fileBytes != null)
+                    {
+                        try
+                        {
+                            var fileMapPath = HostingEnvironment.MapPath(unofficialWatermarkPath); // these paths are relative paths
+                            File.WriteAllBytes(fileMapPath, fileBytes); // this will overwrite existing file of same name.
+                            changesOccurred = true;
+                            logger.Info("Staging file changes: Updated unofficial watermark file at " + unofficialWatermarkPath);
+                        }
+                        catch (Exception e)
+                        {
+                            logger.Error(e, "Staging file changes: Could not write bytes to unofficial watermark file path " + unofficialWatermarkPath);
+                        }
+                    }
+                }
+            }
+
+            return changesOccurred;
+        }
+
+        /// <summary>
+        /// Return the UpdateSetting object from the staging config object with matching setting name
+        /// </summary>
+        /// <param name="stagingConfig"></param>
+        /// <param name="primarySettingName"></param>
+        /// <returns></returns>
+        public static UpdateSetting GetSettingFromStagingConfigFile(SaasStagingConfiguration stagingConfig, string primarySettingName)
+        {
+            UpdateSetting setting = null;
+            if (string.IsNullOrWhiteSpace(primarySettingName))
+            {
+                return null;
+            }
+            setting = stagingConfig.UpdateSettings.Where(
+                        s => s.SettingName.Equals(primarySettingName, StringComparison.OrdinalIgnoreCase))
+                    .FirstOrDefault();
+            return setting;
+        }
+
+
+        private static string SaasStagingConfigFilePath = "~/App_Data/SaasStagingConfig.json";
+
+        /// <summary>
+        /// Return the staging config object, if a valid file exists.
+        /// </summary>
+        private static SaasStagingConfiguration GetStagingConfig(ILogger logger)
+        {
+            SaasStagingConfiguration stagingConfig = null;
+            var path = HostingEnvironment.MapPath(SaasStagingConfigFilePath);
+            if (!File.Exists(path))
+            {
+                logger.Info("No staging config file found at " + SaasStagingConfigFilePath);
+                return null;
+            }
+            var json = File.ReadAllText(path);
+            try
+            {
+                stagingConfig = JsonConvert.DeserializeObject<SaasStagingConfiguration>(json);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Error occurred serializing the staging config object.");
+                return null;
+            }
+
+            if (!stagingConfig.ApplicationName.Equals("Web API", StringComparison.Ordinal))
+            {
+                logger.Error("Staging config: app mismatch - expected 'Web API', but found: " + stagingConfig.ApplicationName);
+                return null;
+            }
+
+            if (!Utilities.VerifyNewConfigVersionOK(ApiConfigVersion, stagingConfig.MinimumConfigVersion))
+            {
+                // minimumConfigVersion <= ApiConfigVersion
+                logger.Error("Staging config: minimum version " + stagingConfig.MinimumConfigVersion + " is not supported. App config version is : " + ApiConfigVersion);
+                return null;
+            }
+
+            return stagingConfig;
+        }
+
+        /// <summary>
+        /// Rename/archive the stagingconfigfile so that it doesn't get re-applied on next startup.
+        /// </summary>
+        private static void ArchiveStagingConfigFile(ILogger logger)
+        {
+            var path = HostingEnvironment.MapPath(SaasStagingConfigFilePath);
+            if (!File.Exists(path))
+            {
+                return;
+            }
+            try
+            {
+                System.IO.File.Move(path, path + "_archived_" + DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss"));
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Error occurred archiving staging config file.");
+            }
         }
 
         private static ApiBackupConfigData EncryptSecrets(ApiBackupConfigData unencryptedConfigData)
@@ -372,7 +753,7 @@ namespace Ellucian.Colleague.Api.Utility
             }
             catch (ConfigurationErrorsException e)
             {
-                logger.Error("Error writing app settings", e);
+                logger.Error(e, "Error writing app settings");
             }
         }
 
@@ -429,7 +810,7 @@ namespace Ellucian.Colleague.Api.Utility
             }
             catch(Exception e)
             {
-                logger.Error("Error retrieving binary files", e);
+                logger.Error(e, "Error retrieving binary files");
             }
             // dict contains relative paths only.
             return dict;
@@ -459,7 +840,7 @@ namespace Ellucian.Colleague.Api.Utility
             }
             catch (Exception e)
             {
-                logger.Error("Error retrieving resource files", e);
+                logger.Error(e, "Error retrieving resource files");
             }
             return dict;
         }

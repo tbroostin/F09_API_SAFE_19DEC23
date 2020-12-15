@@ -52,12 +52,13 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// and PersonPositionWages of all the employees whose leave requests are handled by this leave approver.
         /// </accessComments>
         /// <param name="effectivePersonId">Optional parameter for effective personId, which should be used when proxying on behalf of another user.</param>
+        /// <param name="lookupStartDate">lookup start date, all records with end date before this date will not be retrieved</param>
         /// <returns>A collection of PersonPositionWage objects</returns>
-        public async Task<IEnumerable<PersonPositionWage>> GetPersonPositionWagesAsync(string effectivePersonId = null)
+        public async Task<IEnumerable<PersonPositionWage>> GetPersonPositionWagesAsync(string effectivePersonId = null, DateTime? lookupStartDate = null)
         {
             try
             {
-                return await personPositionWageService.GetPersonPositionWagesAsync(effectivePersonId);
+                return await personPositionWageService.GetPersonPositionWagesAsync(effectivePersonId, lookupStartDate);
             }
             catch(Exception e)
             {

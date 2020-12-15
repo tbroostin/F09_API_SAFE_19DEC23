@@ -23,9 +23,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <summary>
         /// Get the status for a bulk request
         /// </summary>
+        /// <param name="resourceName">name of the requesting resource</param>
         /// <param name="id">id of the bulk request to get the status of</param>
+        /// <param name="permissionCode"></param>
         /// <returns>Bulk request status</returns>
-        Task<Dtos.BulkLoadGet> GetBulkLoadRequestStatus(string id);
+        Task<Dtos.BulkLoadGet> GetBulkLoadRequestStatus(string resourceName, string id, string permissionCode);
 
         /// <summary>
         /// Gets the system status of if bulk loads are supported

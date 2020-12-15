@@ -121,6 +121,38 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Assert.AreEqual(result.Item2, 0);
         }
 
+        //[TestMethod]
+        //public async Task InstitutionsAttendRepository_GetInstitutionTypesAsync()
+        //{
+           
+        //    //dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new List<string>() { "1*1", "2*2" }.ToArray<string>());
+        //    // dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), true, It.IsAny<int>())).ReturnsAsync(new List<string>() { "1", "2" }.ToArray<string>());
+        //    //dataReaderMock.Setup(d => d.BulkReadRecordAsync<InstitutionsAttend>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(institutionsAttends);
+        //    //dataReaderMock.Setup(d => d.ReadRecordAsync<InstitutionsAttend>(It.IsAny<string>(), true)).ReturnsAsync(institutionsAttends.FirstOrDefault());
+
+        //    //var institutionAttends = await DataReader.SelectAsync("INSTITUTIONS.ATTEND",
+        //    //    institutionAttendLimitingKeys != null && institutionAttendLimitingKeys.Any() ? institutionAttendLimitingKeys.ToArray() : null, criteria);
+        //    var ids = new List<string>() { "1*1", "2*2" };
+        //    dataReaderMock.Setup(d => d.SelectAsync("INSTITUTIONS.ATTEND", It.IsAny<string[]>(), It.IsAny<string>()))
+        //            .ReturnsAsync(ids.ToArray());
+
+        //    //var institutionIds = await DataReader.SelectAsync("INSTITUTIONS", "WITH INST.TYPE = '?'", types);
+        //    dataReaderMock.Setup(d => d.SelectAsync("INSTITUTIONS", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), true, It.IsAny<int>()))
+        //        .ReturnsAsync(new List<string>() { "1", "2" }.ToArray<string>());
+
+        //    // var institutionsAttendData = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<Ellucian.Colleague.Data.Base.DataContracts.InstitutionsAttend>("INSTITUTIONS.ATTEND", subList);
+
+        //    var results = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.InstitutionsAttend>() { BulkRecordsRead = institutionsAttends };
+        //    dataReaderMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.InstitutionsAttend>("INSTITUTIONS.ATTEND", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(results);
+
+
+        //    var result = await institutionsAttendRepository.GetInstitutionsAttendAsync(0, 10);
+            
+        //    Assert.IsNotNull(result);
+        //    Assert.AreEqual(result.Item2, 0);
+        //}
+
+
         [TestMethod]
         [ExpectedException(typeof(RepositoryException))]
         public async Task InstitutionsAttendRepository_GetInstitutionAttendByIdAsync_EmptyId()
@@ -249,5 +281,4 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             await institutionsAttendRepository.GetInstitutionsAttendIdFromGuidAsync("1a49eed8-5fe7-4120-b1cf-f23266b9e874");
         }
     }
-
 }

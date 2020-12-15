@@ -37,6 +37,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         private IEnumerable<FinancialAidFund> allFinancialAidFund;
         private List<Dtos.FinancialAidFunds> financialAidFundCollection;
         Tuple<IEnumerable<Dtos.FinancialAidFunds>, int> financialAidFundTuple;
+        private QueryStringFilter criteriaFilter = new QueryStringFilter("criteria", "");
         Web.Http.Models.Paging paging = new Web.Http.Models.Paging(100, 0);
 
         [TestInitialize]
@@ -82,45 +83,59 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             financialAidFundServiceMock = null;
         }
 
-        //[TestMethod]
-        //public async Task FinancialAidFundController_GetFinancialAidFund_ValidateFields_Nocache()
-        //{
-        //    financialAidFundsController.Request.Headers.CacheControl =
-        //         new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+        [TestMethod]
+        public async Task FinancialAidFundController_GetFinancialAidFund_ValidateFields_Nocache()
+        {
+            financialAidFundsController.Request.Headers.CacheControl =
+                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
 
-        //    financialAidFundServiceMock.Setup(x => x.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ReturnsAsync(financialAidFundTuple);
+            financialAidFundServiceMock.Setup(x => x.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Filters.FinancialAidFundsFilter>(), false)).ReturnsAsync(financialAidFundTuple);
 
-        //    var sourceContexts = await financialAidFundsController.GetFinancialAidFundsAsync(paging);
-        //    Assert.AreEqual(financialAidFundCollection.Count, sourceContexts.Count);
-        //    for (var i = 0; i < sourceContexts.Count; i++)
-        //    {
-        //        var expected = financialAidFundCollection[i];
-        //        var actual = sourceContexts[i];
-        //        Assert.AreEqual(expected.Id, actual.Id, "Id, Index=" + i.ToString());
-        //        Assert.AreEqual(expected.Title, actual.Title, "Title, Index=" + i.ToString());
-        //        Assert.AreEqual(expected.Code, actual.Code, "Code, Index=" + i.ToString());
-        //    }
-        //}
+            var results = await financialAidFundsController.GetFinancialAidFundsAsync(paging, criteriaFilter);
+            var cancelToken = new System.Threading.CancellationToken(false);
 
-        //[TestMethod]
-        //public async Task FinancialAidFundController_GetFinancialAidFund_ValidateFields_Cache()
-        //{
-        //    financialAidFundsController.Request.Headers.CacheControl =
-        //        new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+            HttpResponseMessage httpResponseMessage = await results.ExecuteAsync(cancelToken);
 
-        //    financialAidFundServiceMock.Setup(x => x.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), true)).ReturnsAsync(financialAidFundCollection);
+            IEnumerable<Dtos.FinancialAidFunds> sourceContexts = ((ObjectContent<IEnumerable<Dtos.FinancialAidFunds>>)httpResponseMessage.Content)
+                                                            .Value as IEnumerable<Dtos.FinancialAidFunds>;
 
-        //    var sourceContexts = await financialAidFundsController.GetFinancialAidFundsAsync(paging);
-        //    Assert.AreEqual(financialAidFundCollection.Count, sourceContexts.Count);
-        //    for (var i = 0; i < sourceContexts.Count; i++)
-        //    {
-        //        var expected = financialAidFundCollection[i];
-        //        var actual = sourceContexts[i];
-        //        Assert.AreEqual(expected.Id, actual.Id, "Id, Index=" + i.ToString());
-        //        Assert.AreEqual(expected.Title, actual.Title, "Title, Index=" + i.ToString());
-        //        Assert.AreEqual(expected.Code, actual.Code, "Code, Index=" + i.ToString());
-        //    }
-        //}
+            Assert.AreEqual(financialAidFundCollection.Count, sourceContexts.Count());
+            for (var i = 0; i < sourceContexts.Count(); i++)
+            {
+                var expected = financialAidFundCollection[i];
+                var actual = sourceContexts.ElementAt(i);
+                Assert.AreEqual(expected.Id, actual.Id, "Id, Index=" + i.ToString());
+                Assert.AreEqual(expected.Title, actual.Title, "Title, Index=" + i.ToString());
+                Assert.AreEqual(expected.Code, actual.Code, "Code, Index=" + i.ToString());
+            }
+        }
+
+        [TestMethod]
+        public async Task FinancialAidFundController_GetFinancialAidFund_ValidateFields_Cache()
+        {
+            financialAidFundsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+
+            financialAidFundServiceMock.Setup(x => x.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Filters.FinancialAidFundsFilter>(), true)).ReturnsAsync(financialAidFundTuple);
+
+            var results = await financialAidFundsController.GetFinancialAidFundsAsync(paging, criteriaFilter);
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await results.ExecuteAsync(cancelToken);
+
+            IEnumerable<Dtos.FinancialAidFunds> sourceContexts = ((ObjectContent<IEnumerable<Dtos.FinancialAidFunds>>)httpResponseMessage.Content)
+                                                            .Value as IEnumerable<Dtos.FinancialAidFunds>;
+
+            Assert.AreEqual(financialAidFundCollection.Count, sourceContexts.Count());
+            for (var i = 0; i < sourceContexts.Count(); i++)
+            {
+                var expected = financialAidFundCollection[i];
+                var actual = sourceContexts.ElementAt(i);
+                Assert.AreEqual(expected.Id, actual.Id, "Id, Index=" + i.ToString());
+                Assert.AreEqual(expected.Title, actual.Title, "Title, Index=" + i.ToString());
+                Assert.AreEqual(expected.Code, actual.Code, "Code, Index=" + i.ToString());
+            }
+        }
 
         [TestMethod]
         public async Task FinancialAidFundController_GetFinancialAidFundsByIdAsync_ValidateFields()
@@ -139,48 +154,48 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task FinancialAidFundController_GetFinancialAidFund_PermissionsException()
         {
-            financialAidFundServiceMock.Setup(x => x.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), false)).Throws<PermissionsException>();
-            await financialAidFundsController.GetFinancialAidFundsAsync(It.IsAny<Paging>());
+            financialAidFundServiceMock.Setup(x => x.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Filters.FinancialAidFundsFilter>(), false)).Throws<PermissionsException>();
+            await financialAidFundsController.GetFinancialAidFundsAsync(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>());
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task FinancialAidFundController_GetFinancialAidFund_KeyNotFoundException()
         {
-            financialAidFundServiceMock.Setup(x => x.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), false)).Throws<KeyNotFoundException>();
-            await financialAidFundsController.GetFinancialAidFundsAsync(It.IsAny<Paging>());
+            financialAidFundServiceMock.Setup(x => x.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Filters.FinancialAidFundsFilter>(), false)).Throws<KeyNotFoundException>();
+            await financialAidFundsController.GetFinancialAidFundsAsync(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>());
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task FinancialAidFundController_GetFinancialAidFund_ArgumentNullException()
         {
-            financialAidFundServiceMock.Setup(x => x.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), false)).Throws<ArgumentNullException>();
-            await financialAidFundsController.GetFinancialAidFundsAsync(It.IsAny<Paging>());
+            financialAidFundServiceMock.Setup(x => x.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Filters.FinancialAidFundsFilter>(), false)).Throws<ArgumentNullException>();
+            await financialAidFundsController.GetFinancialAidFundsAsync(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>());
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task FinancialAidFundController_GetFinancialAidFund_RepositoryException()
         {
-            financialAidFundServiceMock.Setup(x => x.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), false)).Throws<RepositoryException>();
-            await financialAidFundsController.GetFinancialAidFundsAsync(It.IsAny<Paging>());
+            financialAidFundServiceMock.Setup(x => x.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Filters.FinancialAidFundsFilter>(), false)).Throws<RepositoryException>();
+            await financialAidFundsController.GetFinancialAidFundsAsync(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>());
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task FinancialAidFundController_GetFinancialAidFund_IntgApiException()
         {
-            financialAidFundServiceMock.Setup(x => x.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), false)).Throws<IntegrationApiException>();
-            await financialAidFundsController.GetFinancialAidFundsAsync(It.IsAny<Paging>());
+            financialAidFundServiceMock.Setup(x => x.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Filters.FinancialAidFundsFilter>(), false)).Throws<IntegrationApiException>();
+            await financialAidFundsController.GetFinancialAidFundsAsync(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>());
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task FinancialAidFundController_GetFinancialAidFund_Exception()
         {
-            financialAidFundServiceMock.Setup(x => x.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), false)).Throws<Exception>();
-            await financialAidFundsController.GetFinancialAidFundsAsync(It.IsAny<Paging>());
+            financialAidFundServiceMock.Setup(x => x.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Filters.FinancialAidFundsFilter>(), false)).Throws<Exception>();
+            await financialAidFundsController.GetFinancialAidFundsAsync(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>());
         }
 
         [TestMethod]
@@ -251,6 +266,45 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         public async Task FinancialAidFundController_DeleteFinancialAidFundsAsync_Exception()
         {
             await financialAidFundsController.DeleteFinancialAidFundsAsync(financialAidFundCollection.FirstOrDefault().Id);
+        }
+
+        [TestMethod]
+        public async Task FinancialAidApplicationOutcomesController_GetAll_CodeFilter()
+        {
+            financialAidFundsController.Request.Headers.CacheControl =
+                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var filterGroupName = "criteria";
+            financialAidFundsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.Filters.FinancialAidFundsFilter() { Code = "CODE1" });
+
+            var collection = financialAidFundCollection.Where(e => e.Code.Equals("CODE1", StringComparison.OrdinalIgnoreCase));
+            var collectionCount = collection.Count();
+
+            var tuple = new Tuple<IEnumerable<Dtos.FinancialAidFunds>, int>(collection, collectionCount);
+            financialAidFundServiceMock.Setup(ci => ci.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Filters.FinancialAidFundsFilter>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            var financialAidFunds = await financialAidFundsController.GetFinancialAidFundsAsync(new Paging(3, 0), criteriaFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            System.Net.Http.HttpResponseMessage httpResponseMessage = await financialAidFunds.ExecuteAsync(cancelToken);
+
+            IEnumerable<Dtos.FinancialAidFunds> actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidFunds>>)httpResponseMessage.Content)
+                                                            .Value as IEnumerable<Dtos.FinancialAidFunds>;
+
+
+            Assert.AreEqual(collectionCount, actuals.Count());
+
+            foreach (var actual in actuals)
+            {
+                var expected = financialAidFundCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected); 
+                Assert.AreEqual(expected.Id, actual.Id, "Id");
+                Assert.AreEqual(expected.Title, actual.Title, "Title");
+                Assert.AreEqual(expected.Code, actual.Code, "Code");
+            }
         }
     }
 }

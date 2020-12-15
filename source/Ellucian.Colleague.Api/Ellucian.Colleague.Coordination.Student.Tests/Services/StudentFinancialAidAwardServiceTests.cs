@@ -373,7 +373,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     It.IsAny<Domain.Student.Entities.StudentFinancialAidAward>())).ReturnsAsync(aidAwardEntitiesTuple);
 
                 awardRepositoryMock.Setup(i => i.Get2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>(),
-                    It.IsAny<Domain.Student.Entities.StudentFinancialAidAward>(), It.IsAny<IEnumerable<string>>())).ReturnsAsync(aidAwardEntitiesTuple);
+                    It.IsAny<Domain.Student.Entities.StudentFinancialAidAward>(), It.IsAny<IEnumerable<string>>(), It.IsAny<string>())).ReturnsAsync(aidAwardEntitiesTuple);
 
                 personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("CODE1")).ReturnsAsync("d190d4b5-03b5-41aa-99b8-b8286717c956");
                 personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("CODE2")).ReturnsAsync("d190d4b5-03b5-41aa-99b8-b8286717c956");
@@ -521,7 +521,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>(), It.IsAny<Domain.Student.Entities.StudentFinancialAidAward>()))
                     .ReturnsAsync(new Tuple<IEnumerable<StudentFinancialAidAward>, int>(new List<StudentFinancialAidAward>(), 0));
                 awardRepositoryMock.Setup(i => i.Get2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<bool>(),
-                    It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>(), It.IsAny<Domain.Student.Entities.StudentFinancialAidAward>(), It.IsAny<IEnumerable<string>>()))
+                    It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>(), It.IsAny<Domain.Student.Entities.StudentFinancialAidAward>(), It.IsAny<IEnumerable<string>>(), It.IsAny<string>()))
                     .ReturnsAsync(new Tuple<IEnumerable<StudentFinancialAidAward>, int>(new List<StudentFinancialAidAward>(), 0));
                 Dtos.StudentFinancialAidAward2 sfa = new Dtos.StudentFinancialAidAward2();
                 sfa.AwardFund = new Dtos.GuidObject2("b90812ee-b573-4acb-88b0-6999a050be4f");

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -131,7 +131,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             Address address = null;
             try
             {
-                address =await _addressRepository.GetAddress2Async(guid);
+                address = await _addressRepository.GetAddress2Async(guid);
             }
             catch (RepositoryException ex)
             {
@@ -141,7 +141,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             catch (KeyNotFoundException)
             {
                 IntegrationApiExceptionAddError(string.Format("No addresses was found for guid '{0}'.", guid)
-                    , guid: guid, httpStatusCode: System.Net.HttpStatusCode.NotFound );
+                    , guid: guid, httpStatusCode: System.Net.HttpStatusCode.NotFound);
                 throw IntegrationApiException;
             }
 
@@ -213,7 +213,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         public async Task<Tuple<IEnumerable<Dtos.Addresses>, int>> GetAddresses2Async(int offset, int limit, string personFilter, bool bypassCache = false)
         {
             await CheckUserPersonViewAddress2Async();
-                        
+
             string[] filterPersonIds = new List<string>().ToArray();
             if (!string.IsNullOrEmpty(personFilter))
             {
@@ -244,7 +244,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             var addressEntities = addresses.Item1;
             var totalRecords = addresses.Item2;
-         
+
             var ids = addressEntities
                   .Where(x => (!string.IsNullOrEmpty(x.PostalCode)))
                   .Select(x => x.PostalCode).Distinct().ToList();
@@ -263,7 +263,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     throw IntegrationApiException;
                 }
             }
-            
+
             foreach (var address in addressEntities)
             {
                 try
@@ -372,7 +372,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 throw ex;
             }
-            
+
             try
             {
                 var zipCodeGuidCollection = await _addressRepository.GetZipCodeGuidsCollectionAsync
@@ -391,7 +391,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 throw ex;
             }
-           
+
         }
 
         /// <summary>
@@ -444,7 +444,28 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             await _addressRepository.DeleteAsync(id);
         }
-        
+
+        /// <summary>
+        /// Update an address by guid
+        /// </summary>
+        /// <param name="id">guid for the address</param>
+        public async Task QueryAddressPermissionAsync(IEnumerable<string> personIds)
+        {
+            try
+            {
+                await CheckUserPersonQueryAddresses(personIds);
+            }
+            catch (PermissionsException pex)
+            {
+                logger.Error(pex.Message);
+                throw new PermissionsException("User is not authorized to view requested address.");
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
+        }
+
         /// <summary>
         /// Build a Addresses DTO object from an Address entity
         /// </summary>
@@ -803,7 +824,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if (string.IsNullOrEmpty(addressCountry.PostalCode))
             {
                 addressCountry.PostalCode = null;
-            }            
+            }
 
             if (IsAddressCountryPopulated(addressCountry, address.CountryCode))
             {
@@ -878,7 +899,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 region.Code = address.IntlRegion;
                 var places = await _addressRepository.GetPlacesAsync();
                 if (places != null && places.Any())
-                { 
+                {
                     var place = places
                     .FirstOrDefault(x => x.PlacesRegion == address.IntlRegion && x.PlacesCountry == country.IsoAlpha3Code && x.PlacesSubRegion == string.Empty);
                     if (place != null)
@@ -1095,7 +1116,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     }
                     catch (Exception)
                     {
-                        IntegrationApiExceptionAddError(string.Format("Geographic Area Id '{0}' not found." , area.Id),
+                        IntegrationApiExceptionAddError(string.Format("Geographic Area Id '{0}' not found.", area.Id),
                         "addressDto.GeographicAreas", addressDto.Id);
                     }
                 }
@@ -1227,12 +1248,27 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             var userPermissionList = (await GetUserPermissionCodesAsync()).ToList();
 
-             // Access is ok if the current user has the view or update address permission
+            // Access is ok if the current user has the view or update address permission
             if ((!userPermissionList.Contains(BasePermissionCodes.ViewAddress)) && (!userPermissionList.Contains(BasePermissionCodes.UpdateAddress)))
-                {
+            {
                 logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view addresses.");
                 IntegrationApiExceptionAddError("User '" + CurrentUser.UserId + "' is not authorized to view addresses.", "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
                 throw IntegrationApiException;
+            }
+        }
+
+        /// <summary>
+        /// Provides an integration user permission to view an address using this API. Used by CRM QueryAdresses
+        /// </summary>
+        private async Task CheckUserPersonQueryAddresses(IEnumerable<string> personIds)
+        {
+            IEnumerable<string> userPermissionList = await GetUserPermissionCodesAsync();
+
+            // Access is ok if the current user has view.address
+            if ((!userPermissionList.Contains(BasePermissionCodes.ViewAddress)) && !(personIds.Contains(CurrentUser.PersonId) && personIds.Count() == 1))
+            {
+                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view any address.");
+                throw new PermissionsException("User is not authorized to view any address.");
             }
         }
 

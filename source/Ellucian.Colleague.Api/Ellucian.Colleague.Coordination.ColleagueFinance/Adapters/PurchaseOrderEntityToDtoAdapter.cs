@@ -73,6 +73,16 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
                 }
             }
 
+            purchaseOrderDto.ConfirmationEmailAddresses = new List<string>();
+            if ((Source.ConfirmationEmailAddresses != null) && (Source.ConfirmationEmailAddresses.Count > 0))
+            {
+                foreach (var item in Source.ConfirmationEmailAddresses)
+                {
+                    purchaseOrderDto.ConfirmationEmailAddresses.Add(item);
+                }
+            }
+
+
             // Translate the domain status into the DTO status
             switch (Source.Status)
             {

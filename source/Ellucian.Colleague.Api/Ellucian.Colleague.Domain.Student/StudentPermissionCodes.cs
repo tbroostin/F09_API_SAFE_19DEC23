@@ -241,5 +241,8 @@ namespace Ellucian.Colleague.Domain.Student
 
         //Permissions code that allows an external system to perform the READ operation.
         public const string ViewStudentAcademicCredentials = "VIEW.STUDENT.ACADEMIC.CREDENTIALS";
+
+        //Permissions code that allows users to perform instant enrollment operations.
+        public const string InstantEnrollmentAllowAll = "IE.ALLOW.ALL";
     }
 }

@@ -1,4 +1,4 @@
-//Copyright 2019 Ellucian Company L.P. and its affiliates.
+//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -20,6 +20,8 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Models;
 using System.Configuration;
+using Ellucian.Web.Http.Filters;
+using System.Web.Http.Controllers;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 {
@@ -142,7 +144,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 
             var gradeOptionsTuple = new Tuple<IEnumerable<Dtos.PersonExternalEducationCredentials>, int>(personExternalEducationCredentialsCollection, 3);
             studentFilter = string.Empty;
-            personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(gradeOptionsTuple);
+            personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), 
+                    It.IsAny<PersonExternalEducationCredentials>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(gradeOptionsTuple);
 
             personExternalEducationCredentialsController = new PersonExternalEducationCredentialsController(personExternalEducationCredentialsServiceMock.Object, loggerMock.Object)
             {
@@ -162,6 +165,172 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         }
 
         #region GET
+
+        [TestMethod]
+        public async Task PersonExternalEducationCredentialsController_GetPersonExternalEducationCredentialsAsync_ValidCriteriaFilter()
+        {
+            var contextPrefix = "FilterObject";
+            var contextSuffix = "criteria";
+            
+            var controllerContext = personExternalEducationCredentialsController.ControllerContext;
+            var actionDescriptor = personExternalEducationCredentialsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+
+            var queryStringCriteria = new QueryStringFilter(contextSuffix, "{'externalEducation':{'id': '0487232e-f38b-4fe6-a020-539622bd8ea1'}}");
+           // _context.ActionArguments.Add(contextSuffix, queryStringCriteria);
+
+            var contextPropertyName = string.Format("{0}{1}", contextPrefix, contextSuffix);
+
+            personExternalEducationCredentialsController.Request.Properties.Add(contextPropertyName,
+               new Dtos.PersonExternalEducationCredentials() { ExternalEducation = new GuidObject2() { Id = "0487232e-f38b-4fe6-a020-539622bd8ea1" } });
+            
+            var queryStringFilter = new QueryStringFilterFilter(contextSuffix, typeof(Dtos.PersonExternalEducationCredentials));
+            await queryStringFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+
+            var sourceContexts = await personExternalEducationCredentialsController
+                .GetPersonExternalEducationCredentialsAsync(new Paging(100, 0), queryStringCriteria, null, null);
+
+            Object filterObject;
+            personExternalEducationCredentialsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            System.Net.Http.HttpResponseMessage httpResponseMessage = await sourceContexts.ExecuteAsync(cancelToken);
+
+            var results = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials>>)httpResponseMessage.Content).Value as IEnumerable<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials>;
+            
+            Assert.IsNotNull(filterObject);
+            Assert.IsTrue(sourceContexts is IHttpActionResult);
+            Assert.AreEqual(personExternalEducationCredentialsCollection.Count, results.ToList().Count());
+        }
+
+        [TestMethod]
+        public async Task PersonExternalEducationCredentialsController_GetPersonExternalEducationCredentialsAsync_ValidPersonGuidFilterFilter()
+        {
+            var contextPrefix = "FilterObject";
+            var contextSuffix = "person";
+
+            var controllerContext = personExternalEducationCredentialsController.ControllerContext;
+            var actionDescriptor = personExternalEducationCredentialsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+
+            var queryStringCriteria = new QueryStringFilter(contextSuffix, "{'person':{'id': '0487232e-f38b-4fe6-a020-539622bd8ea1'}}");
+            // _context.ActionArguments.Add(contextSuffix, queryStringCriteria);
+
+            var contextPropertyName = string.Format("{0}{1}", contextPrefix, contextSuffix);
+
+            personExternalEducationCredentialsController.Request.Properties.Add(contextPropertyName,
+               new Dtos.PersonFilter() {  Id = "0487232e-f38b-4fe6-a020-539622bd8ea1"  });
+
+            var queryStringFilter = new QueryStringFilterFilter(contextSuffix, typeof(Dtos.PersonFilter));
+            await queryStringFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+
+            var sourceContexts = await personExternalEducationCredentialsController
+                .GetPersonExternalEducationCredentialsAsync(new Paging(100, 0), null, null, queryStringCriteria);
+
+            Object filterObject;
+            personExternalEducationCredentialsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            System.Net.Http.HttpResponseMessage httpResponseMessage = await sourceContexts.ExecuteAsync(cancelToken);
+
+            var results = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials>>)httpResponseMessage.Content).Value as IEnumerable<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials>;
+
+            Assert.IsNotNull(filterObject);
+            Assert.IsTrue(sourceContexts is IHttpActionResult);
+            Assert.AreEqual(personExternalEducationCredentialsCollection.Count, results.ToList().Count());
+        }
+
+        [TestMethod]
+        public async Task PersonExternalEducationCredentialsController_GetPersonExternalEducationCredentialsAsync_InvalidPersonFilterFilter()
+        {
+            var contextPrefix = "FilterObject";
+            var contextSuffix = "person";
+
+            var controllerContext = personExternalEducationCredentialsController.ControllerContext;
+            var actionDescriptor = personExternalEducationCredentialsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+
+            var queryStringCriteria = new QueryStringFilter(contextSuffix, "{'person':{'id': ''}}");
+            // _context.ActionArguments.Add(contextSuffix, queryStringCriteria);
+
+            var contextPropertyName = string.Format("{0}{1}", contextPrefix, contextSuffix);
+
+            personExternalEducationCredentialsController.Request.Properties.Add(contextPropertyName,
+               new Dtos.PersonFilter() { Id = "" });
+
+            var queryStringFilter = new QueryStringFilterFilter(contextSuffix, typeof(Dtos.PersonFilter));
+            await queryStringFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+
+            var sourceContexts = await personExternalEducationCredentialsController
+                .GetPersonExternalEducationCredentialsAsync(new Paging(100, 0), null, null, queryStringCriteria);
+
+            Object filterObject;
+            personExternalEducationCredentialsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            System.Net.Http.HttpResponseMessage httpResponseMessage = await sourceContexts.ExecuteAsync(cancelToken);
+
+            var results = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials>>)httpResponseMessage.Content).Value as IEnumerable<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials>;
+
+            Assert.IsNotNull(filterObject);
+            Assert.IsTrue(sourceContexts is IHttpActionResult);
+            
+        }
+
+
+        [TestMethod]
+        public async Task PersonExternalEducationCredentialsController_GetPersonExternalEducationCredentialsAsync_ValidPersonFilterFilter()
+        {
+            var contextPrefix = "FilterObject";
+            var contextSuffix = "personFilter";
+
+            var controllerContext = personExternalEducationCredentialsController.ControllerContext;
+            var actionDescriptor = personExternalEducationCredentialsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+
+            var queryStringCriteria = new QueryStringFilter(contextSuffix, "{'personFilter':{'id': '0487232e-f38b-4fe6-a020-539622bd8ea1'}}");
+            // _context.ActionArguments.Add(contextSuffix, queryStringCriteria);
+
+            var contextPropertyName = string.Format("{0}{1}", contextPrefix, contextSuffix);
+
+            personExternalEducationCredentialsController.Request.Properties.Add(contextPropertyName,
+               new Dtos.Filters.PersonFilterFilter2() { personFilter = new GuidObject2("0487232e-f38b-4fe6-a020-539622bd8ea1")});
+
+            var queryStringFilter = new QueryStringFilterFilter(contextSuffix, typeof(Dtos.Filters.PersonFilterFilter2));
+            await queryStringFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+
+            var sourceContexts = await personExternalEducationCredentialsController
+                .GetPersonExternalEducationCredentialsAsync(new Paging(100, 0), null, null, queryStringCriteria);
+
+            Object filterObject;
+            personExternalEducationCredentialsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            System.Net.Http.HttpResponseMessage httpResponseMessage = await sourceContexts.ExecuteAsync(cancelToken);
+
+            var results = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials>>)httpResponseMessage.Content).Value as IEnumerable<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials>;
+
+            Assert.IsNotNull(filterObject);
+            Assert.IsTrue(sourceContexts is IHttpActionResult);
+            Assert.AreEqual(personExternalEducationCredentialsCollection.Count, results.ToList().Count());
+        }
+
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
@@ -228,25 +397,20 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         [TestMethod]
         public async Task GetPersonExternalEducationCredentialsAsync_NoCache()
         {
-            //personExternalEducationCredentialsController.Request.Headers.CacheControl =
-            //     new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
-
             personExternalEducationCredentialsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
             personExternalEducationCredentialsController.Request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue();
             personExternalEducationCredentialsController.Request.Headers.CacheControl.NoCache = true;
 
-            Tuple<IEnumerable<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials>, int> studentAdvRelTuple
+            var studentAdvRelTuple
                 = new Tuple<IEnumerable<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials>, int>(personExternalEducationCredentialsCollection, 3);
 
-            // studentAdvisorRelationshipsServiceMock.Setup(x => x.GetStudentAdvisorRelationshipsAsync(0, 100, It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(studentAdvRelTuple);
-
-            var sourceContexts = await personExternalEducationCredentialsController.GetPersonExternalEducationCredentialsAsync(new Paging(1, 0), studentCriteriaFilter);
+            var sourceContexts = await personExternalEducationCredentialsController.GetPersonExternalEducationCredentialsAsync(new Paging(1, 0), studentCriteriaFilter, null, null);
 
             var cancelToken = new System.Threading.CancellationToken(false);
 
             System.Net.Http.HttpResponseMessage httpResponseMessage = await sourceContexts.ExecuteAsync(cancelToken);
 
-            IEnumerable<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials> results = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials>>)httpResponseMessage.Content).Value as IEnumerable<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials>;
+            var results = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials>>)httpResponseMessage.Content).Value as IEnumerable<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials>;
 
             Assert.IsTrue(sourceContexts is IHttpActionResult);
             Assert.AreEqual(personExternalEducationCredentialsCollection.Count, results.ToList().Count());
@@ -262,56 +426,63 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         [ExpectedException(typeof(HttpResponseException))]
         public async Task PersonExternalEducationCredentialsController_GetPersonExternalEducationCredentialsAsync_Exception()
         {
-            personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<Exception>();
-            await personExternalEducationCredentialsController.GetPersonExternalEducationCredentialsAsync(new Paging(1, 0), studentCriteriaFilter);
+            personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                It.IsAny<PersonExternalEducationCredentials>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<Exception>();
+            await personExternalEducationCredentialsController.GetPersonExternalEducationCredentialsAsync(new Paging(1, 0), studentCriteriaFilter, null, null);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task PersonExternalEducationCredentialsController_GetPersonExternalEducationCredentials_KeyNotFoundException()
         {
-            personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<KeyNotFoundException>();
-            await personExternalEducationCredentialsController.GetPersonExternalEducationCredentialsAsync(new Paging(1, 0), studentCriteriaFilter);
+            personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                It.IsAny<PersonExternalEducationCredentials>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<KeyNotFoundException>();
+            await personExternalEducationCredentialsController.GetPersonExternalEducationCredentialsAsync(new Paging(1, 0), studentCriteriaFilter, null, null);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task PersonExternalEducationCredentialsController_GetPersonExternalEducationCredentials_PermissionsException()
         {
-            personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
-            await personExternalEducationCredentialsController.GetPersonExternalEducationCredentialsAsync(new Paging(1, 0), studentCriteriaFilter);
+            personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                It.IsAny<PersonExternalEducationCredentials>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+            await personExternalEducationCredentialsController.GetPersonExternalEducationCredentialsAsync(new Paging(1, 0), studentCriteriaFilter, null, null);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task PersonExternalEducationCredentialsController_GetStudentTranscriptGradesOptionns_ArgumentException()
         {
-            personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<ArgumentException>();
-            await personExternalEducationCredentialsController.GetPersonExternalEducationCredentialsAsync(new Paging(1, 0), studentCriteriaFilter);
+            personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                It.IsAny<PersonExternalEducationCredentials>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<ArgumentException>();
+            await personExternalEducationCredentialsController.GetPersonExternalEducationCredentialsAsync(new Paging(1, 0), studentCriteriaFilter, null, null);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task PersonExternalEducationCredentialsController_GetPersonExternalEducationCredentials_RepositoryException()
         {
-            personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<RepositoryException>();
-            await personExternalEducationCredentialsController.GetPersonExternalEducationCredentialsAsync(new Paging(1, 0), studentCriteriaFilter);
+            personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                It.IsAny<PersonExternalEducationCredentials>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<RepositoryException>();
+            await personExternalEducationCredentialsController.GetPersonExternalEducationCredentialsAsync(new Paging(1, 0), studentCriteriaFilter, null, null);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task PersonExternalEducationCredentialsController_GetPersonExternalEducationCredentials_IntegrationApiException()
         {
-            personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<IntegrationApiException>();
-            await personExternalEducationCredentialsController.GetPersonExternalEducationCredentialsAsync(new Paging(1, 0), studentCriteriaFilter);
+            personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                It.IsAny<PersonExternalEducationCredentials>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<IntegrationApiException>();
+            await personExternalEducationCredentialsController.GetPersonExternalEducationCredentialsAsync(new Paging(1, 0), studentCriteriaFilter, null, null);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task PersonExternalEducationCredentialsController_GetPersonExternalEducationCredentials_Exception()
         {
-            personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<Exception>();
-            await personExternalEducationCredentialsController.GetPersonExternalEducationCredentialsAsync(new Paging(1, 0), studentCriteriaFilter);
+            personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                It.IsAny<PersonExternalEducationCredentials>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<Exception>();
+            await personExternalEducationCredentialsController.GetPersonExternalEducationCredentialsAsync(new Paging(1, 0), studentCriteriaFilter, null, null);
         }
 
         [TestMethod]

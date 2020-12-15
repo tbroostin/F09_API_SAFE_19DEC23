@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using System;
 
 namespace Ellucian.Colleague.Domain.Base
@@ -119,68 +119,6 @@ namespace Ellucian.Colleague.Domain.Base
         /// </summary>
         public const string ViewOrganizationalRelationships = "VIEW.ORGANIZATIONAL.RELATIONSHIPS";
 
-        /// <summary>
-        /// Enables a person to view employee W2 tax information
-        /// Used in TaxFormConsentService
-        /// </summary>
-        public const string ViewEmployeeW2 = "VIEW.EMPLOYEE.W2";
-
-        /// <summary>
-        /// Enables a person to view employee 1095C tax information
-        /// Used in TaxFormConsent service
-        /// </summary>
-        public const string ViewEmployee1095C = "VIEW.EMPLOYEE.1095C";
-        
-        /// <summary>
-        /// Enable user to view their own T4A information
-        /// </summary>
-        public const string ViewT4A = "VIEW.T4A";
-
-        /// <summary>
-        /// Enable user to view another user's T4A information (ie: Tax Information Admin)
-        /// </summary>
-        public const string ViewRecipientT4A = "VIEW.RECIPIENT.T4A";
-
-        /// <summary>
-        /// Enables a user to view another employee's T4 information (ie: Tax Information Admin)
-        /// </summary>
-        public const string ViewEmployeeT4 = "VIEW.EMPLOYEE.T4";
-
-        /// <summary>
-        /// Enables a user to view their own W2 information
-        /// </summary>
-        public const string ViewW2 = "VIEW.W2";
-
-        /// <summary>
-        /// Enables a user to view their own 1095C information
-        /// </summary>
-        public const string View1095C = "VIEW.1095C";
-
-        /// <summary>
-        /// Enables a user to view their own T4 information
-        /// </summary>
-        public const string ViewT4 = "VIEW.T4";
-
-        /// <summary>
-        /// Enables access to the user's own 1098 tax form data
-        /// </summary>
-        public const string View1098 = "VIEW.1098";
-
-        /// <summary>
-        /// Enables access to other users' 1098 data (ie: Tax Information Admin)
-        /// </summary>
-        public const string ViewStudent1098 = "VIEW.STUDENT.1098";
-
-        /// <summary>
-        /// Enables access to the user's own T2202A tax form data
-        /// </summary>
-        public const string ViewT2202A = "VIEW.T2202A";
-
-        /// <summary>
-        /// Enables access to other users' T2202A data (ie: Tax Information Admin)
-        /// </summary>
-        public const string ViewStudentT2202A = "VIEW.STUDENT.T2202A";
-
         // Access to view any comments
         public const string ViewComment = "VIEW.COMMENT";
 
@@ -194,11 +132,6 @@ namespace Ellucian.Colleague.Domain.Base
         /// Permission to view account activity of anyone.
         /// </summary>
         public const string ViewStudentAccountActivity = "VIEW.STUDENT.ACCOUNT.ACTIVITY";
-
-        /// <summary>
-        /// Enables a user to view their own 1099MI information
-        /// </summary>
-        public const string View1099MISC = "VIEW.1099MISC";
 
         // Access to view any person contacts and person-emergency-contacts
         public const string ViewAnyPersonContact = "VIEW.PERSON.CONTACT";
@@ -267,5 +200,81 @@ namespace Ellucian.Colleague.Domain.Base
         /// Enables an account to reset all passwords. 
         /// </summary>
         public const string AdminResetAllPasswords = "ADMIN.RESET.ALL.PASSWORDS";
+
+        #region Tax Information
+
+        /// <summary>
+        /// Enables a person to view employee W-2 tax information
+        /// Used in TaxFormConsentService
+        /// </summary>
+        public const string ViewEmployeeW2 = "VIEW.EMPLOYEE.W2";
+
+        /// <summary>
+        /// Enables a user to view their own W-2 information
+        /// </summary>
+        public const string ViewW2 = "VIEW.W2";
+
+        /// <summary>
+        /// Enables a person to view employee 1095-C tax information
+        /// Used in TaxFormConsent service
+        /// </summary>
+        public const string ViewEmployee1095C = "VIEW.EMPLOYEE.1095C";
+
+        /// <summary>
+        /// Enables a user to view their own 1095-C information
+        /// </summary>
+        public const string View1095C = "VIEW.1095C";
+
+        /// <summary>
+        /// Enables a user to view another employee's T4 information (ie: Tax Information Admin)
+        /// </summary>
+        public const string ViewEmployeeT4 = "VIEW.EMPLOYEE.T4";
+
+        /// <summary>
+        /// Enable user to view their own T4A information
+        /// </summary>
+        public const string ViewT4A = "VIEW.T4A";
+
+        /// <summary>
+        /// Enable user to view another user's T4A information (ie: Tax Information Admin)
+        /// </summary>
+        public const string ViewRecipientT4A = "VIEW.RECIPIENT.T4A";
+
+        /// <summary>
+        /// Enables a user to view their own T4 information
+        /// </summary>
+        public const string ViewT4 = "VIEW.T4";
+
+        /// <summary>
+        /// Enables access to other users' 1098 data (ie: Tax Information Admin)
+        /// </summary>
+        public const string ViewStudent1098 = "VIEW.STUDENT.1098";
+
+        /// <summary>
+        /// Enables access to the user's own 1098 tax form data
+        /// </summary>
+        public const string View1098 = "VIEW.1098";
+
+        /// <summary>
+        /// Enables access to other users' T2202A data (ie: Tax Information Admin)
+        /// </summary>
+        public const string ViewStudentT2202A = "VIEW.STUDENT.T2202A";
+
+        /// <summary>
+        /// Enables access to the user's own T2202A tax form data
+        /// </summary>
+        public const string ViewT2202A = "VIEW.T2202A";
+
+        /// <summary>
+        /// Enables a user to view their own 1099-MI information
+        /// </summary>
+        public const string View1099MISC = "VIEW.1099MISC";
+
+        /// <summary>
+        /// Enables a user to view their own 1099-NEC information
+        /// </summary>
+        public const string View1099NEC = "VIEW.1099NEC";
+
+        #endregion
     }
 }

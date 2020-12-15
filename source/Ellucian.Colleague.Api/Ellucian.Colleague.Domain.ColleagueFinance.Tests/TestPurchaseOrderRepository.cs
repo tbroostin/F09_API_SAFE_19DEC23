@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -211,6 +211,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                      maintenanceDate;
 
             DateTime? deliveryDate;
+            
 
             for (var i = 0; i < purchaseOrdersArray.GetLength(0); i++)
             {
@@ -267,6 +268,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 shipToCode = purchaseOrdersArray[i, 14];
                 internalComments = purchaseOrdersArray[i, 15];
                 currencyCode = purchaseOrdersArray[i, 16];
+                
 
                 var purchaseOrderSummary = new PurchaseOrderSummary(purchaseOrderId, number, vendorName, date);
                 purchaseOrderSummary.Status = PurchaseOrderStatus.Invoiced;
@@ -279,6 +281,39 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 purchaseOrderSummary.Comments = comments;             
                 purchaseOrderSummary.CurrencyCode = currencyCode;
                 purchaseOrdersSummaryList.Add(purchaseOrderSummary);
+            }
+            #endregion
+            #region Populate approvers
+
+            string approverId,
+                approvalName,
+                approvalPurchaseOrderId;
+            DateTime? approvalDate;
+            for (var i = 0; i < approversArray.GetLength(0); i++)
+            {
+                approverId = approversArray[i, 0];
+                approvalName = approversArray[i, 1];
+
+                if (approversArray[i, 2] == "null")
+                {
+                    approvalDate = null;
+                }
+                else
+                {
+                    approvalDate = Convert.ToDateTime(approversArray[i, 2]);
+                }
+                approvalPurchaseOrderId = approversArray[i, 3];
+                var approverDomainEntity = new Approver(approverId);
+                approverDomainEntity.SetApprovalName(approvalName);
+                approverDomainEntity.ApprovalDate = approvalDate;
+
+                foreach (var purchaseOrder in purchaseOrdersSummaryList)
+                {
+                    if (purchaseOrder.Id == approvalPurchaseOrderId)
+                    {
+                        purchaseOrder.AddApprover(approverDomainEntity);
+                    }
+                }
             }
             #endregion
 

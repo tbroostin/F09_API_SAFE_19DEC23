@@ -239,11 +239,16 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 var institutions = new List<Institution>();
                 Dictionary<string, string> poGuidCollection = null;
                 Dictionary<string, string> bpoGuidCollection = null;
-                if (paymentTransactions != null && !string.IsNullOrEmpty(paymentTransactions.Vendor))
+                if (paymentTransactions != null)
                 {
-                    personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(new string[] { paymentTransactions.Vendor });
-                    institutions = (await _institutionRepository.GetInstitutionsFromListAsync(new string[] { paymentTransactions.Vendor })).ToList();
-                    var associatedVouchers = paymentTransactions.Vouchers;                   
+                    if (!string.IsNullOrEmpty(paymentTransactions.Vendor))
+                    {
+                        personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(new string[] { paymentTransactions.Vendor });
+                        institutions = (await _institutionRepository.GetInstitutionsFromListAsync(new string[] { paymentTransactions.Vendor })).ToList();
+                    }
+                                        
+                    var associatedVouchers = paymentTransactions.Vouchers;
+
                     if (associatedVouchers != null && associatedVouchers.Any())
                     {
                         var PoIds = associatedVouchers.Where(cv => !string.IsNullOrEmpty(cv.PurchaseOrderId)).Select(cd => cd.PurchaseOrderId).Distinct();

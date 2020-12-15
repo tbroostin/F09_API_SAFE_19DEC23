@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -19,6 +19,7 @@ using Ellucian.Web.Http.Configuration;
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.Base.Entities;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
@@ -157,15 +158,20 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
-        ///  Get all InstitutionsAttend domain entity data 
+        /// Get all InstitutionsAttend domain entity data 
         /// </summary>
-        /// <param name="limit"></param>
-        /// <param name="bypassCache"></param>
-        /// <param name="personId">person id</param>
         /// <param name="offset"></param>
+        /// <param name="limit"></param>
+        /// <param name="personId"></param>
+        /// <param name="filterPersonIds"></param>
+        /// <param name="personFilter"></param>
+        /// <param name="personByInstitutionTypePersonId"></param>
+        /// <param name="typeFilter"></param>
+        /// <param name="bypassCache"></param>
         /// <returns>Collection of InstitutionsAttend domain entities</returns>
         public async Task<Tuple<IEnumerable<Domain.Base.Entities.InstitutionsAttend>, int>> GetInstitutionsAttendAsync(int offset, int limit, string personId = "",
-            string[] filterPersonIds = null, string personFilter = "", bool bypassCache = false)
+            string[] filterPersonIds = null, string personFilter = "", string personByInstitutionTypePersonId = "",
+            InstType? typeFilter = null, bool bypassCache = false)
         {
             var criteria = string.Empty;
             var hostInstitutionId = string.Empty;
@@ -176,13 +182,14 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 hostInstitutionId = coreDefaultData.DefaultHostCorpId;
             }
 
+            #region personFilter named query
             if (filterPersonIds != null && filterPersonIds.Any())
             {
                 try
                 {
                     string[] limitingKeys = new string[] { };
-                   
-                    string institutionAttendPersonFilterKey = CacheSupport.BuildCacheKey("InstitutionsAttendKeys", personFilter);
+
+                    string institutionAttendPersonFilterKey = CacheSupport.BuildCacheKey("InstitutionsAttendKeys", personFilter, filterPersonIds.Count());
                     if (offset == 0 && ContainsKey(BuildFullCacheKey(institutionAttendPersonFilterKey)))
                     {
                         ClearCache(new List<string> { institutionAttendPersonFilterKey });
@@ -193,7 +200,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                        {
                            List<string> IdsFromStuFil = new List<string>();
 
-                           // var columns = await DataReader.BatchReadRecordColumnsAsync("PERSON", filterPersonIds, new string[] { "PERSON.INSTITUTIONS.ATTEND" });
                            for (var i = 0; i < filterPersonIds.Count(); i += readSize)
                            {
                                var personSubList = filterPersonIds.Skip(i).Take(readSize);
@@ -253,13 +259,75 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     throw exception;
                 }
 
+                if (exception != null && exception.Errors != null && exception.Errors.Any())
+                {
+                    throw exception;
+                }
             }
+            #endregion
 
-            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            #region personByInstitutionType named query
+
+            if ((!string.IsNullOrEmpty(personByInstitutionTypePersonId)) && (typeFilter != null))
             {
-                throw exception;
-            }
+                // Select records in INSTITUTIONS.ATTEND where INSTA.PERSON.ID is equal to the person specified, 
+                // INSTA.INSTITUTIONS.ID is not equal to DFLTS.HOST.CORP.ID (which is part of the GET ALL) 
+                // and INSTA.INST.TYPE.ACTION1 is equal to the code that corresponds to the type enumeration specified.
 
+                string instaInstTypeAction = string.Empty;
+                if (typeFilter != null)
+                {
+                    switch (typeFilter)
+                    {
+                        case InstType.College:
+                            instaInstTypeAction = "C";
+                            break;
+                        case InstType.HighSchool:
+                            instaInstTypeAction = "H";
+                            break;
+                    }
+                }
+                if (!string.IsNullOrEmpty(hostInstitutionId))
+                {
+                    criteria += "WITH INSTA.INSTITUTIONS.ID NE '" + hostInstitutionId + "'";
+                }
+
+                if (!string.IsNullOrEmpty(personByInstitutionTypePersonId))
+                {
+                    if (!string.IsNullOrEmpty(criteria))
+                    {
+                        criteria += " AND ";
+                    }
+
+                    criteria += "WITH INSTA.PERSON.ID EQ '" + personByInstitutionTypePersonId + "'";
+                }
+
+                if (!string.IsNullOrEmpty(instaInstTypeAction))
+                {
+                    if (!string.IsNullOrEmpty(criteria))
+                    {
+                        criteria += " AND ";
+                    }
+
+                    criteria += "WITH INSTA.INST.TYPE.ACTION1 EQ '" + instaInstTypeAction + "'";
+                }
+
+                institutionAttendLimitingKeys = (await DataReader.SelectAsync("INSTITUTIONS.ATTEND", 
+                        institutionAttendLimitingKeys != null && institutionAttendLimitingKeys.Any() ? institutionAttendLimitingKeys.ToArray() : null, criteria))
+                        .ToList();
+                
+                if (institutionAttendLimitingKeys == null || !institutionAttendLimitingKeys.Any())
+                {
+                    return new Tuple<IEnumerable<Domain.Base.Entities.InstitutionsAttend>, int>(new List<Domain.Base.Entities.InstitutionsAttend>(), 0);
+                }
+            }
+            #endregion
+
+            #region criteria filter
+
+            //Note: this should be called independently of the named queries
+            criteria = string.Empty;
+           
             if (!string.IsNullOrEmpty(hostInstitutionId))
             {
                 criteria += "WITH INSTA.INSTITUTIONS.ID NE '" + hostInstitutionId + "'";
@@ -267,42 +335,43 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             if (!string.IsNullOrEmpty(personId))
             {
-                if (string.IsNullOrEmpty(criteria))
+                if (!string.IsNullOrEmpty(criteria))
                 {
                     criteria += " AND ";
                 }
 
                 criteria += "WITH INSTA.PERSON.ID EQ '" + personId + "'";
             }
+            #endregion
 
-            var institutionAttends = await DataReader.SelectAsync("INSTITUTIONS.ATTEND", institutionAttendLimitingKeys != null && institutionAttendLimitingKeys.Any() ? institutionAttendLimitingKeys.ToArray() : null, criteria);
-
+            var institutionAttends = await DataReader.SelectAsync("INSTITUTIONS.ATTEND", 
+                institutionAttendLimitingKeys != null && institutionAttendLimitingKeys.Any() ? institutionAttendLimitingKeys.ToArray() : null, criteria);
+                 
             //after applying initial criteria, need to get a collection of institution records that 
             //are  associated with an INSTITUTIONS record with special processing codes
             var types = (await this.GetInstitutionTypesAsync()).ValsEntityAssociation.Where(x => !string.IsNullOrEmpty(x.ValActionCode1AssocMember))
-                .Select(z => z.ValInternalCodeAssocMember).ToArray();
+            .Select(z => z.ValInternalCodeAssocMember).ToArray();
 
-            var institutionAttendCacheKey = CacheSupport.BuildCacheKey("InstitutionsAttendedKeys", personId);
+            var institutionAttendCacheKey = CacheSupport.BuildCacheKey("InstitutionsAttendedKeys", personId, personFilter, personByInstitutionTypePersonId, typeFilter.ToString());
             if (offset == 0 && ContainsKey(BuildFullCacheKey(institutionAttendCacheKey)))
             {
                 ClearCache(new List<string> { institutionAttendCacheKey });
             }
             string[] institutionAttendIds = new string[] { };
 
-
             institutionAttendIds = await GetOrAddToCacheAsync<string[]>(institutionAttendCacheKey,
-                async () =>
-                {
-                    var institutionIds = await DataReader.SelectAsync("INSTITUTIONS", "WITH INST.TYPE = '?'", types);
-                    institutionAttendIds =
-                        institutionAttends.Join(
-                            institutionIds,
-                            l1 => l1.Split('*')[1], //Selector for items from the inner list splits on '*'
-                            l2 => l2,               //Select the current item
-                            (l1, l2) => l1).ToArray();
-                    Array.Sort(institutionAttendIds);
-                    return institutionAttendIds;
-                }, 20);
+            async () =>
+            {
+                var institutionIds = await DataReader.SelectAsync("INSTITUTIONS", "WITH INST.TYPE = '?'", types);
+                institutionAttendIds =
+                    institutionAttends.Join(
+                        institutionIds,
+                        l1 => l1.Split('*')[1], //Selector for items from the inner list splits on '*'
+                        l2 => l2,               //Select the current item
+                        (l1, l2) => l1).ToArray();
+                Array.Sort(institutionAttendIds);
+                return institutionAttendIds;
+            }, 20);
 
             if ((institutionAttendIds == null || !institutionAttendIds.Any()))
             {
@@ -319,7 +388,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 return new Tuple<IEnumerable<Domain.Base.Entities.InstitutionsAttend>, int>(new List<Domain.Base.Entities.InstitutionsAttend>(), 0);
             }
             if ((institutionsAttendData.InvalidKeys != null && institutionsAttendData.InvalidKeys.Any())
-                    || (institutionsAttendData.InvalidRecords != null && institutionsAttendData.InvalidRecords.Any()))
+                || (institutionsAttendData.InvalidRecords != null && institutionsAttendData.InvalidRecords.Any()))
             {
 
                 if (institutionsAttendData.InvalidKeys.Any())
@@ -578,16 +647,16 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         private Base.DataContracts.Defaults GetDefaults()
         {
             return GetOrAddToCache<Data.Base.DataContracts.Defaults>("CoreDefaults",
-                () =>
+            () =>
+            {
+                Data.Base.DataContracts.Defaults coreDefaults = DataReader.ReadRecord<Data.Base.DataContracts.Defaults>("CORE.PARMS", "DEFAULTS");
+                if (coreDefaults == null)
                 {
-                    Data.Base.DataContracts.Defaults coreDefaults = DataReader.ReadRecord<Data.Base.DataContracts.Defaults>("CORE.PARMS", "DEFAULTS");
-                    if (coreDefaults == null)
-                    {
-                        logger.Info("Unable to access DEFAULTS from CORE.PARMS table.");
-                        coreDefaults = new Defaults();
-                    }
-                    return coreDefaults;
-                }, Level1CacheTimeoutValue);
+                    logger.Info("Unable to access DEFAULTS from CORE.PARMS table.");
+                    coreDefaults = new Defaults();
+                }
+                return coreDefaults;
+            }, Level1CacheTimeoutValue);
         }
 
         /// <summary>
@@ -603,18 +672,19 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
 
             _institutionTypes = await GetOrAddToCacheAsync<ApplValcodes>("InstitutionTypes",
-                async () =>
+            async () =>
+            {
+                ApplValcodes typesTable = await DataReader.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "INST.TYPES");
+                if (typesTable == null)
                 {
-                    ApplValcodes typesTable = await DataReader.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "INST.TYPES");
-                    if (typesTable == null)
-                    {
-                        var errorMessage = "Unable to access INST.TYPES valcode table.";
-                        logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
-                    }
-                    return typesTable;
-                }, Level1CacheTimeoutValue);
+                    var errorMessage = "Unable to access INST.TYPES valcode table.";
+                    logger.Info(errorMessage);
+                    throw new Exception(errorMessage);
+                }
+                return typesTable;
+            }, Level1CacheTimeoutValue);
             return _institutionTypes;
         }
     }
 }
+ 

@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -45,7 +45,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var cfWebDefaults = await cfWebConfigutationsRepository.GetColleagueFinanceWebConfigurations();
             if (cfWebDefaults != null)
             {
-                // Convert the requisition summary and all its child objects into DTOs
+                // Convert the colleague finance web configuration and all its child objects into DTOs
                 var cfWebDefaultsEntityDtoAdapter = new ColleagueFinanceWebConfigurationsEntityDtoAdapter(_adapterRegistry, logger);
                 cfWebDefaultsDto = cfWebDefaultsEntityDtoAdapter.MapToType(cfWebDefaults);
             }

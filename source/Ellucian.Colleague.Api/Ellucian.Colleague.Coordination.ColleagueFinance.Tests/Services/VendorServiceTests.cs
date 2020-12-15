@@ -38,6 +38,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Mock<IColleagueFinanceReferenceDataRepository> referenceDataRepositoryMock;
             Mock<IReferenceDataRepository> refDataRepositoryMock;
             Mock<IPersonRepository> personRepositoryMock;
+            Mock<IVendorContactsRepository> vendorContactsRepositoryMock;
             Mock<IAddressRepository> addressRepositoryMock;
             Mock<IAdapterRegistry> adapterRegistryMock;
             Mock<IInstitutionRepository> institutionRepositoryMock;
@@ -72,6 +73,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 refDataRepositoryMock = new Mock<IReferenceDataRepository>();
                 personRepositoryMock = new Mock<IPersonRepository>();
                 addressRepositoryMock = new Mock<IAddressRepository>();
+                vendorContactsRepositoryMock = new Mock<IVendorContactsRepository>();
                 institutionRepositoryMock = new Mock<IInstitutionRepository>();
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 roleRepositoryMock = new Mock<IRoleRepository>();
@@ -88,7 +90,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object, 
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, vendorContactsRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
             }
 
@@ -171,7 +173,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(personGuidCollection);
 
                 vendorService = null;
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object, 
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, vendorContactsRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object, 
                                               baseConfigurationRepository,  adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
 
                 var actualsTuple =
@@ -206,7 +208,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
 
                 vendorService = null;
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, vendorContactsRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
 
                 var actualsTuple =
@@ -226,7 +228,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 vendorRepositoryMock.Setup(i => i.GetVendorsAsync(It.IsAny<int>(), It.IsAny<int>(), "", It.IsAny<List<string>>(), null, null, null)).ReturnsAsync(vendorEntityTuple);
 
                 vendorService = null;
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, vendorContactsRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository,  adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
 
                 var actualsTuple =
@@ -258,7 +260,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 vendorRepositoryMock.Setup(i => i.GetVendorsAsync(It.IsAny<int>(), It.IsAny<int>(), "", It.IsAny<List<string>>(), null, null, It.IsAny<List<string>>())).ReturnsAsync(vendorEntityTuple);
 
                 vendorService = null;
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, vendorContactsRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
 
                 var actualsTuple =
@@ -482,6 +484,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Mock<IReferenceDataRepository> refDataRepositoryMock;
             Mock<IPersonRepository> personRepositoryMock;
             Mock<IAddressRepository> addressRepositoryMock;
+            Mock<IVendorContactsRepository> vendorContactsRepositoryMock;
             Mock<IAdapterRegistry> adapterRegistryMock;
             Mock<IInstitutionRepository> institutionRepositoryMock;
             ICurrentUserFactory currentUserFactory;
@@ -511,6 +514,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 refDataRepositoryMock = new Mock<IReferenceDataRepository>();
                 personRepositoryMock = new Mock<IPersonRepository>();
                 addressRepositoryMock = new Mock<IAddressRepository>();
+                vendorContactsRepositoryMock = new Mock<IVendorContactsRepository>();
                 institutionRepositoryMock = new Mock<IInstitutionRepository>();
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 roleRepositoryMock = new Mock<IRoleRepository>();
@@ -527,7 +531,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, vendorContactsRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
             }
 
@@ -1007,6 +1011,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Mock<IReferenceDataRepository> refDataRepositoryMock;
             Mock<IPersonRepository> personRepositoryMock;
             Mock<IAddressRepository> addressRepositoryMock;
+            Mock<IVendorContactsRepository> vendorContactsRepositoryMock;
             Mock<IAdapterRegistry> adapterRegistryMock;
             Mock<IInstitutionRepository> institutionRepositoryMock;
             ICurrentUserFactory currentUserFactory;
@@ -1044,6 +1049,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 refDataRepositoryMock = new Mock<IReferenceDataRepository>();
                 personRepositoryMock = new Mock<IPersonRepository>();
                 addressRepositoryMock = new Mock<IAddressRepository>();
+                vendorContactsRepositoryMock = new Mock<IVendorContactsRepository>();
                 institutionRepositoryMock = new Mock<IInstitutionRepository>();
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 roleRepositoryMock = new Mock<IRoleRepository>();
@@ -1060,7 +1066,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, vendorContactsRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
             }
 
@@ -1143,7 +1149,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(personGuidCollection);
 
                 vendorService = null;
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, vendorContactsRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                               baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
 
                 var actualsTuple =
@@ -1177,7 +1183,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
 
                 vendorService = null;
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, vendorContactsRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
 
                 var actualsTuple =
@@ -1199,7 +1205,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
 
                 vendorService = null;
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, vendorContactsRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
 
                 var actualsTuple =
@@ -1220,7 +1226,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 vendorRepositoryMock.Setup(i => i.GetVendors2Async(It.IsAny<int>(), It.IsAny<int>(), "", It.IsAny<List<string>>(), null, null, null, null)).ReturnsAsync(vendorEntityTuple);
 
                 vendorService = null;
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, vendorContactsRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
 
                 var actualsTuple =
@@ -1251,7 +1257,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 vendorRepositoryMock.Setup(i => i.GetVendors2Async(It.IsAny<int>(), It.IsAny<int>(), "", It.IsAny<List<string>>(), null, null, null, null)).ReturnsAsync(vendorEntityTuple);
 
                 vendorService = null;
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, vendorContactsRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
 
                 var actualsTuple =
@@ -1275,7 +1281,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 vendorRepositoryMock.Setup(i => i.GetVendors2Async(It.IsAny<int>(), It.IsAny<int>(), "", It.IsAny<List<string>>(), null, null, It.IsAny<List<string>>(), null)).ReturnsAsync(vendorEntityTuple);
 
                 vendorService = null;
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, vendorContactsRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
 
                 var actualsTuple =
@@ -1760,6 +1766,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Mock<IReferenceDataRepository> refDataRepositoryMock;
             Mock<IPersonRepository> personRepositoryMock;
             Mock<IAddressRepository> addressRepositoryMock;
+            Mock<IVendorContactsRepository> vendorContactsRepositoryMock;
             Mock<IAdapterRegistry> adapterRegistryMock;
             Mock<IInstitutionRepository> institutionRepositoryMock;
             ICurrentUserFactory currentUserFactory;
@@ -1791,6 +1798,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 refDataRepositoryMock = new Mock<IReferenceDataRepository>();
                 personRepositoryMock = new Mock<IPersonRepository>();
                 addressRepositoryMock = new Mock<IAddressRepository>();
+                vendorContactsRepositoryMock = new Mock<IVendorContactsRepository>();
                 institutionRepositoryMock = new Mock<IInstitutionRepository>();
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 roleRepositoryMock = new Mock<IRoleRepository>();
@@ -1807,7 +1815,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
+                vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, vendorContactsRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
                                                baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
             }
 
@@ -2517,7 +2525,730 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
     }
     #endregion
-    
+
+    #region vendors-maximum
+
+    [TestClass]
+    public class VendorsMaximumServiceTests_GET: CurrentUserSetup
+    {
+        //Mock<IPositionRepository> positionRepositoryMock;
+        Mock<IVendorsRepository> vendorRepositoryMock;
+        Mock<IColleagueFinanceReferenceDataRepository> referenceDataRepositoryMock;
+        Mock<IReferenceDataRepository> refDataRepositoryMock;
+        Mock<IPersonRepository> personRepositoryMock;
+        Mock<IAddressRepository> addressRepositoryMock;
+        Mock<IVendorContactsRepository> vendorContactsRepositoryMock;
+        Mock<IAdapterRegistry> adapterRegistryMock;
+        Mock<IInstitutionRepository> institutionRepositoryMock;
+        ICurrentUserFactory currentUserFactory;
+        Mock<IRoleRepository> roleRepositoryMock;
+        Mock<ILogger> loggerMock;
+
+        VendorsService vendorService;
+        IEnumerable<Domain.ColleagueFinance.Entities.Vendors> vendorEntities;
+        IEnumerable<Domain.ColleagueFinance.Entities.VendorHoldReasons> VendorHoldReasonsEntities;
+        Tuple<IEnumerable<Domain.ColleagueFinance.Entities.Vendors>, int> vendorEntityTuple;
+
+        IEnumerable<Domain.ColleagueFinance.Entities.VendorTerm> vendorTermEntities;
+        IEnumerable<Domain.Base.Entities.TaxForms2> taxFormEntities;
+        IEnumerable<BoxCodes> taxBoxEntities;
+        IEnumerable<IntgVendorAddressUsages> addressUsages;
+        IEnumerable<Domain.ColleagueFinance.Entities.VendorType> vendorTypeEntities;
+        IEnumerable<Domain.ColleagueFinance.Entities.AccountsPayableSources> acctPaySourceEntities;
+        IEnumerable<Domain.ColleagueFinance.Entities.CurrencyConversion> currencyConversionEntities;
+        IEnumerable<Domain.Base.Entities.AddressType2> addressTypes;
+        IEnumerable<State> states;
+        IEnumerable<Domain.Base.Entities.Country> countries;
+        IEnumerable<Domain.Base.Entities.PhoneType> phoneTypes;
+        private IConfigurationRepository baseConfigurationRepository;
+        private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+
+        private Domain.Entities.Permission permissionViewAnyPerson;
+        string guid = "ab8f690b-071f-4d98-8da8-d4312511a4c1";
+
+        int offset = 0;
+        int limit = 4;
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            //positionRepositoryMock = new Mock<IPositionRepository>();
+            vendorRepositoryMock = new Mock<IVendorsRepository>();
+            referenceDataRepositoryMock = new Mock<IColleagueFinanceReferenceDataRepository>();
+            refDataRepositoryMock = new Mock<IReferenceDataRepository>();
+            personRepositoryMock = new Mock<IPersonRepository>();
+            addressRepositoryMock = new Mock<IAddressRepository>();
+            vendorContactsRepositoryMock = new Mock<IVendorContactsRepository>();
+            institutionRepositoryMock = new Mock<IInstitutionRepository>();
+            adapterRegistryMock = new Mock<IAdapterRegistry>();
+            roleRepositoryMock = new Mock<IRoleRepository>();
+            loggerMock = new Mock<ILogger>();
+            baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
+            baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+
+            BuildData();
+            // Set up current user
+            currentUserFactory = new CurrentUserSetup.PersonUserFactory();
+
+            // Mock permissions
+            permissionViewAnyPerson = new Ellucian.Colleague.Domain.Entities.Permission( ColleagueFinancePermissionCodes.ViewVendors );
+            personRole.AddPermission( permissionViewAnyPerson );
+            roleRepositoryMock.Setup( rpm => rpm.Roles ).Returns( new List<Domain.Entities.Role>() { personRole } );
+
+            vendorService = new VendorsService( referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, vendorContactsRepositoryMock.Object, refDataRepositoryMock.Object, institutionRepositoryMock.Object,
+                                           baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object );
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            vendorEntityTuple = null;
+            vendorEntities = null;
+            vendorTermEntities = null;
+            taxFormEntities = null;
+            vendorTypeEntities = null;
+            acctPaySourceEntities = null;
+            currencyConversionEntities = null;
+            vendorRepositoryMock = null;
+            referenceDataRepositoryMock = null;
+            adapterRegistryMock = null;
+            currentUserFactory = null;
+            roleRepositoryMock = null;
+            loggerMock = null;
+            institutionRepositoryMock = null;
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task Vendors_GetVendorsMaximumAsync()
+        {
+            personRole.RemovePermission( permissionViewAnyPerson ); //Removing the VIEW.VOUCHER Permission
+            roleRepositoryMock.Setup( rpm => rpm.Roles ).Returns( new List<Domain.Entities.Role>() { personRole } );
+            var actualsTuple =
+                await
+                    vendorService.GetVendorsMaximumAsync( offset, limit, null, null, It.IsAny<bool>() );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_VendorDetails_GetPersonIdFromGuidAsync_EmptySet()
+        {
+            personRepositoryMock.Setup( repo => repo.GetPersonIdFromGuidAsync( It.IsAny<string>() ) ).ThrowsAsync( new Exception() );
+            var actualsTuple =
+                await
+                    vendorService.GetVendorsMaximumAsync( offset, limit, null, "vendorDetails", It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_VendorDetails_GetPersonIdFromGuidAsync_Returns_Null_EmptySet()
+        {
+            personRepositoryMock.Setup( repo => repo.GetPersonIdFromGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( null );
+            var actualsTuple =
+                await
+                    vendorService.GetVendorsMaximumAsync( offset, limit, null, "vendorDetails", It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_CiteriaObj_GetPersonByGuidNonCachedAsync_EmptySet()
+        {
+            VendorsMaximum maximum = new VendorsMaximum() { VendorDetail = new VendorDetailsDtoProperty() { Person = new GuidObject2("GUID") } };
+            personRepositoryMock.Setup( repo => repo.GetPersonByGuidNonCachedAsync( It.IsAny<string>() ) ).ThrowsAsync( new Exception() );
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, maximum, It.IsAny<string>(), It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_CiteriaObj_GetPersonByGuidNonCachedAsync_Returns_Null_EmptySet()
+        {
+            VendorsMaximum maximum = new VendorsMaximum() { VendorDetail = new VendorDetailsDtoProperty() { Person = new GuidObject2( "GUID" ) } };
+            personRepositoryMock.Setup( repo => repo.GetPersonByGuidNonCachedAsync( It.IsAny<string>() ) ).ReturnsAsync( null );
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, maximum, It.IsAny<string>(), It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_CiteriaObj_GetInstitutionsFromListAsync_Returns_Null_EmptySet()
+        {
+            VendorsMaximum maximum = new VendorsMaximum() { VendorDetail = new VendorDetailsDtoProperty() { Person = new GuidObject2( "GUID" ) } };
+            personRepositoryMock.Setup( repo => repo.GetPersonByGuidNonCachedAsync( It.IsAny<string>() ) ).ReturnsAsync( new Person( "1", "Last_Name" ) );
+            institutionRepositoryMock.Setup( repo => repo.GetInstitutionsFromListAsync( It.IsAny<string[]>() ) ).ReturnsAsync( new List<Institution>() { new Institution() } );
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, maximum, It.IsAny<string>(), It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_CiteriaObj_PersonCorpIndicator_Y__EmptySet()
+        {
+            VendorsMaximum maximum = new VendorsMaximum() { VendorDetail = new VendorDetailsDtoProperty() { Person = new GuidObject2( "GUID" ) } };
+            personRepositoryMock.Setup( repo => repo.GetPersonByGuidNonCachedAsync( It.IsAny<string>() ) ).ReturnsAsync( new Person( "1", "Last_Name" ) { PersonCorpIndicator = "Y" } );
+            institutionRepositoryMock.Setup( repo => repo.GetInstitutionsFromListAsync( It.IsAny<string[]>() ) ).ReturnsAsync( null );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, maximum, It.IsAny<string>(), It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_CiteriaObj_VendorId_Null_EmptySet()
+        {
+            VendorsMaximum maximum = new VendorsMaximum() { VendorDetail = new VendorDetailsDtoProperty() { Person = new GuidObject2( "GUID" ) } };
+            personRepositoryMock.Setup( repo => repo.GetPersonIdFromGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( "1" );
+            personRepositoryMock.Setup( repo => repo.GetPersonByGuidNonCachedAsync( It.IsAny<string>() ) ).ReturnsAsync( new Person( "1", "Last_Name" ) );
+            institutionRepositoryMock.Setup( repo => repo.GetInstitutionsFromListAsync( It.IsAny<string[]>() ) ).ReturnsAsync( null );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, maximum, "vendorDetails", It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_CiteriaObj_Organization_Exception_EmptySet()
+        {
+            VendorsMaximum maximum = new VendorsMaximum() { VendorDetail = new VendorDetailsDtoProperty() { Organization = new GuidObject2( "GUID" ) } };
+            personRepositoryMock.Setup( repo => repo.GetPersonIdFromGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( "1" );
+            personRepositoryMock.Setup( repo => repo.GetPersonByGuidNonCachedAsync( It.IsAny<string>() ) ).ThrowsAsync( new Exception() );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, maximum, "vendorDetails", It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_CiteriaObj_Organization_Person_Null_EmptySet()
+        {
+            VendorsMaximum maximum = new VendorsMaximum() { VendorDetail = new VendorDetailsDtoProperty() { Organization = new GuidObject2( "GUID" ) } };
+            personRepositoryMock.Setup( repo => repo.GetPersonIdFromGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( "1" );
+            personRepositoryMock.Setup( repo => repo.GetPersonByGuidNonCachedAsync( It.IsAny<string>() ) ).ReturnsAsync( null );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, maximum, "vendorDetails", It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_CiteriaObj_Organization_Institution_Not_Empty_EmptySet()
+        {
+            VendorsMaximum maximum = new VendorsMaximum() { VendorDetail = new VendorDetailsDtoProperty() { Organization = new GuidObject2( "GUID" ) } };
+            personRepositoryMock.Setup( repo => repo.GetPersonIdFromGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( "1" );
+            personRepositoryMock.Setup( repo => repo.GetPersonByGuidNonCachedAsync( It.IsAny<string>() ) ).ReturnsAsync( new Person( "1", "Last_Name" ) );
+            institutionRepositoryMock.Setup( repo => repo.GetInstitutionsFromListAsync( It.IsAny<string[]>() ) ).ReturnsAsync( new List<Institution>() { new Institution() } );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, maximum, "vendorDetails", It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_CiteriaObj_Organization_PersonCorpIndicator_Not_Y_EmptySet()
+        {
+            VendorsMaximum maximum = new VendorsMaximum() { VendorDetail = new VendorDetailsDtoProperty() { Organization = new GuidObject2( "GUID" ) } };
+            personRepositoryMock.Setup( repo => repo.GetPersonIdFromGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( "1" );
+            personRepositoryMock.Setup( repo => repo.GetPersonByGuidNonCachedAsync( It.IsAny<string>() ) ).ReturnsAsync( new Person( "1", "Last_Name" ) { PersonCorpIndicator = "N"} );
+            institutionRepositoryMock.Setup( repo => repo.GetInstitutionsFromListAsync( It.IsAny<string[]>() ) ).ReturnsAsync( new List<Institution>() );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, maximum, "vendorDetails", It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_CiteriaObj_Organization_PersonCorpIndicator_Equal_Y_VendorId_Not_Null_EmptySet()
+        {
+            VendorsMaximum maximum = new VendorsMaximum() { VendorDetail = new VendorDetailsDtoProperty() { Organization = new GuidObject2( "GUID" ) } };
+            personRepositoryMock.Setup( repo => repo.GetPersonIdFromGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( "1" );
+            personRepositoryMock.Setup( repo => repo.GetPersonByGuidNonCachedAsync( It.IsAny<string>() ) ).ReturnsAsync( new Person( "1", "Last_Name" ) { PersonCorpIndicator = "Y" } );
+            institutionRepositoryMock.Setup( repo => repo.GetInstitutionsFromListAsync( It.IsAny<string[]>() ) ).ReturnsAsync( new List<Institution>() );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, maximum, "vendorDetails", It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_CiteriaObj_Institution_Exception_EmptySet()
+        {
+            VendorsMaximum maximum = new VendorsMaximum() { VendorDetail = new VendorDetailsDtoProperty() { Institution = new GuidObject2( "GUID" ) } };
+            personRepositoryMock.Setup( repo => repo.GetPersonIdFromGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( "1" );
+            personRepositoryMock.Setup( repo => repo.GetPersonByGuidNonCachedAsync( It.IsAny<string>() ) ).ThrowsAsync( new Exception() );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, maximum, "vendorDetails", It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_CiteriaObj_Institution_Person_Null_EmptySet()
+        {
+            VendorsMaximum maximum = new VendorsMaximum() { VendorDetail = new VendorDetailsDtoProperty() { Institution = new GuidObject2( "GUID" ) } };
+            personRepositoryMock.Setup( repo => repo.GetPersonIdFromGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( "1" );
+            personRepositoryMock.Setup( repo => repo.GetPersonByGuidNonCachedAsync( It.IsAny<string>() ) ).ReturnsAsync( null );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, maximum, "vendorDetails", It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_CiteriaObj_Institution_PersonCorpIndicator_N_EmptySet()
+        {
+            VendorsMaximum maximum = new VendorsMaximum() { VendorDetail = new VendorDetailsDtoProperty() { Institution = new GuidObject2( "GUID" ) } };
+            personRepositoryMock.Setup( repo => repo.GetPersonIdFromGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( "1" );
+            personRepositoryMock.Setup( repo => repo.GetPersonByGuidNonCachedAsync( It.IsAny<string>() ) ).ReturnsAsync( new Person( "1", "Last_Name" ) { PersonCorpIndicator = "N" } );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, maximum, "vendorDetails", It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_CiteriaObj_Institution_Institution_Null_EmptySet()
+        {
+            VendorsMaximum maximum = new VendorsMaximum() { VendorDetail = new VendorDetailsDtoProperty() { Institution = new GuidObject2( "GUID" ) } };
+            personRepositoryMock.Setup( repo => repo.GetPersonIdFromGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( "1" );
+            personRepositoryMock.Setup( repo => repo.GetPersonByGuidNonCachedAsync( It.IsAny<string>() ) ).ReturnsAsync( new Person( "1", "Last_Name" ) { PersonCorpIndicator = "Y" } );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, maximum, "vendorDetails", It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_CiteriaObj_Institution_VendorId_Not_Null_EmptySet()
+        {
+            VendorsMaximum maximum = new VendorsMaximum() { VendorDetail = new VendorDetailsDtoProperty() { Institution = new GuidObject2( "GUID" ) } };
+            personRepositoryMock.Setup( repo => repo.GetPersonIdFromGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( "1" );
+            personRepositoryMock.Setup( repo => repo.GetPersonByGuidNonCachedAsync( It.IsAny<string>() ) ).ReturnsAsync( new Person( "1", "Last_Name" ) { PersonCorpIndicator = "Y" } );
+            institutionRepositoryMock.Setup( repo => repo.GetInstitutionsFromListAsync( It.IsAny<string[]>() ) ).ReturnsAsync( new List<Institution>() { new Institution() } );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, maximum, "vendorDetails", It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_CiteriaObj_Statuses_Value_Null_EmptySet()
+        {
+            VendorsMaximum maximum = new VendorsMaximum() { Statuses = new List<VendorsStatuses?>() { null, null  } };
+            personRepositoryMock.Setup( repo => repo.GetPersonIdFromGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( "1" );
+            personRepositoryMock.Setup( repo => repo.GetPersonByGuidNonCachedAsync( It.IsAny<string>() ) ).ReturnsAsync( new Person( "1", "Last_Name" ) { PersonCorpIndicator = "Y" } );
+            institutionRepositoryMock.Setup( repo => repo.GetInstitutionsFromListAsync( It.IsAny<string[]>() ) ).ReturnsAsync( new List<Institution>() { new Institution() } );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, maximum, "vendorDetails", It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_CiteriaObj_Addresses_DetailId_Null_EmptySet()
+        {
+            VendorsMaximum maximum = new VendorsMaximum() { Addresses = new List<VendorsMaximumAddresses>() { new VendorsMaximumAddresses() { Detail = new GuidObject2("") } } };
+            personRepositoryMock.Setup( repo => repo.GetPersonIdFromGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( "1" );
+            personRepositoryMock.Setup( repo => repo.GetPersonByGuidNonCachedAsync( It.IsAny<string>() ) ).ReturnsAsync( new Person( "1", "Last_Name" ) { PersonCorpIndicator = "Y" } );
+            institutionRepositoryMock.Setup( repo => repo.GetInstitutionsFromListAsync( It.IsAny<string[]>() ) ).ReturnsAsync( new List<Institution>() { new Institution() } );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, maximum, "vendorDetails", It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_CiteriaObj_Addresses_addressId_Null_EmptySet()
+        {
+            VendorsMaximum maximum = new VendorsMaximum() { Addresses = new List<VendorsMaximumAddresses>() { new VendorsMaximumAddresses() { Detail = new GuidObject2( "GUID" ) } } };
+            personRepositoryMock.Setup( repo => repo.GetPersonIdFromGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( "1" );
+            personRepositoryMock.Setup( repo => repo.GetPersonByGuidNonCachedAsync( It.IsAny<string>() ) ).ReturnsAsync( new Person( "1", "Last_Name" ) { PersonCorpIndicator = "Y" } );
+            institutionRepositoryMock.Setup( repo => repo.GetInstitutionsFromListAsync( It.IsAny<string[]>() ) ).ReturnsAsync( new List<Institution>() { new Institution() } );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, maximum, "vendorDetails", It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync_CiteriaObj_Addresses_Exception_EmptySet()
+        {
+            VendorsMaximum maximum = new VendorsMaximum() { Addresses = new List<VendorsMaximumAddresses>() { new VendorsMaximumAddresses() { Detail = new GuidObject2( "GUID" ) } } };
+            personRepositoryMock.Setup( repo => repo.GetPersonIdFromGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( "1" );
+            personRepositoryMock.Setup( repo => repo.GetPersonByGuidNonCachedAsync( It.IsAny<string>() ) ).ReturnsAsync( new Person( "1", "Last_Name" ) { PersonCorpIndicator = "Y" } );
+            institutionRepositoryMock.Setup( repo => repo.GetInstitutionsFromListAsync( It.IsAny<string[]>() ) ).ReturnsAsync( new List<Institution>() { new Institution() } );
+            addressRepositoryMock.Setup( repo => repo.GetAddressFromGuidAsync( It.IsAny<string>() ) ).ThrowsAsync( new Exception() );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, maximum, "vendorDetails", It.IsAny<bool>() );
+
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( 0, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof( IntegrationApiException ) )]
+        public async Task GetVendorsMaximumAsync_RepositoryException_IntegrationApiException_Thrown()
+        {
+            vendorRepositoryMock.Setup( repo => repo.GetVendorsMaximumAsync( It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(),
+                 It.IsAny<string>(), It.IsAny<List<string>>() ) ).ThrowsAsync( new RepositoryException() );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, null, "", It.IsAny<bool>() );
+        }
+
+        [TestMethod]
+        [ExpectedException( typeof( IntegrationApiException ) )]
+        public async Task GetVendorsMaximumAsync_IntegrationApiException()
+        {
+            var vendors = new List<Domain.ColleagueFinance.Entities.Vendors>()
+            {
+                new Domain.ColleagueFinance.Entities.Vendors( guid )
+                {
+                    Id = "1",                    
+                }
+            };
+            var tuple = new Tuple<IEnumerable<Domain.ColleagueFinance.Entities.Vendors>, int>( vendors, 1 );
+            vendorRepositoryMock.Setup( repo => repo.GetVendorsMaximumAsync( It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(),
+                 It.IsAny<string>(), It.IsAny<List<string>>() ) ).ReturnsAsync( tuple );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>() );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumAsync()
+        {
+            var vendors = new List<Domain.ColleagueFinance.Entities.Vendors>()
+            {
+                new Domain.ColleagueFinance.Entities.Vendors( guid )
+                {
+                    Id = "1",
+                }
+            };
+            var tuple = new Tuple<IEnumerable<Domain.ColleagueFinance.Entities.Vendors>, int>( vendors, 1 );
+            vendorRepositoryMock.Setup( repo => repo.GetVendorsMaximumAsync( It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(),
+                 It.IsAny<string>(), It.IsAny<List<string>>() ) ).ReturnsAsync( tuple );
+            Dictionary<string, string> personDict = new Dictionary<string, string>();
+            personDict.Add( "1", guid );
+            personRepositoryMock.Setup( repo => repo.GetPersonGuidsCollectionAsync( It.IsAny<string[]>() ) ).ReturnsAsync( personDict );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumAsync( offset, limit, It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>() );
+            Assert.IsNotNull( actualsTuple );
+            Assert.AreEqual( tuple.Item2, actualsTuple.Item2 );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumByGuidAsync()
+        {
+            var vendor = new Domain.ColleagueFinance.Entities.Vendors( guid ) { Id = "1", };
+            vendorRepositoryMock.Setup( repo => repo.GetVendorsMaximumByGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( vendor );
+            Dictionary<string, string> personDict = new Dictionary<string, string>();
+            personDict.Add( "1", guid );
+            personRepositoryMock.Setup( repo => repo.GetPersonGuidsCollectionAsync( It.IsAny<string[]>() ) ).ReturnsAsync( personDict );
+
+
+            var actual = await vendorService.GetVendorsMaximumByGuidAsync( guid );
+            Assert.IsNotNull( actual );
+        }
+
+        [TestMethod]
+        [ExpectedException( typeof( ArgumentNullException ) )]
+        public async Task GetVendorsMaximumByGuidAsync_ArgumentNullException()
+        {
+            var actualsTuple = await vendorService.GetVendorsMaximumByGuidAsync( "" );
+        }
+
+        [TestMethod]
+        [ExpectedException( typeof( Exception ) )]
+        public async Task GetVendorsMaximumByGuidAsync_RepositoryException()
+        {
+            vendorContactsRepositoryMock.Setup( repo => repo.GetVendorContactsForVendorsAsync( It.IsAny<string[]>() ) ).ThrowsAsync( new RepositoryException() );
+            var actualsTuple = await vendorService.GetVendorsMaximumByGuidAsync( "GUID" );
+        }
+
+        [TestMethod]
+        [ExpectedException( typeof( IntegrationApiException ) )]
+        public async Task GetVendorsMaximumByGuidAsync_IntegrationApiException()
+        {
+            var vendor = new Domain.ColleagueFinance.Entities.Vendors( guid ) { Id = "1" };
+            vendorRepositoryMock.Setup( repo => repo.GetVendorsMaximumByGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( vendor );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumByGuidAsync( guid );
+        }
+
+        [TestMethod]
+        [ExpectedException( typeof( IntegrationApiException ) )]
+        public async Task GetVendorsMaximumByGuidAsync_IntegrationApiException_All()
+        {
+            var vendor = new Domain.ColleagueFinance.Entities.Vendors( Guid.NewGuid().ToString() ) 
+            { 
+                Id = "Bad_Id",
+                TaxId = "1",
+                Categories = new List<string>()
+                {
+                    "EP",
+                    "TR",
+                    "PR"
+                },
+                ActiveFlag = "Y",
+                AddDate = DateTime.Now,
+                TaxForm = "TF"
+            };
+            vendorRepositoryMock.Setup( repo => repo.GetVendorsMaximumByGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( vendor );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumByGuidAsync( guid );
+        }
+
+        [TestMethod]
+        public async Task GetVendorsMaximumByGuidAsync_All()
+        {
+            var vendor = new Domain.ColleagueFinance.Entities.Vendors( Guid.NewGuid().ToString() )
+            {
+                Id = "0000231",
+                TaxId = "1",
+                Categories = new List<string>()
+                {
+                    "EP",
+                    "TR",
+                    "PR"
+                },
+                ActiveFlag = "Y",
+                AddDate = DateTime.Now,
+                TaxForm = "Form123",
+                Addresses = new List<Domain.Base.Entities.Address>()
+                {
+                    new Domain.Base.Entities.Address()
+                    {
+                        Guid = "f43e7195-6eca-451d-b6c3-1e52fe540084",
+                        TypeCode = "AT1",
+                        AddressLines = new List<string>(){"Addr Line 1"},
+                        City = "New York",
+                        State = "MN",
+                        PostalCode = "55430",
+                        Country = "USA"                       
+                    }
+                },
+                Phones = new List<Domain.Base.Entities.Phone>()
+                {
+                    new Domain.Base.Entities.Phone("8005551212", "Home")
+                }
+            };
+            vendorRepositoryMock.Setup( repo => repo.GetVendorsMaximumByGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( vendor );
+
+            var actualsTuple = await vendorService.GetVendorsMaximumByGuidAsync( guid );
+        }
+        private void BuildData()
+        {
+            acctPaySourceEntities = new List<Domain.ColleagueFinance.Entities.AccountsPayableSources>()
+                {
+                    new Domain.ColleagueFinance.Entities.AccountsPayableSources("e43e7195-6eca-451d-b6c3-1e52fe540083", "BMA", "BMA Test"),
+                    new Domain.ColleagueFinance.Entities.AccountsPayableSources("95df0303-9b7f-4686-908f-1640b4881e23", "CD", "Central District Office"),
+                    new Domain.ColleagueFinance.Entities.AccountsPayableSources("ec49b053-7acc-411a-a766-8a7fc2f24ee3", "COE", "Colonial Ohio-East (coe) Campus"),
+                    new Domain.ColleagueFinance.Entities.AccountsPayableSources("eded9894-ea62-44f4-be8e-b141dfc00dba", "COEEA", "Coe-east"),
+                    new Domain.ColleagueFinance.Entities.AccountsPayableSources("17ff700b-8d20-43d7-be31-c34933baca75", "CVIL", "Loc Description"),
+                };
+            referenceDataRepositoryMock.Setup( i => i.GetAccountsPayableSourcesAsync( It.IsAny<bool>() ) ).ReturnsAsync( acctPaySourceEntities );
+            foreach( var record in acctPaySourceEntities )
+            {
+                referenceDataRepositoryMock.Setup( loc => loc.GetAccountsPayableSourceGuidAsync( record.Code ) ).ReturnsAsync( record.Guid );
+            }
+
+            vendorTypeEntities = new List<Domain.ColleagueFinance.Entities.VendorType>()
+                {
+                    new Domain.ColleagueFinance.Entities.VendorType("d4ff9cf9-3300-4dca-b52e-59c905021893", "Admissions", "Admissions"),
+                    new Domain.ColleagueFinance.Entities.VendorType("161b17b2-5b8b-482b-8ff3-2454323aa8e6", "Agriculture Business", "Agriculture Business"),
+                    new Domain.ColleagueFinance.Entities.VendorType("5f8aeedd-8102-4d8f-8dbc-ecd32c374e87", "Agriculture Mechanics", "Agriculture Mechanics"),
+                    new Domain.ColleagueFinance.Entities.VendorType("ba66205d-79a8-4244-95f9-d2770a129a97", "Animal Science", "Animal Science"),
+                    new Domain.ColleagueFinance.Entities.VendorType("ccce9689-aab1-47ab-ae76-fa128fe8b97e", "Anthropology", "Anthropology"),
+                };
+            referenceDataRepositoryMock.Setup( i => i.GetVendorTypesAsync( It.IsAny<bool>() ) ).ReturnsAsync( vendorTypeEntities );
+            foreach( var record in vendorTypeEntities )
+            {
+                referenceDataRepositoryMock.Setup( loc => loc.GetVendorTypesGuidAsync( record.Code ) ).ReturnsAsync( record.Guid );
+            }
+
+            vendorTermEntities = new List<Domain.ColleagueFinance.Entities.VendorTerm>()
+                {
+                    new Domain.ColleagueFinance.Entities.VendorTerm("c1b91008-ba77-4b5b-8b77-84f5a7ae1632", "ADJ", "Adjunct Faculty"),
+                    new Domain.ColleagueFinance.Entities.VendorTerm("874dee09-8662-47e6-af0d-504c257493a3", "SUP", "Support"),
+                    new Domain.ColleagueFinance.Entities.VendorTerm("29391a8c-75e7-41e8-a5ff-5d7f7598b87c", "AS", "Anuj Test"),
+                    new Domain.ColleagueFinance.Entities.VendorTerm("5b05410c-c94c-464a-98ee-684198bde60b", "ITS", "IT Support"),
+                };
+            referenceDataRepositoryMock.Setup( i => i.GetVendorTermsAsync( It.IsAny<bool>() ) ).ReturnsAsync( vendorTermEntities );
+            foreach( var record in vendorTermEntities )
+            {
+                referenceDataRepositoryMock.Setup( loc => loc.GetVendorTermGuidAsync( record.Code ) ).ReturnsAsync( record.Guid );
+            }
+
+            taxFormEntities = new List<TaxForms2>()
+                {
+                    new TaxForms2("c1b91008-ba77-4b5b-8b77-84f5a7ae1632", "Form123", "Form123", "box123" ),
+                    new TaxForms2("874dee09-8662-47e6-af0d-504c257493a3", "Form124", "Form124","box124"),
+                    new TaxForms2("29391a8c-75e7-41e8-a5ff-5d7f7598b87c", "Form123", "Form125","box125"),
+                    new TaxForms2("5b05410c-c94c-464a-98ee-684198bde60b", "Form128", "Form126","box127"),
+                };
+            refDataRepositoryMock.Setup( i => i.GetTaxFormsBaseAsync( It.IsAny<bool>() ) ).ReturnsAsync( taxFormEntities );
+            foreach( var record in taxFormEntities )
+            {
+                refDataRepositoryMock.Setup( loc => loc.GetTaxFormsGuidAsync( record.Code ) ).ReturnsAsync( record.Guid );
+            }
+
+            taxBoxEntities = new List<BoxCodes>()
+                {
+                    new BoxCodes("c1b91008-ba77-4b5b-8b77-84f5a7ae1632", "box123", "box123",  "Form123"),
+                    new BoxCodes("874dee09-8662-47e6-af0d-504c257493a3", "box124", "box124", "Form124"),
+                    new BoxCodes("29391a8c-75e7-41e8-a5ff-5d7f7598b87c", "box125", "box125", "Form125"),
+                    new BoxCodes("5b05410c-c94c-464a-98ee-684198bde60b", "box126", "box126", "Form126"),
+                };
+            refDataRepositoryMock.Setup( i => i.GetAllBoxCodesAsync( It.IsAny<bool>() ) ).ReturnsAsync( taxBoxEntities );
+            foreach( var record in taxBoxEntities )
+            {
+                refDataRepositoryMock.Setup( loc => loc.GetBoxCodesGuidAsync( record.Code ) ).ReturnsAsync( record.Guid );
+            }
+
+            addressUsages = new List<IntgVendorAddressUsages>()
+                {
+                    new IntgVendorAddressUsages("c1b91008-ba77-4b5b-8b77-84f5a7ae1632", "PO", "Purchase Order Address"),
+                    new IntgVendorAddressUsages("874dee09-8662-47e6-af0d-504c257493a3",  "CHECK", "AP Check Address"),
+
+                };
+            referenceDataRepositoryMock.Setup( i => i.GetIntgVendorAddressUsagesAsync( It.IsAny<bool>() ) ).ReturnsAsync( addressUsages );
+            foreach( var record in addressUsages )
+            {
+                referenceDataRepositoryMock.Setup( loc => loc.GetIntgVendorAddressUsagesGuidAsync( record.Code ) ).ReturnsAsync( record.Guid );
+            }
+
+            VendorHoldReasonsEntities = new List<Domain.ColleagueFinance.Entities.VendorHoldReasons>()
+                {
+                    new Domain.ColleagueFinance.Entities.VendorHoldReasons("c1b91008-ba77-4b5b-8b77-84f5a7ae1632", "ADJ", "Adjunct Faculty"),
+                    new Domain.ColleagueFinance.Entities.VendorHoldReasons("874dee09-8662-47e6-af0d-504c257493a3", "SUP", "Support"),
+                    new Domain.ColleagueFinance.Entities.VendorHoldReasons("29391a8c-75e7-41e8-a5ff-5d7f7598b87c", "AS", "Anuj Test"),
+                    new Domain.ColleagueFinance.Entities.VendorHoldReasons("5b05410c-c94c-464a-98ee-684198bde60b", "ITS", "IT Support"),
+                };
+            referenceDataRepositoryMock.Setup( i => i.GetVendorHoldReasonsAsync( It.IsAny<bool>() ) ).ReturnsAsync( VendorHoldReasonsEntities );
+            foreach( var record in VendorHoldReasonsEntities )
+            {
+                referenceDataRepositoryMock.Setup( loc => loc.GetVendorHoldReasonsGuidAsync( record.Code ) ).ReturnsAsync( record.Guid );
+            }
+
+            currencyConversionEntities = new List<Domain.ColleagueFinance.Entities.CurrencyConversion>()
+                {
+                    new Domain.ColleagueFinance.Entities.CurrencyConversion("ALU", "American Labor Union"),
+                    new Domain.ColleagueFinance.Entities.CurrencyConversion("NEA", "National Education Association")
+                };
+            referenceDataRepositoryMock.Setup( i => i.GetCurrencyConversionAsync() ).ReturnsAsync( currencyConversionEntities );
+
+            vendorEntities = new List<Domain.ColleagueFinance.Entities.Vendors>()
+                {
+                    new Domain.ColleagueFinance.Entities.Vendors("ce4d68f6-257d-4052-92c8-17eed0f088fa")
+                    {
+                        Id = "0000231",
+                        IsOrganization = true,
+                        StopPaymentFlag = "Y",
+                        ApprovalFlag = "Y",
+                        ActiveFlag = "Y",
+                        CurrencyCode = "USD",
+                        Comments = "comments",
+                        AddDate = DateTime.Now,
+                        ApTypes = new List<string>()
+                        {
+                            "BMA"
+                        },
+                        Misc = new List<string>()
+                        {
+                            "misc"
+                        },
+                        Terms = new List<string>()
+                        {
+                            "ADJ"
+                        },
+                        Types = new List<string>()
+                        {
+                            "Admissions"
+                        },
+                        IntgHoldReasons = new List<string>(){"AS" },
+                        Categories = new List<string>() { "EP", "TR", "PR" },
+                        CorpParent =  new List<string>(){"0000231" },
+                        TaxId = "EIN123",
+                        TaxForm = "Form123"
+
+                    },
+                    new Domain.ColleagueFinance.Entities.Vendors("5bc2d86c-6a0c-46b1-824d-485ccb27dc67"){IsOrganization = false, Id = "0000232"},
+                    new Domain.ColleagueFinance.Entities.Vendors("7ea5142f-12f1-4ac9-b9f3-73e4205dfc11"){Id = "0000233"},
+                    new Domain.ColleagueFinance.Entities.Vendors("db8f690b-071f-4d98-8da8-d4312511a4c1"){Id = "0000234"}
+                };
+            vendorEntityTuple = new Tuple<IEnumerable<Domain.ColleagueFinance.Entities.Vendors>, int>( vendorEntities, vendorEntities.Count() );
+            vendorRepositoryMock.Setup( i => i.GetVendors2Async( It.IsAny<int>(), It.IsAny<int>(), "", null, null, null, It.IsAny<List<string>>(), null ) ).ReturnsAsync( vendorEntityTuple );
+            vendorRepositoryMock.Setup( i => i.GetVendorsByGuid2Async( It.IsAny<string>() ) ).ReturnsAsync( vendorEntities.ToList()[ 0 ] );
+            vendorRepositoryMock.Setup( i => i.GetVendorGuidFromIdAsync( It.IsAny<string>() ) ).ReturnsAsync( "123" );
+            personRepositoryMock.Setup( i => i.GetPersonGuidFromIdAsync( It.IsAny<string>() ) ).ReturnsAsync( "db8f690b-071f-4d98-8da8-d4312511a4c2" );
+            var personGuidCollection = new Dictionary<string, string>();
+            personGuidCollection.Add( "0000231", "db8f690b-071f-4d98-8da8-d4312511a4c2" );
+            personGuidCollection.Add( "0000232", "db8f690b-071f-4d98-8da8-d4312511a4c3" );
+            personGuidCollection.Add( "0000233", "db8f690b-071f-4d98-8da8-d4312511a4c4" );
+            personGuidCollection.Add( "0000234", "db8f690b-071f-4d98-8da8-d4312511a4c5" );
+            var personAddressCollection = new Dictionary<string, string>();
+            personAddressCollection.Add( "0000231", "address1" );
+            personAddressCollection.Add( "0000232", "address2" );
+            personRepositoryMock.Setup( p => p.GetPersonGuidsCollectionAsync( It.IsAny<string[]>() ) ).ReturnsAsync( personGuidCollection );
+            personRepositoryMock.Setup( p => p.GetHierarchyAddressIdsAsync( It.IsAny<List<string>>(), It.IsAny<string>(), DateTime.Today ) ).ReturnsAsync( personAddressCollection );
+            var addressGuidCollection = new Dictionary<string, string>();
+            addressGuidCollection.Add( "address1", "db8f690b-071f-4d98-8da8-d4312591a4c2" );
+            addressGuidCollection.Add( "address2", "db8f698b-071f-4d98-8da8-d4312511a4c2" );
+            personRepositoryMock.Setup( p => p.GetAddressGuidsCollectionAsync( It.IsAny<List<string>>() ) ).ReturnsAsync( addressGuidCollection );
+
+            addressTypes = new List<Domain.Base.Entities.AddressType2>()
+            {
+                new Domain.Base.Entities.AddressType2("db8f690b-071f-4d98-8da8-d4312511a4c1", "AT1", "Desc1", AddressTypeCategory.Billing),
+                new Domain.Base.Entities.AddressType2("db8f690b-071f-4d98-8da8-d4312511a4c2", "AT2", "Desc2", AddressTypeCategory.Home),
+                new Domain.Base.Entities.AddressType2("db8f690b-071f-4d98-8da8-d4312511a4c3", "AT3", "Desc3", AddressTypeCategory.Business),
+                new Domain.Base.Entities.AddressType2("db8f690b-071f-4d98-8da8-d4312511a4c4", "AT4", "Desc4", AddressTypeCategory.Main),
+            };
+            refDataRepositoryMock.Setup( repo => repo.GetAddressTypes2Async( It.IsAny<bool>() ) ).ReturnsAsync( addressTypes );
+
+            states = new List<State>()
+            {
+                new State("MN", "MN", "USA"),
+                new State("MA", "MA", "USA"),
+                new State("NY", "NY", "USA"),
+
+            };
+            refDataRepositoryMock.Setup( repo => repo.GetStateCodesAsync( It.IsAny<bool>() ) ).ReturnsAsync( states );
+
+            countries = new List<Domain.Base.Entities.Country>()
+            {
+                new Domain.Base.Entities.Country("USA", "USA", "USA"){ IsoAlpha3Code = "USA" }
+            };
+            refDataRepositoryMock.Setup( repo => repo.GetCountryCodesAsync( It.IsAny<bool>() ) ).ReturnsAsync( countries );
+
+            phoneTypes = new List<Domain.Base.Entities.PhoneType>()
+            {
+                new Domain.Base.Entities.PhoneType("gb8f690b-071f-4d98-8da8-d4312511a4c4", "Home", "Home", PhoneTypeCategory.Home)
+            };
+            refDataRepositoryMock.Setup( repo => repo.GetPhoneTypesAsync( It.IsAny<bool>() ) ).ReturnsAsync( phoneTypes );
+        }
+    }
+
+    #endregion
+
     #region VendorServiceTests_SS
 
     [TestClass]
@@ -2529,6 +3260,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         Mock<IReferenceDataRepository> refDataRepositoryMock;
         Mock<IPersonRepository> personRepositoryMock;
         Mock<IAddressRepository> addressRepositoryMock;
+        Mock<IVendorContactsRepository> vendorContactsRepositoryMock;
         Mock<IAdapterRegistry> adapterRegistryMock;
         Mock<IInstitutionRepository> institutionRepositoryMock;
         ICurrentUserFactory currentUserFactory;
@@ -2564,6 +3296,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             refDataRepositoryMock = new Mock<IReferenceDataRepository>();
             personRepositoryMock = new Mock<IPersonRepository>();
             addressRepositoryMock = new Mock<IAddressRepository>();
+            vendorContactsRepositoryMock = new Mock<IVendorContactsRepository>();
             institutionRepositoryMock = new Mock<IInstitutionRepository>();
             adapterRegistryMock = new Mock<IAdapterRegistry>();
             roleRepositoryMock = new Mock<IRoleRepository>();
@@ -2580,7 +3313,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             personRole.AddPermission(permissionViewAnyPerson);
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-            vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, refDataRepositoryMock.Object,
+            vendorService = new VendorsService(referenceDataRepositoryMock.Object, vendorRepositoryMock.Object, personRepositoryMock.Object, addressRepositoryMock.Object, vendorContactsRepositoryMock.Object, refDataRepositoryMock.Object,
                                            institutionRepositoryMock.Object, baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
 
              // Set up and mock the adapter, and setup the GetAdapter method.
@@ -2630,7 +3363,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     }
                 };
             vendorEntityTuple = new Tuple<IEnumerable<Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult>, int>(vendorEntities, vendorEntities.Count());
-            vendorRepositoryMock.Setup(i => i.VendorSearchForVoucherAsync(It.IsAny<string>())).ReturnsAsync(vendorEntities);
+            vendorRepositoryMock.Setup(i => i.VendorSearchForVoucherAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(vendorEntities);
 
             vendorSearchResultEntities = new List<Domain.ColleagueFinance.Entities.VendorSearchResult>()
                 {
@@ -2720,7 +3453,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task VendorService_VendorSearchForVoucherAsync_Repository_ReturnsNull()
         {
             vendorSearchCriteria.QueryKeyword = "Office";
-            vendorRepositoryMock.Setup(i => i.VendorSearchForVoucherAsync(It.IsAny<string>())).ReturnsAsync(null);
+            vendorRepositoryMock.Setup(i => i.VendorSearchForVoucherAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
             var resultDto = await vendorService.QueryVendorForVoucherAsync(vendorSearchCriteria);
             Assert.AreEqual(resultDto.Count(), 0);
         }
@@ -2729,7 +3462,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task VendorService_VendorSearchForVoucherAsync_Repository_ReturnsVendorSearchResults()
         {
             vendorSearchCriteria.QueryKeyword = "Office";
-            vendorRepositoryMock.Setup(i => i.VendorSearchForVoucherAsync(It.IsAny<string>())).ReturnsAsync(vendorEntities);
+            vendorRepositoryMock.Setup(i => i.VendorSearchForVoucherAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(vendorEntities);
             var vendorSearchResultDtos = await vendorService.QueryVendorForVoucherAsync(vendorSearchCriteria);
 
             var vendorSearchResultDto = vendorSearchResultDtos.Where(x => x.VendorId == x.VendorId).FirstOrDefault();
@@ -2741,6 +3474,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Assert.AreEqual(vendorSearchResultDto.Country, vendorDomainEntity.Country);
             Assert.AreEqual(vendorSearchResultDto.FormattedAddress, vendorDomainEntity.FormattedAddress);
             Assert.AreEqual(vendorSearchResultDto.AddressId, vendorDomainEntity.AddressId);
+            Assert.AreEqual(vendorSearchResultDto.TaxForm, vendorDomainEntity.TaxForm);
+            Assert.AreEqual(vendorSearchResultDto.TaxFormCode, vendorDomainEntity.TaxFormCode);
+            Assert.AreEqual(vendorSearchResultDto.TaxFormLocation, vendorDomainEntity.TaxFormLocation);
         }
         #endregion
 

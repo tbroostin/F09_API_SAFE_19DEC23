@@ -1,5 +1,6 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
+using Ellucian.Colleague.Dtos.Filters;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -18,10 +19,12 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="limit">Limit for paging results</param>
         /// <param name="personExternalEducationFilter">filter criteria</param>
         /// <param name="personFilterGuid">person Filter - Guid for SAVE.LIST.PARMS which contains a savedlist of person IDs</param>
+        /// <param name="personByInstitutionType">filter to retrieve information for a specific person at institution's of a specific type</param>
         /// <param name="bypassCache">Flag to bypass cache</param>
         /// <returns>Collection of <see cref="PersonExternalEducation">personExternalEducation</see> dto objects</returns>          
         Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.PersonExternalEducation>, int>> GetPersonExternalEducationAsync(int offset, int limit,
-            Ellucian.Colleague.Dtos.PersonExternalEducation personExternalEducationFilter = null, string personFilterGuid = "", bool bypassCache = false);
+            Dtos.PersonExternalEducation personExternalEducationFilter = null, string personFilterGuid = "",
+            PersonByInstitutionType personByInstitutionType = null,  bool bypassCache = false);
 
         /// <summary>
         /// Get a PersonExternalEducation DTO by guid.

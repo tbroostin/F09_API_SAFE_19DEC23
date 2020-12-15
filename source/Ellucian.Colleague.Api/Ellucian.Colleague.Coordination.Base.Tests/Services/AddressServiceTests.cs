@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -27,20 +27,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
     public class AddressServiceTests
     {
         [TestClass]
-        public class GetAddress: GenericUserFactory
+        public class GetAddress : GenericUserFactory
         {
             private Mock<IReferenceDataRepository> _referenceDataRepositoryMock;
             private IReferenceDataRepository _referenceDataRepository;
             private IAddressRepository _addressRepository;
             private Mock<IAddressRepository> _addressRepositoryMock;
+            private Mock<IAddressService> _addressServiceMock;
             private ILogger _logger;
             private AddressService _addressesService;
 
 
             private Mock<IAdapterRegistry> adapterRegistryMock;
             private IAdapterRegistry adapterRegistry;
-            
-            
+
+
             private Mock<IRoleRepository> roleRepoMock;
             private IRoleRepository roleRepo;
             private ICurrentUserFactory currentUserFactory;
@@ -85,6 +86,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 _logger = new Mock<ILogger>().Object;
                 _addressRepositoryMock = new Mock<IAddressRepository>();
                 _addressRepository = _addressRepositoryMock.Object;
+                _addressServiceMock = new Mock<IAddressService>();
 
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 adapterRegistry = adapterRegistryMock.Object;
@@ -92,7 +94,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 roleRepo = roleRepoMock.Object;
 
                 currentUserFactory = new AddressUser();
-                
+
                 baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
                 baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
 
@@ -148,7 +150,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     new Domain.Base.Entities.Country("BR","Brazil","BR"){ IsoAlpha3Code = "BRA" },
                     new Domain.Base.Entities.Country("AU","Australia","AU"){ IsoAlpha3Code = "AUS" },
                 };
-                 _referenceDataRepositoryMock.Setup(repo => repo.GetCountryCodesAsync(It.IsAny<bool>())).Returns(Task.FromResult(countries));
+                _referenceDataRepositoryMock.Setup(repo => repo.GetCountryCodesAsync(It.IsAny<bool>())).Returns(Task.FromResult(countries));
 
                 // Mock the reference repository for county
                 counties = new List<County>()
@@ -199,27 +201,30 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     var countyDesc = counties.FirstOrDefault(c => c.Code == source.County);
                     var subRegion = new Dtos.AddressSubRegion();
 
-                    if (!string.IsNullOrEmpty(source.State)) {
+                    if (!string.IsNullOrEmpty(source.State))
+                    {
                         region.Code = CleanCountry + "-" + source.State;
-                            
+
                         var title = states.FirstOrDefault(x => x.Code == source.State);
                         if (title != null)
                             region.Title = title.Description;
-                    } else
+                    }
+                    else
                     {
                         region = null;
-                        
+
                     }
                     if (!string.IsNullOrEmpty(source.County))
                     {
                         subRegion.Code = source.County;
                         if (countyDesc != null)
                             subRegion.Title = countyDesc.Description;
-                    } else
+                    }
+                    else
                     {
                         subRegion = null;
                     }
-                    
+
                     countryPlace.Region = region;
                     countryPlace.SubRegion = subRegion;
 
@@ -249,20 +254,20 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task AddressService_GetAddressesAsync()
             {
-                
-                Tuple<IEnumerable<Domain.Base.Entities.Address>, int> _AddressesTuple = 
+
+                Tuple<IEnumerable<Domain.Base.Entities.Address>, int> _AddressesTuple =
                     new Tuple<IEnumerable<Domain.Base.Entities.Address>, int>(allAddresses, allAddresses.Count());
 
                 _addressRepositoryMock.Setup(i =>
                     i.GetAddressesAsync(It.IsAny<int>(), It.IsAny<int>()))
                     .ReturnsAsync(_AddressesTuple);
-                
+
                 var actuals = await _addressesService.GetAddressesAsync(It.IsAny<int>(), It.IsAny<int>());
                 Assert.IsNotNull(actuals);
 
                 foreach (var actual in actuals.Item1)
                 {
-                   var expected = addressesCollection.FirstOrDefault(i => i.Id.Equals(actual.Id));
+                    var expected = addressesCollection.FirstOrDefault(i => i.Id.Equals(actual.Id));
                     Assert.AreEqual(expected.Id, actual.Id);
                     Assert.AreEqual(expected.AddressLines, actual.AddressLines);
                     //These two ID's are meant to fail so will ignore these two ID's data.
@@ -276,7 +281,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                         Assert.AreEqual(expected.Place.Country.CorrectionDigit, actual.Place.Country.CorrectionDigit);
                         Assert.AreEqual(expected.Place.Country.DeliveryPoint, actual.Place.Country.DeliveryPoint);
                         Assert.AreEqual(expected.Place.Country.Locality, actual.Place.Country.Locality);
-                    
+
                         if (expected.Place.Country.Region != null)
                         {
                             Assert.AreEqual(expected.Place.Country.Region.Code, actual.Place.Country.Region.Code);
@@ -288,7 +293,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                             Assert.AreEqual(expected.Place.Country.SubRegion.Title, actual.Place.Country.SubRegion.Title);
                         }
                     }
-                    
+
 
                 }
             }
@@ -389,7 +394,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var address = allAddresses.FirstOrDefault(ac => ac.Guid == usAddressGuid);
                 _addressRepositoryMock.Setup(x => x.GetAddressAsync(usAddressGuid)).ReturnsAsync(address);
 
-            
+
                 var actual = await _addressesService.GetAddressesByGuidAsync(usAddressGuid);
                 var expected = addressesCollection.FirstOrDefault(x => x.Id == usAddressGuid);
 
@@ -498,7 +503,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestClass]
-        public class PutAddress: GenericUserFactory
+        public class PutAddress : GenericUserFactory
         {
             private Mock<IReferenceDataRepository> _referenceDataRepositoryMock;
             private IReferenceDataRepository _referenceDataRepository;
@@ -588,7 +593,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     new Domain.Base.Entities.Country("BR","Brazil","BR"){ IsoAlpha3Code = "BRA" },
                     new Domain.Base.Entities.Country("AU","Australia","AU"){ IsoAlpha3Code = "AUS" },
                 };
-                 _referenceDataRepositoryMock.Setup(repo => repo.GetCountryCodesAsync(It.IsAny<bool>())).Returns(Task.FromResult(countries));
+                _referenceDataRepositoryMock.Setup(repo => repo.GetCountryCodesAsync(It.IsAny<bool>())).Returns(Task.FromResult(countries));
 
                 // Mock the reference repository for county
                 counties = new List<County>()
@@ -742,7 +747,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestClass]
-        public class PutAddress2: GenericUserFactory
+        public class PutAddress2 : GenericUserFactory
         {
             private Mock<IReferenceDataRepository> _referenceDataRepositoryMock;
             private IReferenceDataRepository _referenceDataRepository;
@@ -1244,6 +1249,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 _addressRepositoryMock = new Mock<IAddressRepository>();
                 _addressRepository = _addressRepositoryMock.Object;
 
+
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 adapterRegistry = adapterRegistryMock.Object;
                 roleRepoMock = new Mock<IRoleRepository>();
@@ -1303,6 +1309,89 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 await _addressesService.DeleteAddressesAsync(usAddressGuid);
             }
             #endregion DeleteAddress
+        }
+
+        [TestClass]
+        public class QueryAddress
+        {
+            private Mock<IReferenceDataRepository> _referenceDataRepositoryMock;
+            private IReferenceDataRepository _referenceDataRepository;
+            private IAddressRepository _addressRepository;
+            private Mock<IAddressRepository> _addressRepositoryMock;
+            private ILogger _logger;
+            private AddressService _addressesService;
+
+            private Dtos.Base.AddressQueryCriteria addressQueryCriteria;
+
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+
+
+            private Mock<IRoleRepository> roleRepoMock;
+            private IRoleRepository roleRepo;
+            private ICurrentUserFactory currentUserFactory;
+
+
+            private IConfigurationRepository baseConfigurationRepository;
+            private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+
+            private const string usAddressGuid = "d44134f9-0924-45d4-8b91-be9531aa7773";
+            private const string foreignAddressGuid = "d44135f9-0924-45d4-8b91-be9531aa7773";
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                _referenceDataRepository = _referenceDataRepositoryMock.Object;
+                _logger = new Mock<ILogger>().Object;
+                _addressRepositoryMock = new Mock<IAddressRepository>();
+                _addressRepository = _addressRepositoryMock.Object;
+
+
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                roleRepoMock = new Mock<IRoleRepository>();
+                roleRepo = roleRepoMock.Object;
+
+                roleRepoMock.Setup(repo => repo.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>()
+                {
+
+                });
+
+                addressQueryCriteria = new Dtos.Base.AddressQueryCriteria()
+                {
+                    PersonIds = new List<string>() { "00000", "00000" },
+                    AddressIds = new List<string>() { "0012355", "0012356" }
+                };
+
+                baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
+                baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+
+                // Set up current user
+                currentUserFactory = new CurrentUserSetup.PersonUserFactory();
+
+                _addressesService = new AddressService(adapterRegistry, _addressRepository, baseConfigurationRepository, _referenceDataRepository, currentUserFactory, roleRepo, _logger);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                _referenceDataRepository = null;
+                _addressesService = null;
+                _logger = null;
+                _referenceDataRepository = null;
+                _referenceDataRepositoryMock = null;
+                _addressRepository = null;
+                _addressRepositoryMock = null;
+                addressQueryCriteria = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task AddressService_QueryAddressPermission_PermissionException()
+            {
+                await _addressesService.QueryAddressPermissionAsync(addressQueryCriteria.PersonIds);
+            }
         }
     }
 }

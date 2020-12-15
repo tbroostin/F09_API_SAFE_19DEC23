@@ -54,11 +54,20 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CipCode.cs" />
     <Compile Include="AptitudeAssessmentSources.cs" />
     <Compile Include="CareerGoals.cs" />
     <Compile Include="AdmissionApplicationInfluences.cs" />
     <Compile Include="AdmissionApplicationSources.cs" />
     <Compile Include="BulkLoadGet.cs" />
+    <Compile Include="CourseAdditionalClassifications.cs" />
+    <Compile Include="DtoProperties\FinancialAidEducationLevelDtoProperty.cs" />
+    <Compile Include="DtoProperties\MaritalStatusDtoProperty.cs" />
+    <Compile Include="EnumProperties\RequisitionTypes.cs" />
+    <Compile Include="Filters\PersonByInstitutionTypeFilter.cs" />
+    <Compile Include="DtoProperties\PersonPhone2DtoProperty.cs" />
+    <Compile Include="Filters\FinancialAidFundsFilter.cs" />
+    <Compile Include="Filters\CodeItemFilter.cs" />
     <Compile Include="CompoundConfigurationSettingsOptions.cs" />
     <Compile Include="CompoundConfigurationSettings.cs" />
     <Compile Include="CollectionConfigurationSettings.cs" />
@@ -83,6 +92,7 @@
     <Compile Include="DtoProperties\CompoundConfigurationSettingsSource.cs" />
     <Compile Include="DtoProperties\LineItemTaxCodeRateDtoProperty.cs" />
     <Compile Include="DtoProperties\EmailProperty.cs" />
+    <Compile Include="DtoProperties\PersonAddressType2DtoProperty.cs" />
     <Compile Include="DtoProperties\PersonMatchRequestAddressDtoProperty.cs" />
     <Compile Include="DtoProperties\PersonMatchRequestCredentialDtoProperty.cs" />
     <Compile Include="DtoProperties\PersonMatchRequestAlternativeCredentials.cs" />
@@ -96,11 +106,14 @@
     <Compile Include="DtoProperties\VendorPersonContact.cs" />
     <Compile Include="DtoProperties\VendorContactsPerson.cs" />
     <Compile Include="DtoProperties\VendorsAddressesDtoProperty.cs" />
+    <Compile Include="DtoProperties\VendorsMaximumAddresses .cs" />
+    <Compile Include="DtoProperties\VendorsMaximumContacts.cs" />
     <Compile Include="EducationalGoals.cs" />
     <Compile Include="EnumProperties\AcademicLoad2.cs" />
     <Compile Include="EnumProperties\AccountsPayableInvoicesType.cs" />
     <Compile Include="EnumProperties\AdvanceSearchType.cs" />
     <Compile Include="EnumProperties\BulkLoadRequestStatus.cs" />
+    <Compile Include="EnumProperties\LedgerActivityLedgerType.cs" />
     <Compile Include="EnumProperties\LineItemStatus.cs" />
     <Compile Include="EnumProperties\RecruitmentProgramType.cs" />
     <Compile Include="EnumProperties\PersonMatchRequestCredentialType.cs" />
@@ -109,8 +122,11 @@
     <Compile Include="EnumProperties\StudentPaymentTypes2.cs" />
     <Compile Include="EnumProperties\StudentPaymentUsageTypes.cs" />
     <Compile Include="Filters\DefaultSettingsFilter.cs" />
+    <Compile Include="Filters\PersonGuidFilter.cs" />
     <Compile Include="Filters\RecruitmentProgramFilter.cs" />
+    <Compile Include="Filters\RegistrationStatusesByAcademicPeriodFilter.cs" />
     <Compile Include="Filters\VendorDetail.cs" />
+    <Compile Include="FixedAssetDesignation.cs" />
     <Compile Include="MappingSettingEthosResources.cs" />
     <Compile Include="MappingSettingsOptionsEthos.cs" />
     <Compile Include="MappingSettingsOptions.cs" />
@@ -666,6 +682,7 @@
     <Compile Include="VendorContacts.cs" />
     <Compile Include="DtoProperties\VendorContactsPhones.cs" />
     <Compile Include="Vendors2.cs" />
+    <Compile Include="VendorsMaximum.cs" />
     <Compile Include="VeteranStatuses.cs" />
     <Compile Include="DtoProperties\Amount2DtoProperty.cs" />
     <Compile Include="DtoProperties\FinancialAidApplicationApplicant.cs" />

@@ -5,6 +5,7 @@ using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -88,21 +89,21 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     NoCache = true,
                     Public = true
                 };
-                studentServiceMock.Setup(i => i.GetAllStudentCohortsAsync(true)).ReturnsAsync(studentCohorts);
+                studentServiceMock.Setup( i => i.GetAllStudentCohortsAsync( It.IsAny<Dtos.Filters.CodeItemFilter>(), true ) ).ReturnsAsync( studentCohorts );
 
-                var actuals = await studentCohortsController.GetStudentCohortsAsync();
+                var actuals = await studentCohortsController.GetStudentCohortsAsync( It.IsAny<QueryStringFilter>() );
 
-                Assert.IsNotNull(actuals);
+                Assert.IsNotNull( actuals );
 
-                foreach (var actual in actuals)
+                foreach( var actual in actuals )
                 {
-                    var expected = studentCohorts.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
-                    Assert.IsNotNull(expected);
+                    var expected = studentCohorts.FirstOrDefault( i => i.Id.Equals( actual.Id, StringComparison.OrdinalIgnoreCase ) );
+                    Assert.IsNotNull( expected );
 
-                    Assert.AreEqual(expected.Id, actual.Id);
-                    Assert.AreEqual(expected.Code, actual.Code);
-                    Assert.AreEqual(expected.Description, actual.Description);
-                    Assert.AreEqual(expected.Title, actual.Title);
+                    Assert.AreEqual( expected.Id, actual.Id );
+                    Assert.AreEqual( expected.Code, actual.Code );
+                    Assert.AreEqual( expected.Description, actual.Description );
+                    Assert.AreEqual( expected.Title, actual.Title );
                 }
             }
 
@@ -114,21 +115,21 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     NoCache = false,
                     Public = true
                 };
-                studentServiceMock.Setup(i => i.GetAllStudentCohortsAsync(false)).ReturnsAsync(studentCohorts);
+                studentServiceMock.Setup( i => i.GetAllStudentCohortsAsync( It.IsAny<Dtos.Filters.CodeItemFilter>(), false ) ).ReturnsAsync( studentCohorts );
 
-                var actuals = await studentCohortsController.GetStudentCohortsAsync();
+                var actuals = await studentCohortsController.GetStudentCohortsAsync(It.IsAny<QueryStringFilter>());
 
-                Assert.IsNotNull(actuals);
+                Assert.IsNotNull( actuals );
 
-                foreach (var actual in actuals)
+                foreach( var actual in actuals )
                 {
-                    var expected = studentCohorts.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+                    var expected = studentCohorts.FirstOrDefault( i => i.Id.Equals( actual.Id, StringComparison.OrdinalIgnoreCase ) );
 
-                    Assert.IsNotNull(expected);
-                    Assert.AreEqual(expected.Id, actual.Id);
-                    Assert.AreEqual(expected.Code, actual.Code);
-                    Assert.AreEqual(expected.Description, actual.Description);
-                    Assert.AreEqual(expected.Title, actual.Title);
+                    Assert.IsNotNull( expected );
+                    Assert.AreEqual( expected.Id, actual.Id );
+                    Assert.AreEqual( expected.Code, actual.Code );
+                    Assert.AreEqual( expected.Description, actual.Description );
+                    Assert.AreEqual( expected.Title, actual.Title );
                 }
             }
 
@@ -136,26 +137,26 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task StudentCohortsController_GetById()
             {
                 string id = "f05a6c0f-3a56-4a87-b931-bc2901da5ef9";
-                var expected = studentCohorts.FirstOrDefault(i => i.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
-                studentServiceMock.Setup(i => i.GetStudentCohortByGuidAsync(id, It.IsAny<bool>())).ReturnsAsync(expected);
+                var expected = studentCohorts.FirstOrDefault( i => i.Id.Equals( id, StringComparison.OrdinalIgnoreCase ) );
+                studentServiceMock.Setup( i => i.GetStudentCohortByGuidAsync( id, It.IsAny<bool>() ) ).ReturnsAsync( expected );
 
-                var actual = await studentCohortsController.GetStudentCohortByIdAsync(id);
+                var actual = await studentCohortsController.GetStudentCohortByIdAsync( id );
 
-                Assert.IsNotNull(expected);
-                Assert.IsNotNull(actual);
-                Assert.AreEqual(expected.Id, actual.Id);
-                Assert.AreEqual(expected.Code, actual.Code);
-                Assert.AreEqual(expected.Description, actual.Description);
-                Assert.AreEqual(expected.Title, actual.Title);
+                Assert.IsNotNull( expected );
+                Assert.IsNotNull( actual );
+                Assert.AreEqual( expected.Id, actual.Id );
+                Assert.AreEqual( expected.Code, actual.Code );
+                Assert.AreEqual( expected.Description, actual.Description );
+                Assert.AreEqual( expected.Title, actual.Title );
             }
 
             [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
+            [ExpectedException( typeof( HttpResponseException ) )]
             public async Task StudentCohortsController_GetAll_Exception()
             {
-                studentServiceMock.Setup(i => i.GetAllStudentCohortsAsync(It.IsAny<bool>())).ThrowsAsync(new Exception());
+                studentServiceMock.Setup( i => i.GetAllStudentCohortsAsync( It.IsAny<Dtos.Filters.CodeItemFilter>(), It.IsAny<bool>() ) ).ThrowsAsync( new Exception() );
 
-                var actuals = await studentCohortsController.GetStudentCohortsAsync();
+                var actuals = await studentCohortsController.GetStudentCohortsAsync(It.IsAny<QueryStringFilter>());
             }
 
             [TestMethod]
@@ -238,45 +239,45 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 studentServiceMock.Setup(gc => gc.GetStudentCohortByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<RepositoryException>();
                 await studentCohortsController.GetStudentCohortByIdAsync("invalid");
             }
-    
+
             [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
+            [ExpectedException( typeof( HttpResponseException ) )]
             public async Task studentCohortsController_GetThrowsIntAppiPermissionExc()
             {
-                studentServiceMock.Setup(gc => gc.GetAllStudentCohortsAsync(It.IsAny<bool>())).Throws<PermissionsException>();
-                await studentCohortsController.GetStudentCohortsAsync();
+                studentServiceMock.Setup( gc => gc.GetAllStudentCohortsAsync( It.IsAny<Dtos.Filters.CodeItemFilter>(), It.IsAny<bool>() ) ).Throws<PermissionsException>();
+                await studentCohortsController.GetStudentCohortsAsync(It.IsAny<QueryStringFilter>());
             }
 
             [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
+            [ExpectedException( typeof( HttpResponseException ) )]
             public async Task studentCohortsController_GetThrowsIntAppiKeyNotFoundExc()
             {
-                studentServiceMock.Setup(gc => gc.GetAllStudentCohortsAsync(It.IsAny<bool>())).Throws<KeyNotFoundException>();
-                await studentCohortsController.GetStudentCohortsAsync();
+                studentServiceMock.Setup( gc => gc.GetAllStudentCohortsAsync( It.IsAny<Dtos.Filters.CodeItemFilter>(), It.IsAny<bool>() ) ).Throws<KeyNotFoundException>();
+                await studentCohortsController.GetStudentCohortsAsync(It.IsAny<QueryStringFilter>());
             }
 
             [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
+            [ExpectedException( typeof( HttpResponseException ) )]
             public async Task studentCohortsController_GetThrowsIntAppiIntegrationExc()
             {
-                studentServiceMock.Setup(gc => gc.GetAllStudentCohortsAsync(It.IsAny<bool>())).Throws<IntegrationApiException>();
-                await studentCohortsController.GetStudentCohortsAsync();
+                studentServiceMock.Setup( gc => gc.GetAllStudentCohortsAsync( It.IsAny<Dtos.Filters.CodeItemFilter>(), It.IsAny<bool>() ) ).Throws<IntegrationApiException>();
+                await studentCohortsController.GetStudentCohortsAsync(It.IsAny<QueryStringFilter>());
             }
 
             [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
+            [ExpectedException( typeof( HttpResponseException ) )]
             public async Task studentCohortsController_GetThrowsIntAppiArgumentExc()
             {
-                studentServiceMock.Setup(gc => gc.GetAllStudentCohortsAsync(It.IsAny<bool>())).Throws<ArgumentException>();
-                await studentCohortsController.GetStudentCohortsAsync();
+                studentServiceMock.Setup( gc => gc.GetAllStudentCohortsAsync( It.IsAny<Dtos.Filters.CodeItemFilter>(), It.IsAny<bool>() ) ).Throws<ArgumentException>();
+                await studentCohortsController.GetStudentCohortsAsync(It.IsAny<QueryStringFilter>());
             }
 
             [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
+            [ExpectedException( typeof( HttpResponseException ) )]
             public async Task studentCohortsController_GetThrowsIntAppiRepositoryExc()
             {
-                studentServiceMock.Setup(gc => gc.GetAllStudentCohortsAsync(It.IsAny<bool>())).Throws<RepositoryException>();
-                await studentCohortsController.GetStudentCohortsAsync(); ;
+                studentServiceMock.Setup( gc => gc.GetAllStudentCohortsAsync( It.IsAny<Dtos.Filters.CodeItemFilter>(), It.IsAny<bool>() ) ).Throws<RepositoryException>();
+                await studentCohortsController.GetStudentCohortsAsync(It.IsAny<QueryStringFilter>()); ;
             }
         }
     }

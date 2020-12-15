@@ -2,6 +2,7 @@
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Colleague.Dtos.Student.DegreePlans;
+using Ellucian.Colleague.Dtos.Student.InstantEnrollment;
 using Ellucian.Colleague.Dtos.Student.QuickRegistration;
 using Ellucian.Colleague.Dtos.Student.Requirements;
 using Ellucian.Rest.Client.Exceptions;
@@ -8407,6 +8408,777 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 var clientResponse = await client.GetStudentQuickRegistrationSectionsAsync(studentId);
             }
         }
+
+        [TestClass]
+        public class GetEducationGoalsAsync
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task ClientGetEducationGoalsAsync_ReturnsSerializedEducationGoals()
+            {
+                // Arrange
+                var educationGoals = new List<EducationGoal>()
+                    {
+                        new EducationGoal(){Code="C",Description="Changed Mind"},
+                        new EducationGoal(){Code="D",Description="Difficult"},
+                        new EducationGoal(){Code="W",Description="My own wish" }
+                };
+                var serializedResponse = JsonConvert.SerializeObject(educationGoals);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetEducationGoalsAsync();
+
+                // Assert that the expected number of items is returned and each of the expected items is found in the response
+                Assert.IsNotNull(clientResponse);
+                Assert.AreEqual(educationGoals.Count(), clientResponse.Count());
+                foreach (var EducationGoal in clientResponse)
+                {
+                    Assert.IsNotNull(EducationGoal.Code);
+                    Assert.IsNotNull(EducationGoal.Description);
+                    var reason = educationGoals.Where(c => c.Code == EducationGoal.Code).FirstOrDefault();
+                    Assert.AreEqual(reason.Code, EducationGoal.Code);
+                    Assert.AreEqual(reason.Description, EducationGoal.Description);
+                }
+            }
+        }
+
+        [TestClass]
+        public class GetRegistrationReasonsAsync
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task ClientGetRegistrationReasonsAsync_ReturnsSerializedRegistrationReasons()
+            {
+                // Arrange
+                var RegistrationReasons = new List<RegistrationReason>()
+                    {
+                        new RegistrationReason(){Code="C",Description="Changed Mind"},
+                        new RegistrationReason(){Code="D",Description="Difficult"},
+                        new RegistrationReason(){Code="W",Description="My own wish" }
+                };
+                var serializedResponse = JsonConvert.SerializeObject(RegistrationReasons);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetRegistrationReasonsAsync();
+
+                // Assert that the expected number of items is returned and each of the expected items is found in the response
+                Assert.IsNotNull(clientResponse);
+                Assert.AreEqual(RegistrationReasons.Count(), clientResponse.Count());
+                foreach (var RegistrationReason in clientResponse)
+                {
+                    Assert.IsNotNull(RegistrationReason.Code);
+                    Assert.IsNotNull(RegistrationReason.Description);
+                    var reason = RegistrationReasons.Where(c => c.Code == RegistrationReason.Code).FirstOrDefault();
+                    Assert.AreEqual(reason.Code, RegistrationReason.Code);
+                    Assert.AreEqual(reason.Description, RegistrationReason.Description);
+                }
+            }
+        }
+
+        [TestClass]
+        public class GetRegistrationMarketingSourcesAsync
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task ClientGetRegistrationMarketingSourcesAsync_ReturnsSerializedRegistrationMarketingSources()
+            {
+                // Arrange
+                var RegistrationMarketingSources = new List<RegistrationMarketingSource>()
+                    {
+                        new RegistrationMarketingSource(){Code="C",Description="Changed Mind"},
+                        new RegistrationMarketingSource(){Code="D",Description="Difficult"},
+                        new RegistrationMarketingSource(){Code="W",Description="My own wish" }
+                };
+                var serializedResponse = JsonConvert.SerializeObject(RegistrationMarketingSources);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetRegistrationMarketingSourcesAsync();
+
+                // Assert that the expected number of items is returned and each of the expected items is found in the response
+                Assert.IsNotNull(clientResponse);
+                Assert.AreEqual(RegistrationMarketingSources.Count(), clientResponse.Count());
+                foreach (var RegistrationMarketingSource in clientResponse)
+                {
+                    Assert.IsNotNull(RegistrationMarketingSource.Code);
+                    Assert.IsNotNull(RegistrationMarketingSource.Description);
+                    var reason = RegistrationMarketingSources.Where(c => c.Code == RegistrationMarketingSource.Code).FirstOrDefault();
+                    Assert.AreEqual(reason.Code, RegistrationMarketingSource.Code);
+                    Assert.AreEqual(reason.Description, RegistrationMarketingSource.Description);
+                }
+            }
+        }
+
+        [TestClass]
+        public class GetInstantEnrollmentConfigurationAsync
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task ClientGetRegistrationMarketingSourcesAsync_ReturnsSerializedRegistrationMarketingSources()
+            {
+                // Arrange
+                var configuration = new InstantEnrollmentConfiguration()
+                {
+                    StudentProgramAssignmentBehavior = AddNewStudentProgramBehavior.Any,
+                    AcademicProgramOptions = new List<AcademicProgramOption>()
+                        {
+                            new AcademicProgramOption()
+                            {
+                                Code = "CE.DFLT",
+                                CatalogCode = "2014X"
+                            },
+                            new AcademicProgramOption()
+                            {
+                                Code = "CE.SYSTEMASSIGNED",
+                                CatalogCode = "2016"
+                            }
+                        },
+                    PaymentDistributionCode = "BANK",
+                    CitizenshipHomeCountryCode = "US",
+                    WebPaymentsImplemented = true,
+                    RegistrationUserRole = "CEUSER"
+                };
+                var serializedResponse = JsonConvert.SerializeObject(configuration);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetInstantEnrollmentConfigurationAsync();
+
+                // Assert that the expected number of items is returned and each of the expected items is found in the response
+                Assert.IsNotNull(clientResponse);
+                Assert.AreEqual(AddNewStudentProgramBehavior.Any, clientResponse.StudentProgramAssignmentBehavior);
+                foreach (var option in clientResponse.AcademicProgramOptions)
+                {
+                    Assert.IsNotNull(option.Code);
+                    Assert.IsNotNull(option.CatalogCode);
+                }
+                Assert.AreEqual(configuration.PaymentDistributionCode, clientResponse.PaymentDistributionCode);
+                Assert.AreEqual(configuration.CitizenshipHomeCountryCode, clientResponse.CitizenshipHomeCountryCode);
+                Assert.AreEqual(configuration.WebPaymentsImplemented, clientResponse.WebPaymentsImplemented);
+                Assert.AreEqual(configuration.RegistrationUserRole, clientResponse.RegistrationUserRole);
+            }
+        }
+
+        //
+        [TestClass]
+        public class ZeroCostRegistrationForClassesAsync
+        {
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task ZeroCostRegistrationForClassesAsync_ReturnsSerializedInstantEnrollmentZeroCostRegistrationResult()
+            {
+                // Arrange
+                var request = new Dtos.Student.InstantEnrollment.InstantEnrollmentZeroCostRegistration()
+                {
+                    AcademicProgram = "Program",
+                    Catalog = "Catalog",
+                    PersonDemographic = new Dtos.Student.InstantEnrollment.InstantEnrollmentPersonDemographic()
+                    {
+                        FirstName = "Joe",
+                        LastName = "ZeroCost",
+                        City = "Fairfax",
+                        State = "VA",
+                        ZipCode = "22033",
+                        EmailAddress = "Student@email.com",
+                    },
+                    PersonId = "0000001",
+                    ProposedSections = new List<Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseSectionToRegister>()
+                {
+                    new Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseSectionToRegister(){AcademicCredits = 300, SectionId = "SECT1",},
+                    new Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseSectionToRegister(){AcademicCredits = 400, SectionId = "SECT2",},
+                },
+                };
+                var dtoResponse = new Dtos.Student.InstantEnrollment.InstantEnrollmentZeroCostRegistrationResult()
+                {
+                    ErrorOccurred = false,
+                    RegisteredSections = new List<Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseRegisteredSection>()
+                    {
+                        new Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseRegisteredSection(){SectionId = "SECT1", SectionCost = 10000},
+                        new Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseRegisteredSection() { SectionId = "SECT2", SectionCost = 20000 },
+                    },
+                    RegistrationMessages = new List<Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseMessage>()
+                    {
+                        new Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseMessage() {MessageSection = "SECT1", Message = "SECT1 Message" },
+                        new Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseMessage() {MessageSection = "SECT2", Message = "SECT2 Message" },
+                    },
+                };
+
+                var serializedResponse = JsonConvert.SerializeObject(dtoResponse);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.InstantEnrollmentZeroCostRegistrationAsync(request);
+
+                // Assert that the expected number of items is returned and each of the expected items is found in the response
+                Assert.IsNotNull(clientResponse);
+                Assert.IsFalse(clientResponse.ErrorOccurred);
+
+                Assert.AreEqual(dtoResponse.RegisteredSections[0].SectionId, clientResponse.RegisteredSections[0].SectionId);
+                Assert.AreEqual(dtoResponse.RegisteredSections[0].SectionCost, clientResponse.RegisteredSections[0].SectionCost);
+
+                Assert.AreEqual(dtoResponse.RegisteredSections[1].SectionId, clientResponse.RegisteredSections[1].SectionId);
+                Assert.AreEqual(dtoResponse.RegisteredSections[1].SectionCost, clientResponse.RegisteredSections[1].SectionCost);
+
+                Assert.AreEqual(dtoResponse.RegistrationMessages[0].Message, clientResponse.RegistrationMessages[0].Message);
+                Assert.AreEqual(dtoResponse.RegistrationMessages[0].MessageSection, clientResponse.RegistrationMessages[0].MessageSection);
+
+                Assert.AreEqual(dtoResponse.RegistrationMessages[1].Message, clientResponse.RegistrationMessages[1].Message);
+                Assert.AreEqual(dtoResponse.RegistrationMessages[1].MessageSection, clientResponse.RegistrationMessages[1].MessageSection);
+            }
+        }
+        //
+
+        [TestClass]
+        public class EcheckRegistrationForClassesAsync
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task EcheckRegistrationForClassesAsync_ReturnsSerializedInstantEnrollmentEcheckRegistrationResult()
+            {
+                // Arrange
+                var request = new Dtos.Student.InstantEnrollment.InstantEnrollmentEcheckRegistration()
+                {
+                    AcademicProgram = "Program",
+                    BankAccountCheckNumber = "100",
+                    BankAccountNumber = "AcctNumber",
+                    BankAccountOwner = "AcctOwner",
+                    BankAccountRoutingNumber = "AcctRoute",
+                    BankAccountType = "Check",
+                    Catalog = "Catalog",
+                    ConvenienceFeeAmount = 100,
+                    ConvenienceFeeDesc = "Fee Description",
+                    ConvenienceFeeGlAccount = "FeeGlAccount",
+                    EducationalGoal = "Goal",
+                    GovernmentId = "License",
+                    GovernmentIdState = "VA",
+                    PayerAddress = "123 Main St.",
+                    PayerCity = "Fairfax",
+                    PayerEmailAddress = "Payer@email.com",
+                    PayerPostalCode = "22033",
+                    PayerState = "VA",
+                    PaymentAmount = 10000,
+                    PaymentMethod = "PayMethod",
+                    PersonDemographic = new Dtos.Student.InstantEnrollment.InstantEnrollmentPersonDemographic()
+                    {
+                        FirstName = "Joe",
+                        LastName = "Echeck",
+                        City = "Fairfax",
+                        State = "VA",
+                        ZipCode = "22033",
+                        EmailAddress = "Student@email.com",
+                    },
+                    PersonId = "0000001",
+                    ProposedSections = new List<Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseSectionToRegister>()
+                {
+                    new Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseSectionToRegister(){AcademicCredits = 300, SectionId = "SECT1",},
+                    new Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseSectionToRegister(){AcademicCredits = 400, SectionId = "SECT2",},
+                },
+                    ProviderAccount = "PoviderAccount",
+                };
+                var dtoResponse = new Dtos.Student.InstantEnrollment.InstantEnrollmentEcheckRegistrationResult()
+                {
+                    ErrorOccurred = false,
+                    RegisteredSections = new List<Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseRegisteredSection>()
+                    {
+                        new Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseRegisteredSection(){SectionId = "SECT1", SectionCost = 10000},
+                        new Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseRegisteredSection() { SectionId = "SECT2", SectionCost = 20000 },
+                    },
+                    RegistrationMessages = new List<Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseMessage>()
+                    {
+                        new Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseMessage() {MessageSection = "SECT1", Message = "SECT1 Message" },
+                        new Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseMessage() {MessageSection = "SECT2", Message = "SECT2 Message" },
+                    },
+                    CashReceipt = "RECEIPT",
+                };
+
+                var serializedResponse = JsonConvert.SerializeObject(dtoResponse);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.InstantEnrollmentEcheckRegistrationAsync(request);
+
+                // Assert that the expected number of items is returned and each of the expected items is found in the response
+                Assert.IsNotNull(clientResponse);
+                Assert.IsFalse(clientResponse.ErrorOccurred);
+                Assert.AreEqual(dtoResponse.CashReceipt, clientResponse.CashReceipt);
+                Assert.AreEqual(dtoResponse.RegisteredSections[0].SectionId, clientResponse.RegisteredSections[0].SectionId);
+                Assert.AreEqual(dtoResponse.RegisteredSections[0].SectionCost, clientResponse.RegisteredSections[0].SectionCost);
+                Assert.AreEqual(dtoResponse.RegisteredSections[1].SectionId, clientResponse.RegisteredSections[1].SectionId);
+                Assert.AreEqual(dtoResponse.RegisteredSections[1].SectionCost, clientResponse.RegisteredSections[1].SectionCost);
+                Assert.AreEqual(dtoResponse.RegistrationMessages[0].Message, clientResponse.RegistrationMessages[0].Message);
+                Assert.AreEqual(dtoResponse.RegistrationMessages[0].MessageSection, clientResponse.RegistrationMessages[0].MessageSection);
+                Assert.AreEqual(dtoResponse.RegistrationMessages[1].Message, clientResponse.RegistrationMessages[1].Message);
+                Assert.AreEqual(dtoResponse.RegistrationMessages[1].MessageSection, clientResponse.RegistrationMessages[1].MessageSection);
+            }
+        }
+
+        [TestClass]
+        public class InstantEnrollmentStartPaymentGatewayRegistrationAsync_Tests
+        {
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task InstantEnrollmentStartPaymentGatewayRegistrationAsync_Null_Argument()
+            {
+                var mockHandler = new MockHandler();
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.InstantEnrollmentStartPaymentGatewayRegistrationAsync(null);
+
+            }
+            [TestMethod]
+            public async Task InstantEnrollmentStartPaymentGatewayRegistrationAsync_Success()
+            {
+                const string _serviceUrl = "http://service.url";
+                const string _contentType = "application/json";
+
+                // The input argument is not important, because the mock of the HTTP call is not dependent on the content of the input argument.
+                // Arrange
+                var request = new Dtos.Student.InstantEnrollment.InstantEnrollmentPaymentGatewayRegistration()
+                {
+                    PersonId = "PID",
+                    ReturnUrl = "ReturnUrl"
+                };
+
+                // Create an API result object and serialize it. This will test that the service client deserializes the response back to this type.
+                var dtoResponse = new Dtos.Student.InstantEnrollment.InstantEnrollmentStartPaymentGatewayRegistrationResult();
+                dtoResponse.ErrorMessages = new List<string>() { "Msg1", "Msg2" };
+                dtoResponse.PaymentProviderRedirectUrl = "RedirectUrl";
+                var serializedResponse = JsonConvert.SerializeObject(dtoResponse);
+
+                // Mock the API response that will return the result object.
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                // Create an HTTP client with the mock handler to return the mock response.
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                // Instantiate the service client
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Call the service client method.
+                // The mock is such that any request to any url will return the mocked response. Perhaps in the future we could mock the http client
+                // such that only a call to the expected url would return the mocked response.
+                var clientResponse = await client.InstantEnrollmentStartPaymentGatewayRegistrationAsync(request);
+
+                // Validate that the service client method properly deserialized the response.
+                Assert.IsNotNull(clientResponse);
+                Assert.AreEqual(clientResponse.ErrorMessages.Count, 2);
+                Assert.AreEqual(clientResponse.ErrorMessages[0], dtoResponse.ErrorMessages[0]);
+                Assert.AreEqual(clientResponse.ErrorMessages[1], dtoResponse.ErrorMessages[1]);
+                Assert.AreEqual(clientResponse.PaymentProviderRedirectUrl, dtoResponse.PaymentProviderRedirectUrl);
+            }
+        }
+
+        [TestClass]
+        public class GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync_Tests
+        {
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync_Null_Argument()
+            {
+                var mockHandler = new MockHandler();
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(null);
+
+            }
+
+            [TestMethod]
+            public async Task GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync_Success()
+            {
+                const string _serviceUrl = "http://service.url";
+                const string _contentType = "application/json";
+
+                // The input argument is not important, because the mock of the HTTP call is not dependent on the content of the input argument.
+                // Arrange
+                var request = new Dtos.Student.InstantEnrollment.InstantEnrollmentPaymentAcknowledgementParagraphRequest()
+                {
+                    PersonId = "PID",
+                    CashReceiptId = "0001234"
+                };
+
+                // Create an API result object and serialize it. This will test that the service client deserializes the response back to this type.
+                var dtoResponse = new List<string>() { "Line 1", "Line 2" };
+                var serializedResponse = JsonConvert.SerializeObject(dtoResponse);
+
+                // Mock the API response that will return the result object.
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                // Create an HTTP client with the mock handler to return the mock response.
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                // Instantiate the service client
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Call the service client method.
+                // The mock is such that any request to any url will return the mocked response. Perhaps in the future we could mock the http client
+                // such that only a call to the expected url would return the mocked response.
+                var clientResponse = await client.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
+
+                // Validate that the service client method properly deserialized the response.
+                Assert.IsNotNull(clientResponse);
+                CollectionAssert.AreEqual(dtoResponse, clientResponse.ToList());
+            }
+        }
+
+        [TestClass]
+        public class QueryPersonMatchInstantEnrollmentResultsByPostAsync_Tests
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            private PersonMatchCriteria criteria;
+            private InstantEnrollmentPersonMatchResult result;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+
+                criteria = new Dtos.Base.PersonMatchCriteria()
+                {
+                    MatchCriteriaIdentifier = "WINR.PERSON",
+                    MatchNames = new List<Dtos.Base.PersonName>()
+                    {
+                        new Dtos.Base.PersonName() { GivenName = "given", FamilyName = "family" }
+                    }
+                };
+
+                result = new InstantEnrollmentPersonMatchResult()
+                {
+                    PersonId = "0003315",
+                    HasPotentialMatches = false
+                };
+
+            }
+
+            [TestMethod]
+            public async Task Client_QueryPersonMatchInstantEnrollmentResultsByPostAsync()
+            {
+                var iECriteria = new PersonMatchCriteriaInstantEnrollment()
+                {
+                    LastName = "Last",
+                    FirstName = "First"
+                };
+
+                var serializedResponse = JsonConvert.SerializeObject(result);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.QueryPersonMatchInstantEnrollmentResultsByPostAsync(iECriteria);
+
+                // Assert that the expected item is found in the response
+                Assert.AreEqual(result.HasPotentialMatches, clientResponse.HasPotentialMatches);
+                Assert.AreEqual(result.PersonId, clientResponse.PersonId);
+            }
+        }
+
+        [TestClass]
+        public class GetInstantEnrollmentCashReceiptAcknowledgementAsync_Tests
+        {
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetInstantEnrollmentCashReceiptAcknowledgementAsync_Null_Argument()
+            {
+                var mockHandler = new MockHandler();
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                await client.GetInstantEnrollmentCashReceiptAcknowledgementAsync(null);
+
+            }
+
+            [TestMethod]
+            public async Task GetInstantEnrollmentCashReceiptAcknowledgementAsync_Success()
+            {
+                const string _serviceUrl = "http://service.url";
+                const string _contentType = "application/json";
+
+                // The input argument is not important, because the mock of the HTTP call is not dependent on the content of the input argument.
+                // Arrange
+                var request = new Dtos.Student.InstantEnrollment.InstantEnrollmentCashReceiptAcknowledgementRequest()
+                {
+                    TransactionId = "123",
+                    CashReceiptId = "",
+                    PersonId = ""
+                };
+
+                // Create an API result object and serialize it. This will test that the service client deserializes the response back to this type.
+                var convenienceFees = new List<Dtos.Student.InstantEnrollment.ConvenienceFee>();
+                convenienceFees.Add(new Dtos.Student.InstantEnrollment.ConvenienceFee() { Code = "code", Amount = 1.2M, Description = "convience fee" });
+
+                var paymentMethods = new List<Dtos.Student.InstantEnrollment.PaymentMethod>();
+                paymentMethods.Add(new Dtos.Student.InstantEnrollment.PaymentMethod()
+                {
+                    PayMethodCode = "VSA",
+                    PayMethodDescription = "Visa",
+                    ControlNumber = "8858",
+                    ConfirmationNumber = "A45D8542",
+                    TransactionNumber = "123",
+                    TransactionDescription = "Payment on account",
+                    TransactionAmount = 81.2M
+                });
+
+                var registeredSections = new List<Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationPaymentGatewayRegisteredSection>();
+                registeredSections.Add(new Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationPaymentGatewayRegisteredSection()
+                {
+                    SectionId = "251",
+                    Ceus = 1.5M,
+                    SectionCost = 80.12M
+                });
+                var dtoResponse = new Dtos.Student.InstantEnrollment.InstantEnrollmentCashReceiptAcknowledgement()
+                {
+                    CashReceiptsId = "123",
+                    ReceiptDate = new DateTime(2020, 01, 01),
+                    MerchantNameAddress = new List<string>() { "Mechant Name", "Address Line 1" },
+                    ReceiptPayerId = "0001",
+                    ReceiptPayerName = "John Smith",
+                    Status = EcommerceProcessStatus.None,
+                    Username = "john_smith",
+                    UsernameCreationErrors = new List<string>(),
+                    ConvenienceFees = convenienceFees,
+                    PaymentMethods = paymentMethods,
+                    RegisteredSections = registeredSections,
+                    FailedSections = new List<Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationPaymentGatewayFailedSection>()
+                };
+
+                var serializedResponse = JsonConvert.SerializeObject(dtoResponse);
+
+                // Mock the API response that will return the result object.
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                // Create an HTTP client with the mock handler to return the mock response.
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                // Instantiate the service client
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Call the service client method.
+                // The mock is such that any request to any url will return the mocked response. Perhaps in the future we could mock the http client
+                // such that only a call to the expected url would return the mocked response.
+                var clientResponse = await client.GetInstantEnrollmentCashReceiptAcknowledgementAsync(request);
+
+                // Validate that the service client method properly deserialized the response.
+                Assert.IsNotNull(clientResponse);
+                Assert.AreEqual(dtoResponse.CashReceiptsId, clientResponse.CashReceiptsId);
+                Assert.AreEqual(dtoResponse.ReceiptDate, clientResponse.ReceiptDate);
+                CollectionAssert.AreEqual(dtoResponse.MerchantNameAddress, clientResponse.MerchantNameAddress);
+                Assert.AreEqual(dtoResponse.ReceiptPayerId, clientResponse.ReceiptPayerId);
+                Assert.AreEqual(dtoResponse.ReceiptPayerName, clientResponse.ReceiptPayerName);
+                Assert.AreEqual(dtoResponse.Status, clientResponse.Status);
+                Assert.AreEqual(dtoResponse.Username, clientResponse.Username);
+                CollectionAssert.AreEqual(dtoResponse.UsernameCreationErrors, clientResponse.UsernameCreationErrors);
+                Assert.AreEqual(dtoResponse.ConvenienceFees.Count(), clientResponse.ConvenienceFees.Count());
+                Assert.AreEqual(dtoResponse.PaymentMethods.Count(), clientResponse.PaymentMethods.Count());
+                Assert.AreEqual(dtoResponse.RegisteredSections.Count(), clientResponse.RegisteredSections.Count());
+                Assert.AreEqual(dtoResponse.FailedSections.Count(), clientResponse.FailedSections.Count());
+            }
+        }
+
 
         [TestClass]
         public class QueryRetentionAlertCaseCategoryOrgRolesAsync_Tests

@@ -62,5 +62,10 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// VoucherWebConfiguration
         /// </summary>
         public VoucherWebConfiguration RequestPaymentDefaults { get; set; }
+
+        /// <summary>
+        /// ID of the Attachment Collection that corresponds to Vouchers (aka: Request for Payments).
+        /// </summary>
+        public string VoucherAttachmentCollectionId { get; set; }
     }
 }

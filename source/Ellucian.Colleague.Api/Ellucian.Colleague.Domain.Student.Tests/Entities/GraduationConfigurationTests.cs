@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Student.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Linq;
@@ -22,6 +22,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 Assert.IsFalse(config.RequireImmediatePayment);
                 Assert.IsFalse(config.OverrideCapAndGownDisplay);
                 Assert.IsFalse(config.PreventGraduationApplicationEdits);
+                Assert.AreEqual(null,config.ExpandRequirements);
             }
         }
 

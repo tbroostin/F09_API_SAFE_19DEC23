@@ -20,6 +20,8 @@ using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Dmi.Runtime;
+using Ellucian.Colleague.Domain.Base.Entities;
+
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
@@ -31,6 +33,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         private readonly int readSize;
         protected const int AllVendorsCacheTimeout = 20; // Clear from cache every 20 minutes
         protected const string AllVendorFilterCache = "AllVendorsFilter";
+
 
         public VendorsRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)
@@ -229,7 +232,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                        AllVendorsCacheTimeout,
                        async () =>
                        {
-                           return await GetVendorsFilterCriteriaAsync(vendorDetail, classifications, statuses, types, relatedReference, taxId);
+                           return await GetVendorsFilterCriteriaAsync(vendorDetail, classifications, statuses, types, relatedReference, taxId, null);
                        }
                    );
 
@@ -267,10 +270,87 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         }
 
         /// <summary>
+        /// Get a list of vendors using criteria
+        /// </summary>
+        /// <returns></returns>
+        public async Task<Tuple<IEnumerable<Vendors>, int>> GetVendorsMaximumAsync(int offset, int limit, string vendorDetail = "", 
+            List<string> statuses = null, List<string> types = null, string taxId = null, List<string> addresses = null)
+        {
+            try
+            {
+                int totalCount = 0;
+                string[] subList = null;
+                var repositoryException = new RepositoryException();
+                string vendorCacheKey = CacheSupport.BuildCacheKey(AllVendorFilterCache, vendorDetail, statuses, types, taxId);
+                var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+                       this,
+                       ContainsKey,
+                       GetOrAddToCacheAsync,
+                       AddOrUpdateCacheAsync,
+                       transactionInvoker,
+                       vendorCacheKey,
+                       "VENDORS",
+                       offset,
+                       limit,
+                       AllVendorsCacheTimeout,
+                       async () =>
+                       {
+                           return await GetVendorsFilterCriteriaAsync(vendorDetail, null, statuses, types, null, taxId, addresses);
+                       }
+                   );
+
+                if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
+                {
+                    return new Tuple<IEnumerable<Vendors>, int>(new List<Vendors>(), 0);
+                }
+
+                subList = keyCache.Sublist.ToArray();
+                totalCount = keyCache.TotalCount.Value;
+                var vendorsData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.ColleagueFinance.DataContracts.Vendors>("VENDORS", subList);
+                if (vendorsData != null && vendorsData.Any())
+                {
+                    var personsData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", subList);
+                    var corpContract = await DataReader.BulkReadRecordAsync<Corp>("PERSON", subList);
+                    var corpFoundData = await DataReader.BulkReadRecordAsync<CorpFounds>(subList);
+                    var personIntgData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.PersonIntg>("PERSON.INTG", subList);
+
+                    var personAddresses = personsData.Where(p => p.PersonAddresses != null).SelectMany(p => p.PersonAddresses);
+                    var addressesData = new List<Base.DataContracts.Address>();
+                    if (personAddresses != null && personAddresses.Any())
+                    {
+                        var addressesDataContract = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Address>("ADDRESS", personAddresses.Distinct().ToArray());
+                        if (addressesDataContract != null)
+                        {
+                            addressesData = addressesDataContract.ToList();
+                        }
+                    }
+                    var vendors = BuildVendorsMaximum(vendorsData, personsData, corpContract, corpFoundData, personIntgData, addressesData);
+                    return new Tuple<IEnumerable<Vendors>, int>(vendors, totalCount);
+
+                }
+                else
+                {
+                    return new Tuple<IEnumerable<Vendors>, int>(new List<Vendors>(), 0);
+                }
+            }
+            catch (ArgumentException e)
+            {
+                throw e;
+            }
+            catch (RepositoryException e)
+            {
+                throw e;
+            }
+
+        }
+
+       
+
+        /// <summary>
         /// Get vendor criteria and limiting list.
         /// </summary>
         /// <returns></returns>
-        private async Task<CacheSupport.KeyCacheRequirements> GetVendorsFilterCriteriaAsync(string vendorDetail, List<string> classifications, List<string> statuses, List<string> types, List<string> relatedReference, string taxId)
+        private async Task<CacheSupport.KeyCacheRequirements> GetVendorsFilterCriteriaAsync(string vendorDetail, List<string> classifications, List<string> statuses, List<string> types, List<string> relatedReference, string taxId, List<string> addresses)
         {
             string criteria = "";
             var criteriaBuilder = new StringBuilder();
@@ -404,6 +484,32 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     return new CacheSupport.KeyCacheRequirements() { criteria = string.Empty, limitingKeys = new List<string>(), NoQualifyingRecords = true };
                 }
             }
+
+            if ((addresses != null) && (addresses.Any()))
+            {
+                var addrCriteria = string.Empty;
+                foreach(var addr in addresses)
+                {
+                    if (string.IsNullOrEmpty(addrCriteria))
+                        addrCriteria = string.Format("WITH PERSON.ADDRESSES EQ '{0}'", addr);
+                    else
+                        addrCriteria = string.Format(" AND WITH PERSON.ADDRESSES EQ '{0}'", addr);
+                }
+                var persons = await DataReader.SelectAsync("PERSON", vendorsLimitingKeys.ToArray(), addrCriteria);
+                if (persons != null && persons.Any())
+                {
+                    vendorsLimitingKeys = (await DataReader.SelectAsync("VENDORS", persons, criteria)).ToList();
+                    if (vendorsLimitingKeys == null || !vendorsLimitingKeys.Any())
+                    {
+                        return new CacheSupport.KeyCacheRequirements() { criteria = string.Empty, limitingKeys = new List<string>(), NoQualifyingRecords = true };
+                    }
+                }
+                else
+                {
+                    return new CacheSupport.KeyCacheRequirements() { criteria = string.Empty, limitingKeys = new List<string>(), NoQualifyingRecords = true };
+                }
+            }
+                
 
             if (!string.IsNullOrEmpty(taxId))
             {
@@ -550,7 +656,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// </summary>
         /// <param name="searchCriteria"> The search criteria containing keyword for vendor search.</param>
         /// <returns> The vendor search results for the vouchers</returns> 
-        public async Task<IEnumerable<Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult>> VendorSearchForVoucherAsync(string searchCriteria)
+        public async Task<IEnumerable<Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult>> VendorSearchForVoucherAsync(string searchCriteria, string apType)
         {
             List<Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult> voucherVendorSearchResults = new List<Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult>();
             if (string.IsNullOrEmpty(searchCriteria))
@@ -558,6 +664,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             var searchRequest = new TxGetVoucherVendorResultsRequest();
             searchRequest.ASearchCriteria = searchCriteria;
+            searchRequest.AApType = apType;
 
             var searchResponse = await transactionInvoker.ExecuteAsync<TxGetVoucherVendorResultsRequest, TxGetVoucherVendorResultsResponse>(searchRequest);
             if (searchResponse == null)
@@ -590,6 +697,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     resultEntity.Country = x.AlVendorCountry;
                     resultEntity.State = x.AlVendorState;
                     resultEntity.Zip = x.AlVendorZip;
+                    resultEntity.TaxForm = x.AlVendorTaxForm;
+                    resultEntity.TaxFormCode = x.AlVendorTaxFormCode;
+                    resultEntity.TaxFormLocation = x.AlVendorTaxFormLoc;
 
                     voucherVendorSearchResults.Add(resultEntity);
                 }
@@ -941,6 +1051,76 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         }
 
         /// <summary>
+        /// Get a single vendor using an ID
+        /// </summary>
+        /// <param name="id">The vendor GUID</param>
+        /// <returns>The vendor</returns>
+        public async Task<Vendors> GetVendorsMaximumByGuidAsync(string guid)
+        {
+            Vendors vendor = null;
+            string id = string.Empty;
+            try
+            {
+                id = await GetVendorIdFromGuidAsync(guid);
+                if (string.IsNullOrEmpty(id))
+                {
+                    throw new KeyNotFoundException(string.Concat("Id not found for vendor guid:", guid));
+                }
+                else
+                {
+                    // Now we have an ID, so we can read the record
+                    var record = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.ColleagueFinance.DataContracts.Vendors>(id);
+                    if (record == null)
+                    {
+                        throw new KeyNotFoundException(string.Concat("Record not found for vendor with ID ", id));
+                    }
+
+                    var personRecord = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>(id);
+                    if (personRecord == null)
+                    {
+                        throw new ArgumentNullException(string.Concat("Record not found for person with ID ", id));
+                    }
+
+                    var corpRecord = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Corp>("PERSON", id);
+                    var corpFoundRecord = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.CorpFounds>(id);
+                    var personIntg = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.PersonIntg>(id);
+                    //var addressRecords = (await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Address>(personRecord.PersonAddresses.Distinct().ToArray())).ToList();
+                    var personAddresses = personRecord.PersonAddresses;
+                    var addressesData = new List<Base.DataContracts.Address>();
+                    if (personAddresses != null && personAddresses.Any())
+                    {
+                        var addressesDataContract = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Address>("ADDRESS", personAddresses.Distinct().ToArray());
+                        if (addressesDataContract != null)
+                        {
+                            addressesData = addressesDataContract.ToList();
+                        }
+                    }
+
+                    // Build the vendor data
+                    vendor = BuildVendorMaximum(record, personRecord, corpRecord, corpFoundRecord, personIntg, addressesData);
+
+                    return vendor;
+                }
+            }
+            catch (KeyNotFoundException ex)
+            {
+                throw ex;
+            }
+            catch (Exception ex)
+            {
+                var exception = new RepositoryException();
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message)
+                {
+                    Id = guid,
+                    SourceId = id
+                });
+                throw exception;
+            }
+
+            
+        }
+
+        /// <summary>
         /// Vendor default Tax form information
         /// </summary>
         /// <param name="vendorId">vendor id</param>
@@ -1168,7 +1348,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             if (person != null)
             {
-                vendor.IsOrganization = (person.PersonCorpIndicator == "Y");
+                vendor.IsOrganization = (person.PersonCorpIndicator == "Y");                
             }
 
             if (source.VenIntgHoldReasons != null && source.VenIntgHoldReasons.Any())
@@ -1176,6 +1356,281 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 vendor.IntgHoldReasons = source.VenIntgHoldReasons;
             }
             return vendor;
+        }
+
+        /// <summary>
+        /// Build a collection of vendor domain entities from data contracts
+        /// </summary>
+        /// <param name="sources">Vendors data contracts</param>
+        /// <param name="persons">Persons data contracst</param>
+        /// <param name="corp"></param>
+        /// <returns>collection of vendor domain entities</returns>
+        private IEnumerable<Vendors> BuildVendorsMaximum(IEnumerable<Ellucian.Colleague.Data.ColleagueFinance.DataContracts.Vendors> sources,
+            IEnumerable<Ellucian.Colleague.Data.Base.DataContracts.Person> persons,
+            IEnumerable<Ellucian.Colleague.Data.Base.DataContracts.Corp> corp, IEnumerable<Ellucian.Colleague.Data.Base.DataContracts.CorpFounds> corpFounds, IEnumerable<PersonIntg> personIntgData, IEnumerable<Base.DataContracts.Address> addressesData)
+        {
+            var repositoryException = new RepositoryException();
+            var vendorCollection = new List<Vendors>();
+            var cor = new Corp();
+            CorpFounds corpFound = null;
+            PersonIntg personIntg = null;
+            List<Base.DataContracts.Address> addresses = null;
+            foreach (var source in sources)
+            {
+                if (persons != null && persons.Any())
+                {
+                    var person = persons.FirstOrDefault(p => p.Recordkey == source.Recordkey);
+                    if (person == null)
+                    {
+                        repositoryException.AddError(
+                      new RepositoryError("Bad.Data", "Person record cannot be found.")
+                      {
+                          Id = source.RecordGuid,
+                          SourceId = source.Recordkey
+                      });
+                    }
+                    else
+                    {
+                        if (corp != null && corp.Any())
+                            cor = corp.FirstOrDefault(p => p.Recordkey == source.Recordkey);
+                        if (corpFounds != null && corpFounds.Any())
+                            corpFound = corpFounds.FirstOrDefault(p => p.Recordkey == source.Recordkey);
+                        if (personIntgData != null && personIntgData.Any())
+                            personIntg = personIntgData.FirstOrDefault(p => p.Recordkey == source.Recordkey);
+                        if (addressesData != null && addressesData.Any())
+                            addresses = addressesData.Where(y => person.PersonAddresses.Contains(y.Recordkey)).ToList();
+
+                        try
+                        {
+                            vendorCollection.Add(BuildVendorMaximum(source, person, cor, corpFound, personIntg, addresses));
+                        }
+                        catch (Exception ex)
+                        {
+                            repositoryException.AddError(
+                          new RepositoryError("Bad.Data", ex.Message)
+                          {
+                              Id = source.RecordGuid,
+                              SourceId = source.Recordkey
+                          });
+                        }
+                    }
+
+                }
+                else
+                {
+                    repositoryException.AddError(
+                       new RepositoryError("Bad.Data", "Person record not found.")
+                       {
+                           Id = source.RecordGuid,
+                           SourceId = source.Recordkey
+                       });
+                }
+            }
+            if (repositoryException.Errors.Any())
+            {
+                throw repositoryException;
+            }
+            return vendorCollection.AsEnumerable();
+        }
+
+
+        /// <summary>
+        /// Build a vendor domain entity from data contracts
+        /// </summary>
+        /// <param name="source">Vendors data contract</param>
+        /// <param name="person">Persons data contract</param>
+        /// <param name="corp">Corp data contract</param>
+        /// <param name="corpFound">corpFound data contract</param>
+        /// <param name="PersonIntg">PersonIntg data contract</param>
+        /// <param name="addresses">list of addresses data contract</param>
+        /// <returns>Vendors domain entity</returns>
+        private Vendors BuildVendorMaximum(Ellucian.Colleague.Data.ColleagueFinance.DataContracts.Vendors source,
+            Ellucian.Colleague.Data.Base.DataContracts.Person person,
+            Ellucian.Colleague.Data.Base.DataContracts.Corp corp, Ellucian.Colleague.Data.Base.DataContracts.CorpFounds corpFound, PersonIntg personIntg, List<Base.DataContracts.Address> addresses)
+        {
+            Vendors vendor = null;
+            vendor = new Vendors(source.RecordGuid);
+            vendor.Id = source.Recordkey;
+            vendor.ActiveFlag = source.VenActiveFlag;
+            if (source.VendorsAddDate.HasValue)
+            {
+                vendor.AddDate = source.VendorsAddDate;
+            }
+            vendor.ApTypes = source.VenApTypes;
+            vendor.ApprovalFlag = source.VenApprovalFlag;
+            vendor.CurrencyCode = source.VenCurrencyCode;
+            vendor.Misc = source.VenMisc;
+            vendor.StopPaymentFlag = source.VenStopPaymentFlag;
+            vendor.Terms = source.VenTerms;
+            vendor.Types = source.VenTypes;
+            vendor.Categories = source.VenCategories;
+            vendor.TaxForm = source.VenTaxForm;
+            if (!string.IsNullOrWhiteSpace(source.VenComments))
+            {
+                vendor.Comments = source.VenComments;
+            }
+
+            if ((corp != null) && (corp.CorpParents != null && corp.CorpParents.Any()))
+            {
+                vendor.CorpParent = corp.CorpParents;
+            }
+
+            if (corpFound != null)
+            {
+                vendor.TaxId = corpFound.CorpTaxId;
+            }
+
+            if (person != null)
+            {
+                vendor.IsOrganization = (person.PersonCorpIndicator == "Y");
+                // Populate address and phone numbers
+                var tuplePerson = GetPersonIntegrationDataAsync(source.Recordkey, person, personIntg, addresses);
+                if (tuplePerson != null)
+                {
+                    vendor.Phones = tuplePerson.Item1;
+                    vendor.Addresses = tuplePerson.Item2;
+                }
+            }
+
+            if (source.VenIntgHoldReasons != null && source.VenIntgHoldReasons.Any())
+            {
+                vendor.IntgHoldReasons = source.VenIntgHoldReasons;
+            }
+            return vendor;
+        }
+
+        /// <summary>
+        /// Get person addresses, email addresses and phones used for integration.
+        /// </summary>
+        /// <param name="personId">Person's Colleague ID</param>
+        /// <param name="emailAddresses">List of <see cref="EmailAddress"> email addresses</see></param>
+        /// <param name="phones">List of <see cref="Phone"> phones</see></param>
+        /// <param name="addresses">List of <see cref="Address">addresses</see></param>
+        /// <returns>Boolean where true is success and false otherwise</returns>
+        private Tuple<List<Phone>, List<Domain.Base.Entities.Address>, bool> GetPersonIntegrationDataAsync(string personId,
+            Base.DataContracts.Person personData, PersonIntg personIntgData, List<Base.DataContracts.Address> addressData )
+        {
+            List<Domain.Base.Entities.Address> addresses = new List<Domain.Base.Entities.Address>();          
+            List<Phone> phones = new List<Phone>();
+            //get person phones.
+            if (personData != null )
+            {
+                foreach (var phone in personData.PerphoneEntityAssociation)
+                {
+                    try
+                    {
+                        var phoneNumber = phone.PersonalPhoneNumberAssocMember;
+                        var phoneType = phone.PersonalPhoneTypeAssocMember;
+                        var phoneExt = phone.PersonalPhoneExtensionAssocMember;
+                        bool isPreferred = false;
+                        string countryCallingCode = null;
+                        if (personIntgData != null && personIntgData.PerIntgPhonesEntityAssociation != null && personIntgData.PerIntgPhonesEntityAssociation.Any())
+                        {
+                            var matchingPhone = personIntgData.PerIntgPhonesEntityAssociation.FirstOrDefault(pi => pi.PerIntgPhoneNumberAssocMember == phoneNumber);
+                            if (matchingPhone != null)
+                            {
+                                isPreferred = (!string.IsNullOrEmpty(matchingPhone.PerIntgPhonePrefAssocMember) ? matchingPhone.PerIntgPhonePrefAssocMember.Equals("Y", StringComparison.OrdinalIgnoreCase) : false);
+                                countryCallingCode = matchingPhone.PerIntgCtryCallingCodeAssocMember;
+                            }
+                        }
+                        phones.Add(new Phone(phoneNumber, phoneType, phoneExt)
+                        {
+                            CountryCallingCode = countryCallingCode,
+                            IsPreferred = isPreferred
+                        });
+                    }
+                    catch (Exception exception)
+                    {
+                        throw new RepositoryException(string.Format(exception.Message + ".  Could not load phone number for person id '{0}' with GUID '{1}'", personData.Recordkey, personData.RecordGuid));
+                    }
+                }
+            }                
+
+            if (personData != null && addressData != null && personData.PersonAddresses != null && personData.PersonAddresses.Any())
+            {
+                // Current Addresses
+                var addressIds = personData.PersonAddresses;
+                var addressDataContracts = addressData.Where(ad => addressIds.Contains(ad.Recordkey));
+                if (addressDataContracts.Any())
+                {
+                    // create the address entities
+                    foreach (var address in addressDataContracts)
+                    {
+                        var addressEntity = new Domain.Base.Entities.Address();
+                        addressEntity.Guid = address.RecordGuid;
+                        addressEntity.City = address.City;
+                        addressEntity.State = address.State;
+                        addressEntity.PostalCode = address.Zip;
+                        addressEntity.CountryCode = address.Country;
+                        addressEntity.County = address.County;
+                        addressEntity.AddressLines = address.AddressLines;
+                        addressEntity.IntlLocality = address.IntlLocality;
+                        addressEntity.IntlPostalCode = address.IntlPostalCode;
+                        addressEntity.IntlRegion = address.IntlRegion;
+                        addressEntity.IntlSubRegion = address.IntlSubRegion;
+                        // Find Addrel Association in Person contract
+                        var assocEntity = personData.PseasonEntityAssociation.FirstOrDefault(pa => address.Recordkey == pa.PersonAddressesAssocMember);
+                        if (assocEntity != null)
+                        {
+                            //addressEntity.TypeCode = assocEntity.AddrTypeAssocMember.Split(_SM).FirstOrDefault();
+                            addressEntity.TypeCode = assocEntity.AddrTypeAssocMember;
+                            addressEntity.EffectiveStartDate = assocEntity.AddrEffectiveStartAssocMember;
+                            addressEntity.EffectiveEndDate = assocEntity.AddrEffectiveEndAssocMember;
+                            
+                        }
+                        addressEntity.IsPreferredAddress = (address.Recordkey == personData.PreferredAddress);
+                        addressEntity.IsPreferredResidence = (address.Recordkey == personData.PreferredResidence);
+                        addressEntity.Status = "Current";
+                        //add address phones if addresslines is there otherwise at it to the phone list. 
+
+                        if (address.AdrPhonesEntityAssociation != null && address.AdrPhonesEntityAssociation.Any())
+                        {
+                            foreach (var phone in address.AdrPhonesEntityAssociation)
+                            {
+                                try
+                                {
+                                    bool isPreferred = false;
+                                    string countryCallingCode = null;
+                                    if (personIntgData != null && personIntgData.PerIntgPhonesEntityAssociation != null && personIntgData.PerIntgPhonesEntityAssociation.Any())
+                                    {
+                                        var matchingPhone = personIntgData.PerIntgPhonesEntityAssociation.FirstOrDefault(pi => pi.PerIntgPhoneNumberAssocMember == phone.AddressPhonesAssocMember);
+                                        if (matchingPhone != null)
+                                        {
+                                            isPreferred = (!string.IsNullOrEmpty(matchingPhone.PerIntgPhonePrefAssocMember) ? matchingPhone.PerIntgPhonePrefAssocMember.Equals("Y", StringComparison.OrdinalIgnoreCase) : false);
+                                            countryCallingCode = matchingPhone.PerIntgCtryCallingCodeAssocMember;
+                                        }
+                                    }
+                                    if (addressEntity.AddressLines != null && addressEntity.AddressLines.Any())
+                                    {
+                                        addressEntity.AddPhone(new Phone(phone.AddressPhonesAssocMember, phone.AddressPhoneTypeAssocMember, phone.AddressPhoneExtensionAssocMember)
+
+                                        {
+                                            CountryCallingCode = countryCallingCode,
+                                            IsPreferred = isPreferred
+                                        });
+                                    }
+                                    else
+                                    {
+                                        phones.Add(new Phone(phone.AddressPhonesAssocMember, phone.AddressPhoneTypeAssocMember, phone.AddressPhoneExtensionAssocMember)
+                                        {
+                                            CountryCallingCode = countryCallingCode,
+                                            IsPreferred = isPreferred
+                                        });
+                                    }
+                                }
+                                catch (Exception exception)
+                                {
+                                    throw new RepositoryException(string.Format(exception.Message + "Could not load address phone number for person id '{0}' with GUID '{1}'", personData.Recordkey, personData.RecordGuid));
+                                }
+                            }
+                        }
+
+                        addresses.Add(addressEntity);
+                    }
+                }
+            }
+
+            return new Tuple<List<Phone>, List<Domain.Base.Entities.Address>, bool>(phones, addresses, true);
         }
 
         /// <summary>

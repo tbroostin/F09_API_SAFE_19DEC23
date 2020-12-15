@@ -11,6 +11,10 @@ namespace Ellucian.Colleague.Domain.Base.Entities
     [Serializable]
     public class EthosExtensibleDataRow
     {
+        public string associationController;
+        public string transType;
+        public string databaseUsageType;
+
         /// <summary>
         /// Collumn name from Colleague
         /// </summary>

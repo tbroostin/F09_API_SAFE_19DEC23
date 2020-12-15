@@ -75,6 +75,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
                     break;
             }
 
+            requisitionDto.ConfirmationEmailAddresses = new List<string>();
+            if ((Source.ConfirmationEmailAddresses != null) && (Source.ConfirmationEmailAddresses.Count > 0))
+            {
+                foreach (var item in Source.ConfirmationEmailAddresses)
+                {
+                    requisitionDto.ConfirmationEmailAddresses.Add(item);
+                }
+            }
+
             requisitionDto.LineItems = new List<Dtos.ColleagueFinance.LineItem>();
             requisitionDto.Approvers = new List<Dtos.ColleagueFinance.Approver>();
 

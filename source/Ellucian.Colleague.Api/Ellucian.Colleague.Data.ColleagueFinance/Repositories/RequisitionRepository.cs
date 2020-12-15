@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -16,6 +16,8 @@ using slf4net;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
+using Ellucian.Colleague.Domain.Base.Services;
+using System.Collections.ObjectModel;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
@@ -26,6 +28,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
     public class RequisitionRepository : BaseColleagueRepository, IRequisitionRepository
     {
         private Ellucian.Data.Colleague.DataContracts.IntlParams _internationalParameters;
+        protected const int AllRequisitionCacheTimeout = 20; // Clear from cache every 20 minutes
+        protected const string AllRequisitionsCache = "AllEthosRequisitions";
 
         /// <summary>
         /// The constructor to instantiate a requisition repository object
@@ -224,6 +228,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
             }
             requisitionDomainEntity.CommodityCode = requisition.ReqDefaultCommodity;
+            requisitionDomainEntity.ConfirmationEmailAddresses = requisition.ReqConfEmailAddresses;
 
             // Add any associated purchase orders to the requisition domain entity
             if ((requisition.ReqPoNo != null) && (requisition.ReqPoNo.Count > 0))
@@ -632,25 +637,55 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 poDictionary = await BuildPurchaseOrderDictionaryAsync(requisitionData);
                 bpoDictionary = await BuildBlanketPODictionaryAsync(requisitionData);
 
+                // Read the OPERS records associated with the approval signatures and 
+                // next approvers on the requisiton, and build approver objects.
+                var operators = new List<string>();
+                Collection<Opers> opersCollection = new Collection<Opers>();
+                // get list of Approvers and next approvers from the entire requisition records
+                var allRequisitionDataApprovers = requisitionData.SelectMany(requisitionContract => requisitionContract.ReqAuthorizations).Distinct().ToList();
+                if (allRequisitionDataApprovers != null && allRequisitionDataApprovers.Any(x => x != null))
+                {
+                    operators.AddRange(allRequisitionDataApprovers);
+                }
+
+                var allRequisitionDataNextApprovers = requisitionData.SelectMany(requisitionContract => requisitionContract.ReqNextApprovalIds).Distinct().ToList();
+                if (allRequisitionDataNextApprovers != null && allRequisitionDataNextApprovers.Any(x => x != null))
+                {
+                    operators.AddRange(allRequisitionDataNextApprovers);
+                }
+                var uniqueOperators = operators.Distinct().ToList();
+                if (uniqueOperators.Count > 0)
+                {
+                    opersCollection = await DataReader.BulkReadRecordAsync<Opers>("UT.OPERS", uniqueOperators.ToArray(), true);
+                }
+
                 foreach (var requisition in requisitionData)
                 {
                     try
                     {
-                        string initiatorName = string.Empty;
-                        if (!string.IsNullOrEmpty(requisition.ReqDefaultInitiator))
-                            hierarchyNameDictionary.TryGetValue(requisition.ReqDefaultInitiator, out initiatorName);
-
-                        string requestorName = string.Empty;
-                        if (!string.IsNullOrEmpty(requisition.ReqRequestor))
-                            hierarchyNameDictionary.TryGetValue(requisition.ReqRequestor, out requestorName);
-
-                        // If there is no vendor name and there is a vendor id, use the PO hierarchy to get the vendor name.
-                        var requisitionVendorName = requisition.ReqMiscName != null && requisition.ReqMiscName.Any() ? requisition.ReqMiscName.FirstOrDefault() : string.Empty;
-                        if ((string.IsNullOrEmpty(requisitionVendorName)) && (!string.IsNullOrEmpty(requisition.ReqVendor)))
+                        //filter out any requisitions with Requisition Number whose values are empty/ whitespace
+                        if (string.IsNullOrWhiteSpace(requisition.ReqNo))
                         {
-                            hierarchyNameDictionary.TryGetValue(requisition.ReqVendor, out requisitionVendorName);
+                            logger.Debug(string.Format("The Requisition with the ID \"{0}\" has Requisition Number \"{1}\"; skipped this record for Requisition View on Procurement page for person {2}.", requisition.Recordkey, requisition.ReqNo, personId));
                         }
-                        requisitionList.Add(BuildRequisitionSummary(requisition, poDictionary, bpoDictionary, requisitionVendorName, initiatorName, requestorName));
+                        else
+                        {
+                            string initiatorName = string.Empty;
+                            if (!string.IsNullOrEmpty(requisition.ReqDefaultInitiator))
+                                hierarchyNameDictionary.TryGetValue(requisition.ReqDefaultInitiator, out initiatorName);
+
+                            string requestorName = string.Empty;
+                            if (!string.IsNullOrEmpty(requisition.ReqRequestor))
+                                hierarchyNameDictionary.TryGetValue(requisition.ReqRequestor, out requestorName);
+
+                            // If there is no vendor name and there is a vendor id, use the PO hierarchy to get the vendor name.
+                            var requisitionVendorName = requisition.ReqMiscName != null && requisition.ReqMiscName.Any() ? requisition.ReqMiscName.FirstOrDefault() : string.Empty;
+                            if ((string.IsNullOrEmpty(requisitionVendorName)) && (!string.IsNullOrEmpty(requisition.ReqVendor)))
+                            {
+                                hierarchyNameDictionary.TryGetValue(requisition.ReqVendor, out requisitionVendorName);
+                            }
+                            requisitionList.Add(BuildRequisitionSummary(requisition, poDictionary, bpoDictionary, requisitionVendorName, initiatorName, requestorName, opersCollection));
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -707,15 +742,41 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns>collection of requisition domain entity objects</returns>
         public async Task<Tuple<IEnumerable<Requisition>, int>> GetRequisitionsAsync(int offset, int limit)
         {
-            var requisitionIds = await DataReader.SelectAsync("REQUISITIONS", "WITH REQ.CURRENT.STATUS NE 'U'");
+            int totalCount = 0;
+            string[] subList = null;
+            string reqCacheKey = CacheSupport.BuildCacheKey(AllRequisitionsCache);
+            var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+                   this,
+                   ContainsKey,
+                   GetOrAddToCacheAsync,
+                   AddOrUpdateCacheAsync,
+                   transactionInvoker,
+                   reqCacheKey,
+                   "REQUISITIONS",
+                   offset,
+                   limit,
+                   AllRequisitionCacheTimeout,
+                   async () =>
+                   {
+                       var criteria = "WITH REQ.CURRENT.STATUS NE 'U'";
+                       var requirements = new CacheSupport.KeyCacheRequirements()
+                       {
+                           criteria = criteria
+                       };
+                       return requirements;
+                   }
+               );
 
-            var totalCount = requisitionIds.Count();
-            Array.Sort(requisitionIds);
-            var subList = requisitionIds.Skip(offset).Take(limit).ToArray();
+            if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
+            {
+                return new Tuple<IEnumerable<Requisition>, int>(new List<Requisition>(), 0);
+            }
 
+            subList = keyCache.Sublist.ToArray();
+            totalCount = keyCache.TotalCount.Value;
+            IEnumerable<Requisition> requisitions = null;
             var requisitionData = await DataReader.BulkReadRecordAsync<DataContracts.Requisitions>("REQUISITIONS", subList);
-            var requisitions = await BuildRequisitionsAsync(requisitionData);
-
+            requisitions = await BuildRequisitionsAsync(requisitionData);
             return new Tuple<IEnumerable<Requisition>, int>(requisitions, totalCount);
 
         }
@@ -734,14 +795,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             var id = await GetRequisitionsIdFromGuidAsync(guid);
 
-            if (id == null)
+            if (string.IsNullOrEmpty(id))
             {
-                throw new KeyNotFoundException("No requisitions was found for guid " + guid);
+                throw new KeyNotFoundException("No requisitions was found for GUID " + guid);
             }
             var requisitionData = await DataReader.ReadRecordAsync<Requisitions>(id);
             if (requisitionData == null)
             {
-                throw new KeyNotFoundException("No requisitions was found for guid " + guid);
+                throw new KeyNotFoundException("No requisitions was found for GUID " + guid);
             }
             // exclude those PO that are inprogress
             if (requisitionData != null && requisitionData.ReqStatus != null && requisitionData.ReqStatus.Any() && requisitionData.ReqStatus.FirstOrDefault().Equals("U", StringComparison.OrdinalIgnoreCase))
@@ -758,7 +819,29 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns>id</returns>
         public async Task<string> GetRequisitionsIdFromGuidAsync(string guid)
         {
-            return await GetRecordKeyFromGuidAsync(guid);
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid");
+            }
+
+            var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
+            if (idDict == null || idDict.Count == 0)
+            {
+                throw new KeyNotFoundException("No requisitions was found for GUID " + guid);
+            }
+
+            var foundEntry = idDict.FirstOrDefault();
+            if (foundEntry.Value == null)
+            {
+                throw new KeyNotFoundException("No requisitions was found for GUID " + guid);
+            }
+
+            if (foundEntry.Value.Entity != "REQUISITIONS")
+            {
+                throw new RepositoryException("GUID " + guid + " has different entity, " + foundEntry.Value.Entity + ", than expected, REQUISITIONS");
+            }
+
+            return foundEntry.Value.PrimaryKey;
         }
 
         /// <summary>
@@ -838,36 +921,27 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (string.IsNullOrEmpty(requisitionEntity.Guid))
                 throw new ArgumentNullException("requisitionEntity", "Must provide the guid of the requisitionEntity to update.");
 
-            // verify the GUID exists to perform an update.  If not, perform a create instead
-            var requisitionId = await this.GetRequisitionsIdFromGuidAsync(requisitionEntity.Guid);
+            var updateRequest = BuildRequisitionUpdateRequest(requisitionEntity);
 
-            if (!string.IsNullOrEmpty(requisitionId))
+            var extendedDataTuple = GetEthosExtendedDataLists();
+            if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null)
             {
-
-                var updateRequest = BuildRequisitionUpdateRequest(requisitionEntity);
-
-                var extendedDataTuple = GetEthosExtendedDataLists();
-                if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null)
-                {
-                    updateRequest.ExtendedNames = extendedDataTuple.Item1;
-                    updateRequest.ExtendedValues = extendedDataTuple.Item2;
-                }
-
-                var updateResponse = await transactionInvoker.ExecuteAsync<UpdateCreateRequisitionRequest, UpdateCreateRequisitionResponse>(updateRequest);
-
-                if (updateResponse.ReqErrors.Any())
-                {
-                    var exception = new RepositoryException();
-                    updateResponse.ReqErrors.ForEach(e => exception.AddError(new RepositoryError("requisition", e.ErrorMessages)));
-                    throw exception;
-                }
-
-                // get the updated entity from the database
-                return await GetRequisitionsByGuidAsync(requisitionEntity.Guid);
+                updateRequest.ExtendedNames = extendedDataTuple.Item1;
+                updateRequest.ExtendedValues = extendedDataTuple.Item2;
             }
 
-            // perform a create instead
-            return await CreateRequisitionAsync(requisitionEntity);
+            var updateResponse = await transactionInvoker.ExecuteAsync<UpdateCreateRequisitionRequest, UpdateCreateRequisitionResponse>(updateRequest);
+
+            if (updateResponse.ReqErrors.Any())
+            {
+                var exception = new RepositoryException();
+                updateResponse.ReqErrors.ForEach(e => exception.AddError(new RepositoryError("requisition", e.ErrorMessages)));
+                throw exception;
+            }
+
+            // get the updated entity from the database
+            return await GetRequisitionsByGuidAsync(requisitionEntity.Guid);
+
         }
 
         /// <summary>
@@ -1090,7 +1164,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     }
                 }
             }
-
+            requisitionDomainEntity.Type = requisitionDataContract.ReqIntgType;
             requisitionDomainEntity.Amount = 0;
             requisitionDomainEntity.CurrencyCode = requisitionDataContract.ReqCurrencyCode;
             if (requisitionDataContract.ReqMaintGlTranDate.HasValue)
@@ -1185,7 +1259,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
 
             // Populate the line item domain entities and add them to the requisition domain entity
-            await GetLineItems(glAccessLevel, expenseAccounts, requisitionDataContract, requisitionDomainEntity, requisitionDataContract.ReqItemsId);
+            try
+            {
+                await GetLineItems(glAccessLevel, expenseAccounts, requisitionDataContract, requisitionDomainEntity, requisitionDataContract.ReqItemsId);
+            }
+            catch(Exception ex)
+            {
+                throw new RepositoryException(ex.Message + ". Missing GL details for line items for requistion id : " + requisitionDataContract.Recordkey);
+            }
 
             return requisitionDomainEntity;
         }
@@ -1336,6 +1417,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         lineItemDomainEntity.VendorPart = lineItem.ItmVendorPart;
 
                         lineItemDomainEntity.CommodityCode = lineItem.ItmCommodityCode;
+                        lineItemDomainEntity.FixedAssetsFlag = lineItem.ItmFixedAssetsFlag;
                         lineItemDomainEntity.TradeDiscountAmount = lineItem.ItmReqTradeDiscAmt;
                         lineItemDomainEntity.TradeDiscountPercentage = lineItem.ItmReqTradeDiscPct;
                         lineItemDomainEntity.FixedAssetsFlag = lineItem.ItmFixedAssetsFlag;
@@ -1578,6 +1660,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (!string.IsNullOrEmpty(requisitionEntity.Number))
                 request.RequisitionNumber = requisitionEntity.Number;
 
+            if (!string.IsNullOrEmpty(requisitionEntity.Type))
+                request.Type = requisitionEntity.Type;
+
             if (requisitionEntity.DeliveryDate != null && requisitionEntity.DeliveryDate.HasValue)
                 request.DeliveredBy = requisitionEntity.DeliveryDate;
 
@@ -1679,6 +1764,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     {
                         LineDesc = apLineItem.Description,
                         LineCommodityCodeId = apLineItem.CommodityCode,
+                        LineFixedAssetsFlag = apLineItem.FixedAssetsFlag,
                         LinePartNumber = apLineItem.VendorPart,
                         LineDesiredDate = apLineItem.DesiredDate,
                         LineQuantity = apLineItem.Quantity.ToString(),
@@ -1801,7 +1887,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return hierarchyNameDictionary;
         }
 
-        private RequisitionSummary BuildRequisitionSummary(Requisitions requisitionDataContract, Dictionary<string, PurchaseOrders> poDictionary, Dictionary<string, Bpo> bpoDictionary, string vendorName, string initiatorName, string requestorName)
+        private RequisitionSummary BuildRequisitionSummary(Requisitions requisitionDataContract, Dictionary<string, PurchaseOrders> poDictionary, Dictionary<string, Bpo> bpoDictionary, string vendorName, string initiatorName, string requestorName, Collection<Opers> opersCollection)
         {
             if (requisitionDataContract == null)
             {
@@ -1831,12 +1917,47 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 Status = requisitionStatus,
                 VendorId = requisitionDataContract.ReqVendor,
                 InitiatorName = initiatorName,
-                RequestorName = requestorName,
+                RequestorName = requestorName,  
                 Amount = requisitionDataContract.ReqTotalAmt.HasValue ? requisitionDataContract.ReqTotalAmt.Value : 0
             };
+            // build approvers and add to entity
+            if ((requisitionDataContract.ReqAuthEntityAssociation != null) && (requisitionDataContract.ReqAuthEntityAssociation.Any()))
+            {
+                // Approver object is declared once
+                Approver approver;
+                foreach (var approval in requisitionDataContract.ReqAuthEntityAssociation)
+                {
+                    //get opersId for the requisition
+                    var oper = opersCollection.FirstOrDefault(x => x.Recordkey == approval.ReqAuthorizationsAssocMember);
+                    if (oper != null)
+                    {
+                        approver = new Approver(oper.Recordkey);
+                        approver.SetApprovalName(oper.SysUserName);
+                        approver.ApprovalDate = approval.ReqAuthorizationDatesAssocMember.Value;
+                        requisitionSummaryEntity.AddApprover(approver);
+                    }
+                }
+            }
+            // build next approvers and add to entity
+            if ((requisitionDataContract.ReqApprEntityAssociation != null) && (requisitionDataContract.ReqApprEntityAssociation.Any()))
+            {
+                // Approver object is declared once
+                Approver approver;
+                foreach (var approval in requisitionDataContract.ReqApprEntityAssociation)
+                {
+                    //get opersId for the requisition
+                    var oper = opersCollection.FirstOrDefault(x => x.Recordkey == approval.ReqNextApprovalIdsAssocMember);
+                    if (oper != null)
+                    {
+                        approver = new Approver(oper.Recordkey);
+                        approver.SetApprovalName(oper.SysUserName);
+                        requisitionSummaryEntity.AddApprover(approver);
+                    }
+                }
+            }
 
             // Add any associated purchase orders to the requisition summary domain entity
-            if ((requisitionDataContract.ReqPoNo != null) && (requisitionDataContract.ReqPoNo.Count > 0))
+            if ((requisitionDataContract.ReqPoNo != null) && (requisitionDataContract.ReqPoNo.Any()))
             {
                 foreach (var purchaseOrderId in requisitionDataContract.ReqPoNo)
                 {
@@ -1854,7 +1975,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             // Add any associated blanket purchase orders to the requisition domain entity.
             // Even though ReqBpoNo is a list of string, only one bpo can be associated to a requisition
-            if ((requisitionDataContract.ReqBpoNo != null) && (requisitionDataContract.ReqBpoNo.Count > 0))
+            if ((requisitionDataContract.ReqBpoNo != null) && (requisitionDataContract.ReqBpoNo.Any()))
             {
                 if (requisitionDataContract.ReqBpoNo.Count > 1)
                 {

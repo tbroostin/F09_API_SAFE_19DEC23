@@ -82,5 +82,10 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// </summary>
         public List<PurchaseOrderLinkSummary> PurchaseOrders { get; set; }
 
+        /// <summary>
+        /// List of Approvers associated to this voucher
+        /// </summary>
+        public List<Approver> Approvers { get; set; }
+
     }
 }

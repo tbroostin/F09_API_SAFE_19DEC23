@@ -51,15 +51,27 @@ namespace Ellucian.Colleague.Domain.Base.Entities
                     //    return DemographicFieldType.AddressLines;
                     //case "ADDRESS_TYPE":
                     //    return DemographicFieldType.AddressType;
-                    //case "CITY":
-                    //    return DemographicFieldType.City;
-                    //case "STATE":
-                    //    return DemographicFieldType.StateProvince;
-                    //case "POSTAL_CODE":
-                    //    return DemographicFieldType.PostalCode;
-                    //case "COUNTRY":
-                    //    return DemographicFieldType.Country;
+                    case "ADDRESS_LINE_1":
+                        return DemographicFieldType.AddressLine1;
+                    case "ADDRESS_LINE_2":
+                        return DemographicFieldType.AddressLine2;
+                    case "ADDRESS_LINE_3":
+                        return DemographicFieldType.AddressLine3;
+                    case "ADDRESS_LINE_4":
+                        return DemographicFieldType.AddressLine4;
+                    case "CITY":
+                        return DemographicFieldType.City;
+                    case "STATE":
+                    case "STATE_PROVINCE":
+                        return DemographicFieldType.StateProvince;
+                    case "POSTAL_CODE":
+                        return DemographicFieldType.PostalCode;
+                    case "COUNTY":
+                        return DemographicFieldType.County;
+                    case "ADDRESS_COUNTRY":
+                        return DemographicFieldType.AddressCountry;
                     case "PHONE":
+                    case "PHONE_NUM":
                         return DemographicFieldType.Phone;
                     case "PHONE_EXTENSION":
                         return DemographicFieldType.PhoneExtension;
@@ -71,6 +83,13 @@ namespace Ellucian.Colleague.Domain.Base.Entities
                         return DemographicFieldType.Gender;
                     case "SSN":
                         return DemographicFieldType.GovernmentId;
+                    case "CITIZEN_COUNTRY":
+                    case "CITIZENSHIP_COUNTRY":
+                        return DemographicFieldType.CitizenshipCountry;
+                    case "ETHNICITY":
+                        return DemographicFieldType.Ethnicity;
+                    case "RACE":
+                        return DemographicFieldType.Race;
                     default:
                         return DemographicFieldType.Unknown;
                 }

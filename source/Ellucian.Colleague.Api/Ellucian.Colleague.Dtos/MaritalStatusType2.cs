@@ -39,6 +39,12 @@ namespace Ellucian.Colleague.Dtos
         /// Separated
         /// </summary>
         [EnumMember(Value = "separated")]
-        Separated
+        Separated,
+
+        /// <summary>
+        /// Other
+        /// </summary>
+        [EnumMember(Value = "other")]
+        Other
     }
 }

@@ -58,6 +58,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="category">Specific category (term, subterm, year)</param>
         /// <returns>Collection of AcademicPeriod DTO objects</returns>
         Task<IEnumerable<Ellucian.Colleague.Dtos.AcademicPeriod4>> GetAcademicPeriods4Async(bool bypassCache, string registration = "", string termCode = "", 
-            string category = "", DateTime? startOn = null, DateTime? endOn = null, Dictionary<string, string> filterQualifiers = null);
+            string category = "", DateTimeOffset? startOn = null, DateTimeOffset? endOn = null, Dictionary<string, string> filterQualifiers = null);
     }
 }

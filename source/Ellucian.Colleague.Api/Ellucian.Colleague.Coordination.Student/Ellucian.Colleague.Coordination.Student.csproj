@@ -43,26 +43,26 @@
     <Reference Include="DDay.iCal">
       <HintPath>..\packages\DDay.iCal.1.0.1\lib\DDay.iCal.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Configuration, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Colleague.Configuration.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Configuration, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Colleague.Configuration.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Domain, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Colleague.Domain.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Domain, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Colleague.Domain.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Legacy, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Colleague.Legacy.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Legacy, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Colleague.Legacy.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Property, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Colleague.Property.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Property, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Colleague.Property.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Data.Colleague, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Data.Colleague.dll</HintPath>
+    <Reference Include="Ellucian.Data.Colleague, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Data.Colleague.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Dmi.Client, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Dmi.Client.dll</HintPath>
+    <Reference Include="Ellucian.Dmi.Client, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Dmi.Client.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Dmi.Runtime, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Dmi.Runtime.dll</HintPath>
+    <Reference Include="Ellucian.Dmi.Runtime, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Dmi.Runtime.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Logging, Version=1.0.0.1, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
       <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.248\lib\net451\Ellucian.Logging.dll</HintPath>
@@ -85,8 +85,8 @@
     <Reference Include="Ellucian.Web.Utility, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
       <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.184\lib\net451\Ellucian.Web.Utility.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.WebServices.Core.Config.dll</HintPath>
+    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.WebServices.Core.Config.dll</HintPath>
     </Reference>
     <Reference Include="ICSharpCode.SharpZipLib, Version=1.2.0.246, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
       <HintPath>..\packages\SharpZipLib.1.2.0\lib\net45\ICSharpCode.SharpZipLib.dll</HintPath>
@@ -154,10 +154,10 @@
       <HintPath>..\packages\slf4net.0.1.32.1\lib\net35\slf4net.dll</HintPath>
     </Reference>
     <Reference Include="System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\System.dll</HintPath>
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\System.dll</HintPath>
     </Reference>
     <Reference Include="System.ComponentModel.DataAnnotations, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\System.ComponentModel.DataAnnotations.dll</HintPath>
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\System.ComponentModel.DataAnnotations.dll</HintPath>
     </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.IdentityModel" />
@@ -166,7 +166,7 @@
       <HintPath>..\packages\System.IdentityModel.Tokens.Jwt.4.0.1\lib\net45\System.IdentityModel.Tokens.Jwt.dll</HintPath>
     </Reference>
     <Reference Include="System.Runtime.Serialization, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\System.Runtime.Serialization.dll</HintPath>
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\System.Runtime.Serialization.dll</HintPath>
     </Reference>
     <Reference Include="System.Threading.Tasks.Dataflow, Version=4.5.24.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -191,6 +191,7 @@
     <Compile Include="Adapters\AcademicHistoryLevelEntityToAcademicHistoryLevel2DtoAdapter.cs" />
     <Compile Include="Adapters\AddAuthorizationInputDtoToEntityAdapter.cs" />
     <Compile Include="Adapters\CourseCatalogConfigurationEntityToDto2Adapter.cs" />
+    <Compile Include="Adapters\CourseCatalogConfigurationEntityToDto3Adapter.cs" />
     <Compile Include="Adapters\CourseCatalogConfigurationEntityToDtoAdapter.cs" />
     <Compile Include="Adapters\DegreePlanApprovalEntityAdapter.cs" />
     <Compile Include="Adapters\DegreePlanDto2Adapter.cs" />
@@ -203,6 +204,20 @@
     <Compile Include="Adapters\DegreePlanEntityAdapter.cs" />
     <Compile Include="Adapters\DegreePlanNoteEntityAdapter.cs" />
     <Compile Include="Adapters\FacultyOfficeHoursEntityToDtoAdapter.cs" />
+    <Compile Include="Adapters\InstantEnrollmentCashReceiptAcknowledgementEntityToDtoAdapter.cs" />
+    <Compile Include="Adapters\InstantEnrollmentCashReceiptAcknowledgementRequestDtoToEntityAdapter.cs" />
+    <Compile Include="Adapters\InstantEnrollmentEcheckRegistrationDtoToEntityAdapter.cs" />
+    <Compile Include="Adapters\InstantEnrollmentBaseSectionToRegisterDtoToEntityAdapter.cs" />
+    <Compile Include="Adapters\InstantEnrollmentPaymentAcknowledgementParagraphRequestDtoToEntityAdapter.cs" />
+    <Compile Include="Adapters\InstantEnrollmentStartPaymentGatewayRegistrationResultEntityToDtoAdapter.cs" />
+    <Compile Include="Adapters\InstantEnrollmentEcheckRegistrationResultEntityToDtoAdapter.cs" />
+    <Compile Include="Adapters\InstantEnrollmentPersonDemographicsDtoToEntityAdapter.cs" />
+    <Compile Include="Adapters\InstantEnrollmentPmtGatewayRegistrationDtoToEntityAdapter.cs" />
+    <Compile Include="Adapters\InstantEnrollmentProposedRegistrationResultEntityToDtoAdapter.cs" />
+    <Compile Include="Adapters\InstantEnrollmentConfigurationEntityToDtoAdapter.cs" />
+    <Compile Include="Adapters\InstantEnrollmentZeroCostRegistrationDtoToEntityAdapter.cs" />
+    <Compile Include="Adapters\InstantEnrollmentZeroCostRegistrationResultEntityToDtoAdapter.cs" />
+    <Compile Include="Adapters\InstitutionalTransferWorkEntitytoDtoAdapter.cs" />
     <Compile Include="Adapters\RetentionAlertCaseCategoryOrgRolesEntityToDtoAdapter.cs" />
     <Compile Include="Adapters\RetentionAlertCaseSetManageRemindersDtoToEntityAdapter.cs" />
     <Compile Include="Adapters\RetentionAlertCaseSetReminderDtoToEntityAdapter.cs" />
@@ -213,6 +228,7 @@
     <Compile Include="Adapters\SectionMidtermGradingCompleteEntityToDtoAdapter.cs" />
     <Compile Include="Adapters\StudentAcademicProgramEntityAdapter.cs" />
     <Compile Include="Adapters\StudentConfigurationEntityAdapter.cs" />
+    <Compile Include="Adapters\InstantEnrollmentProposedRegistrationDtoToEntityAdapter.cs" />
     <Compile Include="Adapters\StudentQuickRegistrationEntityToStudentQuickRegistrationDtoAdapter.cs" />
     <Compile Include="Adapters\StudentSectionWaitlistInfoEntityToDtoAdapter.cs" />
     <Compile Include="Adapters\PlannedCourseEntityAdapter.cs" />
@@ -289,10 +305,14 @@
     <Compile Include="Services\CareerGoalsService.cs" />
     <Compile Include="Services\AdmissionApplicationInfluencesService.cs" />
     <Compile Include="Services\AdmissionApplicationSourcesService.cs" />
+    <Compile Include="Services\CipCodeService.cs" />
     <Compile Include="Services\EducationalGoalsService.cs" />
     <Compile Include="Services\IAptitudeAssessmentSourcesService.cs" />
     <Compile Include="Services\ICareerGoalsService.cs" />
+    <Compile Include="Services\IInstantEnrollmentService.cs" />
+    <Compile Include="Services\InstantEnrollmentService.cs" />
     <Compile Include="Services\IAdmissionApplicationSourcesService.cs" />
+    <Compile Include="Services\ICipCodeService.cs" />
     <Compile Include="Services\IEducationalGoalsService.cs" />
     <Compile Include="Services\IAdmissionApplicationInfluencesService.cs" />
     <Compile Include="Services\IProspectOpportunitiesService.cs" />
@@ -306,6 +326,7 @@
     <Compile Include="Services\IStudentDegreePlanService.cs" />
     <Compile Include="Services\IStudentQuickRegistrationService.cs" />
     <Compile Include="Services\IStudentTranscriptGradesOptionsService.cs" />
+    <Compile Include="Services\ITransferWorkService.cs" />
     <Compile Include="Services\ProspectOpportunitiesService.cs" />
     <Compile Include="Services\RecruiterService.cs" />
     <Compile Include="Services\RetentionAlertService.cs" />
@@ -527,6 +548,7 @@
     <Compile Include="Services\StudentService.cs" />
     <Compile Include="Services\StudentCoordinationService.cs" />
     <Compile Include="Services\StudentWaiverService.cs" />
+    <Compile Include="Services\TransferWorkService.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config">

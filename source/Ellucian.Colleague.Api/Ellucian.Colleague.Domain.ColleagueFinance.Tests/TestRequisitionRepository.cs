@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -516,7 +516,40 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 requisitionsSummaryList.Add(requisitionSummary);
             }
             #endregion
-            
+            #region Populate approvers
+
+            string approverId,
+                approvalName,
+                approvalRequisitionId;
+            DateTime? approvalDate;
+            for (var i = 0; i < approversArray.GetLength(0); i++)
+            {
+                approverId = approversArray[i, 0];
+                approvalName = approversArray[i, 1];
+
+                if (approversArray[i, 2] == "null")
+                {
+                    approvalDate = null;
+                }
+                else
+                {
+                    approvalDate = Convert.ToDateTime(approversArray[i, 2]);
+                }
+                approvalRequisitionId = approversArray[i, 3];
+                var approverDomainEntity = new Approver(approverId);
+                approverDomainEntity.SetApprovalName(approvalName);
+                approverDomainEntity.ApprovalDate = approvalDate;
+
+                foreach (var requisition in requisitionsSummaryList)
+                {
+                    if (requisition.Id == approvalRequisitionId)
+                    {
+                        requisition.AddApprover(approverDomainEntity);
+                    }
+                }
+            }
+            #endregion
+
             #region Populate Purchase Orders
 
             string purchaseOrderId,

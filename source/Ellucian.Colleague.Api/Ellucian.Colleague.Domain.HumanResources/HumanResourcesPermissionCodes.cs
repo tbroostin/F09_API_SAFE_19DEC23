@@ -142,5 +142,13 @@ namespace Ellucian.Colleague.Domain.HumanResources
         /// primary position they supervise.
         /// </summary>
         public const string ApproveRejectLeaveRequest = "APPROVE.REJECT.LEAVE.REQUEST";
+
+
+        /// <summary>
+        /// This permits a role to view, approve, and reject timecards. More specifically, 
+        /// a user with a role associated to this permission can view all data associated to a timecard for all employees the user 
+        /// supervises, and can create new timecard statuses for those timecards.
+        /// </summary>
+        public const string ApproveRejectEmployeeTimecard = "APPROVE.REJECT.TIME.ENTRY";
     }
 }

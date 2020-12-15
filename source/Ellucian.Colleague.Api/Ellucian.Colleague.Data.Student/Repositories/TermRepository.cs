@@ -446,7 +446,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (codeCache == null)
             {
                 var allCodesNoCache = await GetAsync(true);
-                if (allCodesCache == null)
+                if ( allCodesNoCache == null)
                 {
                     throw new RepositoryException(string.Concat("No code found, Entity:'TERMS', Record ID:'", guid, "'"));
                 }
@@ -464,6 +464,49 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     throw new RepositoryException(string.Concat("No code found, Entity:'TERMS', Record ID:'", guid, "'"));
             }
             return code;
+        }
+
+        /// <summary>
+        /// Using a collection of  ids, get a dictionary collection of associated guids
+        /// </summary>
+        /// <param name="ids">collection of  ids</param>
+        /// <returns>Dictionary consisting of a ids (key) and guids (value)</returns>
+        public async Task<Dictionary<string, string>> GetGuidsCollectionAsync( IEnumerable<string> ids )
+        {
+            if( ( ids == null ) || ( ids != null && !ids.Any() ) )
+            {
+                return new Dictionary<string, string>();
+            }
+            var guidCollection = new Dictionary<string, string>();
+            try
+            {
+                var guidLookup = ids
+                    .Where( s => !string.IsNullOrWhiteSpace( s ) )
+                    .Distinct().ToList()
+                    .ConvertAll( p => new RecordKeyLookup( "TERMS", p, false ) ).ToArray();
+
+                var recordKeyLookupResults = await DataReader.SelectAsync( guidLookup );
+
+                if( ( recordKeyLookupResults != null ) && ( recordKeyLookupResults.Any() ) )
+                {
+                    foreach( var recordKeyLookupResult in recordKeyLookupResults )
+                    {
+                        if( recordKeyLookupResult.Value != null )
+                        {
+                            var splitKeys = recordKeyLookupResult.Key.Split( new[] { "+" }, StringSplitOptions.RemoveEmptyEntries );
+                            if( !guidCollection.ContainsKey( splitKeys[ 1 ] ) )
+                            {
+                                guidCollection.Add( splitKeys[ 1 ], recordKeyLookupResult.Value.Guid );
+                            }
+                        }
+                    }
+                }
+            }
+            catch( Exception ex )
+            {
+                throw new Exception( string.Format( "Error occured while getting guids for {0}.", "TERMS" ), ex ); ;
+            }
+            return guidCollection;
         }
 
         /// <summary>

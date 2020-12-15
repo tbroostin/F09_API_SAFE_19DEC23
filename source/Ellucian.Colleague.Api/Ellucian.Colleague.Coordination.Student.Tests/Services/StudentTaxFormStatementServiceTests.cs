@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -15,6 +15,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using Ellucian.Web.Security;
+using Ellucian.Colleague.Domain.Student.Entities;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -45,6 +46,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             expectedTaxFormT2202aStatements = new List<TaxFormStatement2>();
             expectedTaxFormT2202aStatements.Add(new TaxFormStatement2("1", "2016", TaxForms.FormT2202A, "3456"));
             expectedTaxFormT2202aStatements.Add(new TaxFormStatement2("1", "2015", TaxForms.FormT2202A, "4567"));
+
+            expectedTaxFormPdf = new Form1098PdfData("2020", "0000043");
         }
 
         [TestCleanup]
@@ -188,6 +191,27 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.AreEqual(1, actualStatements.Count);
             }
         }
+        [TestMethod]
+        public async Task GetAsync_1098_NoReportableBoxAmountsFor2019()
+        {
+            expectedTaxFormStatements = new List<TaxFormStatement2>();
+            expectedTaxFormStatements.Add(new TaxFormStatement2("1", "2019", TaxForms.Form1098, "1234"));
+            expectedTaxFormPdf = null;
+            
+            var actualTaxFormStatements = await service.GetAsync("1", Dtos.Base.TaxForms.Form1098);
+
+            foreach (var expectedStatement in expectedTaxFormStatements)
+            {
+                var actualStatements = actualTaxFormStatements.Where(x =>
+                    x.Notation == Dtos.Base.TaxFormNotations2.None
+                    && x.PdfRecordId == expectedStatement.PdfRecordId
+                    && x.PersonId == expectedStatement.PersonId
+                    && x.TaxForm == Dtos.Base.TaxForms.Form1098
+                    && x.TaxYear == expectedStatement.TaxYear).ToList();
+                Assert.AreEqual(0, actualStatements.Count);
+            }
+        }
+
         #endregion
 
         #region GetAsync T2202a
@@ -300,6 +324,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         private void Build1098Service(bool isPermissionsRequired = true)
         {
             var statementRepositoryMock = new Mock<IStudentTaxFormStatementRepository>();
+            var taxFormPdfDataRepositoryMock = new Mock<IStudentTaxFormPdfDataRepository>();
             var configurationRepositoryMock = new Mock<IConfigurationRepository>();
             var adapterRegistryMock = new Mock<IAdapterRegistry>();
             var userFactory = new StudentUserFactory.TaxInformationUserFactory();
@@ -336,12 +361,17 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     return Task.FromResult(getStatements());
                 });
 
+            taxFormPdfDataRepositoryMock.Setup(x => x.Get1098PdfAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Returns(() =>
+            {
+                return Task.FromResult(GetForm1098PdfData());
+            });
+
             configurationRepositoryMock.Setup(x => x.GetTaxFormAvailabilityConfigurationAsync(It.IsAny<Domain.Base.Entities.TaxForms>())).Returns(() =>
                 {
                     return Task.FromResult(taxForm1098Configuration);
                 });
 
-            service = new StudentTaxFormStatementService(statementRepositoryMock.Object, configurationRepositoryMock.Object,
+            service = new StudentTaxFormStatementService(statementRepositoryMock.Object, taxFormPdfDataRepositoryMock.Object, configurationRepositoryMock.Object,
                 adapterRegistryMock.Object, userFactory, roleRepositoryMock.Object, loggerMock.Object);
         }
 
@@ -352,6 +382,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             return expectedTaxFormStatements;
         }
 
+        private Domain.Student.Entities.Form1098PdfData expectedTaxFormPdf;
+
+        private Domain.Student.Entities.Form1098PdfData GetForm1098PdfData()
+        {
+            return expectedTaxFormPdf;
+        }
+
         private TaxFormConfiguration taxForm1098Configuration;
 
         /// <summary>
@@ -360,6 +397,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         private void BuildT2202aService(bool isPermissionsRequired = true)
         {
             var t2202aStatementRepositoryMock = new Mock<IStudentTaxFormStatementRepository>();
+            var taxFormPdfDataRepositoryMock = new Mock<IStudentTaxFormPdfDataRepository>();
             var t2202aConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
             var adapterRegistryMock = new Mock<IAdapterRegistry>();
             var userFactory = new StudentUserFactory.TaxInformationUserFactory();
@@ -400,7 +438,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 return Task.FromResult(taxFormT2202aConfiguration);
             });
 
-            t2202aService = new StudentTaxFormStatementService(t2202aStatementRepositoryMock.Object, t2202aConfigurationRepositoryMock.Object,
+            t2202aService = new StudentTaxFormStatementService(t2202aStatementRepositoryMock.Object, taxFormPdfDataRepositoryMock.Object, t2202aConfigurationRepositoryMock.Object,
                 adapterRegistryMock.Object, userFactory, roleRepositoryMock.Object, loggerMock.Object);
         }
 

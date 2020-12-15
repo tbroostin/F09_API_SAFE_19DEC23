@@ -150,7 +150,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         #endregion
 
         #region GetGLAccountsListAsync
-        
+
         [TestMethod]
         public async Task GetGLAccountsListAsync_OpenYear_NonPooledAccountsOnly()
         {
@@ -644,14 +644,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
             // Populate the non-pooled accounts.
             PopulateGlAccountDataContracts(nonPooledAccounts, GlBudgetPoolType.None, null, false, false, true);
-            
+
             this.param1_GlUser = new GeneralLedgerUser("0000032", "Kleehammer");
             this.param1_GlUser.AddAllAccounts(glAccounts);
             this.param1_GlUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
             this.param2_glAccountStructure = await testGlConfigurationRepository.GetAccountStructureAsync();
             this.param4_financeQueryCriteria.FiscalYear = (await testGlConfigurationRepository.GetFiscalYearConfigurationAsync()).FiscalYearForToday.ToString();
             this.param4_financeQueryCriteria.IncludeActiveAccountsWithNoActivity = true;
-            
+
             var glAcctsFilename = "GL.ACCTS";
             dataReaderMock.Setup(dr => dr.SelectAsync(glAcctsFilename, It.IsAny<string[]>(), It.IsAny<string>())).Returns(() =>
             {
@@ -776,7 +776,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
             // Populate the non-pooled accounts
             PopulateGlsFyrDataContracts(glAccounts, GlBudgetPoolType.None, null);
-            PopulateEncFyrDataContracts(glAccounts);
+            PopulateEncFyrDataContracts(glAccounts);           
 
             var result = await RealRepository_GetGLAccountsListAsync();
             Assert.IsNotNull(result);
@@ -793,6 +793,67 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
                 Assert.AreEqual(Helper_BudgetForAnyAccount_Gls(glsDataContracts), glAccountLineItem.GlAccount.BudgetAmount);
                 Assert.AreEqual(Helper_ActualsForNonUmbrella_Gls(glsDataContracts, this.param3_glClassConfiguration), glAccountLineItem.GlAccount.ActualAmount);
+                Assert.AreEqual(Helper_EncumbrancesForNonUmbrella_GlsAndEnc(glsDataContracts, encDataContracts), glAccountLineItem.GlAccount.EncumbranceAmount);
+                Assert.AreEqual(Helper_RequisitionsForNonUmbrella_GlsAndEnc(glsDataContracts, encDataContracts), glAccountLineItem.GlAccount.RequisitionAmount);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGLAccountsListAsync_ClosedYear_ExcludeYEAmounts()
+        {
+            var glAccounts = new List<string>()
+            {
+                "10_00_01_00_EJK88_10000",  // Object 10000
+                "10_00_01_00_EJK99_10000",  // Object 10000
+
+                "10_00_01_01_EJK88_20000",  // Object 20000
+                "10_00_01_01_EJK99_20000",  // Object 20000
+
+                "10_00_01_02_EJK88_30000",  // Object 30000
+                "10_00_01_02_EJK99_30000",  // Object 30000
+
+                "10_00_01_00_EJK88_40000",  // Object 40000
+                "10_00_01_00_EJK99_40000",  // Object 40000
+
+                "10_00_01_01_EJK88_50000",  // Object 50000
+                "10_00_01_01_EJK99_50000",  // Object 50000
+
+                "10_00_01_02_EJK88_70000",  // Object 70000
+                "10_00_01_02_EJK99_70000"   // Object 70000
+            };
+            this.glAcctsIds = glAccounts.ToArray();
+            this.param1_GlUser = new GeneralLedgerUser("0000032", "Kleehammer");
+            this.param1_GlUser.AddAllAccounts(glAccounts);
+            this.param1_GlUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+            this.param2_glAccountStructure = await testGlConfigurationRepository.GetAccountStructureAsync();
+            this.param4_financeQueryCriteria.FiscalYear = testGlConfigurationRepository.ClosedYear;
+
+            // Populate the non-pooled accounts
+            PopulateGlsFyrDataContracts(glAccounts, GlBudgetPoolType.None, null);
+            PopulateEncFyrDataContracts(glAccounts);
+
+            // setup cfwebdefaults.CfwebFqIncludeYeAmounts to "N"
+            CfwebDefaults cfwebDefaults = new CfwebDefaults() { CfwebFqIncludeYeAmounts = "N" };
+            dataReaderMock.Setup(dr => dr.ReadRecordAsync<CfwebDefaults>("CF.PARMS", "CFWEB.DEFAULTS", true)).Returns(() =>
+            {
+                return Task.FromResult(cfwebDefaults);
+            });
+
+            var result = await RealRepository_GetGLAccountsListAsync();
+            Assert.IsNotNull(result);
+            var financeQueryGlAccountLineItems = result.ToList();
+            Assert.AreEqual(12, financeQueryGlAccountLineItems.Count);
+
+            foreach (var glAccountLineItem in financeQueryGlAccountLineItems)
+            {
+                // Make sure the totals for each gl account match the amounts in the data contracts.
+                var glsDataContracts = this.glsFyrDataContracts
+                    .Where(x => x.Recordkey == glAccountLineItem.GlAccountNumber).ToList();
+                var encDataContracts = this.encFyrDataContracts
+                    .Where(x => x.Recordkey == glAccountLineItem.GlAccountNumber).ToList();
+
+                Assert.AreEqual(Helper_BudgetForAnyAccount_Gls(glsDataContracts), glAccountLineItem.GlAccount.BudgetAmount);
+                Assert.AreEqual(Helper_ActualsForNonUmbrella_Gls(glsDataContracts, this.param3_glClassConfiguration, false), glAccountLineItem.GlAccount.ActualAmount);
                 Assert.AreEqual(Helper_EncumbrancesForNonUmbrella_GlsAndEnc(glsDataContracts, encDataContracts), glAccountLineItem.GlAccount.EncumbranceAmount);
                 Assert.AreEqual(Helper_RequisitionsForNonUmbrella_GlsAndEnc(glsDataContracts, encDataContracts), glAccountLineItem.GlAccount.RequisitionAmount);
             }
@@ -1443,7 +1504,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
         }
 
-        [TestMethod]        
+        [TestMethod]
         public async Task GetGLAccountsListAsync_ClosedYear_UmbrellaHasNoDirectExpenses_NoGlAccessToUmbrella()
         {
             var umbrellaAccount = "10_00_01_00_EJK88_10000";
@@ -1807,7 +1868,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             return actualsAmount;
         }
 
-        private decimal Helper_ActualsForNonUmbrella_Gls(IEnumerable<GlsFyr> glsDataContracts, GeneralLedgerClassConfiguration glClassConfiguration)
+        private decimal Helper_ActualsForNonUmbrella_Gls(IEnumerable<GlsFyr> glsDataContracts, GeneralLedgerClassConfiguration glClassConfiguration, bool includeYEClosingAmounts = true)
         {
             var actualsAmount = 0m;
             var glClass = GetGlAccountGlClass(glsDataContracts.First().Recordkey, glClassConfiguration);
@@ -1817,8 +1878,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 foreach (var glsDataContract in glsDataContracts)
                 {
                     actualsAmount += glsDataContract.OpenBal.HasValue ? glsDataContract.OpenBal.Value : 0m;
-                    actualsAmount += glsDataContract.CloseDebits.HasValue ? glsDataContract.CloseDebits.Value : 0m;
-                    actualsAmount -= glsDataContract.CloseCredits.HasValue ? glsDataContract.CloseCredits.Value : 0m;
+                    if (includeYEClosingAmounts)
+                    {
+                        actualsAmount += glsDataContract.CloseDebits.HasValue ? glsDataContract.CloseDebits.Value : 0m;
+                        actualsAmount -= glsDataContract.CloseCredits.HasValue ? glsDataContract.CloseCredits.Value : 0m;
+                    }
                 }
             }
             else
@@ -2480,6 +2544,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             dataReaderMock.Setup(dr => dr.SelectAsync(glAcctsFilename, It.IsAny<string[]>(), It.IsAny<string>())).Returns(() =>
             {
                 return Task.FromResult(glAcctsIds);
+            });
+
+            CfwebDefaults cfwebDefaults = new CfwebDefaults();
+            dataReaderMock.Setup(dr => dr.ReadRecordAsync<CfwebDefaults>("CF.PARMS", "CFWEB.DEFAULTS", true)).Returns(() =>
+            {
+                return Task.FromResult(cfwebDefaults);
             });
         }
 

@@ -106,6 +106,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                                      {"0016299","Transcript grouping subjects","","TRANSCRIPT.GROUPING.FILTER.SUBJECTS","116,117,120,121" },
                                      //filter on additional criteria- will mock this
                                       {"0016300","Transcript grouping additional criteria","","TRANSCRIPT.GROUPING.FILTER.ADDL.SELECT","116,117,120,121" },
+
+                                       {"0016301","my name is test in.list.sort.order","809","PROG.IN.LIST.SORT.ORDER.BB","128,127,129,130,131" }, //germ-100 and arth-100 are planned
                                     };
 
 
@@ -201,17 +203,17 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             RegistrationEligibilityTerm term3 = new RegistrationEligibilityTerm("term3", true, false);
             term3.Status = RegistrationEligibilityTermStatus.Open;
             term3.Message = "term3msg";
-            term3.AnticipatedTimeForAdds = new DateTime(2020, 9, 1, 2, 12, 0);
+            term3.AnticipatedTimeForAdds = DateTime.Today.AddYears(2); 
             regElig.AddRegistrationEligibilityTerm(term3);
             RegistrationEligibilityTerm term4 = new RegistrationEligibilityTerm("term4", false, false);
             term4.Status = RegistrationEligibilityTermStatus.Future;
             term4.Message = "term4msg";
-            term4.AnticipatedTimeForAdds = new DateTime(2020, 9, 1, 2, 12, 0); ;
+            term4.AnticipatedTimeForAdds = DateTime.Today.AddYears(2);
             regElig.AddRegistrationEligibilityTerm(term4);
             RegistrationEligibilityTerm term5 = new RegistrationEligibilityTerm("term5", false, false);
             term5.Status = RegistrationEligibilityTermStatus.Future;
             term5.Message = "term5msg";
-            term5.AnticipatedTimeForAdds = new DateTime(2020, 9, 1, 2, 12, 0); ;
+            term5.AnticipatedTimeForAdds = DateTime.Today.AddYears(2);
             regElig.AddRegistrationEligibilityTerm(term5);
             RegistrationEligibilityTerm term6 = new RegistrationEligibilityTerm("term6", false, false);
             term6.Status = RegistrationEligibilityTermStatus.NotEligible;

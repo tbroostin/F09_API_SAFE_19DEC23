@@ -1621,7 +1621,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     }
                                     catch (Exception e)
                                     {
-                                        logger.Warn(e, string.Format("Unable to determine the Email Address for Student: '{0}'", students.Recordkey));
+                                        logger.Warn(e, string.Format("Unable to add Email Address to student entity for Student: '{0}'", students.Recordkey));
                                     }
                                 }
                             }

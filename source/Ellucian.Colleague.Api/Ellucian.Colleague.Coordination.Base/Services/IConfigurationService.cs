@@ -1,4 +1,5 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+
 using System;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos.Base;
@@ -21,6 +22,14 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// </summary>
         /// <param name="taxFormId">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
         /// <returns>Tax form configuration DTO.</returns>
+        Task<TaxFormConfiguration2> GetTaxFormConsentConfiguration2Async(string taxForm);
+
+        /// <summary>
+        /// Returns the tax form configuration DTO for the tax form passed in.
+        /// </summary>
+        /// <param name="taxFormId">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
+        /// <returns>Tax form configuration DTO.</returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use GetTaxFormConsentConfiguration2Async instead.")]
         Task<TaxFormConfiguration> GetTaxFormConsentConfigurationAsync(TaxForms taxFormId);
 
         /// <summary>

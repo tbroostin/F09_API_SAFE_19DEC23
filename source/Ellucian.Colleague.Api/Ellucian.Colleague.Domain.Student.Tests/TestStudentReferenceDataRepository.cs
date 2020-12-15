@@ -262,6 +262,55 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     new Student.Entities.Ccd("ccd4", "Ccd 4")
                 });
         }
+        
+        /// <summary>
+        /// Get All CIP codes for cip-codes API (HEDM)
+        /// </summary>
+        /// <returns>List of CipCode entities</returns>
+        public Task<IEnumerable<CipCode>> GetCipCodesAsync(bool ignoreCache = false)
+        {
+            return Task.FromResult<IEnumerable<Student.Entities.CipCode>>(new List<Student.Entities.CipCode>()
+                {
+                    new Student.Entities.CipCode("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1", 2020),
+                    new Student.Entities.CipCode("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2", 2020),
+                    new Student.Entities.CipCode("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3", 2020),
+                    new Student.Entities.CipCode("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4", 2020)
+                });
+        }
+
+        /// <summary>
+        /// Get guid for Cip code
+        /// </summary>
+        /// <param name="code">Cip code</param>
+        /// <returns>Guid</returns>
+        public Task<string> GetCipCodesGuidAsync(string code)
+        {
+            var cipCodeList = (new List<Student.Entities.CipCode>()
+                {
+                    new Student.Entities.CipCode("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1", 2020),
+                    new Student.Entities.CipCode("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2", 2020),
+                    new Student.Entities.CipCode("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3", 2020),
+                    new Student.Entities.CipCode("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4", 2020)
+                });
+            return Task.FromResult(cipCodeList.FirstOrDefault(c => c.Code == code).Guid);
+        }
+
+        /// <summary>
+        /// Get code for Cip code guid
+        /// </summary>
+        /// <param name="code">Cip code guid</param>
+        /// <returns>code</returns>
+        public Task<string> GetCipCodesFromGuidAsync(string guid)
+        {
+            var cipCodeList = (new List<Student.Entities.CipCode>()
+                {
+                    new Student.Entities.CipCode("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1", 2020),
+                    new Student.Entities.CipCode("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2", 2020),
+                    new Student.Entities.CipCode("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3", 2020),
+                    new Student.Entities.CipCode("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4", 2020)
+                });
+            return Task.FromResult(cipCodeList.FirstOrDefault(c => c.Guid == guid).Code);
+        }
 
         public Task<IEnumerable<Student.Entities.ClassLevel>> GetClassLevelsAsync()
         {
@@ -1428,6 +1477,48 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             throw new NotImplementedException();
         }
 
+        /// <summary>
+        /// Returns all education goals
+        /// </summary>
+        /// <param name="ignoreCache">Flag indicating whether or not to bypass the cache</param>
+        /// <returns>Collection of <see cref="EducationGoal">education goals</see></returns>
+        public Task<IEnumerable<EducationGoal>> GetAllEducationGoalsAsync(bool bypassCache = false)
+        {
+            return Task.FromResult<IEnumerable<EducationGoal>>(new List<EducationGoal>()
+                {
+                    new EducationGoal("BA", "Bachelor's Degree"),
+                    new EducationGoal("MA", "Master's Degree"),
+                });
+        }
+
+        /// <summary>
+        /// Returns all registration reasons
+        /// </summary>
+        /// <param name="ignoreCache">Flag indicating whether or not to bypass the cache</param>
+        /// <returns>Collection of <see cref="RegistrationReason">registration reasons</see></returns>
+        public Task<IEnumerable<RegistrationReason>> GetRegistrationReasonsAsync(bool bypassCache = false)
+        {
+            return Task.FromResult<IEnumerable<RegistrationReason>>(new List<RegistrationReason>()
+                {
+                    new RegistrationReason("CURRENTJOB", "Need for my current job"),
+                    new RegistrationReason("FUN", "Just for fun"),
+                });
+        }
+
+        /// <summary>
+        /// Returns all registration marketing sources
+        /// </summary>
+        /// <param name="ignoreCache">Flag indicating whether or not to bypass the cache</param>
+        /// <returns>Collection of <see cref="RegistrationMarketingSource">registration marrketing sources</see></returns>
+        public Task<IEnumerable<RegistrationMarketingSource>> GetRegistrationMarketingSourcesAsync(bool bypassCache = false)
+        {
+            return Task.FromResult<IEnumerable<RegistrationMarketingSource>>(new List<RegistrationMarketingSource>()
+                {
+                    new RegistrationMarketingSource("NEWSAD", "From a newspaper ad"),
+                    new RegistrationMarketingSource("WEB", "I found it on the web"),
+                });
+        }
+
         public Task<string> GetAccountReceivableTypesGuidAsync(string code)
         {
             throw new NotImplementedException();
@@ -1479,6 +1570,21 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
 
         public Task<string> GetFinancialAidYearsGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<FinancialAidYear> GetFinancialAidYearAsync( string sourceGuid )
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<FinancialAidMaritalStatus>> GetFinancialAidMaritalStatusesAsync( bool bypassCache = false, params string[] years )
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<FinancialAidMaritalStatus> GetFinancialAidMaritalStatusAsync( string year, string code )
         {
             throw new NotImplementedException();
         }

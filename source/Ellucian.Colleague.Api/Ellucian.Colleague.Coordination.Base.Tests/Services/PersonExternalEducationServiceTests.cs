@@ -1,11 +1,13 @@
-//Copyright 2019 Ellucian Company L.P. and its affiliates.
+//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base;
+using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos;
+using Ellucian.Colleague.Dtos.Filters;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
@@ -114,8 +116,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 BuildData();
 
-                _InstitutionsAttendRepoMock.Setup(repo => repo.GetInstitutionsAttendAsync(offset, limit, It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>()))
+                _InstitutionsAttendRepoMock.Setup(repo => repo.GetInstitutionsAttendAsync(offset, limit, It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<string>(), 
+                    It.IsAny<InstType?>(), It.IsAny<bool>()))
                     .ReturnsAsync(new Tuple<IEnumerable<Domain.Base.Entities.InstitutionsAttend>, int>(_personExternalEducationEntityCollection, 4));
+                _InstitutionsAttendRepoMock.Setup(repo => repo.GetInstitutionsAttendAsync(offset, limit, It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), string.Empty,
+                   null, It.IsAny<bool>()))
+                   .ReturnsAsync(new Tuple<IEnumerable<Domain.Base.Entities.InstitutionsAttend>, int>(_personExternalEducationEntityCollection, 4));
 
                 _InstitutionsAttendRepoMock.Setup(repo => repo.GetInstitutionsAttendIdFromGuidAsync(It.IsAny<string>()))
                     .ReturnsAsync(_personExternalEducationEntityCollection.FirstOrDefault(cs => cs.Guid == personExternalEducationGuid).Id);
@@ -125,8 +131,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 _personRepoMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(_personGuidCollection);
 
-                // Mock PUT and POST methods
+           
                 _personRepoMock.Setup(repo => repo.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("2");
+                _personRepoMock.Setup(repo => repo.GetPersonIdForNonCorpOnly(It.IsAny<string>())).ReturnsAsync("2");
+
                 _institutionsRepoMock.Setup(repo => repo.GetInstitutionFromGuidAsync(It.IsAny<string>())).ReturnsAsync("11");
                 _institutionsRepoMock.Setup(repo => repo.GetInstitutionAsync(It.IsAny<string>())).ReturnsAsync(new Domain.Base.Entities.Institution("11", Domain.Base.Entities.InstType.HighSchool));
                 _InstitutionsAttendRepoMock.Setup(repo => repo.UpdateExternalEducationAsync(It.IsAny<Domain.Base.Entities.InstitutionsAttend>()))
@@ -251,7 +259,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task PersonExternalEducationService_GetPersonExternalEducationAsync()
             {
-                var results = await _personExternalEducationService.GetPersonExternalEducationAsync(offset, limit, null, string.Empty, true);
+                var results = await _personExternalEducationService.GetPersonExternalEducationAsync(offset, limit, null, string.Empty, null, true);
                 Assert.IsTrue(results.Item1 is IEnumerable<Dtos.PersonExternalEducation>);
                 Assert.AreEqual(results.Item2, 4);
                 Assert.IsNotNull(results);
@@ -274,7 +282,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task PersonExternalEducationService_GetPersonExternalEducationAsync_Count()
             {
-                var results = await _personExternalEducationService.GetPersonExternalEducationAsync(offset, limit, null, string.Empty, true);
+                var results = await _personExternalEducationService.GetPersonExternalEducationAsync(offset, limit, null, string.Empty, null, true);
                 Assert.AreEqual(results.Item2, 4);
             }
 
@@ -283,7 +291,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 var expectedResults = _personExternalEducationDtoCollection.FirstOrDefault(c => c.Id == personExternalEducationGuid);
                 var actualResult =
-                    (await _personExternalEducationService.GetPersonExternalEducationAsync(offset, limit, null, string.Empty, true)).Item1.FirstOrDefault(x => x.Id == personExternalEducationGuid);
+                    (await _personExternalEducationService.GetPersonExternalEducationAsync(offset, limit, null, string.Empty, null, true)).Item1.FirstOrDefault(x => x.Id == personExternalEducationGuid);
 
                 Assert.AreEqual(expectedResults.Id, actualResult.Id);
                 Assert.AreEqual(expectedResults.Person.Id, actualResult.Person.Id);
@@ -293,6 +301,126 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Assert.AreEqual(expectedResults.ClassPercentile, actualResult.ClassPercentile);
                 Assert.AreEqual(expectedResults.AttendancePeriods.Count(), actualResult.AttendancePeriods.Count());
             }
+
+           
+            [TestMethod]
+            public async Task PersonExternalEducationService_GetPersonExternalEducationAsync_Criteria_InvalidPersonIdFilter()
+            {
+                _personRepoMock.Setup(repo => repo.GetPersonIdForNonCorpOnly(It.IsAny<string>())).ReturnsAsync("");
+
+                PersonExternalEducation filter = new PersonExternalEducation()
+                {
+                    Person = new GuidObject2("invalid")
+                };
+                var results = await _personExternalEducationService.GetPersonExternalEducationAsync(offset, limit, filter, string.Empty, null, true);
+                Assert.AreEqual(results.Item2, 0);
+            }
+
+            [TestMethod]
+            public async Task PersonExternalEducationService_GetPersonExternalEducationAsync_PersonByInstitutionType_InvalidPersonIdFilter()
+            {
+               
+                _personRepoMock.Setup(repo => repo.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(string.Empty);
+
+                PersonByInstitutionType filter = new PersonByInstitutionType()
+                {
+                    Person = new GuidObject2("invalid"),
+                    Type = Dtos.EnumProperties.EducationalInstitutionType.PostSecondarySchool
+                };
+                var results = await _personExternalEducationService.GetPersonExternalEducationAsync(offset, limit, null, string.Empty,  filter, true);
+                Assert.AreEqual(results.Item2, 0);
+            }
+
+            [TestMethod]
+            public async Task PersonExternalEducationService_GetPersonExternalEducationAsync_PersonByInstitutionType_Exception()
+            {
+                _personRepoMock.Setup(repo => repo.GetPersonIdFromGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+
+                PersonByInstitutionType filter = new PersonByInstitutionType()
+                {
+                    Person = new GuidObject2(Guid.NewGuid().ToString()),
+                    Type = Dtos.EnumProperties.EducationalInstitutionType.PostSecondarySchool
+                };
+                var results = await _personExternalEducationService.GetPersonExternalEducationAsync(offset, limit, null, string.Empty, filter, true);
+                Assert.AreEqual(results.Item2, 0);
+            }
+
+            [TestMethod]
+            public async Task PersonExternalEducationService_GetPersonExternalEducationAsync_PersonByInstitutionType_PostSecondarySchool()
+            {
+                _InstitutionsAttendRepoMock.Setup(repo => repo.GetInstitutionsAttendAsync(offset, limit, It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<string>(),
+                   It.IsAny<InstType?>(), It.IsAny<bool>()))
+                   .ReturnsAsync(new Tuple<IEnumerable<Domain.Base.Entities.InstitutionsAttend>, int>(_personExternalEducationEntityCollection, 4));
+
+                PersonByInstitutionType filter = new PersonByInstitutionType()
+                {
+                    Person = new GuidObject2(Guid.NewGuid().ToString()),
+                    Type = Dtos.EnumProperties.EducationalInstitutionType.PostSecondarySchool
+                };
+                var results = await _personExternalEducationService.GetPersonExternalEducationAsync(offset, limit, null, string.Empty, filter, true);
+                Assert.AreEqual(results.Item2, 4);
+            }
+
+            [TestMethod]
+            public async Task PersonExternalEducationService_GetPersonExternalEducationAsync_PersonByInstitutionType_SecondarySchool()
+            {
+                _InstitutionsAttendRepoMock.Setup(repo => repo.GetInstitutionsAttendAsync(offset, limit, It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<string>(),
+                   It.IsAny<InstType?>(), It.IsAny<bool>()))
+                   .ReturnsAsync(new Tuple<IEnumerable<Domain.Base.Entities.InstitutionsAttend>, int>(_personExternalEducationEntityCollection, 4));
+
+
+                PersonByInstitutionType filter = new PersonByInstitutionType()
+                {
+                    Person = new GuidObject2(Guid.NewGuid().ToString()),
+                    Type = Dtos.EnumProperties.EducationalInstitutionType.SecondarySchool
+                };
+                var results = await _personExternalEducationService.GetPersonExternalEducationAsync(offset, limit, null, string.Empty, filter, true);
+                Assert.AreEqual(results.Item2, 4);
+            }
+
+            [TestMethod]
+            public async Task PersonExternalEducationService_GetPersonExternalEducationAsync_PersonByInstitutionType_PersonIdOnly()
+            {
+              
+                PersonByInstitutionType filter = new PersonByInstitutionType()
+                {
+                    Person = new GuidObject2(Guid.NewGuid().ToString())
+                };
+                var results = await _personExternalEducationService.GetPersonExternalEducationAsync(offset, limit, null, string.Empty, filter, true);
+                Assert.AreEqual(results.Item2, 0);
+            }
+
+            [TestMethod]
+            public async Task PersonExternalEducationService_GetPersonExternalEducationAsync_PersonByInstitutionType_TypeOnly()
+            {
+
+                PersonByInstitutionType filter = new PersonByInstitutionType()
+                {
+                    Type = Dtos.EnumProperties.EducationalInstitutionType.PostSecondarySchool
+                };
+                var results = await _personExternalEducationService.GetPersonExternalEducationAsync(offset, limit, null, string.Empty, filter, true);
+                Assert.AreEqual(results.Item2, 0);
+            }
+
+            [TestMethod]
+            public async Task PersonExternalEducationService_GetPersonExternalEducationAsync_PersonByInstitutionType_PersonIsCorp()
+            {
+                _InstitutionsAttendRepoMock.Setup(repo => repo.GetInstitutionsAttendAsync(offset, limit, It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<string>(),
+                   It.IsAny<InstType?>(), It.IsAny<bool>()))
+                   .ReturnsAsync(new Tuple<IEnumerable<Domain.Base.Entities.InstitutionsAttend>, int>(_personExternalEducationEntityCollection, 4));
+                
+                _personRepoMock.Setup(repo => repo.GetPersonIdForNonCorpOnly(It.IsAny<string>())).ReturnsAsync("");
+
+
+                PersonByInstitutionType filter = new PersonByInstitutionType()
+                {
+                    Person = new GuidObject2(Guid.NewGuid().ToString()),
+                    Type = Dtos.EnumProperties.EducationalInstitutionType.PostSecondarySchool
+                };
+                var results = await _personExternalEducationService.GetPersonExternalEducationAsync(offset, limit, null, string.Empty, filter, true);
+                Assert.AreEqual(results.Item2, 4);
+            }
+
 
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]

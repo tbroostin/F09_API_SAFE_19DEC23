@@ -249,6 +249,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         public string PrepayVoucherId { get; set; }
 
         /// <summary>
+        /// List of email addresses - confirmation email notifications would be sent to these email addresses on create / update .
+        /// </summary>
+        public List<string> ConfirmationEmailAddresses { get; set; }
+
+        /// <summary>
         /// This constructor initializes the purchase order domain entity
         /// </summary>
         /// <param name="id">Purchase order ID</param>

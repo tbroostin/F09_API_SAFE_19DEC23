@@ -3429,5 +3429,143 @@ namespace Ellucian.Colleague.Api.Client.Tests
         }
 
         #endregion
+        
+        #region GetCountiesAsync
+
+        [TestClass]
+        public class GetCountiesAsync
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+            }
+
+
+            [TestMethod]
+            public async Task ClientGetCountiesAsync_ReturnsSerializedCounties()
+            {
+                // Arrange
+                var counties = new List<County>();
+                counties.Add(new County() { Code = "BUT", Description = "Butler" });
+                counties.Add(new County() { Code = "HAM", Description = "Hamilton" });
+                var serializedResponse = JsonConvert.SerializeObject(counties);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetCountiesAsync();
+
+                // Assert that the expected number of items is returned and each of the expected items is found in the response
+                Assert.IsNotNull(clientResponse);
+                Assert.AreEqual(counties.Count(), clientResponse.Count());
+                foreach (var county in counties)
+                {
+                    var countyResult = clientResponse.Where(c => c.Code == county.Code).FirstOrDefault();
+                    Assert.IsNotNull(countyResult);
+                    Assert.AreEqual(county.Description, countyResult.Description);
+                }
+            }
+
+        }
+        #endregion
+
+        #region HealthTests
+
+        [TestClass]
+        public class HealthTests
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task Client_GetHealthCheckResponseAvailableAsync()
+            {
+                // Arrange
+                var healthCheckResponse = new HealthCheckResponse { Status = HealthCheckStatusType.Available };
+                var serializedResponse = JsonConvert.SerializeObject(healthCheckResponse);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType)
+                };
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler)
+                {
+                    BaseAddress = new Uri(_serviceUrl)
+                };
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetHealthCheckResponseAsync();
+
+                // Assert that the expected item is found in the response
+                var actualJson = JsonConvert.SerializeObject(clientResponse);
+                var expectedJson = JsonConvert.SerializeObject(healthCheckResponse);
+                Assert.AreEqual(expectedJson, actualJson);
+            }
+
+            [TestMethod]
+            public async Task Client_GetHealthCheckResponseUnavailableAsync()
+            {
+                // Arrange
+                var healthCheckResponse = new HealthCheckResponse { Status = HealthCheckStatusType.Unavailable };
+                var serializedResponse = JsonConvert.SerializeObject(healthCheckResponse);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType)
+                };
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler)
+                {
+                    BaseAddress = new Uri(_serviceUrl)
+                };
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetHealthCheckResponseAsync();
+
+                // Assert that the expected item is found in the response
+                var actualJson = JsonConvert.SerializeObject(clientResponse);
+                var expectedJson = JsonConvert.SerializeObject(healthCheckResponse);
+                Assert.AreEqual(expectedJson, actualJson);
+            }
+        }
+
+        #endregion
     }
 }

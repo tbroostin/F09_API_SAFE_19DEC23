@@ -67,7 +67,8 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                             Recordkey = id,
                             FaCodPersonId = expectedRepository.FaStudent.CodPersonId,
                             FaInterviews = expectedRepository.FaStudent.FaInterviewIds,
-                            FaIsirNsldsIds = expectedRepository.FaStudent.FaIsirNsldsIds
+                            FaIsirNsldsIds = expectedRepository.FaStudent.FaIsirNsldsIds,
+                            FaSaYears = expectedRepository.FaStudent.FaSaYears
                         });
                     });
 

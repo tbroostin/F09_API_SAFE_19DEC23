@@ -1,4 +1,5 @@
 ﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -1847,6 +1848,629 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
         #endregion
 
+    }
+
+    #endregion
+
+    #region vendors-maximum v11
+
+    [TestClass]
+    public class VendorsMaximumControllerTests_v11
+    {
+        public TestContext TestContext { get; set; }
+
+        private Mock<IVendorsService> _vendorsServiceMock;
+        private Mock<ILogger> _loggerMock;
+
+        private VendorsController _vendorsController;
+
+        private List<Dtos.VendorsMaximum> _vendorsCollection;
+        private Dtos.VendorsMaximum _vendorDto;
+        private Dtos.VendorsMaximum _vendorDto2;
+        private readonly DateTime _currentDate = DateTime.Now;
+        private const string Vendors1Guid = "a830e686-7692-4012-8da5-b1b5d44389b4";
+        private QueryStringFilter criteriaFilter = new QueryStringFilter("criteria", "");
+        private QueryStringFilter vendorDetailFilter = new QueryStringFilter("vendorDetail", "");
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.DeploymentDirectory, "App_Data"));
+
+            _vendorsServiceMock = new Mock<IVendorsService>();
+            _loggerMock = new Mock<ILogger>();
+
+            _vendorsCollection = new List<Dtos.VendorsMaximum>();
+
+            var vendors1 = new Ellucian.Colleague.Dtos.VendorsMaximum
+            {
+                Id = Vendors1Guid,
+            };
+
+            _vendorsCollection.Add(vendors1);
+
+            BuildData();
+
+            _vendorsController = new VendorsController(_vendorsServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+            _vendorsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+            _vendorsController.Request.Properties.Add("PartialInputJsonObject", JObject.FromObject(_vendorDto));
+        }
+
+        private void BuildData()
+        {
+            _vendorDto = new Ellucian.Colleague.Dtos.VendorsMaximum
+            {
+                Id = Vendors1Guid,
+                DefaultCurrency = CurrencyIsoCode.USD,
+
+                StartOn = DateTime.Today,
+
+                VendorDetail = new VendorDetailsDtoProperty()
+                {
+                    Organization = new GuidObject2("b42ca98d-edee-42da-8ddf-2a9e915221e7")
+                },
+
+                Statuses = new List<Dtos.EnumProperties.VendorsStatuses?>()
+                {
+                    Dtos.EnumProperties.VendorsStatuses.Holdpayment
+                },
+                Types = new List<VendorTypes>() { VendorTypes.Travel }
+            };
+
+            _vendorDto2 = new Ellucian.Colleague.Dtos.VendorsMaximum
+            {
+                Id = Vendors1Guid,
+                DefaultCurrency = CurrencyIsoCode.USD,
+
+                StartOn = DateTime.Today,
+
+                VendorDetail = new VendorDetailsDtoProperty()
+                {
+                    Organization = new GuidObject2("b42ca98d-edee-42da-8ddf-2a9e915221e7")
+                },
+
+
+                Statuses = new List<Dtos.EnumProperties.VendorsStatuses?>()
+                {
+                    Dtos.EnumProperties.VendorsStatuses.Holdpayment
+                },
+                Types = new List<VendorTypes>() { VendorTypes.Travel }
+            };
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            _vendorsController = null;
+            _vendorsCollection = null;
+            _loggerMock = null;
+            _vendorsServiceMock = null;
+        }
+
+        #region Vendors
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorMaximum()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.VendorsMaximum>, int>(_vendorsCollection, 1);
+
+            _vendorsServiceMock
+                .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsMaximumAsync(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.VendorsMaximum>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+
+            }
+        }
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorsMaximum_VendorDetail()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.VendorsMaximum>, int>(_vendorsCollection, 1);
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.VendorsMaximum() { VendorDetail = new Dtos.DtoProperties.VendorDetailsDtoProperty() { Person = new GuidObject2("PersonGUID123") } });
+
+            _vendorsServiceMock
+               .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+               .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsMaximumAsync(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.VendorsMaximum>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorsMaximum_VendorDetail_Organizations()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.VendorsMaximum>, int>(_vendorsCollection, 1);
+
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.VendorsMaximum() { VendorDetail = new Dtos.DtoProperties.VendorDetailsDtoProperty() { Organization = new GuidObject2("PersonGUID123") } });
+
+            _vendorsServiceMock
+                .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+                   .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsMaximumAsync(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.VendorsMaximum>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorMaximum_VendorDetail_Institution()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.VendorsMaximum>, int>(_vendorsCollection, 1);
+
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.VendorsMaximum() { VendorDetail = new Dtos.DtoProperties.VendorDetailsDtoProperty() { Institution = new GuidObject2("PersonGUID123") } });
+
+            _vendorsServiceMock
+               .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsMaximumAsync(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.VendorsMaximum>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorsMaximum_VendorDetail_NameQuery()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.VendorsMaximum>, int>(_vendorsCollection, 1);
+
+            var filterGroupName = "vendorDetail";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.Filters.VendorDetail() { vendorDetail = new GuidObject2("PersonGUID123") });
+
+            _vendorsServiceMock
+               .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsMaximumAsync(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.VendorsMaximum>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorMaximum_Status()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.VendorsMaximum>, int>(_vendorsCollection, 1);
+
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.VendorsMaximum() { Statuses = new List<VendorsStatuses?>() { VendorsStatuses.Active, VendorsStatuses.Approved, VendorsStatuses.Holdpayment } });
+
+            _vendorsServiceMock
+               .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsMaximumAsync(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.VendorsMaximum>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorsMaximum_TaxId()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.VendorsMaximum>, int>(_vendorsCollection, 1);
+            //var criteria = "{\"classifications\":\"classificationsGUID123\"}";
+            var criteria = @"{'classifications':[{'id':'classificationsGUID123'}]}";
+
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.VendorsMaximum() { TaxId = "tax123" });
+
+            _vendorsServiceMock
+              .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+                 .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsMaximumAsync(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.VendorsMaximum>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorsMaximum_TaxId_empty()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.VendorsMaximum>, int>(_vendorsCollection, 1);
+
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.VendorsMaximum() { TaxId = string.Empty });
+            _vendorsController.Request.Properties.Add("EmptyFilterProperties", true);
+
+            _vendorsServiceMock
+              .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+              .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsMaximumAsync(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.VendorsMaximum>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+        [TestMethod]
+        public async Task VendorsController_GetVendorsMaximum_vendorType()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.VendorsMaximum>, int>(_vendorsCollection, 1);
+            // var criteria = "";
+            // var vendorType = @"{'vendorType':'travel'} ";
+
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.VendorsMaximum() { Types = new List<VendorTypes>() { VendorTypes.Travel } });
+
+            _vendorsServiceMock
+              .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+               .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsMaximumAsync(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.VendorsMaximum>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorsMaximum_KeyNotFoundException()
+        {
+            //var paging = new Paging(100, 0);
+            _vendorsServiceMock
+             .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+               .Throws<KeyNotFoundException>();
+            await _vendorsController.GetVendorsMaximumAsync(null, criteriaFilter, vendorDetailFilter);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorsMaximum_Exception()
+        {
+            //var paging = new Paging(100, 0);
+            _vendorsServiceMock
+             .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+               .Throws<Exception>();
+            await _vendorsController.GetVendorsMaximumAsync(null, criteriaFilter, vendorDetailFilter);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorsMaximum_IntegrationApiException()
+        {
+            //var paging = new Paging(100, 0);
+            _vendorsServiceMock
+             .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+               .Throws<IntegrationApiException>();
+            await _vendorsController.GetVendorsMaximumAsync(null, criteriaFilter, vendorDetailFilter);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorsMaximum_PermissionsException()
+        {
+            var paging = new Paging(100, 0);
+            _vendorsServiceMock
+              .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .Throws<PermissionsException>();
+            await _vendorsController.GetVendorsMaximumAsync(paging, criteriaFilter, vendorDetailFilter);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorsMaximum_ArgumentException()
+        {
+            var paging = new Paging(100, 0);
+            _vendorsServiceMock
+              .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+                          .Throws<ArgumentException>();
+            await _vendorsController.GetVendorsMaximumAsync(paging, criteriaFilter, vendorDetailFilter);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorsMaximum_RepositoryException()
+        {
+            var paging = new Paging(100, 0);
+            _vendorsServiceMock
+              .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+                 .Throws<RepositoryException>();
+            await _vendorsController.GetVendorsMaximumAsync(paging, criteriaFilter, vendorDetailFilter);
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorController_PostVendorsMaximum_Exception()
+        {
+            var expected = _vendorsCollection.FirstOrDefault();
+            await _vendorsController.PostVendorsMaximumAsync(expected);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorController_PutVendorsMaximum_Exception()
+        {
+            var expected = _vendorsCollection.FirstOrDefault();
+            await _vendorsController.PutVendorsMaximumAsync(expected.Id, expected);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorController_DeleteVendorsMaximum_Exception()
+        {
+            var expected = _vendorsCollection.FirstOrDefault();
+            await _vendorsController.DeleteVendorsMaximumAsync(expected.Id);
+        }
+        #endregion GetVendorsMaximum
+
+        #region GetVendorsMaximumByGuid
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorsMaximumByGuidAsync()
+        {
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var expected = _vendorsCollection.FirstOrDefault(x => x.Id.Equals(Vendors1Guid, StringComparison.OrdinalIgnoreCase));
+
+            _vendorsServiceMock.Setup(x => x.GetVendorsMaximumByGuidAsync(It.IsAny<string>())).ReturnsAsync(expected);
+
+            var actual = await _vendorsController.GetVendorsMaximumByGuidAsync(Vendors1Guid);
+
+            Assert.IsNotNull(expected);
+            Assert.AreEqual(expected.Id, actual.Id);
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorController_GetVendorsMaximumByGuidAsync_NullException()
+        {
+            await _vendorsController.GetVendorsMaximumByGuidAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorController_GetVendorsMaximumByGuidAsync_KeyNotFoundException()
+        {
+            _vendorsServiceMock.Setup(x => x.GetVendorsMaximumByGuidAsync(It.IsAny<string>()))
+                .Throws<KeyNotFoundException>();
+            await _vendorsController.GetVendorsMaximumByGuidAsync(Vendors1Guid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorController_GetVendorsMaximumByGuidAsync_PermissionsException()
+        {
+            _vendorsServiceMock.Setup(x => x.GetVendorsMaximumByGuidAsync(It.IsAny<string>()))
+                .Throws<PermissionsException>();
+            await _vendorsController.GetVendorsMaximumByGuidAsync(Vendors1Guid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorController_GetVendorsMaximumByGuidAsync_ArgumentException()
+        {
+            _vendorsServiceMock.Setup(x => x.GetVendorsMaximumByGuidAsync(It.IsAny<string>()))
+                .Throws<ArgumentException>();
+            await _vendorsController.GetVendorsMaximumByGuidAsync(Vendors1Guid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorController_GetVendorsMaximumByGuidAsync_RepositoryException()
+        {
+            _vendorsServiceMock.Setup(x => x.GetVendorsMaximumByGuidAsync(It.IsAny<string>()))
+                .Throws<RepositoryException>();
+            await _vendorsController.GetVendorsMaximumByGuidAsync(Vendors1Guid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorController_GetVendorsMaximumByGuidAsync_IntegrationApiException()
+        {
+            _vendorsServiceMock.Setup(x => x.GetVendorsMaximumByGuidAsync(It.IsAny<string>()))
+                .Throws<IntegrationApiException>();
+            await _vendorsController.GetVendorsMaximumByGuidAsync(Vendors1Guid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorController_GetVendorsMaximumByGuidAsync_Exception()
+        {
+            _vendorsServiceMock.Setup(x => x.GetVendorsMaximumByGuidAsync(It.IsAny<string>()))
+                .Throws<Exception>();
+            await _vendorsController.GetVendorsMaximumByGuidAsync(Vendors1Guid);
+        }
+
+        #endregion GetVendorsMaximumByGuidAsync
     }
 
     #endregion

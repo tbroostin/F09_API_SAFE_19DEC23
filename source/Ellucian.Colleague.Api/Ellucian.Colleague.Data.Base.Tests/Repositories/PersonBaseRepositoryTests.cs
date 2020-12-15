@@ -660,7 +660,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
                 var ids = new string[] { "1" };
                 dataReaderMock.Setup(d => d.SelectAsync("PERSON", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(ids);
-                dataReaderMock.Setup(d => d.SelectAsync("PERSON.PIN", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(ids);
+                dataReaderMock.Setup(d => d.SelectAsync("ORG.ENTITY.ENV", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(ids);
 
                 var persons = new Collection<DataContracts.Person>()
                 {
@@ -973,8 +973,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
                 var ids = new string[] { "1" };
                 dataReaderMock.Setup(d => d.SelectAsync("PERSON", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(ids);
-                dataReaderMock.Setup(d => d.SelectAsync("PERSON.PIN", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(ids);
-
+                //dataReaderMock.Setup(d => d.SelectAsync("PERSON.PIN", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(ids);
+                dataReaderMock.Setup(d => d.SelectAsync("ORG.ENTITY.ENV", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(ids);
                 var persons = new Collection<DataContracts.Person>()
                 {
                     new DataContracts.Person()
@@ -2413,6 +2413,104 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             }
 
         }
+        #endregion
+
+        #region GetPersonIdForNonCorpOnlyTests
+
+        [TestClass]
+        public class GetPersonIdForNonCorpOnlyTests : BasePersonSetup
+        {
+            PersonBaseRepository repository;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                // Initialize person setup and Mock framework
+                PersonSetupInitialize();
+
+                /*personRecords = (new List<Base.DataContracts.Person>()
+                    {
+                        new Base.DataContracts.Person()
+                        {
+                            Recordkey = "0000001",
+                            RecordGuid = GenerateGuid(),
+                            LastName = "Smith",
+                            FirstName = "John",
+                            MiddleName = "Jacob Jingleheimer"
+                        },
+                        new Base.DataContracts.Person()
+                        {
+                            Recordkey = "0000002",
+                            RecordGuid = GenerateGuid(),
+                            LastName = "Doe",
+                            FirstName = "John",
+                            MiddleName = "None"
+                        },
+                        new Base.DataContracts.Person()
+                        {
+                            Recordkey = "0000003",
+                            RecordGuid = GenerateGuid(),
+                            LastName = "Corporation",
+                            FirstName = "XYZ",
+                            MiddleName = "None",
+                            PersonCorpIndicator = "Y"
+                        },
+                        new Base.DataContracts.Person()
+                        {
+                            Recordkey = "2222",
+                            RecordGuid = GenerateGuid(),
+                            LastName = "Padding",
+                            FirstName = "Patty",
+                            MiddleName = "Paddington"
+                        },
+                        new Base.DataContracts.Person()
+                        {
+                            Recordkey = "0002222",
+                            RecordGuid = GenerateGuid(),
+                            LastName = "Padding2",
+                            FirstName = "Patty2",
+                            MiddleName = "Paddington2"
+                        }
+                    });
+                    */
+
+                // Build the test repository
+                repository = new PersonBaseRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+            }
+
+            [TestMethod]
+            public async Task GetPersonIdForNonCorpConly_PersonCorpIndicator_Invalid ()
+            {
+                var person = personRecords.FirstOrDefault().Value;
+                person.PersonCorpIndicator = "Y";
+               
+                dataReaderMock.Setup(d => d.ReadRecordAsync<DataContracts.Person>(It.IsAny<GuidLookup>(), It.IsAny<bool>())).ReturnsAsync(person);
+
+          
+                var result = await repository.GetPersonIdForNonCorpOnly(person.RecordGuid);
+                Assert.AreEqual(string.Empty, result);
+            }
+
+            [TestMethod]
+            public async Task GetPersonIdForNonCorpConly_PersonCorpIndicator_Valid()
+            {
+                var person = personRecords.FirstOrDefault().Value;
+                person.PersonCorpIndicator = "";
+
+                dataReaderMock.Setup(d => d.ReadRecordAsync<DataContracts.Person>(It.IsAny<GuidLookup>(), It.IsAny<bool>())).ReturnsAsync(person);
+
+                var result = await repository.GetPersonIdForNonCorpOnly(person.RecordGuid);
+                Assert.AreEqual(person.Recordkey, result);
+            }
+
+            [TestMethod]
+            public async Task GetPersonIdForNonCorpConly_PersonCorpIndicator_Empty()
+            {             
+                var result = await repository.GetPersonIdForNonCorpOnly("");
+                Assert.AreEqual(string.Empty, result);
+            }
+        }
+
         #endregion
 
         [TestClass]

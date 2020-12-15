@@ -1,7 +1,8 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -29,6 +30,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     {
         public static char _VM = Convert.ToChar(DynamicArray.VM);
         private readonly string colleagueTimeZone;
+        const string AllApplicationStatusCacheKey = "AllApplicationStatusKeys";
+        const int AllApplicationStatusCacheTimeout = 20;
 
         public ApplicationStatusRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)
@@ -58,147 +61,183 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var applicationLimitingKeys = new List<string>();
             var admissionStatusesEntities = new List<Domain.Student.Entities.ApplicationStatus2>();
 
-            if (decidedOn != null && decidedOn != DateTimeOffset.MinValue)
+            string applicationStatusKey = CacheSupport.BuildCacheKey( AllApplicationStatusCacheKey,
+                        !string.IsNullOrWhiteSpace( applicationId ) ? applicationId : string.Empty,
+                        decidedOn.HasValue ? decidedOn.Value : default(DateTimeOffset?),
+                        filterQualifiers != null && filterQualifiers.Any() ? filterQualifiers : null,
+                        filterPersonIds != null && filterPersonIds.Any() ? filterPersonIds : null );
+
+            var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                   this,
+                   ContainsKey,
+                   GetOrAddToCacheAsync,
+                   AddOrUpdateCacheAsync,
+                   transactionInvoker,
+                   applicationStatusKey,
+                   "",
+                   offset,
+                   limit,
+                   AllApplicationStatusCacheTimeout,
+                   async () =>
+                   {
+
+                       if (decidedOn != null && decidedOn != DateTimeOffset.MinValue)
+                       {
+                           var localDateTime = Convert.ToDateTime(decidedOn.ToLocalDateTime(colleagueTimeZone));
+
+                           convertedDecidedOnDate = DmiString.DateTimeToPickDate(localDateTime);
+                           convertedDecidedOnTime = DmiString.DateTimeToPickTime(localDateTime);
+                           dateFilterOperation = filterQualifiers != null && filterQualifiers.ContainsKey("DecidedOn") ? filterQualifiers["DecidedOn"] : "EQ";
+                       }
+
+                       string[] limitingKeys = null;
+                       if (filterPersonIds != null && filterPersonIds.ToList().Any())
+                       {
+                           // Set limiting keys to previously retrieved personIds from SAVE.LIST.PARMS
+                           limitingKeys = filterPersonIds;
+                           var applicantApplicationId = (await DataReader.SelectAsync("APPLICANTS", limitingKeys, "WITH APP.APPLICATIONS NE '' BY.EXP APP.APPLICATIONS SAVING APP.APPLICATIONS")).ToList();
+                           if (applicantApplicationId != null && applicantApplicationId.Any())
+                           {
+                               applicationLimitingKeys.AddRange(applicantApplicationId);
+                           }
+                           if (applicationLimitingKeys == null || !applicationLimitingKeys.Any())
+                           {
+                               return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                           }
+                       }
+
+                       // select all the applications that have the index populated. This should return all records with a status
+                       var applIdsWithStatus = await DataReader.SelectAsync("APPLICATIONS", applicationLimitingKeys.ToArray(),
+                           "WITH APPL.STATUS.DATE.TIME.IDX NE ''");
+
+
+
+                       if (applIdsWithStatus == null || !applIdsWithStatus.Any())
+                       {
+                           return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                       }
+                       // get all the special processing codes from application.statuses
+                       var applStatusesNoSpCodeIds = await DataReader.SelectAsync("APPLICATION.STATUSES", "WITH APPS.SPECIAL.PROCESSING.CODE NE ''");
+
+                       if (applStatusesNoSpCodeIds == null || !applStatusesNoSpCodeIds.Any())
+                       {
+                           return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                       }
+                       // get all the applications with a special processing code.
+                       // any status with an application special processing code that is not null indicates an application has been submitted
+                       var applStatusCriteria = "WITH APPL.STATUS EQ '" + (string.Join(" ", applStatusesNoSpCodeIds.Distinct())).Replace(" ", "' '") + "'";
+                       applIdsWithStatus = await DataReader.SelectAsync("APPLICATIONS", applIdsWithStatus, applStatusCriteria);
+
+                       if (applIdsWithStatus == null || !applIdsWithStatus.Any())
+                       {
+                           return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                       }
+
+                       if (!string.IsNullOrEmpty(applicationId))
+                       {
+                           var applId = await GetRecordKeyFromGuidAsync(applicationId);
+                           var recordInfo = await GetRecordInfoFromGuidAsync(applicationId);
+                           if (recordInfo == null)
+                           {
+                               return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                           }
+                           else if ((!recordInfo.Entity.Equals("APPLICATIONS", StringComparison.OrdinalIgnoreCase))
+                                   || (!string.IsNullOrEmpty(recordInfo.SecondaryKey)))
+                           {
+                               return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                           }
+                           else
+                           {
+                               selectionCriteria.Append(string.Format("WITH APPLICATIONS.ID EQ '{0}' AND ", applId));
+                           }
+                       }
+
+                       //apply the date filter          
+                       selectionCriteria.Append("WITH APPL.STATUS.DATE NE ''");
+                       if (convertedDecidedOnDate != 0)
+                       {
+                           selectionCriteria.Append(string.Format(" AND WITH APPL.STATUS.DATE {0} '{1}'", dateFilterOperation, convertedDecidedOnDate));
+                       }
+                       selectionCriteria.Append(" AND WITH APPL.STATUS.TIME NE ''");
+                       // special conditions to account for the date-filter operation which includes date + time.
+                       // if EQ, then we want to make sure the time matches exactly
+                       // allother operations need to make sure records from the actual date are included since the previous select can possibly remove them. 
+                       if (convertedDecidedOnTime != 0)
+                       {
+                           switch (dateFilterOperation)
+                           {
+                               case "EQ":
+                                   {
+                                       selectionCriteria.Append(string.Format(" WITH APPL.STATUS.TIME {0} '{1}'", dateFilterOperation, convertedDecidedOnTime));
+                                       break;
+                                   }
+                               default:
+                                   selectionCriteria.Append(string.Format(@" OR WITH APPL.STATUS.DATE EQ '{0}' AND APPL.STATUS.TIME {1} '{2}'", convertedDecidedOnDate, dateFilterOperation, convertedDecidedOnTime));
+                                   break;
+                           }
+                       }
+
+                       applIdsWithStatus = await DataReader.SelectAsync("APPLICATIONS", applIdsWithStatus,
+                              selectionCriteria.ToString());
+
+                       if (applIdsWithStatus == null || !applIdsWithStatus.Any())
+                       {
+                           return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                       }
+
+                       // we need to assocaite the APPLICATION.ID with the APPL.STATUS.DATE.TIME.IDX
+                       var applIds = (await DataReader.SelectAsync("APPLICATIONS", applIdsWithStatus,
+                          "BY.EXP APPL.STATUS.DATE.TIME.IDX")).ToList();
+                       var applIdxs = (await DataReader.SelectAsync("APPLICATIONS", applIdsWithStatus,
+                          "BY.EXP APPL.STATUS.DATE.TIME.IDX SAVING APPL.STATUS.DATE.TIME.IDX")).ToList();
+
+                       // this code makes an assumption that both data sets contain the same number of records,
+                       // in the same order.   
+                       var idx = 0; var keys = new List<string>();
+                       foreach (var applId in applIds)
+                       {
+                           var applId2 = applId.Split(_VM)[0];
+                           var statusCode = applIdxs.ElementAt(idx).Split(new[] { '*' })[0];
+                           if (applStatusesNoSpCodeIds.Contains(statusCode))
+                           {
+                               keys.Add(String.Concat(applId2, "|", applIdxs.ElementAt(idx)));
+                               idx++;
+                           }
+                           else
+                           {
+                               idx++;
+                           }
+                       }
+
+                       // once the result set is exploded, we now have additional records which may not meet the filter criteria
+                       // using the index, apply the filter based on the filter-operator
+                       if (decidedOn != null && decidedOn != DateTimeOffset.MinValue)
+                       {
+                           try
+                           {
+                               keys = FilterDecidedOnDate(dateFilterOperation, decidedOn, keys);
+                           }
+                           catch (Exception ex)
+                           {
+                               exception.AddError(new RepositoryError("data.access", ex.Message));
+                               throw exception;
+                           }
+                       }
+
+                       return new CacheSupport.KeyCacheRequirements()
+                       {
+                           limitingKeys = keys != null && keys.Any() ? keys.Distinct().ToList() : null,
+                           criteria = string.Empty,
+                       };
+                   } );
+
+            if( keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any() )
             {
-                var localDateTime = Convert.ToDateTime(decidedOn.ToLocalDateTime(colleagueTimeZone));
-
-                convertedDecidedOnDate = DmiString.DateTimeToPickDate(localDateTime);
-                convertedDecidedOnTime = DmiString.DateTimeToPickTime(localDateTime);
-                dateFilterOperation = filterQualifiers != null && filterQualifiers.ContainsKey("DecidedOn") ? filterQualifiers["DecidedOn"] : "EQ";                
+                return new Tuple<IEnumerable<ApplicationStatus2>, int>( new List<ApplicationStatus2>(), 0 );
             }
-
-            string[] limitingKeys = null;
-            if (filterPersonIds != null && filterPersonIds.ToList().Any())
-            {
-                // Set limiting keys to previously retrieved personIds from SAVE.LIST.PARMS
-                limitingKeys = filterPersonIds;
-                var applicantApplicationId = (await DataReader.SelectAsync("APPLICANTS", limitingKeys, "WITH APP.APPLICATIONS NE '' BY.EXP APP.APPLICATIONS SAVING APP.APPLICATIONS")).ToList();
-                if (applicantApplicationId != null && applicantApplicationId.Any())
-                {
-                    applicationLimitingKeys.AddRange(applicantApplicationId);
-                }
-                if (applicationLimitingKeys == null || !applicationLimitingKeys.Any())
-                {
-                    return new Tuple<IEnumerable<ApplicationStatus2>, int>(new List<ApplicationStatus2>(), 0);
-                }                
-            }
-
-            // select all the applications that have the index populated. This should return all records with a status
-            var applIdsWithStatus = await DataReader.SelectAsync("APPLICATIONS", applicationLimitingKeys.ToArray(), 
-                "WITH APPL.STATUS.DATE.TIME.IDX NE ''");
-
-           
-
-            if (applIdsWithStatus == null || !applIdsWithStatus.Any())
-            {
-                return new Tuple<IEnumerable<ApplicationStatus2>, int>(new List<ApplicationStatus2>(), 0);
-            }
-            // get all the special processing codes from application.statuses
-            var applStatusesNoSpCodeIds = await DataReader.SelectAsync("APPLICATION.STATUSES", "WITH APPS.SPECIAL.PROCESSING.CODE NE ''");
-
-            if (applStatusesNoSpCodeIds == null || !applStatusesNoSpCodeIds.Any())
-            {
-                return new Tuple<IEnumerable<ApplicationStatus2>, int>(new List<ApplicationStatus2>(), 0);
-            }
-            // get all the applications with a special processing code.
-            // any status with an application special processing code that is not null indicates an application has been submitted
-            var applStatusCriteria = "WITH APPL.STATUS EQ '" + (string.Join(" ", applStatusesNoSpCodeIds.Distinct())).Replace(" ", "' '") + "'";
-            applIdsWithStatus = await DataReader.SelectAsync("APPLICATIONS", applIdsWithStatus, applStatusCriteria);
-
-            if (applIdsWithStatus == null || !applIdsWithStatus.Any())
-            {
-               return new Tuple<IEnumerable<ApplicationStatus2>, int>(new List<ApplicationStatus2>(), 0);
-            }
-
-            if (!string.IsNullOrEmpty(applicationId))
-            {
-                var applId = await GetRecordKeyFromGuidAsync(applicationId);
-                var recordInfo = await GetRecordInfoFromGuidAsync(applicationId);
-                if ( recordInfo == null)
-                    return new Tuple<IEnumerable<ApplicationStatus2>, int>(new List<ApplicationStatus2>(), 0);
-                else if ((!recordInfo.Entity.Equals("APPLICATIONS", StringComparison.OrdinalIgnoreCase))
-                        || (!string.IsNullOrEmpty(recordInfo.SecondaryKey)))
-                    return new Tuple<IEnumerable<ApplicationStatus2>, int>(new List<ApplicationStatus2>(), 0);
-                else
-                    selectionCriteria.Append(string.Format("WITH APPLICATIONS.ID EQ '{0}' AND ", applId));
-            }
-
-            //apply the date filter          
-            selectionCriteria.Append("WITH APPL.STATUS.DATE NE ''");           
-            if (convertedDecidedOnDate != 0)
-            {
-                selectionCriteria.Append(string.Format(" AND WITH APPL.STATUS.DATE {0} '{1}'", dateFilterOperation, convertedDecidedOnDate));
-            }
-            selectionCriteria.Append(" AND WITH APPL.STATUS.TIME NE ''");
-            // special conditions to account for the date-filter operation which includes date + time.
-            // if EQ, then we want to make sure the time matches exactly
-            // allother operations need to make sure records from the actual date are included since the previous select can possibly remove them. 
-            if (convertedDecidedOnTime != 0)
-            {
-                switch (dateFilterOperation)
-                {
-                    case "EQ":
-                        {
-                            selectionCriteria.Append(string.Format(" WITH APPL.STATUS.TIME {0} '{1}'", dateFilterOperation, convertedDecidedOnTime));
-                            break;
-                        }
-                    default:
-                        selectionCriteria.Append(string.Format(@" OR WITH APPL.STATUS.DATE EQ '{0}' AND APPL.STATUS.TIME {1} '{2}'", convertedDecidedOnDate, dateFilterOperation, convertedDecidedOnTime));
-                        break;
-                }
-            }
-
-            applIdsWithStatus = await DataReader.SelectAsync("APPLICATIONS", applIdsWithStatus,
-                   selectionCriteria.ToString());
-
-            if (applIdsWithStatus == null || !applIdsWithStatus.Any())
-            {
-                return new Tuple<IEnumerable<ApplicationStatus2>, int>(new List<ApplicationStatus2>(), 0);
-            }
-
-            // we need to assocaite the APPLICATION.ID with the APPL.STATUS.DATE.TIME.IDX
-            var applIds = (await DataReader.SelectAsync("APPLICATIONS", applIdsWithStatus,
-               "BY.EXP APPL.STATUS.DATE.TIME.IDX")).ToList();
-            var applIdxs = (await DataReader.SelectAsync("APPLICATIONS", applIdsWithStatus,
-               "BY.EXP APPL.STATUS.DATE.TIME.IDX SAVING APPL.STATUS.DATE.TIME.IDX")).ToList();
-
-            // this code makes an assumption that both data sets contain the same number of records,
-            // in the same order.   
-            var idx = 0; var keys = new List<string>();
-            foreach (var applId in applIds)
-            {
-                var applId2 = applId.Split(_VM)[0];
-                var statusCode = applIdxs.ElementAt(idx).Split(new[] { '*' })[0];
-                if (applStatusesNoSpCodeIds.Contains(statusCode))
-                {
-                    keys.Add(String.Concat(applId2, "|", applIdxs.ElementAt(idx)));
-                    idx++;
-                }
-                else
-                {
-                    idx++;
-                }
-            }
-
-            // once the result set is exploded, we now have additional records which may not meet the filter criteria
-            // using the index, apply the filter based on the filter-operator
-            if (decidedOn != null && decidedOn != DateTimeOffset.MinValue)
-            {
-                try
-                {
-                    keys = FilterDecidedOnDate(dateFilterOperation, decidedOn, keys);
-                }
-                catch (Exception ex)
-                {
-                    exception.AddError(new RepositoryError("data.access", ex.Message));
-                    throw exception;
-                }
-            }
-
-            //apply paging
-            totalCount = keys.Count();
-            keys.Sort();
-            var keysSubList = keys.Skip(offset).Take(limit).Distinct().ToArray();
+            
+            totalCount = keyCacheObject.TotalCount.Value;            
+            var keysSubList = keyCacheObject.Sublist;
 
             if (keysSubList.Any())
             {

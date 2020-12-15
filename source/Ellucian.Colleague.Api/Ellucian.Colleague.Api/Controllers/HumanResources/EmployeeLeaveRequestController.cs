@@ -24,6 +24,7 @@ using Ellucian.Colleague.Dtos.HumanResources;
 using System.Net.Http;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 
+
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
     /// <summary>
@@ -44,8 +45,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         private static readonly string noLeaveRequestObjectErrorMessage = "Leave Request DTO is required in body of request";
         private static readonly string noLeaveRequestCommentObjectErrorMessage = "Leave Request Comment DTO is required in body of the request";
         private const string getLeaveRequestRouteId = "GetLeaveRequestInfoByLeaveRequestId";
-        private static readonly string noSupervisorIdErrorMessage = "Supervisor Id is required in the request";
-        private static readonly string SupervisorsUnexpectedErrorMessage = "Unexpected error occurred while getting the supervisee information by their primary position";
+        private static readonly string supervisorsUnexpectedErrorMessage = "Unexpected error occurred while getting the supervisee information by their primary position";
+        private static readonly string unexpectedErrorMessageLeaveRequestsForTimeEntry = "Unexpected error occurred while getting leave request details for the specified date range";
         /// <summary>
         /// Initializes a new instance of the EmployeeLeaveRequestController class.
         /// </summary>
@@ -126,6 +127,45 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 throw CreateHttpResponseException(unexpectedErrorMessage, HttpStatusCode.BadRequest);
             }
         }
+
+        /// <summary>
+        /// Gets the Approved Leave Requests for a timecard week based on the date range.
+        /// </summary>
+        /// <accessComments>
+        /// 1) Any authenticated user can view their own leave request information within the date range.
+        /// 2) Timecard approvers(users with the permission APPROVE.REJECT.TIME.ENTRY) can view the leave request information of their supervisees, within the date range. 
+        /// </accessComments>
+        /// <param name="startDate">Start date of timecard week</param>
+        /// <param name="endDate">End date of timecard week</param>
+        /// <param name="effectivePersonId">Optional parameter for passing effective person Id</param>
+        /// <returns>List of LeaveRequest DTO</returns>
+        [HttpGet]
+        public async Task<IEnumerable<LeaveRequest>> GetLeaveRequestsForTimeEntryAsync(DateTime startDate, DateTime endDate, string effectivePersonId = null)
+        {
+            try
+            {
+                return await _employeeLeaveRequestService.GetLeaveRequestsForTimeEntryAsync(startDate, endDate, effectivePersonId);
+            }
+            catch (ArgumentNullException ane)
+            {
+                var message = "Unexpected null value found in argument(s)";
+                _logger.Error(ane, ane.Message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+
+            catch (PermissionsException pe)
+            {
+                _logger.Error(pe, pe.Message);
+                var message = "User doesn't have permissions to view approved leave requests for the specified date range ";
+                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e, e.Message);
+                throw CreateHttpResponseException(unexpectedErrorMessageLeaveRequestsForTimeEntry, HttpStatusCode.BadRequest);
+            }
+        }
+
 
         /// <summary>
         /// Creates a single Leave Request. This POST endpoint will create a Leave Request along with its associated leave request details 
@@ -269,7 +309,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (Exception e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(SupervisorsUnexpectedErrorMessage, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(supervisorsUnexpectedErrorMessage, HttpStatusCode.BadRequest);
             }
         }
         /// <summary>

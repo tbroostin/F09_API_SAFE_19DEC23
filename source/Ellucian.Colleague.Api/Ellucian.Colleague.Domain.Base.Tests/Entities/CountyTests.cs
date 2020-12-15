@@ -1,10 +1,7 @@
-﻿// Copyright 2014 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 
 namespace Ellucian.Colleague.Domain.Base.Tests.Entities
 {
@@ -27,6 +24,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         public void CountyConstructorTest()
         {
             var county = new County(guid, code, description);
+            Assert.AreEqual(guid, county.Guid);
             Assert.AreEqual(code, county.Code);
             Assert.AreEqual(description, county.Description);
         }

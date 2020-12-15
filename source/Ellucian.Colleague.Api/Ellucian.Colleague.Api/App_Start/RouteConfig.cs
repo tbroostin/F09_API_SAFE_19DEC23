@@ -15,6 +15,7 @@ namespace Ellucian.Colleague.Api
         private const string HedtechIntegrationMediaTypeFormat = "application/vnd.hedtech.integration.v{0}+json";
         private const string HedtechIntegrationMaximumMediaTypeFormat = "application/vnd.hedtech.integration.maximum.v{0}+json";
         private const string HedtechIntegrationSectionsMaximumMediaTypeFormat = "application/vnd.hedtech.integration.sections-maximum.v{0}+json";
+        private const string HedtechIntegrationVendorsMaximumMediaTypeFormat = "application/vnd.hedtech.integration.vendors-maximum.v{0}+json";
         private const string HedtechIntegrationMinimumMediaTypeFormat = "application/vnd.hedtech.integration.minimum.v{0}+json";
         private const string HedtechIntegrationQapiMediaTypeFormat = "application/vnd.hedtech.integration.{0}.v{1}+json";
         private const string HedtechIntegrationStudentTranscriptGradesOptionsFormat = "application/vnd.hedtech.integration.student-transcript-grades-options.v{0}+json";
@@ -52,6 +53,7 @@ namespace Ellucian.Colleague.Api
         private const string EllucianRetentionAlertCaseManageRemindersFormat = "application/vnd.ellucian-retention-alert-manage-reminders.v{0}+json";
         private const string EllucianRetentionAlertCaseSendMailFormat = "application/vnd.ellucian-retention-alert-case-send-mail.v{0}+json";
         private const string EllucianRetentionAlertCaseReassignFormat = "application/vnd.ellucian-retention-alert-case-reassign.v{0}+json";
+        private const string EllucianInstantEnrollmentFormat = "application/vnd.ellucian-instant-enrollment.v{0}+json";
 
         /// <summary>
         /// Registers the routes for the Web API
@@ -2700,6 +2702,16 @@ namespace Ellucian.Colleague.Api
 
             #region  Accounts Payable Invoices
 
+            routes.MapHttpRoute(
+              name: "GetAccountsPayableInvoicesByGuidV11.2.0",
+              routeTemplate: "accounts-payable-invoices/{guid}",
+              defaults: new { controller = "AccountsPayableInvoices", action = "GetAccountsPayableInvoices2ByGuidAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("GET"),
+                  headerVersion = new HeaderVersionConstraint("11.2.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "11.2.0"))
+              }
+            );
 
             routes.MapHttpRoute(
               name: "GetAccountsPayableInvoicesByGuidV11.1.0",
@@ -2727,13 +2739,24 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                name: "DefaultGetAccountsPayableInvoicesByGuid",
                routeTemplate: "accounts-payable-invoices/{guid}",
-                  defaults: new { controller = "AccountsPayableInvoices", action = "GetAccountsPayableInvoices2ByGuidAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0") },
+                  defaults: new { controller = "AccountsPayableInvoices", action = "GetAccountsPayableInvoices2ByGuidAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "11.2.0") },
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint("11.1.0", true)
+                   headerVersion = new HeaderVersionConstraint("11.2.0", true)
                }
              );
+
+            routes.MapHttpRoute(
+             name: "GetAccountsPayableInvoicesV11.2.0",
+             routeTemplate: "accounts-payable-invoices",
+             defaults: new { controller = "AccountsPayableInvoices", action = "GetAccountsPayableInvoices2Async", isEedmSupported = true },
+             constraints: new
+             {
+                 httpMethod = new HttpMethodConstraint("GET"),
+                 headerVersion = new HeaderVersionConstraint("11.2.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "11.2.0"))
+             }
+           );
 
 
             routes.MapHttpRoute(
@@ -2762,12 +2785,23 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                name: "GetAccountsPayableInvoices",
                routeTemplate: "accounts-payable-invoices",
-                  defaults: new { controller = "AccountsPayableInvoices", action = "GetAccountsPayableInvoices2Async", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0") },
+                  defaults: new { controller = "AccountsPayableInvoices", action = "GetAccountsPayableInvoices2Async", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "11.2.0") },
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint("11.1.0", true)
+                   headerVersion = new HeaderVersionConstraint("11.2.0", true)
                }
+            );
+
+            routes.MapHttpRoute(
+             name: "PutAccountsPayableInvoicesV11.2.0",
+             routeTemplate: "accounts-payable-invoices/{guid}",
+             defaults: new { controller = "AccountsPayableInvoices", action = "PutAccountsPayableInvoices2Async", isEedmSupported = true },
+             constraints: new
+             {
+                 httpMethod = new HttpMethodConstraint("PUT"),
+                 headerVersion = new HeaderVersionConstraint("11.2.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "11.2.0"))
+             }
             );
 
             routes.MapHttpRoute(
@@ -2789,6 +2823,17 @@ namespace Ellucian.Colleague.Api
               {
                   httpMethod = new HttpMethodConstraint("PUT"),
                   headerVersion = new HeaderVersionConstraint(11, false, string.Format(HedtechIntegrationMediaTypeFormat, 11))
+              }
+            );
+
+            routes.MapHttpRoute(
+               name: "PostAccountsPayableInvoicesV11.2.0",
+               routeTemplate: "accounts-payable-invoices",
+               defaults: new { controller = "AccountsPayableInvoices", action = "PostAccountsPayableInvoices2Async", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("POST"),
+                  headerVersion = new HeaderVersionConstraint("11.2.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "11.2.0"))
               }
             );
 
@@ -3201,7 +3246,7 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                 name: "GetAddressesByIdList",
                 routeTemplate: "qapi/addresses",
-                defaults: new { controller = "Addresses", action = "QueryAddresses" },
+                defaults: new { controller = "Addresses", action = "QueryAddressesAsync" },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("POST"),
@@ -8407,6 +8452,93 @@ namespace Ellucian.Colleague.Api
            );
             #endregion Charge Assessment Methods
 
+            #region  CipCodes
+
+            routes.MapHttpRoute(
+              name: "GetCipCodesByGuidV1",
+              routeTemplate: "cip-codes/{id}",
+              defaults: new { controller = "CipCodes", action = "GetCipCodeByIdAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("GET"),
+                  headerVersion = new HeaderVersionConstraint("1.0.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0"))
+              }
+          );
+            routes.MapHttpRoute(
+               name: "DefaultGetCipCodesByGuid",
+               routeTemplate: "cip-codes/{id}",
+                  defaults: new { controller = "CipCodes", action = "GetCipCodeByIdAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0") },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("GET"),
+                   headerVersion = new HeaderVersionConstraint("1.0.0", true)
+               }
+           );
+
+            routes.MapHttpRoute(
+              name: "GetCipCodesV1",
+              routeTemplate: "cip-codes",
+              defaults: new { controller = "CipCodes", action = "GetCipCodesAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("GET"),
+                  headerVersion = new HeaderVersionConstraint("1.0.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0"))
+              }
+          );
+            routes.MapHttpRoute(
+               name: "GetCipCodes",
+               routeTemplate: "cip-codes",
+                  defaults: new { controller = "CipCodes", action = "GetCipCodesAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0") },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("GET"),
+                   headerVersion = new HeaderVersionConstraint("1.0.0", true)
+               }
+           );
+            routes.MapHttpRoute(
+              name: "PutCipCodesV1.0.0",
+              routeTemplate: "cip-codes/{id}",
+              defaults: new { controller = "CipCodes", action = "PutCipCodeAsync" },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("PUT"),
+                  headerVersion = new HeaderVersionConstraint("1.0.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0"))
+              }
+          );
+
+            routes.MapHttpRoute(
+               name: "PostCipCodesV1.0.0",
+               routeTemplate: "cip-codes",
+               defaults: new { controller = "CipCodes", action = "PostCipCodeAsync" },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("POST"),
+                  headerVersion = new HeaderVersionConstraint("1.0.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0"))
+              }
+           );
+            routes.MapHttpRoute(
+                name: "DefaultDeleteCipCodes",
+                routeTemplate: "cip-codes/{id}",
+                defaults: new { controller = "CipCodes", action = "DeleteCipCodeAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("DELETE"),
+
+                }
+           );
+
+            routes.MapHttpRoute(
+              name: "CipCodesUnsupported",
+              routeTemplate: "cip-codes/{id}",
+               defaults: new { controller = "CipCodes", action = "NotAcceptableStatusException", id = UrlParameter.Optional },
+                  constraints: new
+                  {
+                      httpMethod = new HttpMethodConstraint("GET", "PUT", "POST"),
+                      headerVersion = new HeaderVersionConstraint("*", false, string.Format(HedtechIntegrationMediaTypeFormat, "*"))
+                  }
+            );
+            #endregion CipCodes
+
             #region ClassLevels
 
             routes.MapHttpRoute(
@@ -9697,9 +9829,21 @@ namespace Ellucian.Colleague.Api
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(2, true)
+                    headerVersion = new HeaderVersionConstraint(2, false)
                 }
             );
+
+            routes.MapHttpRoute(
+                name: "GetCourseCatalogConfiguration3",
+                routeTemplate: "configuration/course-catalog",
+                defaults: new { controller = "StudentConfiguration", action = "GetCourseCatalogConfiguration3Async" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(3, true)
+                }
+            );
+
 
             routes.MapHttpRoute(
                 name: "GetOrganizationRelationshipConfigurationAsync",
@@ -9756,7 +9900,18 @@ namespace Ellucian.Colleague.Api
                 }
             );
 
-            #endregion
+            routes.MapHttpRoute(
+                name: "GetInstantEnrollmentConfigurationAsync",
+                routeTemplate: "configuration/instant-enrollment",
+                defaults: new { controller = "StudentConfiguration", action = "GetInstantEnrollmentConfigurationAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(1, true)
+                }
+            );
+
+            #endregion            
 
             #region Content Keys
 
@@ -10254,7 +10409,7 @@ namespace Ellucian.Colleague.Api
             #endregion Cost Calculation Methods
 
             #region Cost Centers
-
+            // WARNING: This is an obsolete route as of Api version 1.29. Use QueryCostCenters route
             routes.MapHttpRoute(
                 name: "GetCostCenters",
                 routeTemplate: "cost-centers",
@@ -10457,6 +10612,21 @@ namespace Ellucian.Colleague.Api
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("DELETE"),
+                }
+            );
+
+            #endregion
+
+            #region Counties
+
+            routes.MapHttpRoute(
+                name: "GetCountiesAsync",
+                routeTemplate: "counties",
+                defaults: new { controller = "Counties", action = "GetAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(1, true)
                 }
             );
 
@@ -10730,18 +10900,18 @@ namespace Ellucian.Colleague.Api
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint("16.0.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "16.0.0"))
+                    headerVersion = new HeaderVersionConstraint("16.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "16.1.0"))
                 }
              );
 
             routes.MapHttpRoute(
                 name: "DefaultGetHedmCourse5ById",
                 routeTemplate: "courses/{id}",
-                defaults: new { controller = "Courses", action = "GetHedmCourse5ByIdAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "16.0.0") },
+                defaults: new { controller = "Courses", action = "GetHedmCourse5ByIdAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "16.1.0") },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint("16.0.0", true)
+                    headerVersion = new HeaderVersionConstraint("16.1.0", true)
                 }
             );
 
@@ -10808,24 +10978,24 @@ namespace Ellucian.Colleague.Api
             );
 
             routes.MapHttpRoute(
-               name: "GetCoursesAllAndFilteredV16.0.0",
+               name: "GetCoursesAllAndFilteredV16.1.0",
                routeTemplate: "courses",
                defaults: new { controller = "Courses", action = "GetAllAndFilteredCourses5Async", isEedmSupported = true },
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint("16.0.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "16.0.0"))
+                   headerVersion = new HeaderVersionConstraint("16.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "16.1.0"))
                }
             );
 
             routes.MapHttpRoute(
-               name: "DefaultGetCoursesAllAndFilteredV16.0.0",
+               name: "DefaultGetCoursesAllAndFilteredV16.1.0",
                routeTemplate: "courses",
-               defaults: new { controller = "Courses", action = "GetAllAndFilteredCourses5Async", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "16.0.0") },
+               defaults: new { controller = "Courses", action = "GetAllAndFilteredCourses5Async", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "16.1.0") },
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint("16.0.0", true)
+                   headerVersion = new HeaderVersionConstraint("16.1.0", true)
                }
             );
 
@@ -10851,7 +11021,16 @@ namespace Ellucian.Colleague.Api
                 }
             );
 
-
+            routes.MapHttpRoute(
+              name: "InstantEnrollmentCourseSearch",
+              routeTemplate: "courses/search",
+              defaults: new { controller = "Courses", action = "PostInstantEnrollmentCourseSearchAsync" },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("POST"),
+                  headerVersion = new HeaderVersionConstraint(1, false, string.Format(EllucianInstantEnrollmentFormat, 1))
+              }
+          );
 
 
             routes.MapHttpRoute(
@@ -10894,7 +11073,7 @@ namespace Ellucian.Colleague.Api
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("POST"),
-                   headerVersion = new HeaderVersionConstraint("16.0.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "16.0.0"))
+                   headerVersion = new HeaderVersionConstraint("16.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "16.1.0"))
                }
            );
 
@@ -10927,7 +11106,7 @@ namespace Ellucian.Colleague.Api
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("PUT"),
-                    headerVersion = new HeaderVersionConstraint("16.0.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "16.0.0"))
+                    headerVersion = new HeaderVersionConstraint("16.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "16.1.0"))
                 }
             );
 
@@ -10938,6 +11117,17 @@ namespace Ellucian.Colleague.Api
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("DELETE"),
+                }
+            );
+
+            routes.MapHttpRoute(
+            name: "CoursesUnsupported",
+            routeTemplate: "courses/{id}",
+             defaults: new { controller = "courses", action = "NotAcceptableStatusException", id = UrlParameter.Optional },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET", "PUT", "POST"),
+                    headerVersion = new HeaderVersionConstraint("*", false, string.Format(HedtechIntegrationMediaTypeFormat, "*"))
                 }
             );
             #endregion
@@ -12863,6 +13053,21 @@ namespace Ellucian.Colleague.Api
           );
 
             #endregion Educational Goals
+
+            #region EducationGoals
+
+            routes.MapHttpRoute(
+                name: "GetEducationGoalsAsync",
+                routeTemplate: "education-goals",
+                defaults: new { controller = "EducationGoals", action = "GetEducationGoalsAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(1, true)
+                }
+            );
+
+            #endregion
 
             #region Education History
 
@@ -15937,6 +16142,17 @@ namespace Ellucian.Colleague.Api
             #region FinancialAidApplications
 
             routes.MapHttpRoute(
+              name: "GetFinancialAidApplicationsByIdV910",
+              routeTemplate: "financial-aid-applications/{id}",
+              defaults: new { controller = "StudentFinancialAidApplications", action = "GetByIdAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("GET"),
+                  headerVersion = new HeaderVersionConstraint("9.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "9.1.0"))
+              }
+          );
+
+            routes.MapHttpRoute(
               name: "GetFinancialAidApplicationsByIdV9",
               routeTemplate: "financial-aid-applications/{id}",
               defaults: new { controller = "StudentFinancialAidApplications", action = "GetByIdAsync", isEedmSupported = true },
@@ -15950,14 +16166,24 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                name: "DefaultGetFinancialAidApplicationsById",
                routeTemplate: "financial-aid-applications/{id}",
-                  defaults: new { controller = "StudentFinancialAidApplications", action = "GetByIdAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, 9) },
+                  defaults: new { controller = "StudentFinancialAidApplications", action = "GetByIdAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "9.1.0") },
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint(9, true)
+                   headerVersion = new HeaderVersionConstraint("9.1.0", true)
                }
            );
 
+            routes.MapHttpRoute(
+              name: "GetFinancialAidApplicationsV910",
+              routeTemplate: "financial-aid-applications",
+              defaults: new { controller = "StudentFinancialAidApplications", action = "GetAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("GET"),
+                  headerVersion = new HeaderVersionConstraint("9.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "9.1.0"))
+              }
+          );
 
             routes.MapHttpRoute(
               name: "GetFinancialAidApplicationsV9",
@@ -15973,13 +16199,24 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                name: "DefaultGetFinancialAidApplications",
                routeTemplate: "financial-aid-applications",
-                  defaults: new { controller = "StudentFinancialAidApplications", action = "GetAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, 9) },
+                  defaults: new { controller = "StudentFinancialAidApplications", action = "GetAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "9.1.0") },
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint(9, true)
+                   headerVersion = new HeaderVersionConstraint("9.1.0", true)
                }
            );
+
+            routes.MapHttpRoute(
+              name: "PutFinancialAidApplicationsV910",
+              routeTemplate: "financial-aid-applications/{id}",
+              defaults: new { controller = "StudentFinancialAidApplications", action = "UpdateAsync" },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("PUT"),
+                  headerVersion = new HeaderVersionConstraint("9.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "9.1.0"))
+              }
+          );
 
             routes.MapHttpRoute(
               name: "PutFinancialAidApplicationsV9",
@@ -15992,6 +16229,16 @@ namespace Ellucian.Colleague.Api
               }
           );
 
+            routes.MapHttpRoute(
+               name: "PostFinancialAidApplicationsV910",
+               routeTemplate: "financial-aid-applications",
+               defaults: new { controller = "StudentFinancialAidApplications", action = "CreateAsync" },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("POST"),
+                  headerVersion = new HeaderVersionConstraint("9.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "9.1.0"))
+              }
+           );
 
             routes.MapHttpRoute(
                name: "PostFinancialAidApplicationsV9",
@@ -16010,10 +16257,20 @@ namespace Ellucian.Colleague.Api
                 defaults: new { controller = "StudentFinancialAidApplications", action = "DeleteAsync" },
                 constraints: new
                 {
-                    httpMethod = new HttpMethodConstraint("DELETE"),
-                    headerVersion = new HeaderVersionConstraint(9, false, string.Format(HedtechIntegrationMediaTypeFormat, 9))
+                    httpMethod = new HttpMethodConstraint("DELETE")
                 }
            );
+
+            routes.MapHttpRoute(
+                name: "FinancialAidApplicationsUnsupported",
+                routeTemplate: "financial-aid-applications/{id}",
+                defaults: new { controller = "StudentFinancialAidApplications", action = "NotAcceptableStatusException", id = UrlParameter.Optional },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET", "PUT", "POST"),
+                    headerVersion = new HeaderVersionConstraint("*", false, string.Format(HedtechIntegrationMediaTypeFormat, "*"))
+                }
+            );
 
             //Obsolete as of API version 1.7. Deprecated.
             routes.MapHttpRoute(
@@ -16031,6 +16288,72 @@ namespace Ellucian.Colleague.Api
             #region FinancialAidApplicationOutcomes
 
             routes.MapHttpRoute(
+              name: "GetFinancialAidApplicationOutcomesByIdV9_1_0",
+              routeTemplate: "financial-aid-application-outcomes/{id}",
+              defaults: new { controller = "FinancialAidApplicationOutcomes", action = "GetFinancialAidApplicationOutcomesByGuidAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("GET"),
+                  headerVersion = new HeaderVersionConstraint("9.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "9.1.0"))
+              }
+          );
+
+            routes.MapHttpRoute(
+               name: "DefaultGetFinancialAidApplicationOutcomesById",
+               routeTemplate: "financial-aid-application-outcomes/{id}",
+                  defaults: new { controller = "FinancialAidApplicationOutcomes", action = "GetFinancialAidApplicationOutcomesByGuidAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "9.1.0") },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("GET"),
+                   headerVersion = new HeaderVersionConstraint("9.1.0", true)
+               }
+           );
+
+            routes.MapHttpRoute(
+              name: "GetFinancialAidApplicationOutcomesV9_1_0",
+              routeTemplate: "financial-aid-application-outcomes",
+              defaults: new { controller = "FinancialAidApplicationOutcomes", action = "GetFinancialAidApplicationOutcomesAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("GET"),
+                  headerVersion = new HeaderVersionConstraint("9.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "9.1.0"))
+              }
+          );
+
+            routes.MapHttpRoute(
+               name: "DefaultGetFinancialAidApplicationOutcomes",
+               routeTemplate: "financial-aid-application-outcomes",
+                  defaults: new { controller = "FinancialAidApplicationOutcomes", action = "GetFinancialAidApplicationOutcomesAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "9.1.0") },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("GET"),
+                   headerVersion = new HeaderVersionConstraint("9.1.0", true)
+               }
+           );
+
+            routes.MapHttpRoute(
+              name: "PutFinancialAidApplicationOutcomesV9_1_0",
+              routeTemplate: "financial-aid-application-outcomes/{id}",
+              defaults: new { controller = "FinancialAidApplicationOutcomes", action = "UpdateAsync" },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("PUT"),
+                  headerVersion = new HeaderVersionConstraint("9.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "9.1.0"))
+              }
+          );
+
+            routes.MapHttpRoute(
+               name: "PostFinancialAidApplicationOutcomesV9_1_0",
+               routeTemplate: "financial-aid-application-outcomes",
+               defaults: new { controller = "FinancialAidApplicationOutcomes", action = "CreateAsync" },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("POST"),
+                  headerVersion = new HeaderVersionConstraint("9.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "9.1.0"))
+              }
+           );
+
+            routes.MapHttpRoute(
               name: "GetFinancialAidApplicationOutcomesByIdV9",
               routeTemplate: "financial-aid-application-outcomes/{id}",
               defaults: new { controller = "FinancialAidApplicationOutcomes", action = "GetFinancialAidApplicationOutcomesByGuidAsync", isEedmSupported = true },
@@ -16040,18 +16363,6 @@ namespace Ellucian.Colleague.Api
                   headerVersion = new HeaderVersionConstraint(9, false, string.Format(HedtechIntegrationMediaTypeFormat, 9))
               }
           );
-
-            routes.MapHttpRoute(
-               name: "DefaultGetFinancialAidApplicationOutcomesById",
-               routeTemplate: "financial-aid-application-outcomes/{id}",
-                  defaults: new { controller = "FinancialAidApplicationOutcomes", action = "GetFinancialAidApplicationOutcomesByGuidAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, 9) },
-               constraints: new
-               {
-                   httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint(9, true)
-               }
-           );
-
 
             routes.MapHttpRoute(
               name: "GetFinancialAidApplicationOutcomesV9",
@@ -16065,40 +16376,6 @@ namespace Ellucian.Colleague.Api
           );
 
             routes.MapHttpRoute(
-               name: "DefaultGetFinancialAidApplicationOutcomes",
-               routeTemplate: "financial-aid-application-outcomes",
-                  defaults: new { controller = "FinancialAidApplicationOutcomes", action = "GetFinancialAidApplicationOutcomesAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, 9) },
-               constraints: new
-               {
-                   httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint(9, true)
-               }
-           );
-
-            routes.MapHttpRoute(
-              name: "PutFinancialAidApplicationOutcomesV9",
-              routeTemplate: "financial-aid-application-outcomes/{id}",
-              defaults: new { controller = "FinancialAidApplicationOutcomes", action = "UpdateAsync" },
-              constraints: new
-              {
-                  httpMethod = new HttpMethodConstraint("PUT"),
-                  headerVersion = new HeaderVersionConstraint(9, false, string.Format(HedtechIntegrationMediaTypeFormat, 9))
-              }
-          );
-
-
-            routes.MapHttpRoute(
-               name: "PostFinancialAidApplicationOutcomesV9",
-               routeTemplate: "financial-aid-application-outcomes",
-               defaults: new { controller = "FinancialAidApplicationOutcomes", action = "CreateAsync" },
-              constraints: new
-              {
-                  httpMethod = new HttpMethodConstraint("POST"),
-                  headerVersion = new HeaderVersionConstraint(9, false, string.Format(HedtechIntegrationMediaTypeFormat, 9))
-              }
-           );
-
-            routes.MapHttpRoute(
                 name: "DefaultDeleteFinancialAidApplicationOutcomes",
                 routeTemplate: "financial-aid-application-outcomes/{id}",
                 defaults: new { controller = "FinancialAidApplicationOutcomes", action = "DeleteAsync" },
@@ -16107,6 +16384,17 @@ namespace Ellucian.Colleague.Api
                     httpMethod = new HttpMethodConstraint("DELETE")
                 }
            );
+
+            routes.MapHttpRoute(
+                name: "FinancialAidApplicationOutcomesUnsupported",
+                routeTemplate: "financial-aid-application-outcomes/{id}",
+                defaults: new { controller = "FinancialAidApplicationOutcomes", action = "NotAcceptableStatusException", id = UrlParameter.Optional },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET", "PUT", "POST"),
+                    headerVersion = new HeaderVersionConstraint("*", false, string.Format(HedtechIntegrationMediaTypeFormat, "*"))
+                }
+            );
 
             #endregion
 
@@ -16396,6 +16684,73 @@ namespace Ellucian.Colleague.Api
             #region  Financial Aid Funds
 
             routes.MapHttpRoute(
+              name: "GetFinancialAidFundsByGuidV9_1_0",
+              routeTemplate: "financial-aid-funds/{id}",
+              defaults: new { controller = "FinancialAidFunds", action = "GetFinancialAidFundsByGuidAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("GET"),
+                  headerVersion = new HeaderVersionConstraint("9.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "9.1.0"))
+              }
+          );
+
+            routes.MapHttpRoute(
+               name: "DefaultGetFinancialAidFundsByGuid",
+               routeTemplate: "financial-aid-funds/{id}",
+                  defaults: new { controller = "FinancialAidFunds", action = "GetFinancialAidFundsByGuidAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "9.1.0") },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("GET"),
+                   headerVersion = new HeaderVersionConstraint("9.1.0", true)
+               }
+           );
+
+            routes.MapHttpRoute(
+              name: "GetFinancialAidFundsV9_1_0",
+              routeTemplate: "financial-aid-funds",
+              defaults: new { controller = "FinancialAidFunds", action = "GetFinancialAidFundsAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("GET"),
+                  headerVersion = new HeaderVersionConstraint("9.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "9.1.0"))
+              }
+          );
+
+            routes.MapHttpRoute(
+               name: "DefaultGetFinancialAidFunds",
+               routeTemplate: "financial-aid-funds",
+                  defaults: new { controller = "FinancialAidFunds", action = "GetFinancialAidFundsAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "9.1.0") },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("GET"),
+                   headerVersion = new HeaderVersionConstraint("9.1.0", true)
+               }
+           );
+
+            routes.MapHttpRoute(
+              name: "PutFinancialAidFundsV9_1_0",
+              routeTemplate: "financial-aid-funds/{id}",
+              defaults: new { controller = "FinancialAidFunds", action = "PutFinancialAidFundsAsync" },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("PUT"),
+                  headerVersion = new HeaderVersionConstraint("9.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "9.1.0"))
+              }
+          );
+
+
+            routes.MapHttpRoute(
+               name: "PostFinancialAidFundsV9_1_0",
+               routeTemplate: "financial-aid-funds",
+               defaults: new { controller = "FinancialAidFunds", action = "PostFinancialAidFundsAsync" },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("POST"),
+                  headerVersion = new HeaderVersionConstraint("9.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "9.1.0"))
+              }
+           );
+
+            routes.MapHttpRoute(
               name: "GetFinancialAidFundsByGuidV9",
               routeTemplate: "financial-aid-funds/{id}",
               defaults: new { controller = "FinancialAidFunds", action = "GetFinancialAidFundsByGuidAsync", isEedmSupported = true },
@@ -16405,18 +16760,6 @@ namespace Ellucian.Colleague.Api
                   headerVersion = new HeaderVersionConstraint(9, false, string.Format(HedtechIntegrationMediaTypeFormat, 9))
               }
           );
-
-            routes.MapHttpRoute(
-               name: "DefaultGetFinancialAidFundsByGuid",
-               routeTemplate: "financial-aid-funds/{id}",
-                  defaults: new { controller = "FinancialAidFunds", action = "GetFinancialAidFundsByGuidAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, 9) },
-               constraints: new
-               {
-                   httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint(9, true)
-               }
-           );
-
 
             routes.MapHttpRoute(
               name: "GetFinancialAidFundsV9",
@@ -16430,40 +16773,6 @@ namespace Ellucian.Colleague.Api
           );
 
             routes.MapHttpRoute(
-               name: "GetFinancialAidFunds",
-               routeTemplate: "financial-aid-funds",
-                  defaults: new { controller = "FinancialAidFunds", action = "GetFinancialAidFundsAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, 9) },
-               constraints: new
-               {
-                   httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint(9, true)
-               }
-           );
-
-            routes.MapHttpRoute(
-              name: "PutFinancialAidFundsV9",
-              routeTemplate: "financial-aid-funds/{id}",
-              defaults: new { controller = "FinancialAidFunds", action = "PutFinancialAidFundsAsync" },
-              constraints: new
-              {
-                  httpMethod = new HttpMethodConstraint("PUT"),
-                  headerVersion = new HeaderVersionConstraint(9, false, string.Format(HedtechIntegrationMediaTypeFormat, 9))
-              }
-          );
-
-
-            routes.MapHttpRoute(
-               name: "PostFinancialAidFundsV9",
-               routeTemplate: "financial-aid-funds",
-               defaults: new { controller = "FinancialAidFunds", action = "PostFinancialAidFundsAsync" },
-              constraints: new
-              {
-                  httpMethod = new HttpMethodConstraint("POST"),
-                  headerVersion = new HeaderVersionConstraint(9, false, string.Format(HedtechIntegrationMediaTypeFormat, 9))
-              }
-           );
-
-            routes.MapHttpRoute(
                 name: "DefaultDeleteFinancialAidFunds",
                 routeTemplate: "financial-aid-funds/{id}",
                 defaults: new { controller = "FinancialAidFunds", action = "DeleteFinancialAidFundsAsync" },
@@ -16473,6 +16782,17 @@ namespace Ellucian.Colleague.Api
 
                 }
            );
+
+            routes.MapHttpRoute(
+                name: "FinancialAidFundsUnsupported",
+                routeTemplate: "financial-aid-funds/{id}",
+                defaults: new { controller = "FinancialAidFunds", action = "NotAcceptableStatusException", id = UrlParameter.Optional },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET", "PUT", "POST"),
+                    headerVersion = new HeaderVersionConstraint("*", false, string.Format(HedtechIntegrationMediaTypeFormat, "*"))
+                }
+            );
             #endregion Financial Aid Funds
 
             #region FinancialAidOffices
@@ -16594,6 +16914,17 @@ namespace Ellucian.Colleague.Api
             #region FinancialAidYears
 
             routes.MapHttpRoute(
+                 name: "GetFinancialAidYearByIdV710",
+                 routeTemplate: "financial-aid-years/{id}",
+                 defaults: new { controller = "FinancialAidYears", action = "GetFinancialAidYearByIdAsync", isEedmSupported = true },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("GET"),
+                     headerVersion = new HeaderVersionConstraint("7.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "7.1.0"))
+                 }
+             );
+
+            routes.MapHttpRoute(
                 name: "GetFinancialAidYearByIdV7",
                 routeTemplate: "financial-aid-years/{id}",
                 defaults: new { controller = "FinancialAidYears", action = "GetFinancialAidYearByIdAsync", isEedmSupported = true },
@@ -16607,14 +16938,24 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                 name: "DefaultGetFinancialAidYearById",
                 routeTemplate: "financial-aid-years/{id}",
-                defaults: new { controller = "FinancialAidYears", action = "GetFinancialAidYearByIdAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, 7) },
+                defaults: new { controller = "FinancialAidYears", action = "GetFinancialAidYearByIdAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "7.1.0") },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(7, true)
+                    headerVersion = new HeaderVersionConstraint("7.1.0", true)
                 }
             );
 
+            routes.MapHttpRoute(
+                name: "GetFinancialAidYearsV710",
+                routeTemplate: "financial-aid-years",
+                defaults: new { controller = "FinancialAidYears", action = "GetFinancialAidYearsAsync", isEedmSupported = true },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint("7.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "7.1.0"))
+                }
+            );
 
             routes.MapHttpRoute(
                 name: "GetFinancialAidYearsV7",
@@ -16630,13 +16971,24 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                 name: "DefaultGetFinancialAidYears",
                 routeTemplate: "financial-aid-years",
-                defaults: new { controller = "FinancialAidYears", action = "GetFinancialAidYearsAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, 7) },
+                defaults: new { controller = "FinancialAidYears", action = "GetFinancialAidYearsAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "7.1.0") },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(7, true)
+                    headerVersion = new HeaderVersionConstraint("7.1.0", true)
                 }
             );
+
+            routes.MapHttpRoute(
+               name: "PutFinancialAidYearsV710",
+               routeTemplate: "financial-aid-years/{id}",
+               defaults: new { controller = "FinancialAidYears", action = "PutFinancialAidYearAsync" },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("PUT"),
+                   headerVersion = new HeaderVersionConstraint("7.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "7.1.0"))
+               }
+           );
 
             routes.MapHttpRoute(
                name: "PutFinancialAidYearsV7",
@@ -16648,6 +17000,17 @@ namespace Ellucian.Colleague.Api
                    headerVersion = new HeaderVersionConstraint(7, false, string.Format(HedtechIntegrationMediaTypeFormat, 7))
                }
            );
+
+            routes.MapHttpRoute(
+                name: "PostFinancialAidYearsV710",
+                routeTemplate: "financial-aid-years",
+                defaults: new { controller = "FinancialAidYears", action = "PostFinancialAidYearAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("POST"),
+                    headerVersion = new HeaderVersionConstraint("7.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "7.1.0"))
+                }
+            );
 
             routes.MapHttpRoute(
                 name: "PostFinancialAidYearsV7",
@@ -16669,6 +17032,17 @@ namespace Ellucian.Colleague.Api
                     httpMethod = new HttpMethodConstraint("DELETE")
                 }
             );
+
+            routes.MapHttpRoute(
+            name: "FinancialAidYearsUnsupported",
+            routeTemplate: "financial-aid-years/{id}",
+             defaults: new { controller = "FinancialAidYears", action = "NotAcceptableStatusException", id = UrlParameter.Optional },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET", "PUT", "POST"),
+                    headerVersion = new HeaderVersionConstraint("*", false, string.Format(HedtechIntegrationMediaTypeFormat, "*"))
+                }
+          );
 
             #endregion
 
@@ -17155,6 +17529,100 @@ namespace Ellucian.Colleague.Api
                 }
            );
             #endregion Fixed Asset Categories
+
+            #region  Fixed Asset Designations
+
+            routes.MapHttpRoute(
+              name: "GetFixedAssetDesignationsByGuidV1.0.0",
+              routeTemplate: "fixed-asset-designations/{guid}",
+              defaults: new { controller = "FixedAssetDesignations", action = "GetFixedAssetDesignationsByGuidAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("GET"),
+                  headerVersion = new HeaderVersionConstraint("1.0.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0"))
+              }
+          );
+
+            routes.MapHttpRoute(
+               name: "DefaultGetFixedAssetDesignationsByGuid",
+               routeTemplate: "fixed-asset-designations/{guid}",
+                  defaults: new { controller = "FixedAssetDesignations", action = "GetFixedAssetDesignationsByGuidAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0") },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("GET"),
+                   headerVersion = new HeaderVersionConstraint("1.0.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0"))
+               }
+           );
+
+
+            routes.MapHttpRoute(
+              name: "GetFixedAssetDesignationsV1.0.0",
+              routeTemplate: "fixed-asset-designations",
+              defaults: new { controller = "FixedAssetDesignations", action = "GetFixedAssetDesignationsAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("GET"),
+                  headerVersion = new HeaderVersionConstraint("1.0.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0"))
+              }
+          );
+
+            routes.MapHttpRoute(
+               name: "DefaultGetFixedAssetDesignations",
+               routeTemplate: "fixed-asset-designations",
+                  defaults: new { controller = "FixedAssetDesignations", action = "GetFixedAssetDesignationsAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0") },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("GET"),
+                   headerVersion = new HeaderVersionConstraint("1.0.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0"))
+               }
+           );
+
+            routes.MapHttpRoute(
+              name: "PutFixedAssetDesignationsV1.0.0",
+              routeTemplate: "fixed-asset-designations/{guid}",
+              defaults: new { controller = "FixedAssetDesignations", action = "PutFixedAssetDesignationsAsync" },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("PUT"),
+                  headerVersion = new HeaderVersionConstraint("1.0.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0"))
+              }
+          );
+
+
+            routes.MapHttpRoute(
+               name: "PostFixedAssetDesignationsV1.0.0",
+               routeTemplate: "fixed-asset-designations",
+               defaults: new { controller = "FixedAssetDesignations", action = "PostFixedAssetDesignationsAsync" },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("POST"),
+                  headerVersion = new HeaderVersionConstraint("1.0.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0"))
+              }
+           );
+
+            routes.MapHttpRoute(
+                name: "DefaultDeleteFixedAssetDesignations",
+                routeTemplate: "fixed-asset-designations/{guid}",
+                defaults: new { controller = "FixedAssetDesignations", action = "DeleteFixedAssetDesignationsAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("DELETE"),
+
+                }
+           );
+
+            routes.MapHttpRoute(
+            name: "FixedAssetDesignationsUnsupported",
+            routeTemplate: "fixed-asset-designations/{id}",
+             defaults: new { controller = "FixedAssetDesignations", action = "NotAcceptableStatusException", id = UrlParameter.Optional },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET", "PUT", "POST"),
+                    headerVersion = new HeaderVersionConstraint("*", false, string.Format(HedtechIntegrationMediaTypeFormat, "*"))
+                }
+          );
+
+            #endregion Fixed Asset Designations
 
             #region  Fixed Asset Types
 
@@ -18588,6 +19056,20 @@ namespace Ellucian.Colleague.Api
            );
             #endregion Grants
 
+            #region Health
+
+            routes.MapHttpRoute(
+                name: "GetApplicationHealth",
+                routeTemplate: "health",
+                   defaults: new { controller = "Health", action = "GetApplicationHealthCheckAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                }
+            );
+
+            #endregion
+
             #region HealthCheck
 
             routes.MapHttpRoute(
@@ -19156,6 +19638,21 @@ namespace Ellucian.Colleague.Api
                 name: "GetImportantNumberCategories",
                 routeTemplate: "important-number-categories",
                 defaults: new { controller = "ImportantNumbers", action = "GetImportantNumberCategories" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(1, true)
+                }
+            );
+
+            #endregion
+
+            #region Initiator
+
+            routes.MapHttpRoute(
+                name: "SearchInitiator",
+                routeTemplate: "initiator/{queryKeyword}",
+                defaults: new { controller = "Initiator", action = "GetInitiatorByKeywordAsync" },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
@@ -20872,18 +21369,111 @@ namespace Ellucian.Colleague.Api
 
             #endregion
 
-            #region  Job Applications
+            #region InstantEnrollment
 
             routes.MapHttpRoute(
-              name: "GetJobApplicationsByGuidV10",
-              routeTemplate: "job-applications/{guid}",
-              defaults: new { controller = "JobApplications", action = "GetJobApplicationsByGuidAsync" },
+                name: "InstantEnrollmentProposedRegistration",
+                routeTemplate: "instant-enrollment/proposed-registration",
+                defaults: new { controller = "InstantEnrollment", action = "PostProposedRegistrationForClassesAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("POST"),
+                    headerVersion = new HeaderVersionConstraint(1, true, string.Format(EllucianInstantEnrollmentFormat, 1))
+                }
+            );
+
+            routes.MapHttpRoute(
+                name: "InstantEnrollmentZeroCostRegistration",
+                routeTemplate: "instant-enrollment/zero-cost-registration",
+                defaults: new { controller = "InstantEnrollment", action = "PostZeroCostRegistrationForClassesAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("POST"),
+                    headerVersion = new HeaderVersionConstraint(1, true, string.Format(EllucianInstantEnrollmentFormat, 1))
+                }
+            );
+
+            routes.MapHttpRoute(
+                name: "InstantEnrollmentEcheckRegistration",
+                routeTemplate: "instant-enrollment/echeck-registration",
+                defaults: new { controller = "InstantEnrollment", action = "PostEcheckRegistrationForClassesAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("POST"),
+                    headerVersion = new HeaderVersionConstraint(1, true, string.Format(EllucianInstantEnrollmentFormat, 1))
+                }
+            );
+
+            routes.MapHttpRoute(
+                name: "InstantEnrollmentStartPaymentGatewayTransaction",
+                routeTemplate: "instant-enrollment/start-payment-gateway-transaction",
+                defaults: new { controller = "InstantEnrollment", action = "PostStartInstantEnrollmentPaymentGatewayTransaction" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("POST"),
+                    headerVersion = new HeaderVersionConstraint(1, true, string.Format(EllucianInstantEnrollmentFormat, 1))
+                }
+            );
+
+            routes.MapHttpRoute(
+                name: "GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync",
+                routeTemplate: "qapi/instant-enrollment/payment-acknowledgement-paragraph-text",
+                defaults: new { controller = "InstantEnrollment", action = "GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("POST"),
+                    headerVersion = new HeaderVersionConstraint(1, true, string.Format(EllucianInstantEnrollmentFormat, 1))
+                }
+            );
+
+            routes.MapHttpRoute(
+                name: "GetPersonMatchingResultsInstantEnrollment",
+                routeTemplate: "qapi/persons",
+                defaults: new { controller = "InstantEnrollment", action = "QueryPersonMatchResultsInstantEnrollmentByPostAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("POST"),
+                    headerVersion = new HeaderVersionConstraint(1, false, string.Format(EllucianInstantEnrollmentFormat, 1))
+                }
+            );
+
+            routes.MapHttpRoute(
+                name: "GetInstantEnrollmentCashReceiptAcknowledgementAsync",
+                routeTemplate: "qapi/instant-enrollment/cash-receipt-acknowledgement",
+                defaults: new { controller = "InstantEnrollment", action = "GetInstantEnrollmentCashReceiptAcknowledgementAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("POST"),
+                    headerVersion = new HeaderVersionConstraint(1, true, string.Format(EllucianInstantEnrollmentFormat, 1))
+                }
+            );
+
+            routes.MapHttpRoute(
+              name: "GetInstantEnrollmentStudentPrograms2Async",
+              routeTemplate: "students/{studentId}/programs",
+              defaults: new { userId = 0, controller = "InstantEnrollment", action = "GetInstantEnrollmentStudentPrograms2Async" },
               constraints: new
               {
                   httpMethod = new HttpMethodConstraint("GET"),
-                  headerVersion = new HeaderVersionConstraint(10, false, string.Format(HedtechIntegrationMediaTypeFormat, 10))
+                  headerVersion = new HeaderVersionConstraint(1, false, string.Format(EllucianInstantEnrollmentFormat, 1))
               }
-          );
+            );
+
+
+            #endregion
+
+            #region  Job Applications
+
+            routes.MapHttpRoute(
+                name: "GetJobApplicationsByGuidV10",
+                routeTemplate: "job-applications/{guid}",
+                defaults: new { controller = "JobApplications", action = "GetJobApplicationsByGuidAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(10, false, string.Format(HedtechIntegrationMediaTypeFormat, 10))
+                }
+            );
 
             routes.MapHttpRoute(
                name: "DefaultGetJobApplicationsByGuid",
@@ -21780,11 +22370,31 @@ namespace Ellucian.Colleague.Api
                  headerVersion = new HeaderVersionConstraint(1, true)
              }
         );
-
+            routes.MapHttpRoute(
+           name: "GetLeaveRequestsForTimeEntry",
+           routeTemplate: "leave-requests-timeentry",
+           defaults: new { controller = "EmployeeLeaveRequest", action = "GetLeaveRequestsForTimeEntryAsync" },
+           constraints: new
+           {
+               httpMethod = new HttpMethodConstraint("GET"),
+               headerVersion = new HeaderVersionConstraint(1, true)
+           }
+       );
 
             #endregion
 
             #region  Ledger Activities
+
+            routes.MapHttpRoute(
+             name: "GetLedgerActivitiesByGuidV11_1_0",
+             routeTemplate: "ledger-activities/{guid}",
+             defaults: new { controller = "LedgerActivities", action = "GetLedgerActivitiesByGuidAsync", isEedmSupported = true },
+             constraints: new
+             {
+                 httpMethod = new HttpMethodConstraint("GET"),
+                 headerVersion = new HeaderVersionConstraint("11.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0"))
+             }
+         );
 
             routes.MapHttpRoute(
               name: "GetLedgerActivitiesByGuidV11",
@@ -21797,16 +22407,28 @@ namespace Ellucian.Colleague.Api
               }
           );
 
+
             routes.MapHttpRoute(
                name: "DefaultGetLedgerActivitiesByGuid",
                routeTemplate: "ledger-activities/{guid}",
-                  defaults: new { controller = "LedgerActivities", action = "GetLedgerActivitiesByGuidAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, 11) },
+                  defaults: new { controller = "LedgerActivities", action = "GetLedgerActivitiesByGuidAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0") },
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint(11, true)
+                   headerVersion = new HeaderVersionConstraint("11.1.0", true)
                }
            );
+
+            routes.MapHttpRoute(
+             name: "GetLedgerActivitiesV11_1_0",
+             routeTemplate: "ledger-activities",
+             defaults: new { controller = "LedgerActivities", action = "GetLedgerActivitiesAsync", isEedmSupported = true, isBulkSupported = true },
+             constraints: new
+             {
+                 httpMethod = new HttpMethodConstraint("GET"),
+                 headerVersion = new HeaderVersionConstraint("11.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0"))
+             }
+         );
 
 
             routes.MapHttpRoute(
@@ -21820,16 +22442,28 @@ namespace Ellucian.Colleague.Api
               }
           );
 
+
             routes.MapHttpRoute(
                name: "GetLedgerActivities",
                routeTemplate: "ledger-activities",
-                  defaults: new { controller = "LedgerActivities", action = "GetLedgerActivitiesAsync", isEedmSupported = true, isBulkSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, 11) },
+                  defaults: new { controller = "LedgerActivities", action = "GetLedgerActivitiesAsync", isEedmSupported = true, isBulkSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0") },
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint(11, true)
+                   headerVersion = new HeaderVersionConstraint("11.1.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0"))
                }
            );
+
+            routes.MapHttpRoute(
+              name: "PutLedgerActivitiesV11_1_0",
+              routeTemplate: "ledger-activities/{guid}",
+              defaults: new { controller = "LedgerActivities", action = "PutLedgerActivitiesAsync" },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("PUT"),
+                  headerVersion = new HeaderVersionConstraint("11.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0"))
+              }
+          );
 
             routes.MapHttpRoute(
               name: "PutLedgerActivitiesV11",
@@ -21842,6 +22476,16 @@ namespace Ellucian.Colleague.Api
               }
           );
 
+            routes.MapHttpRoute(
+               name: "PostLedgerActivitiesV11_1_0",
+               routeTemplate: "ledger-activities",
+               defaults: new { controller = "LedgerActivities", action = "PostLedgerActivitiesAsync" },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("POST"),
+                  headerVersion = new HeaderVersionConstraint("11.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0"))
+              }
+           );
 
             routes.MapHttpRoute(
                name: "PostLedgerActivitiesV11",
@@ -21864,9 +22508,25 @@ namespace Ellucian.Colleague.Api
 
                 }
            );
+            routes.MapHttpRoute(
+                name: "BulkLedgerActivitiesRequestV11_1_0",
+                routeTemplate: "qapi/ledger-activities",
+                defaults: new
+                {
+                    controller = "BulkLoadRequest",
+                    action = "PostBulkLoadRequestAsync",
+                    permissionCode = "VIEW.LEDGER.ACTIVITIES",
+                    bulkRepresentation = string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0")
+                },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("POST"),
+                    headerVersion = new HeaderVersionConstraint(1, false, string.Format(HedtechIntegrationBulkRequestMediaTypeFormat, "1.0.0"))
+                }
+            );
 
             routes.MapHttpRoute(
-                name: "BulkLedgerActivitiesRequestV1",
+                name: "BulkLedgerActivitiesRequestV11",
                 routeTemplate: "qapi/ledger-activities",
                 defaults: new
                 {
@@ -21884,14 +22544,16 @@ namespace Ellucian.Colleague.Api
 
             routes.MapHttpRoute(
                 name: "BulkLedgerActivitiesStatusV1",
-                routeTemplate: "ledger-activities/{id}",
-                defaults: new { controller = "BulkLoadRequest", action = "GetBulkLoadRequestStatusAsync" },
+                routeTemplate: "ledger-activities/{guid}",
+                defaults: new { controller = "BulkLoadRequest", action = "GetBulkLoadRequestStatusAsync", permissionCode = "VIEW.LEDGER.ACTIVITIES", guid = UrlParameter.Optional },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
                     headerVersion = new HeaderVersionConstraint(1, false, string.Format(HedtechIntegrationBulkRequestMediaTypeFormat, "1.0.0"))
                 }
             );
+
+
 
             routes.MapHttpRoute(
                name: "LedgerActivitiesUnsupported",
@@ -22150,6 +22812,17 @@ namespace Ellucian.Colleague.Api
             #region MaritalStatuses
 
             routes.MapHttpRoute(
+                name: "GetMaritalStatusById2V6_1_0",
+                routeTemplate: "marital-statuses/{id}",
+                defaults: new { controller = "MaritalStatuses", action = "GetMaritalStatusById2Async", isEedmSupported = true },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint("6.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "6.1.0"))
+                }
+            );
+
+            routes.MapHttpRoute(
                 name: "GetMaritalStatusById2V6",
                 routeTemplate: "marital-statuses/{id}",
                 defaults: new { controller = "MaritalStatuses", action = "GetMaritalStatusById2Async", isEedmSupported = true },
@@ -22161,18 +22834,29 @@ namespace Ellucian.Colleague.Api
             );
 
             routes.MapHttpRoute(
-                name: "GetMaritalStatusById2",
+                name: "GetDefaultMaritalStatusById2",
                 routeTemplate: "marital-statuses/{id}",
                    defaults: new { controller = "MaritalStatuses", action = "GetMaritalStatusById2Async", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, 6) },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(6, true)
+                    headerVersion = new HeaderVersionConstraint("6.1.0", true)
                 }
             );
 
             routes.MapHttpRoute(
-                name: "GetCdmMaritalStatuses2V6",
+                name: "GetMaritalStatuses2V6_1_0",
+                routeTemplate: "marital-statuses",
+                defaults: new { controller = "MaritalStatuses", action = "GetMaritalStatuses2Async", isEedmSupported = true },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint("6.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "6.1.0"))
+                }
+            );
+
+            routes.MapHttpRoute(
+                name: "GetMaritalStatuses2V6",
                 routeTemplate: "marital-statuses",
                 defaults: new { controller = "MaritalStatuses", action = "GetMaritalStatuses2Async", isEedmSupported = true },
                 constraints: new
@@ -22194,13 +22878,24 @@ namespace Ellucian.Colleague.Api
             );
 
             routes.MapHttpRoute(
-                name: "GetCdmMaritalStatuses2",
+                name: "GetDefaultMaritalStatuses",
                 routeTemplate: "marital-statuses",
-                   defaults: new { controller = "MaritalStatuses", action = "GetMaritalStatuses2Async", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, 6) },
+                   defaults: new { controller = "MaritalStatuses", action = "GetMaritalStatuses2Async", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "6.1.0") },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(6, true)
+                    headerVersion = new HeaderVersionConstraint("6.1.0", true)
+                }
+            );
+
+            routes.MapHttpRoute(
+                name: "PutMaritalStatusesV6_1_0",
+                routeTemplate: "marital-statuses/{id}",
+                defaults: new { controller = "MaritalStatuses", action = "PutMaritalStatusesAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("PUT"),
+                    headerVersion = new HeaderVersionConstraint("6.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "6.1.0"))
                 }
             );
 
@@ -22214,6 +22909,17 @@ namespace Ellucian.Colleague.Api
                     headerVersion = new HeaderVersionConstraint(6, false, string.Format(HedtechIntegrationMediaTypeFormat, 6))
                 }
             );
+
+            routes.MapHttpRoute(
+               name: "PostMaritalStatusesV6_1_0",
+               routeTemplate: "marital-statuses",
+               defaults: new { controller = "MaritalStatuses", action = "PostMaritalStatusesAsync" },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("POST"),
+                   headerVersion = new HeaderVersionConstraint("6.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "6.1.0"))
+               }
+           );
 
             routes.MapHttpRoute(
                 name: "PostMaritalStatusesV6",
@@ -22234,6 +22940,17 @@ namespace Ellucian.Colleague.Api
                 {
                     httpMethod = new HttpMethodConstraint("DELETE"),
                 }
+            );
+
+            routes.MapHttpRoute(
+              name: "MaritalStatusesUnsupported",
+              routeTemplate: "marital-statuses/{id}",
+               defaults: new { controller = "MaritalStatuses", action = "NotAcceptableStatusException", id = UrlParameter.Optional },
+                  constraints: new
+                  {
+                      httpMethod = new HttpMethodConstraint("GET", "PUT", "POST"),
+                      headerVersion = new HeaderVersionConstraint("*", false, string.Format(HedtechIntegrationMediaTypeFormat, "*"))
+                  }
             );
 
             #endregion
@@ -22739,6 +23456,18 @@ namespace Ellucian.Colleague.Api
                     headerVersion = new HeaderVersionConstraint(1, true)
                 }
             );
+
+            routes.MapHttpRoute(
+                name: "SearchNextApprover",
+                routeTemplate: "next-approvers-search/{queryKeyword}",
+                defaults: new { controller = "Approvers", action = "GetNextApproverByKeywordAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(1, true)
+                }
+            );
+
             #endregion
 
             #region NonAcademicAttendances
@@ -24830,7 +25559,18 @@ namespace Ellucian.Colleague.Api
 
             #endregion
 
-            #region Person HEDM V8 V12 V12.1.0
+            #region Person HEDM V8 V12 V12.1.0 V12.3.0
+
+            routes.MapHttpRoute(
+                name: "GetHedmPersonByGuidV12.3.0",
+                routeTemplate: "persons/{guid}",
+                defaults: new { controller = "Persons", action = "GetPerson5ByIdAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "12.3.0") },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint("12.3.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "12.3.0"))
+                }
+            );
 
             routes.MapHttpRoute(
                 name: "GetHedmPersonByGuidV12.1.0",
@@ -24879,11 +25619,23 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                 name: "DefaultGetHedmPersonByGuid",
                 routeTemplate: "persons/{guid}",
-                defaults: new { controller = "Persons", action = "GetPerson5ByIdAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "12.1.0") },
+                defaults: new { controller = "Persons", action = "GetPerson5ByIdAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "12.3.0") },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint("12.1.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "12.1.0"))
+                    headerVersion = new HeaderVersionConstraint("12.3.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "12.3.0"))
+                }
+            );
+
+            routes.MapHttpRoute(
+                name: "GetHedmPersonV12.3.0",
+               routeTemplate: "persons",
+                defaults: new { controller = "Persons", action = "GetPerson5Async", isEedmSupported = true, isBulkSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "12.3.0") },
+                constraints: new
+                {
+
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint("12.3.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "12.3.0"))
                 }
             );
 
@@ -24938,13 +25690,24 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                 name: "DefaultGetHedmPerson",
                routeTemplate: "persons",
-                defaults: new { controller = "Persons", action = "GetPerson5Async", isEedmSupported = true, isBulkSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "12.1.0") },
+                defaults: new { controller = "Persons", action = "GetPerson5Async", isEedmSupported = true, isBulkSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "12.3.0") },
                 constraints: new
                 {
 
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint("12.1.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "12.1.0"))
+                    headerVersion = new HeaderVersionConstraint("12.3.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "12.3.0"))
                 }
+            );
+
+            routes.MapHttpRoute(
+               name: "CreateHedmPersonV12.3.0",
+               routeTemplate: "persons",
+               defaults: new { controller = "Persons", action = "PostPerson5Async", isEedmSupported = true },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("POST"),
+                   headerVersion = new HeaderVersionConstraint("12.3.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "12.3.0"))
+               }
             );
 
             routes.MapHttpRoute(
@@ -25026,6 +25789,17 @@ namespace Ellucian.Colleague.Api
             );
 
             routes.MapHttpRoute(
+              name: "UpdateHedmPersonV12.3.0",
+              routeTemplate: "persons/{guid}",
+              defaults: new { controller = "Persons", action = "PutPerson5Async", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("PUT"),
+                  headerVersion = new HeaderVersionConstraint("12.3.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "12.3.0"))
+              }
+           );
+
+            routes.MapHttpRoute(
               name: "UpdateHedmPersonV12.1.0",
               routeTemplate: "persons/{guid}",
               defaults: new { controller = "Persons", action = "PutPerson5Async", isEedmSupported = true },
@@ -25089,7 +25863,7 @@ namespace Ellucian.Colleague.Api
                     controller = "BulkLoadRequest",
                     action = "PostBulkLoadRequestAsync",
                     permissionCode = "VIEW.ANY.PERSON",
-                    bulkRepresentation = string.Format(HedtechIntegrationMediaTypeFormat, "12.1.0")
+                    bulkRepresentation = string.Format(HedtechIntegrationMediaTypeFormat, "12.3.0")
                 },
                 constraints: new
                 {
@@ -25100,8 +25874,8 @@ namespace Ellucian.Colleague.Api
 
             routes.MapHttpRoute(
                 name: "BulkPersonRequestStatusV1",
-                routeTemplate: "persons/{id}",
-                defaults: new { controller = "BulkLoadRequest", action = "GetBulkLoadRequestStatusAsync" },
+                routeTemplate: "persons/{guid}",
+                defaults: new { controller = "BulkLoadRequest", action = "GetBulkLoadRequestStatusAsync", permissionCode = "VIEW.ANY.PERSON", guid = UrlParameter.Optional },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
@@ -25741,6 +26515,17 @@ namespace Ellucian.Colleague.Api
             #region  PersonExternalEducation
 
             routes.MapHttpRoute(
+            name: "GetPersonExternalEducationByGuidV1.1.0",
+            routeTemplate: "person-external-education/{guid}",
+            defaults: new { controller = "PersonExternalEducation", action = "GetPersonExternalEducationByGuidAsync", isEedmSupported = true },
+            constraints: new
+            {
+                httpMethod = new HttpMethodConstraint("GET"),
+                headerVersion = new HeaderVersionConstraint("1.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0"))
+            }
+         );
+
+            routes.MapHttpRoute(
               name: "GetPersonExternalEducationByGuidV1.0.0",
               routeTemplate: "person-external-education/{guid}",
               defaults: new { controller = "PersonExternalEducation", action = "GetPersonExternalEducationByGuidAsync", isEedmSupported = true },
@@ -25749,19 +26534,29 @@ namespace Ellucian.Colleague.Api
                   httpMethod = new HttpMethodConstraint("GET"),
                   headerVersion = new HeaderVersionConstraint("1.0.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0"))
               }
-          );
+           );
 
             routes.MapHttpRoute(
                name: "DefaultGetPersonExternalEducationByGuid",
                routeTemplate: "person-external-education/{guid}",
-                  defaults: new { controller = "PersonExternalEducation", action = "GetPersonExternalEducationByGuidAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0") },
+                  defaults: new { controller = "PersonExternalEducation", action = "GetPersonExternalEducationByGuidAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0") },
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint("1.0.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0"))
+                   headerVersion = new HeaderVersionConstraint("1.1.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0"))
                }
            );
 
+            routes.MapHttpRoute(
+             name: "GetPersonExternalEducationV1.1.0",
+             routeTemplate: "person-external-education",
+             defaults: new { controller = "PersonExternalEducation", action = "GetPersonExternalEducationAsync", isEedmSupported = true },
+             constraints: new
+             {
+                 httpMethod = new HttpMethodConstraint("GET"),
+                 headerVersion = new HeaderVersionConstraint("1.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0"))
+             }
+         );
 
             routes.MapHttpRoute(
               name: "GetPersonExternalEducationV1.0.0",
@@ -25777,25 +26572,46 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                name: "DefaultGetPersonExternalEducation",
                routeTemplate: "person-external-education",
-                  defaults: new { controller = "PersonExternalEducation", action = "GetPersonExternalEducationAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0") },
+                  defaults: new { controller = "PersonExternalEducation", action = "GetPersonExternalEducationAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0") },
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint("1.0.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0"))
+                   headerVersion = new HeaderVersionConstraint("1.1.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0"))
                }
            );
 
             routes.MapHttpRoute(
-              name: "PutPersonExternalEducationV1.0.0",
+              name: "PutPersonExternalEducationV1.1.0",
               routeTemplate: "person-external-education/{guid}",
               defaults: new { controller = "PersonExternalEducation", action = "PutPersonExternalEducationAsync", isEedmSupported = true },
               constraints: new
               {
                   httpMethod = new HttpMethodConstraint("PUT"),
-                  headerVersion = new HeaderVersionConstraint("1.0.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0"))
+                  headerVersion = new HeaderVersionConstraint("1.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0"))
               }
           );
 
+            routes.MapHttpRoute(
+             name: "PutPersonExternalEducationV1.0.0",
+             routeTemplate: "person-external-education/{guid}",
+             defaults: new { controller = "PersonExternalEducation", action = "PutPersonExternalEducationAsync", isEedmSupported = true },
+             constraints: new
+             {
+                 httpMethod = new HttpMethodConstraint("PUT"),
+                 headerVersion = new HeaderVersionConstraint("1.0.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0"))
+             }
+         );
+
+            routes.MapHttpRoute(
+               name: "PostPersonExternalEducationV1.1.0",
+               routeTemplate: "person-external-education",
+               defaults: new { controller = "PersonExternalEducation", action = "PostPersonExternalEducationAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("POST"),
+                  headerVersion = new HeaderVersionConstraint("1.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0"))
+              }
+           );
 
             routes.MapHttpRoute(
                name: "PostPersonExternalEducationV1.0.0",
@@ -25835,6 +26651,17 @@ namespace Ellucian.Colleague.Api
             #region  Person External Education Credentials
 
             routes.MapHttpRoute(
+             name: "GetPersonExternalEducationCredentialsByGuidV1.1.0",
+             routeTemplate: "person-external-education-credentials/{guid}",
+             defaults: new { controller = "PersonExternalEducationCredentials", action = "GetPersonExternalEducationCredentialsByGuidAsync", isEedmSupported = true },
+             constraints: new
+             {
+                 httpMethod = new HttpMethodConstraint("GET"),
+                 headerVersion = new HeaderVersionConstraint("1.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0"))
+             }
+           );
+
+            routes.MapHttpRoute(
               name: "GetPersonExternalEducationCredentialsByGuidV1.0.0",
               routeTemplate: "person-external-education-credentials/{guid}",
               defaults: new { controller = "PersonExternalEducationCredentials", action = "GetPersonExternalEducationCredentialsByGuidAsync", isEedmSupported = true },
@@ -25848,14 +26675,24 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                name: "DefaultGetPersonExternalEducationCredentialsByGuid",
                routeTemplate: "person-external-education-credentials/{guid}",
-                  defaults: new { controller = "PersonExternalEducationCredentials", action = "GetPersonExternalEducationCredentialsByGuidAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0") },
+                  defaults: new { controller = "PersonExternalEducationCredentials", action = "GetPersonExternalEducationCredentialsByGuidAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0") },
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint("1.0.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0"))
+                   headerVersion = new HeaderVersionConstraint("1.1.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0"))
                }
             );
 
+            routes.MapHttpRoute(
+              name: "GetPersonExternalEducationCredentialsV1.1.0",
+              routeTemplate: "person-external-education-credentials",
+              defaults: new { controller = "PersonExternalEducationCredentials", action = "GetPersonExternalEducationCredentialsAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("GET"),
+                  headerVersion = new HeaderVersionConstraint("1.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0"))
+              }
+            );
 
             routes.MapHttpRoute(
               name: "GetPersonExternalEducationCredentialsV1.0.0",
@@ -25871,13 +26708,24 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                name: "DefaultGetPersonExternalEducationCredentials",
                routeTemplate: "person-external-education-credentials",
-                  defaults: new { controller = "PersonExternalEducationCredentials", action = "GetPersonExternalEducationCredentialsAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0") },
+                  defaults: new { controller = "PersonExternalEducationCredentials", action = "GetPersonExternalEducationCredentialsAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0") },
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint("1.0.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0"))
+                   headerVersion = new HeaderVersionConstraint("1.1.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0"))
                }
             );
+
+            routes.MapHttpRoute(
+             name: "PutPersonExternalEducationCredentialsV1.1.0",
+             routeTemplate: "person-external-education-credentials/{guid}",
+             defaults: new { controller = "PersonExternalEducationCredentials", action = "PutPersonExternalEducationCredentialsAsync", isEedmSupported = true },
+             constraints: new
+             {
+                 httpMethod = new HttpMethodConstraint("PUT"),
+                 headerVersion = new HeaderVersionConstraint("1.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0"))
+             }
+           );
 
             routes.MapHttpRoute(
               name: "PutPersonExternalEducationCredentialsV1.0.0",
@@ -25890,6 +26738,16 @@ namespace Ellucian.Colleague.Api
               }
             );
 
+            routes.MapHttpRoute(
+              name: "PostPersonExternalEducationCredentialsV1.1.0",
+              routeTemplate: "person-external-education-credentials",
+              defaults: new { controller = "PersonExternalEducationCredentials", action = "PostPersonExternalEducationCredentialsAsync", isEedmSupported = true },
+             constraints: new
+             {
+                 httpMethod = new HttpMethodConstraint("POST"),
+                 headerVersion = new HeaderVersionConstraint("1.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0"))
+             }
+           );
 
             routes.MapHttpRoute(
                name: "PostPersonExternalEducationCredentialsV1.0.0",
@@ -28137,7 +28995,7 @@ namespace Ellucian.Colleague.Api
                     contentType = new ContentTypeConstraint(string.Format(HedtechIntegrationProspectOpportunitiesSubmissionsFormat, "1.0.0")),
                     headerVersion = new HeaderVersionConstraint("*", false, string.Format(HedtechIntegrationMediaTypeFormat, "*"))
                 }
-          );    
+          );
 
             routes.MapHttpRoute(
               name: "GetProspectOpportunitiesByGuidVema",
@@ -28472,6 +29330,17 @@ namespace Ellucian.Colleague.Api
                 name: "PersonPhoto",
                 routeTemplate: "photos/people/{id}",
                 defaults: new { userId = 0, controller = "Photos", action = "GetPersonPhoto" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(1, true)
+                }
+            );
+
+            routes.MapHttpRoute(
+                name: "GetUserPhotoConfiguration",
+                routeTemplate: "configuration/photo",
+                defaults: new { controller = "Photos", action = "GetUserPhotoConfiguration" },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
@@ -28919,6 +29788,16 @@ namespace Ellucian.Colleague.Api
                     headerVersion = new HeaderVersionConstraint(1, true)
                 }
             );
+            routes.MapHttpRoute(
+              name: "QueryProjects",
+              routeTemplate: "qapi/projects",
+              defaults: new { controller = "Projects", action = "QueryProjectsAsync" },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("POST"),
+                  headerVersion = new HeaderVersionConstraint(1, true)
+              }
+          );
 
             #endregion
 
@@ -29219,6 +30098,17 @@ namespace Ellucian.Colleague.Api
             #region PurchaseOrders
 
             routes.MapHttpRoute(
+              name: "GetPurchaseOrdersByGuidV11_2_0",
+              routeTemplate: "purchase-orders/{guid}",
+              defaults: new { controller = "PurchaseOrders", action = "GetPurchaseOrdersByGuidAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("GET"),
+                  headerVersion = new HeaderVersionConstraint("11.2.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "11.2.0"))
+              }
+          );
+
+            routes.MapHttpRoute(
               name: "GetPurchaseOrdersByGuidV11_1_0",
               routeTemplate: "purchase-orders/{guid}",
               defaults: new { controller = "PurchaseOrders", action = "GetPurchaseOrdersByGuidAsync", isEedmSupported = true },
@@ -29254,13 +30144,24 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                name: "DefaultGetPurchaseOrdersByGuid",
                routeTemplate: "purchase-orders/{guid}",
-                  defaults: new { controller = "PurchaseOrders", action = "GetPurchaseOrdersByGuidAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0") },
+                  defaults: new { controller = "PurchaseOrders", action = "GetPurchaseOrdersByGuidAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "11.2.0") },
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint("11.1.0", true)
+                   headerVersion = new HeaderVersionConstraint("11.2.0", true)
                }
            );
+
+            routes.MapHttpRoute(
+              name: "GetPurchaseOrdersV11_2_0",
+              routeTemplate: "purchase-orders",
+              defaults: new { controller = "PurchaseOrders", action = "GetPurchaseOrdersAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("GET"),
+                  headerVersion = new HeaderVersionConstraint("11.2.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "11.2.0"))
+              }
+            );
 
             routes.MapHttpRoute(
               name: "GetPurchaseOrdersV11_1_0",
@@ -29288,13 +30189,24 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                name: "DefaultGetPurchaseOrders",
                routeTemplate: "purchase-orders",
-                  defaults: new { controller = "PurchaseOrders", action = "GetPurchaseOrdersAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0") },
+                  defaults: new { controller = "PurchaseOrders", action = "GetPurchaseOrdersAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "11.2.0") },
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint("11.1.0", true)
+                   headerVersion = new HeaderVersionConstraint("11.2.0", true)
                }
            );
+
+            routes.MapHttpRoute(
+              name: "PutPurchaseOrdersV11_2_0",
+              routeTemplate: "purchase-orders/{guid}",
+              defaults: new { controller = "PurchaseOrders", action = "PutPurchaseOrdersAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("PUT"),
+                  headerVersion = new HeaderVersionConstraint("11.2.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "11.2.0"))
+              }
+            );
 
             routes.MapHttpRoute(
               name: "PutPurchaseOrdersV11_1_0",
@@ -29317,6 +30229,17 @@ namespace Ellucian.Colleague.Api
                   headerVersion = new HeaderVersionConstraint(11, false, string.Format(HedtechIntegrationMediaTypeFormat, 11))
               }
           );
+
+            routes.MapHttpRoute(
+               name: "PostPurchaseOrdersV11_2_0",
+               routeTemplate: "purchase-orders",
+               defaults: new { controller = "PurchaseOrders", action = "PostPurchaseOrdersAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("POST"),
+                  headerVersion = new HeaderVersionConstraint("11.2.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "11.2.0"))
+              }
+            );
 
             routes.MapHttpRoute(
                name: "PostPurchaseOrdersV11_1_0",
@@ -29371,7 +30294,7 @@ namespace Ellucian.Colleague.Api
                     httpMethod = new HttpMethodConstraint("GET"),
                     headerVersion = new HeaderVersionConstraint(1, false)
                 });
-            
+
             routes.MapHttpRoute(
             name: "PostPurchaseOrder",
             routeTemplate: "purchaseOrders",
@@ -29739,12 +30662,42 @@ namespace Ellucian.Colleague.Api
             );
             #endregion
 
+            #region RegistrationMarketingSource
+
+            routes.MapHttpRoute(
+                name: "GetRegistrationMarketingSourcesAsync",
+                routeTemplate: "registration-marketing-sources",
+                defaults: new { controller = "RegistrationMarketingSources", action = "GetRegistrationMarketingSourcesAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(1, true)
+                }
+            );
+
+            #endregion
+
             #region RegistrationOptions
 
             routes.MapHttpRoute(
                 name: "GetRegistrationOptions",
                 routeTemplate: "students/{studentId}/registration-options",
                 defaults: new { controller = "RegistrationOptions", action = "GetAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(1, true)
+                }
+            );
+
+            #endregion
+
+            #region RegistrationReasons
+
+            routes.MapHttpRoute(
+                name: "GetRegistrationReasonsAsync",
+                routeTemplate: "registration-reasons",
+                defaults: new { controller = "RegistrationReasons", action = "GetRegistrationReasonsAsync" },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
@@ -30368,6 +31321,17 @@ namespace Ellucian.Colleague.Api
              );
 
             routes.MapHttpRoute(
+              name: "GetRequisitionsByGuidV11_1",
+              routeTemplate: "requisitions/{guid}",
+              defaults: new { controller = "Requisitions", action = "GetRequisitionsByGuidAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("GET"),
+                  headerVersion = new HeaderVersionConstraint("11.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0"))
+              }
+            );
+
+            routes.MapHttpRoute(
               name: "GetRequisitionsByGuidV11",
               routeTemplate: "requisitions/{guid}",
               defaults: new { controller = "Requisitions", action = "GetRequisitionsByGuidAsync", isEedmSupported = true },
@@ -30381,14 +31345,24 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                name: "DefaultGetRequisitionsByGuid",
                routeTemplate: "requisitions/{guid}",
-                  defaults: new { controller = "Requisitions", action = "GetRequisitionsByGuidAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, 11) },
+                  defaults: new { controller = "Requisitions", action = "GetRequisitionsByGuidAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0") },
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint(11, true)
+                   headerVersion = new HeaderVersionConstraint("11.1.0", true)
                }
            );
 
+            routes.MapHttpRoute(
+              name: "GetRequisitionsV11_1",
+              routeTemplate: "requisitions",
+              defaults: new { controller = "Requisitions", action = "GetRequisitionsAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("GET"),
+                  headerVersion = new HeaderVersionConstraint("11.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0"))
+              }
+            );
 
             routes.MapHttpRoute(
               name: "GetRequisitionsV11",
@@ -30404,13 +31378,24 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                name: "GetRequisitions",
                routeTemplate: "requisitions",
-                  defaults: new { controller = "Requisitions", action = "GetRequisitionsAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, 11) },
+                  defaults: new { controller = "Requisitions", action = "GetRequisitionsAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0") },
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint(11, true)
+                   headerVersion = new HeaderVersionConstraint("11.1.0", true)
                }
            );
+
+            routes.MapHttpRoute(
+             name: "PutRequisitionsV11_1_0",
+             routeTemplate: "requisitions/{guid}",
+             defaults: new { controller = "Requisitions", action = "PutRequisitionsAsync", isEedmSupported = true },
+             constraints: new
+             {
+                 httpMethod = new HttpMethodConstraint("PUT"),
+                 headerVersion = new HeaderVersionConstraint("11.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0"))
+             }
+         );
 
             routes.MapHttpRoute(
               name: "PutRequisitionsV11",
@@ -30421,8 +31406,18 @@ namespace Ellucian.Colleague.Api
                   httpMethod = new HttpMethodConstraint("PUT"),
                   headerVersion = new HeaderVersionConstraint(11, false, string.Format(HedtechIntegrationMediaTypeFormat, 11))
               }
-          );
+          );          
 
+            routes.MapHttpRoute(
+               name: "PostRequisitionsV11_1_0",
+               routeTemplate: "requisitions",
+               defaults: new { controller = "Requisitions", action = "PostRequisitionsAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("POST"),
+                  headerVersion = new HeaderVersionConstraint("11.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0"))
+              }
+            );
 
             routes.MapHttpRoute(
                name: "PostRequisitionsV11",
@@ -30444,18 +31439,7 @@ namespace Ellucian.Colleague.Api
                     httpMethod = new HttpMethodConstraint("DELETE"),
 
                 }
-           );
-
-            routes.MapHttpRoute(
-             name: "RequisitionsUnsupported",
-             routeTemplate: "requisitions/{id}",
-              defaults: new { controller = "Requisitions", action = "NotAcceptableStatusException", id = UrlParameter.Optional },
-                 constraints: new
-                 {
-                     httpMethod = new HttpMethodConstraint("GET", "PUT", "POST"),
-                     headerVersion = new HeaderVersionConstraint("*", false, string.Format(HedtechIntegrationMediaTypeFormat, "*"))
-                 }
-           );
+           );            
 
             routes.MapHttpRoute(
                  name: "GetRequisitionsSummaryByPersonId",
@@ -30501,6 +31485,17 @@ namespace Ellucian.Colleague.Api
                     headerVersion = new HeaderVersionConstraint(1, false)
                 }
             );
+
+            routes.MapHttpRoute(
+             name: "RequisitionsUnsupported",
+             routeTemplate: "requisitions/{id}",
+              defaults: new { controller = "Requisitions", action = "NotAcceptableStatusException", id = UrlParameter.Optional },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("GET", "PUT", "POST"),
+                     headerVersion = new HeaderVersionConstraint("*", false, string.Format(HedtechIntegrationMediaTypeFormat, "*"))
+                 }
+           );
             #endregion
 
             #region ResidenceLife
@@ -31825,6 +32820,28 @@ namespace Ellucian.Colleague.Api
             #region SectionRegistrations
 
             routes.MapHttpRoute(
+               name: "GetSectionRegistrationsByGuidV16_1_0",
+               routeTemplate: "section-registrations/{guid}",
+               defaults: new { controller = "SectionRegistrations", action = "GetSectionRegistrationByGuid3Async", isEedmSupported = true },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("GET"),
+                   headerVersion = new HeaderVersionConstraint("16.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "16.1.0"))
+               }
+           );
+
+            routes.MapHttpRoute(
+                name: "GetSectionRegistrationsByGuidV16",
+                routeTemplate: "section-registrations/{guid}",
+                defaults: new { controller = "SectionRegistrations", action = "GetSectionRegistrationByGuid3Async", isEedmSupported = true },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint("16.0.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "16.0.0"))
+                }
+            );
+
+            routes.MapHttpRoute(
                 name: "GetHedmSectionRegistration7",
                 routeTemplate: "section-registrations/{guid}",
                 defaults: new { controller = "SectionRegistrations", action = "GetSectionRegistration2Async", isEedmSupported = true },
@@ -31846,16 +32863,6 @@ namespace Ellucian.Colleague.Api
                 }
             );
 
-            routes.MapHttpRoute(
-              name: "GetSectionRegistrationsByGuidV1600",
-              routeTemplate: "section-registrations/{guid}",
-              defaults: new { controller = "SectionRegistrations", action = "GetSectionRegistrationByGuid3Async", isEedmSupported = true },
-              constraints: new
-              {
-                  httpMethod = new HttpMethodConstraint("GET"),
-                  headerVersion = new HeaderVersionConstraint("16.0.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "16.0.0"))
-              }
-          );
 
             routes.MapHttpRoute(
               name: "GetSectionRegistrationsGradeOptionsByGuidV1",
@@ -31871,12 +32878,34 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                 name: "DefaultGetHedmSectionRegistration",
                 routeTemplate: "section-registrations/{guid}",
-                defaults: new { controller = "SectionRegistrations", action = "GetSectionRegistrationByGuid3Async", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "16.0.0") },
+                defaults: new { controller = "SectionRegistrations", action = "GetSectionRegistrationByGuid3Async", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "16.1.0") },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint("16.0.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "16.0.0"))
+                    headerVersion = new HeaderVersionConstraint("16.1.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "16.1.0"))
                 }
+            );
+
+            routes.MapHttpRoute(
+                name: "GetSectionRegistrationsV16_1_0",
+                routeTemplate: "section-registrations",
+                defaults: new { controller = "SectionRegistrations", action = "GetSectionRegistrations3Async", isEedmSupported = true, isBulkSupported = true },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint("16.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "16.1.0"))
+                }
+           );
+
+            routes.MapHttpRoute(
+                 name: "GetSectionRegistrationsV16",
+                 routeTemplate: "section-registrations",
+                 defaults: new { controller = "SectionRegistrations", action = "GetSectionRegistrations3Async", isEedmSupported = true, isBulkSupported = true },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("GET"),
+                     headerVersion = new HeaderVersionConstraint("16.0.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "16.0.0"))
+                 }
             );
 
             routes.MapHttpRoute(
@@ -31901,16 +32930,6 @@ namespace Ellucian.Colleague.Api
                 }
             );
 
-            routes.MapHttpRoute(
-              name: "GetSectionRegistrationsV1600",
-              routeTemplate: "section-registrations",
-              defaults: new { controller = "SectionRegistrations", action = "GetSectionRegistrations3Async", isEedmSupported = true, isBulkSupported = true },
-              constraints: new
-              {
-                  httpMethod = new HttpMethodConstraint("GET"),
-                  headerVersion = new HeaderVersionConstraint("16.0.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "16.0.0"))
-              }
-          );
 
             routes.MapHttpRoute(
               name: "GetSectionRegistrationsGradeOptionsV1",
@@ -31926,16 +32945,27 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                 name: "DefaultGetHedmSectionRegistrations",
                 routeTemplate: "section-registrations",
-                defaults: new { controller = "SectionRegistrations", action = "GetSectionRegistrations3Async", isEedmSupported = true, isBulkSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "16.0.0") },
+                defaults: new { controller = "SectionRegistrations", action = "GetSectionRegistrations3Async", isEedmSupported = true, isBulkSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "16.1.0") },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint("16.0.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "16.0.0"))
+                    headerVersion = new HeaderVersionConstraint("16.1.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "16.1.0"))
                 }
             );
 
             routes.MapHttpRoute(
-               name: "PostSectionRegistrationsV1600",
+              name: "PostSectionRegistrationsV16_1_0",
+              routeTemplate: "section-registrations",
+              defaults: new { controller = "SectionRegistrations", action = "PostSectionRegistrations3Async", isEedmSupported = true },
+             constraints: new
+             {
+                 httpMethod = new HttpMethodConstraint("POST"),
+                 headerVersion = new HeaderVersionConstraint("16.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "16.1.0"))
+             }
+          );
+
+            routes.MapHttpRoute(
+               name: "PostSectionRegistrationsV16",
                routeTemplate: "section-registrations",
                defaults: new { controller = "SectionRegistrations", action = "PostSectionRegistrations3Async", isEedmSupported = true },
               constraints: new
@@ -31979,7 +33009,18 @@ namespace Ellucian.Colleague.Api
            );
 
             routes.MapHttpRoute(
-              name: "PutSectionRegistrationsV1600",
+                 name: "PutSectionRegistrationsV16_1_0",
+                 routeTemplate: "section-registrations/{guid}",
+                 defaults: new { controller = "SectionRegistrations", action = "PutSectionRegistrations3Async", isEedmSupported = true },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("PUT"),
+                     headerVersion = new HeaderVersionConstraint("16.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "16.1.0"))
+                 }
+            );
+
+            routes.MapHttpRoute(
+              name: "PutSectionRegistrationsV16",
               routeTemplate: "section-registrations/{guid}",
               defaults: new { controller = "SectionRegistrations", action = "PutSectionRegistrations3Async", isEedmSupported = true },
               constraints: new
@@ -32051,8 +33092,8 @@ namespace Ellucian.Colleague.Api
 
             routes.MapHttpRoute(
                 name: "BulkSectionRegistrationsRequestStatusV1",
-                routeTemplate: "section-registrations/{id}",
-                defaults: new { controller = "BulkLoadRequest", action = "GetBulkLoadRequestStatusAsync" },
+                routeTemplate: "section-registrations/{guid}",
+                defaults: new { controller = "BulkLoadRequest", action = "GetBulkLoadRequestStatusAsync", permissionCode = "VIEW.REGISTRATIONS", guid = UrlParameter.Optional },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
@@ -34348,8 +35389,8 @@ namespace Ellucian.Colleague.Api
 
             routes.MapHttpRoute(
                 name: "BulkStudentAcademicPeriodsRequestStatusV1",
-                routeTemplate: "student-academic-periods/{id}",
-                defaults: new { controller = "BulkLoadRequest", action = "GetBulkLoadRequestStatusAsync" },
+                routeTemplate: "student-academic-periods/{guid}",
+                defaults: new { controller = "BulkLoadRequest", action = "GetBulkLoadRequestStatusAsync", permissionCode = "VIEW.STUDENT.ACADEMIC.PERIODS", guid = UrlParameter.Optional },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
@@ -35782,6 +36823,17 @@ namespace Ellucian.Colleague.Api
             #region StudentCohorts
 
             routes.MapHttpRoute(
+               name: "GetStudentCohortByIdV720",
+               routeTemplate: "student-cohorts/{id}",
+               defaults: new { controller = "StudentCohorts", action = "GetStudentCohortByIdAsync", isEedmSupported = true },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("GET"),
+                   headerVersion = new HeaderVersionConstraint("7.2.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "7.2.0"))
+               }
+            );
+
+            routes.MapHttpRoute(
                name: "GetStudentCohortByIdV710",
                routeTemplate: "student-cohorts/{id}",
                defaults: new { controller = "StudentCohorts", action = "GetStudentCohortByIdAsync", isEedmSupported = true },
@@ -35817,13 +36869,24 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                 name: "DefaultStudentCohortById",
                 routeTemplate: "student-cohorts/{id}",
-                   defaults: new { controller = "StudentCohorts", action = "GetStudentCohortByIdAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "7.1.0") },
+                   defaults: new { controller = "StudentCohorts", action = "GetStudentCohortByIdAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "7.2.0") },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint("7.1.0", true)
+                    headerVersion = new HeaderVersionConstraint("7.2.0", true)
                 }
             );
+
+            routes.MapHttpRoute(
+               name: "GetStudentCohortsV720",
+               routeTemplate: "student-cohorts",
+               defaults: new { controller = "StudentCohorts", action = "GetStudentCohortsAsync", isEedmSupported = true },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("GET"),
+                   headerVersion = new HeaderVersionConstraint("7.2.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "7.2.0"))
+               }
+           );
 
             routes.MapHttpRoute(
                name: "GetStudentCohortsV710",
@@ -35861,13 +36924,24 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                 name: "DefaultStudentCohorts",
                 routeTemplate: "student-cohorts",
-                   defaults: new { controller = "StudentCohorts", action = "GetStudentCohortsAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "7.1.0") },
+                   defaults: new { controller = "StudentCohorts", action = "GetStudentCohortsAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "7.2.0") },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint("7.1.0", true)
+                    headerVersion = new HeaderVersionConstraint("7.2.0", true)
                 }
             );
+
+            routes.MapHttpRoute(
+               name: "PutStudentCohortV720",
+               routeTemplate: "student-cohorts/{id}",
+               defaults: new { controller = "StudentCohorts", action = "PutStudentCohortAsync" },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("PUT"),
+                   headerVersion = new HeaderVersionConstraint("7.2.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "7.2.0"))
+               }
+           );
 
             routes.MapHttpRoute(
                name: "PutStudentCohortV710",
@@ -35901,6 +36975,17 @@ namespace Ellucian.Colleague.Api
                    headerVersion = new HeaderVersionConstraint(6, false, string.Format(HedtechIntegrationMediaTypeFormat, 6))
                }
            );
+
+            routes.MapHttpRoute(
+                name: "PostStudentCohortV720",
+                routeTemplate: "student-cohorts",
+                defaults: new { controller = "StudentCohorts", action = "PostStudentCohortAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("POST"),
+                    headerVersion = new HeaderVersionConstraint("7.2.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "7.2.0"))
+                }
+            );
 
             routes.MapHttpRoute(
                 name: "PostStudentCohortV710",
@@ -36464,6 +37549,17 @@ namespace Ellucian.Colleague.Api
             #region RestrictedStudentFinancialAidAwards
 
             routes.MapHttpRoute(
+                name: "GetRestrictedStudentFinancialAidAwardById1110",
+                routeTemplate: "restricted-student-financial-aid-awards/{id}",
+                defaults: new { controller = "StudentFinancialAidAwards", action = "GetRestrictedById2Async", isEedmSupported = true },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint("11.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0"))
+                }
+            );
+
+            routes.MapHttpRoute(
                 name: "GetRestrictedStudentFinancialAidAwardById11",
                 routeTemplate: "restricted-student-financial-aid-awards/{id}",
                 defaults: new { controller = "StudentFinancialAidAwards", action = "GetRestrictedById2Async", isEedmSupported = true },
@@ -36482,6 +37578,17 @@ namespace Ellucian.Colleague.Api
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
                     headerVersion = new HeaderVersionConstraint(7, false, string.Format(HedtechIntegrationMediaTypeFormat, 7))
+                }
+            );
+
+            routes.MapHttpRoute(
+                name: "GetRestrictedAllStudentFinancialAidAwards1110",
+                routeTemplate: "restricted-student-financial-aid-awards",
+                defaults: new { controller = "StudentFinancialAidAwards", action = "GetRestricted3Async", isEedmSupported = true },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint("11.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0"))
                 }
             );
 
@@ -36510,22 +37617,33 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                 name: "GetRestrictedStudentFinancialAidAwardByIdDefault",
                 routeTemplate: "restricted-student-financial-aid-awards/{id}",
-                defaults: new { controller = "StudentFinancialAidAwards", action = "GetRestrictedById2Async", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, 11) },
+                defaults: new { controller = "StudentFinancialAidAwards", action = "GetRestrictedById2Async", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0") },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(11, true)
+                    headerVersion = new HeaderVersionConstraint("11.1.0", true)
                 }
             );
 
             routes.MapHttpRoute(
                 name: "GetRestrictedAllStudentFinancialAidAwardsDefault",
                 routeTemplate: "restricted-student-financial-aid-awards",
-                defaults: new { controller = "StudentFinancialAidAwards", action = "GetRestricted2Async", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, 11) },
+                defaults: new { controller = "StudentFinancialAidAwards", action = "GetRestricted3Async", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0") },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(11, true)
+                    headerVersion = new HeaderVersionConstraint("11.1.0", true)
+                }
+            );
+
+            routes.MapHttpRoute(
+                name: "PutRestrictedStudentFinancialAidAward1110",
+                routeTemplate: "restricted-student-financial-aid-awards/{id}",
+                defaults: new { controller = "StudentFinancialAidAwards", action = "UpdateAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("PUT"),
+                    headerVersion = new HeaderVersionConstraint("11.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0"))
                 }
             );
 
@@ -36548,6 +37666,17 @@ namespace Ellucian.Colleague.Api
                 {
                     httpMethod = new HttpMethodConstraint("PUT"),
                     headerVersion = new HeaderVersionConstraint(7, false, string.Format(HedtechIntegrationMediaTypeFormat, 7))
+                }
+            );
+
+            routes.MapHttpRoute(
+                name: "PostRestrictedStudentFinancialAidAward1110",
+                routeTemplate: "restricted-student-financial-aid-awards",
+                defaults: new { controller = "StudentFinancialAidAwards", action = "CreateAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("POST"),
+                    headerVersion = new HeaderVersionConstraint("11.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "11.1.0"))
                 }
             );
 
@@ -36825,8 +37954,8 @@ namespace Ellucian.Colleague.Api
 
             routes.MapHttpRoute(
                 name: "BulkStudentGradePointAveragesRequestStatusV1",
-                routeTemplate: "student-grade-point-averages/{id}",
-                defaults: new { controller = "BulkLoadRequest", action = "GetBulkLoadRequestStatusAsync" },
+                routeTemplate: "student-grade-point-averages/{guid}",
+                defaults: new { controller = "BulkLoadRequest", action = "GetBulkLoadRequestStatusAsync", permissionCode = "VIEW.STUDENT.GRADE.POINT.AVERAGES", guid = UrlParameter.Optional },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
@@ -37195,6 +38324,19 @@ namespace Ellucian.Colleague.Api
                 }
             );
 
+            #endregion
+
+            #region StudentTransferWork
+            routes.MapHttpRoute(
+                name: "GetStudentTransferWork",
+                routeTemplate: "students/{studentId}/transfer-work",
+                defaults: new { controller = "StudentTransferWork", action = "GetStudentTransferWorkAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(1, true)
+                }
+            );
             #endregion
 
             #region Students
@@ -38464,6 +39606,17 @@ namespace Ellucian.Colleague.Api
           );
 
             routes.MapHttpRoute(
+              name: "GetStudentTranscriptGradesByGuidV1.1.0",
+              routeTemplate: "student-transcript-grades/{guid}",
+              defaults: new { controller = "StudentTranscriptGrades", action = "GetStudentTranscriptGradesByGuidAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("GET"),
+                  headerVersion = new HeaderVersionConstraint("1.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0"))
+              }
+           );
+
+            routes.MapHttpRoute(
               name: "GetStudentTranscriptGradesByGuidV1.0.0",
               routeTemplate: "student-transcript-grades/{guid}",
               defaults: new { controller = "StudentTranscriptGrades", action = "GetStudentTranscriptGradesByGuidAsync", isEedmSupported = true },
@@ -38489,13 +39642,24 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                name: "DefaultGetStudentTranscriptGradesByGuid",
                routeTemplate: "student-transcript-grades/{guid}",
-                  defaults: new { controller = "StudentTranscriptGrades", action = "GetStudentTranscriptGradesByGuidAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0") },
+                  defaults: new { controller = "StudentTranscriptGrades", action = "GetStudentTranscriptGradesByGuidAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0") },
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint("1.0.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0"))
+                   headerVersion = new HeaderVersionConstraint("1.1.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0"))
                }
             );
+
+            routes.MapHttpRoute(
+              name: "GetStudentTranscriptGradesV1.1.0",
+              routeTemplate: "student-transcript-grades",
+              defaults: new { controller = "StudentTranscriptGrades", action = "GetStudentTranscriptGradesAsync", isEedmSupported = true, isBulkSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("GET"),
+                  headerVersion = new HeaderVersionConstraint("1.1.0", false, string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0"))
+              }
+           );
 
             routes.MapHttpRoute(
               name: "GetStudentTranscriptGradesV1.0.0",
@@ -38533,11 +39697,11 @@ namespace Ellucian.Colleague.Api
             routes.MapHttpRoute(
                name: "DefaultGetStudentTranscriptGrades",
                routeTemplate: "student-transcript-grades",
-                  defaults: new { controller = "StudentTranscriptGrades", action = "GetStudentTranscriptGradesAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0"), isBulkSupported = true },
+                  defaults: new { controller = "StudentTranscriptGrades", action = "GetStudentTranscriptGradesAsync", isEedmSupported = true, RequestedContentType = string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0"), isBulkSupported = true },
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint("1.0.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "1.0.0"))
+                   headerVersion = new HeaderVersionConstraint("1.1.0", true, string.Format(HedtechIntegrationMediaTypeFormat, "1.1.0"))
                }
             );
 
@@ -38606,8 +39770,14 @@ namespace Ellucian.Colleague.Api
 
             routes.MapHttpRoute(
                 name: "BulkStudentTranscriptGradesRequestStatusV1",
-                routeTemplate: "student-transcript-grades/{id}",
-                defaults: new { controller = "BulkLoadRequest", action = "GetBulkLoadRequestStatusAsync" },
+                routeTemplate: "student-transcript-grades/{guid}",
+                defaults: new
+                {
+                    controller = "BulkLoadRequest",
+                    action = "GetBulkLoadRequestStatusAsync",
+                    permissionCode = "VIEW.STUDENT.TRANSCRIPT.GRADES",
+                    guid = UrlParameter.Optional
+                },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
@@ -39521,6 +40691,32 @@ namespace Ellucian.Colleague.Api
             #endregion Tax Form Components
 
             #region TaxFormConsents
+
+            routes.MapHttpRoute(
+                name: "GetTaxFormConsents2",
+                routeTemplate: "tax-form-consents/{personId}/{taxFormId}",
+                defaults: new { controller = "TaxFormConsents", action = "Get2Async" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(2, true)
+                }
+            );
+
+            routes.MapHttpRoute(
+                name: "CreateTaxFormConsent2",
+                routeTemplate: "tax-form-consents",
+                defaults: new { controller = "TaxFormConsents", action = "Post2Async" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("POST"),
+                    headerVersion = new HeaderVersionConstraint(2, true)
+                }
+            );
+
+            // OBSOLETE
+
+            // WARNING: This is an obsolete route as of API version 1.29.1. Use GetTaxFormConsents2 route.
             routes.MapHttpRoute(
                 name: "GetTaxFormConsents",
                 routeTemplate: "tax-form-consents/{personId}/{taxFormId}",
@@ -39528,10 +40724,11 @@ namespace Ellucian.Colleague.Api
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(1, true)
+                    headerVersion = new HeaderVersionConstraint(1, false)
                 }
             );
 
+            // WARNING: This is an obsolete route as of API version 1.29.1. Use CreateTaxFormConsent2 route.
             routes.MapHttpRoute(
                 name: "CreateTaxFormConsent",
                 routeTemplate: "tax-form-consents",
@@ -39539,12 +40736,27 @@ namespace Ellucian.Colleague.Api
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("POST"),
-                    headerVersion = new HeaderVersionConstraint(1, true)
+                    headerVersion = new HeaderVersionConstraint(1, false)
                 }
             );
+
             #endregion
 
             #region TaxFormConfiguration
+
+            routes.MapHttpRoute(
+                name: "GetTaxFormConfiguration2",
+                routeTemplate: "configuration/tax-forms/{taxFormId}",
+                defaults: new { controller = "Configuration", action = "GetTaxFormConfiguration2Async" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(2, true)
+                }
+            );
+
+
+            // WARNING: This is an obsolete route as of API version 1.29.1. Use GetTaxFormConfiguration2 route.
             routes.MapHttpRoute(
                 name: "GetTaxFormConfiguration",
                 routeTemplate: "configuration/tax-forms/{taxFormId}",
@@ -39552,13 +40764,119 @@ namespace Ellucian.Colleague.Api
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(1, true)
+                    headerVersion = new HeaderVersionConstraint(1, false)
                 }
             );
+
             #endregion
 
             #region Tax Form PDFs
 
+            // See obsolete routes below.
+
+            routes.MapHttpRoute(
+                name: "GetTaxFormW2Pdf3",
+                routeTemplate: "persons/{personId}/formW2s/{recordId}",
+                defaults: new { controller = "HumanResourcesTaxFormPdfs", action = "GetW2TaxFormPdf2Async" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(2, true, string.Format(EllucianPDFMediaTypeFormat, 2))
+                }
+            );
+
+            routes.MapHttpRoute(
+                name: "GetTaxFormW2cPdf2",
+                routeTemplate: "persons/{personId}/formW2cs/{recordId}",
+                defaults: new { controller = "HumanResourcesTaxFormPdfs", action = "GetW2cTaxFormPdf2Async" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(2, true, string.Format(EllucianPDFMediaTypeFormat, 2))
+                }
+            );
+
+            routes.MapHttpRoute(
+                name: "GetTaxForm1095cPdf3",
+                routeTemplate: "persons/{personId}/form1095cs/{recordId}",
+                defaults: new { controller = "HumanResourcesTaxFormPdfs", action = "Get1095cTaxFormPdf2Async" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(2, true, string.Format(EllucianPDFMediaTypeFormat, 2))
+                }
+            );
+
+            routes.MapHttpRoute(
+                name: "GetT4TaxFormPdf2",
+                routeTemplate: "persons/{personId}/formT4s/{recordId}",
+                defaults: new { controller = "HumanResourcesTaxFormPdfs", action = "GetT4TaxFormPdf2Async" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(2, true, string.Format(EllucianPDFMediaTypeFormat, 2))
+                }
+            );
+
+            routes.MapHttpRoute(
+                name: "Get1098TaxFormPdf3",
+                routeTemplate: "persons/{personId}/form1098ts/{recordId}",
+                defaults: new { controller = "StudentTaxFormPdfs", action = "Get1098TaxFormPdf2Async" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(2, true, string.Format(EllucianPDFMediaTypeFormat, 2))
+                }
+            );
+
+
+            routes.MapHttpRoute(
+                name: "GetT2202aTaxFormPdf2",
+                routeTemplate: "persons/{personId}/formT2202as/{recordId}",
+                defaults: new { controller = "StudentTaxFormPdfs", action = "GetT2202aTaxFormPdf2Async" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(2, true, string.Format(EllucianPDFMediaTypeFormat, 2))
+                }
+            );
+
+            routes.MapHttpRoute(
+                name: "GetT4aTaxFormPdf2",
+                routeTemplate: "persons/{personId}/formT4as/{recordId}",
+                defaults: new { controller = "ColleagueFinanceTaxFormPdfs", action = "GetFormT4aPdf2Async" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(2, true, string.Format(EllucianPDFMediaTypeFormat, 2))
+                }
+            );
+
+            routes.MapHttpRoute(
+               name: "Get1099MiscTaxFormPdf2",
+               routeTemplate: "persons/{personId}/form1099Miscs/{recordId}",
+               defaults: new { controller = "ColleagueFinanceTaxFormPdfs", action = "Get1099MiscTaxFormPdf2Async" },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("GET"),
+                   headerVersion = new HeaderVersionConstraint(2, true, string.Format(EllucianPDFMediaTypeFormat, 2))
+               }
+           );
+
+            routes.MapHttpRoute(
+               name: "Get1099NecTaxFormPdf",
+               routeTemplate: "persons/{personId}/form1099Nec/{recordId}",
+               defaults: new { controller = "ColleagueFinanceTaxFormPdfs", action = "Get1099NecTaxFormPdfAsync" },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("GET"),
+                   headerVersion = new HeaderVersionConstraint(1, true, string.Format(EllucianPDFMediaTypeFormat, 1))
+               }
+           );
+
+            #region Obsolete routes for Tax Form PDFs
+
+            // WARNING: This is an obsolete route as of API version 1.29.1. Use GetTaxFormW2Pdf3 route.
             routes.MapHttpRoute(
                 name: "GetTaxFormW2Pdf2",
                 routeTemplate: "persons/{personId}/formW2s/{recordId}",
@@ -39566,7 +40884,7 @@ namespace Ellucian.Colleague.Api
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(1, true, string.Format(EllucianPDFMediaTypeFormat, 1))
+                    headerVersion = new HeaderVersionConstraint(1, false, string.Format(EllucianPDFMediaTypeFormat, 1))
                 }
             );
 
@@ -39581,6 +40899,19 @@ namespace Ellucian.Colleague.Api
                 }
             );
 
+            // WARNING: This is an obsolete route as of API version 1.29.1. Use GetTaxFormW2cPdf2 route.
+            routes.MapHttpRoute(
+                name: "GetTaxFormW2cPdf",
+                routeTemplate: "persons/{personId}/formW2cs/{recordId}",
+                defaults: new { controller = "HumanResourcesTaxFormPdfs", action = "GetW2cTaxFormPdf" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(1, false, string.Format(EllucianPDFMediaTypeFormat, 1))
+                }
+            );
+
+            // WARNING: This is an obsolete route as of API version 1.29.1. Use GetTaxForm1095cPdf3 route.
             routes.MapHttpRoute(
                 name: "GetTaxForm1095cPdf2",
                 routeTemplate: "persons/{personId}/form1095cs/{recordId}",
@@ -39588,7 +40919,7 @@ namespace Ellucian.Colleague.Api
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(1, true, string.Format(EllucianPDFMediaTypeFormat, 1))
+                    headerVersion = new HeaderVersionConstraint(1, false, string.Format(EllucianPDFMediaTypeFormat, 1))
                 }
             );
 
@@ -39603,6 +40934,7 @@ namespace Ellucian.Colleague.Api
                 }
             );
 
+            // WARNING: This is an obsolete route as of API version 1.29.1. Use Get1098TaxFormPdf3 route.
             routes.MapHttpRoute(
                 name: "Get1098TaxFormPdf2",
                 routeTemplate: "persons/{personId}/form1098ts/{recordId}",
@@ -39610,7 +40942,7 @@ namespace Ellucian.Colleague.Api
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(1, true, string.Format(EllucianPDFMediaTypeFormat, 1))
+                    headerVersion = new HeaderVersionConstraint(1, false, string.Format(EllucianPDFMediaTypeFormat, 1))
                 }
             );
 
@@ -39625,6 +40957,7 @@ namespace Ellucian.Colleague.Api
                 }
             );
 
+            // WARNING: This is an obsolete route as of API version 1.29.1. Use GetT4TaxFormPdf2 route.
             routes.MapHttpRoute(
                 name: "GetT4TaxFormPdf",
                 routeTemplate: "persons/{personId}/formT4s/{recordId}",
@@ -39632,10 +40965,11 @@ namespace Ellucian.Colleague.Api
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(1, true, string.Format(EllucianPDFMediaTypeFormat, 1))
+                    headerVersion = new HeaderVersionConstraint(1, false, string.Format(EllucianPDFMediaTypeFormat, 1))
                 }
             );
 
+            // WARNING: This is an obsolete route as of API version 1.29.1. Use GetT4aTaxFormPdf2 route.
             routes.MapHttpRoute(
                 name: "GetT4aTaxFormPdf",
                 routeTemplate: "persons/{personId}/formT4as/{recordId}",
@@ -39643,10 +40977,11 @@ namespace Ellucian.Colleague.Api
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(1, true, string.Format(EllucianPDFMediaTypeFormat, 1))
+                    headerVersion = new HeaderVersionConstraint(1, false, string.Format(EllucianPDFMediaTypeFormat, 1))
                 }
             );
 
+            // WARNING: This is an obsolete route as of API version 1.29.1. Use GetT2202aTaxFormPdf2 route.
             routes.MapHttpRoute(
                 name: "GetT2202aTaxFormPdf",
                 routeTemplate: "persons/{personId}/formT2202as/{recordId}",
@@ -39654,10 +40989,11 @@ namespace Ellucian.Colleague.Api
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(1, true, string.Format(EllucianPDFMediaTypeFormat, 1))
+                    headerVersion = new HeaderVersionConstraint(1, false, string.Format(EllucianPDFMediaTypeFormat, 1))
                 }
             );
 
+            // WARNING: This is an obsolete route as of API version 1.29.1. Use Get1099MiscTaxFormPdf2 route.
             routes.MapHttpRoute(
                name: "Get1099MiscTaxFormPdf",
                routeTemplate: "persons/{personId}/form1099Miscs/{recordId}",
@@ -39665,94 +41001,97 @@ namespace Ellucian.Colleague.Api
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("GET"),
-                   headerVersion = new HeaderVersionConstraint(1, true, string.Format(EllucianPDFMediaTypeFormat, 1))
+                   headerVersion = new HeaderVersionConstraint(1, false, string.Format(EllucianPDFMediaTypeFormat, 1))
                }
            );
+
+            #endregion
+
             #endregion
 
             #region Tax Form Statements
 
             routes.MapHttpRoute(
-                name: "GetW2TaxFormStatements",
+                name: "GetW2TaxFormStatements2",
                 routeTemplate: "tax-form-statements/{personId}/FormW2",
-                defaults: new { controller = "HumanResourcesTaxFormStatements", action = "GetW2Async" },
+                defaults: new { controller = "HumanResourcesTaxFormStatements", action = "GetW22Async" },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(1, true)
+                    headerVersion = new HeaderVersionConstraint(2, true)
                 }
             );
 
             routes.MapHttpRoute(
-                name: "GetTaxFormW2cPdf",
-                routeTemplate: "persons/{personId}/formW2cs/{recordId}",
-                defaults: new { controller = "HumanResourcesTaxFormPdfs", action = "GetW2cTaxFormPdf" },
-                constraints: new
-                {
-                    httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(1, true, string.Format(EllucianPDFMediaTypeFormat, 1))
-                }
-            );
-
-            routes.MapHttpRoute(
-                name: "Get1095CTaxFormStatements",
+                name: "Get1095CTaxFormStatements2",
                 routeTemplate: "tax-form-statements/{personId}/Form1095C",
-                defaults: new { controller = "HumanResourcesTaxFormStatements", action = "Get1095cAsync" },
+                defaults: new { controller = "HumanResourcesTaxFormStatements", action = "Get1095c2Async" },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(1, true)
+                    headerVersion = new HeaderVersionConstraint(2, true)
                 }
             );
 
             routes.MapHttpRoute(
-                name: "GetT4TaxFormStatements",
+                name: "GetT4TaxFormStatements2",
                 routeTemplate: "tax-form-statements/{personId}/FormT4",
-                defaults: new { controller = "HumanResourcesTaxFormStatements", action = "GetT4Async" },
+                defaults: new { controller = "HumanResourcesTaxFormStatements", action = "GetT42Async" },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(1, true)
+                    headerVersion = new HeaderVersionConstraint(2, true)
                 }
             );
 
             routes.MapHttpRoute(
-                name: "Get1098TaxFormStatements",
+                name: "Get1098TaxFormStatements2",
                 routeTemplate: "tax-form-statements/{personId}/Form1098",
-                defaults: new { controller = "StudentTaxFormStatements", action = "Get1098Async" },
+                defaults: new { controller = "StudentTaxFormStatements", action = "Get10982Async" },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(1, true)
+                    headerVersion = new HeaderVersionConstraint(2, true)
                 }
             );
 
             routes.MapHttpRoute(
-                name: "GetT2202ATaxFormStatements",
+                name: "GetT2202ATaxFormStatements2",
                 routeTemplate: "tax-form-statements/{personId}/FormT2202A",
-                defaults: new { controller = "StudentTaxFormStatements", action = "GetT2202aAsync" },
+                defaults: new { controller = "StudentTaxFormStatements", action = "GetT2202a2Async" },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(1, true)
+                    headerVersion = new HeaderVersionConstraint(2, true)
                 }
             );
 
             routes.MapHttpRoute(
-                name: "GetT4ATaxFormStatements",
+                name: "GetT4ATaxFormStatements2",
                 routeTemplate: "tax-form-statements/{personId}/FormT4A",
-                defaults: new { controller = "ColleagueFinanceTaxFormStatements", action = "GetT4aAsync" },
+                defaults: new { controller = "ColleagueFinanceTaxFormStatements", action = "GetT4a2Async" },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
-                    headerVersion = new HeaderVersionConstraint(1, true)
+                    headerVersion = new HeaderVersionConstraint(2, true)
                 }
             );
 
             routes.MapHttpRoute(
-               name: "Get1099MITaxFormStatements",
+               name: "Get1099MiTaxFormStatements2",
                routeTemplate: "tax-form-statements/{personId}/Form1099MI",
-               defaults: new { controller = "ColleagueFinanceTaxFormStatements", action = "Get1099MIAsync" },
+               defaults: new { controller = "ColleagueFinanceTaxFormStatements", action = "Get1099Mi2Async" },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("GET"),
+                   headerVersion = new HeaderVersionConstraint(2, true)
+               }
+           );
+
+            routes.MapHttpRoute(
+               name: "Get1099NecTaxFormStatements",
+               routeTemplate: "tax-form-statements/{personId}/Form1099NEC",
+               defaults: new { controller = "ColleagueFinanceTaxFormStatements", action = "Get1099NecAsync" },
                constraints: new
                {
                    httpMethod = new HttpMethodConstraint("GET"),
@@ -39760,7 +41099,94 @@ namespace Ellucian.Colleague.Api
                }
            );
 
+            #region Obsolete routes for Tax Form Statements
+
+            // WARNING: This is an obsolete route as of API version 1.29.1. Use GetW2TaxFormStatements3 route.
+            routes.MapHttpRoute(
+                name: "GetW2TaxFormStatements",
+                routeTemplate: "tax-form-statements/{personId}/FormW2",
+                defaults: new { controller = "HumanResourcesTaxFormStatements", action = "GetW2Async" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(1, false)
+                }
+            );
+
+            // WARNING: This is an obsolete route as of API version 1.29.1. Use Get1095CTaxFormStatements2 route.
+            routes.MapHttpRoute(
+                name: "Get1095CTaxFormStatements",
+                routeTemplate: "tax-form-statements/{personId}/Form1095C",
+                defaults: new { controller = "HumanResourcesTaxFormStatements", action = "Get1095cAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(1, false)
+                }
+            );
+
+            // WARNING: This is an obsolete route as of API version 1.29.1. Use GetT4TaxFormStatements2 route.
+            routes.MapHttpRoute(
+                name: "GetT4TaxFormStatements",
+                routeTemplate: "tax-form-statements/{personId}/FormT4",
+                defaults: new { controller = "HumanResourcesTaxFormStatements", action = "GetT4Async" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(1, false)
+                }
+            );
+
+            // WARNING: This is an obsolete route as of API version 1.29.1. Use Get1098TaxFormStatements2 route.
+            routes.MapHttpRoute(
+                name: "Get1098TaxFormStatements",
+                routeTemplate: "tax-form-statements/{personId}/Form1098",
+                defaults: new { controller = "StudentTaxFormStatements", action = "Get1098Async" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(1, false)
+                }
+            );
+
+            // WARNING: This is an obsolete route as of API version 1.29.1. Use GetT2202ATaxFormStatements2 route.
+            routes.MapHttpRoute(
+                name: "GetT2202ATaxFormStatements",
+                routeTemplate: "tax-form-statements/{personId}/FormT2202A",
+                defaults: new { controller = "StudentTaxFormStatements", action = "GetT2202aAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(1, false)
+                }
+            );
+
+            // WARNING: This is an obsolete route as of API version 1.29.1. Use GetT4ATaxFormStatements2 route.
+            routes.MapHttpRoute(
+                name: "GetT4ATaxFormStatements",
+                routeTemplate: "tax-form-statements/{personId}/FormT4A",
+                defaults: new { controller = "ColleagueFinanceTaxFormStatements", action = "GetT4aAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(1, false)
+                }
+            );
+
+            // WARNING: This is an obsolete route as of API version 1.29.1. Use Get1099MiTaxFormStatements2 route.
+            routes.MapHttpRoute(
+               name: "Get1099MITaxFormStatements",
+               routeTemplate: "tax-form-statements/{personId}/Form1099MI",
+               defaults: new { controller = "ColleagueFinanceTaxFormStatements", action = "Get1099MIAsync" },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("GET"),
+                   headerVersion = new HeaderVersionConstraint(1, false)
+               }
+           );
+
             // This route points to an obsolete controller method.
+            // WARNING: This is an obsolete route as of API version 1.14. 
             routes.MapHttpRoute(
                 name: "GetTaxFormStatements",
                 routeTemplate: "tax-form-statements/{personId}/{taxFormId}",
@@ -39772,6 +41198,7 @@ namespace Ellucian.Colleague.Api
                 }
             );
 
+            #endregion
 
             #endregion
 
@@ -40052,6 +41479,18 @@ namespace Ellucian.Colleague.Api
                     headerVersion = new HeaderVersionConstraint(2, true)
                 }
             );
+
+            routes.MapHttpRoute(
+               name: "GetTimecardsAssociatedWithLeaveRequests",
+               routeTemplate: "timecards-with-leaverequests",
+               defaults: new { controller = "Timecards", action = "GetTimecardsAssociatedWithLeaveRequestsAsync" },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("GET"),
+                   headerVersion = new HeaderVersionConstraint(1, true)
+               }
+           );
+            
 
 
             #endregion
@@ -40411,7 +41850,68 @@ namespace Ellucian.Colleague.Api
             );
             #endregion Vendor Payment Terms
 
+            #region VendorsMaximum
+
+            routes.MapHttpRoute(
+              name: "GetVendorsMaximumV1.0.0",
+              routeTemplate: "vendors",
+              defaults: new { controller = "Vendors", action = "GetVendorsMaximumAsync", isEedmSupported = true },
+              constraints: new
+              {
+                  httpMethod = new HttpMethodConstraint("GET"),
+                  headerVersion = new HeaderVersionConstraint("1.0.0", false, string.Format(HedtechIntegrationVendorsMaximumMediaTypeFormat, "1.0.0"))
+              }
+           );
+
+            routes.MapHttpRoute(
+               name: "GetVendorsMaximumByGuidV1.0.0",
+               routeTemplate: "vendors/{id}",
+               defaults: new { controller = "Vendors", action = "GetVendorsMaximumByGuidAsync", isEedmSupported = true },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("GET"),
+                   headerVersion = new HeaderVersionConstraint("1.0.0", false, string.Format(HedtechIntegrationVendorsMaximumMediaTypeFormat, "1.0.0"))
+               }
+            );
+
+            routes.MapHttpRoute(
+              name: "PostVendorsMaximumV1.0.0",
+               routeTemplate: "vendors",
+               defaults: new { controller = "Vendors", action = "PostVendorsMaximumAsync" },
+               constraints: new
+               {
+                   httpMethod = new HttpMethodConstraint("POST"),
+                   headerVersion = new HeaderVersionConstraint("1.0.0", false, string.Format(HedtechIntegrationVendorsMaximumMediaTypeFormat, "1.0.0"))
+               }
+           );
+
+            routes.MapHttpRoute(
+               name: "PutVendorsMaximumV1.0.0",
+                routeTemplate: "vendors/{guid}",
+                defaults: new { controller = "Vendors", action = "PutVendorsMaximumAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("PUT"),
+                    headerVersion = new HeaderVersionConstraint("1.0.0", false, string.Format(HedtechIntegrationVendorsMaximumMediaTypeFormat, "1.0.0"))
+                }
+            );
+
+            routes.MapHttpRoute(
+                 name: "DeleteVendorsMaximumV1.0.0",
+                 routeTemplate: "vendors/{guid}",
+                 defaults: new { controller = "Vendors", action = "DeleteVendorsMaximumAsync" },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("DELETE"),
+                     headerVersion = new HeaderVersionConstraint("1.0.0", false, string.Format(HedtechIntegrationVendorsMaximumMediaTypeFormat, "1.0.0"))
+                 }
+             );
+
+            #endregion
+
             #region  Vendors
+
+
 
             routes.MapHttpRoute(
                 name: "GetVendorsByGuidV11.1.0",
@@ -40588,6 +42088,8 @@ namespace Ellucian.Colleague.Api
                      headerVersion = new HeaderVersionConstraint(1, true)
                  }
              );
+
+           
 
             routes.MapHttpRoute(
                 name: "VendorsUnsupported",
@@ -40792,7 +42294,7 @@ namespace Ellucian.Colleague.Api
                 }
           );
 
-            #endregion Vendor Contacts
+            #endregion Vendor Contacts           
 
             #region Version
 
@@ -41307,6 +42809,18 @@ namespace Ellucian.Colleague.Api
                     headerVersion = new HeaderVersionConstraint(1, false)
                 }
             );
+
+            routes.MapHttpRoute(
+               name: "GetVouchersByVendorAndInvoiceNoAsync",
+               routeTemplate: "vouchers",
+               defaults: new { controller = "Vouchers", action = "GetVouchersByVendorAndInvoiceNoAsync" },
+             constraints: new
+             {
+                 httpMethod = new HttpMethodConstraint("GET"),
+                 headerVersion = new HeaderVersionConstraint(1, true),
+                 isSingle = new QueryStringConstraint(new List<string> { "vendorId", "invoiceNo" })
+             }
+           );
             #endregion
 
             #region WorkTasks
@@ -41327,6 +42841,7 @@ namespace Ellucian.Colleague.Api
 
             #region YearlyCycles
 
+
             routes.MapHttpRoute(
                 name: "GetYearlyCycles",
                 routeTemplate: "yearly-cycles",
@@ -41339,16 +42854,17 @@ namespace Ellucian.Colleague.Api
             );
             #endregion
 
-            // routes.MapRoute(
-            //    name: "ExtendedRoutes",
-            //    url: "{resource}/{id}",
-            //    defaults: new { controller = "Home", action = "Index", id = UrlParameter.Optional },
-            //     constraints: new
-            //     {
-            //         httpMethod = new HttpMethodConstraint("GET"),
-            //         headerVersion = new ExtendedRouteConstraint(9, false, string.Format(HedtechIntegrationMediaTypeFormat, 9))
-            //     }
-            //);
+
+            routes.MapHttpRoute(
+                name: "ExtendedRoutes",
+                routeTemplate: "{resource}/{id}",
+                defaults: new { controller = "EthosApiBuilder", action = "GetEthosApiBuilderAsync", id = UrlParameter.Optional },
+                constraints: new
+                {
+                    extendedRoute = new ExtendedRouteConstraint()
+                }
+           );
+
 
 
             routes.MapRoute(

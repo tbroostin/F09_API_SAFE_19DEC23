@@ -41,11 +41,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         private Mock<IReferenceDataRepository> _referenceRepositoryMock;
         private Mock<IPersonRepository> _personRepositoryMock;
         private Mock<IGradeRepository> _gradeRepositoryMock;
+        private Mock<ITermRepository> _termRepositoryMock;
+
         private Mock<ILogger> _loggerMock;
         private Mock<IAdapterRegistry> _adapterRegistryMock;
         private ICurrentUserFactory _currentUserFactory;
         private Mock<IRoleRepository> _roleRepositoryMock;
         private Mock<IConfigurationRepository> _configurationRepoMock;
+
 
 
         private ICollection<Ellucian.Colleague.Domain.Student.Entities.GradeScheme> _gradeSchemeCollection;
@@ -63,10 +66,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             _referenceRepositoryMock = new Mock<IReferenceDataRepository>();
             _personRepositoryMock = new Mock<IPersonRepository>();
             _gradeRepositoryMock = new Mock<IGradeRepository>();
+            _termRepositoryMock = new Mock<ITermRepository>();
             _adapterRegistryMock = new Mock<IAdapterRegistry>();
             _loggerMock = new Mock<ILogger>();
             _roleRepositoryMock = new Mock<IRoleRepository>();
             _configurationRepoMock = new Mock<IConfigurationRepository>();
+
 
             _currentUserFactory = new StudentTranscriptGradesUser();
 
@@ -79,7 +84,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             BuildMocks();
 
             _studentTranscriptGradesService = new StudentTranscriptGradesService(_studentTranscriptGradesRepositoryMock.Object,
-                _referenceRepositoryMock.Object, _studentReferenceRepositoryMock.Object, _personRepositoryMock.Object, _gradeRepositoryMock.Object,
+                _referenceRepositoryMock.Object, _studentReferenceRepositoryMock.Object, _personRepositoryMock.Object, _gradeRepositoryMock.Object, _termRepositoryMock.Object,
                 _adapterRegistryMock.Object, _currentUserFactory, _roleRepositoryMock.Object, _configurationRepoMock.Object, _loggerMock.Object);
         }
 
@@ -95,7 +100,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 viewStudentTranscriptGrades//new Domain.Entities.Role(1, "VIEW.STUDENT.COURSE.TRANSFERS")
             });
-            _studentTranscriptGradesRepositoryMock.Setup(repo => repo.GetStudentTranscriptGradesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>()))
+            _studentTranscriptGradesRepositoryMock.Setup(repo => repo.GetStudentTranscriptGradesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
                 .ReturnsAsync(studentTranscriptGradesTuple);
             _studentTranscriptGradesRepositoryMock.Setup(repo => repo.GetStudentTranscriptGradesByGuidAsync(It.IsAny<string>()))
                 .ReturnsAsync(_studentTranscriptGradesCollection[0]);

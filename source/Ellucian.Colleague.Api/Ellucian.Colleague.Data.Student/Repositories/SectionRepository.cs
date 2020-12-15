@@ -69,10 +69,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 ss.ValExternalRepresentationAssocMember), Level1CacheTimeoutValue);
 
         }
-
+      
 
         // Track the time that the addtional/changed section cache was last built.
         private static DateTime ChangedRegistrationSectionsCacheBuildTime = new DateTime();
+
+        // Track the time that the addtional/changed instant enrollment section cache was last built.
+        private static DateTime ChangedInstantEnrollmentSectionsCacheBuildTime = new DateTime();
+
 
         //private ApplValcodes waitlistStatuses;
         private Ellucian.Colleague.Data.Base.DataContracts.IntlParams _internationalParameters;
@@ -1608,6 +1612,115 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return new Tuple<IEnumerable<Section>, int>(sections, totalCount);
         }
 
+        /// <summary>
+        /// Retrieve Instant Enrollment Sections.
+        /// </summary>
+        /// <returns></returns>
+        public async Task<IEnumerable<Section>> GetInstantEnrollmentSectionsAsync()
+        {
+            try
+            {
+                var sections = await GetOrAddToCacheAsync<IEnumerable<Section>>("InstantEnrollmentSections",
+                async () =>
+                {
+                    List<string> sectionIds = new List<string>();
+                    List<Section> ieSections = new List<Section>();
+                    GetIESectionsListRequest request = new GetIESectionsListRequest();
+                    var response = await transactionInvoker.ExecuteAsync<GetIESectionsListRequest, GetIESectionsListResponse>(request);
+                    if (response != null && response.SectionIds != null && response.SectionIds.Any())
+                    {
+                        sectionIds.AddRange(response.SectionIds);
+                    }
+                    var regUserGroupId = await GetInstantEnrollmentRegistrationUserAsync();
+                    //Retrieve corresponding RGU.REG.CONTROLS from REG.USERS
+                    var criteria = string.Format("WITH REG.USERS.ID EQ '{0}'", regUserGroupId);
+                    var regUsers = await DataReader.BulkReadRecordAsync<RegUsers>("REG.USERS", criteria, true);
+                    if (regUsers != null && regUsers.Count > 0)
+                    {
+                        var regUser = regUsers[0];
+                        if (regUser.RguRegControls == null || regUser.RguRegControls.Count == 0)
+                        {
+                        //If there are no reg controls defined for reg users. It is highly impossible unless data is corrupted. 
+                        //If there are no reg controls do not return any sections.
+                        logger.Debug(string.Format("No RGU.REG.CONTROLS for REG.USER {0}, hence no sections will be returned for Instant Enrollment catalog", regUser));
+                            return new List<Section>();
+                        }
+                        var regControlId = regUser.RguRegControls[0];
+                        var regControls = await DataReader.BulkReadRecordAsync<RegControls>("REG.CONTROLS", "", true);
+                        if (regControls != null)
+                        {
+                            var regUserRegControls = regControls.FirstOrDefault(rc => rc.Recordkey == regControlId);
+                            if ((regUserRegControls != null) && (regUserRegControls.RgcSectionLookupCriteria != null) && (regUserRegControls.RgcSectionLookupCriteria.Any()) && sectionIds != null && sectionIds.Any())
+                            {
+                                var sectionLookupCriteria = string.Join(" ", regUserRegControls.RgcSectionLookupCriteria);
+                                sectionLookupCriteria = sectionLookupCriteria.Replace(@"\""", "'");
+                                logger.Info("Sections searchable lookup criteria for IE: COURSE.SECTIONS: " + sectionLookupCriteria);
+                                var sectionIdsFromLookupCriteria = await DataReader.SelectAsync("COURSE.SECTIONS", sectionIds.ToArray(), sectionLookupCriteria);
+                                if (sectionIdsFromLookupCriteria != null)
+                                {
+                                    sectionIds.Clear();
+                                    sectionIds.AddRange(sectionIdsFromLookupCriteria);
+                                }
+                                else
+                                {
+                                    sectionIds = null;
+                                }
+                            }
+                        }
+                    }
+                    if (sectionIds != null && sectionIds.Any())
+                    {
+                        List<CourseSections> csData = new List<CourseSections>();
+                        BulkReadOutput<CourseSections> csBulkReadOutput = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<CourseSections>(sectionIds.ToArray());
+                        if (!csBulkReadOutput.Equals(default(BulkReadOutput<CourseSections>)))
+                        {
+                            if (csBulkReadOutput.BulkRecordsRead == null || !csBulkReadOutput.BulkRecordsRead.Any())
+                            {
+                                logger.Error(string.Format("Bulk data retrieval for COURSE.SECTIONS file for records {0} did not return any valid records.", string.Join(",", sectionIds)));
+                            }
+                            if (csBulkReadOutput.InvalidRecords != null && csBulkReadOutput.InvalidRecords.Any())
+                            {
+                                foreach (var ir in csBulkReadOutput.InvalidRecords)
+                                {
+                                    logger.Error("Invalid COURSE.SECTIONS record found. COURSE.SECTIONS.ID = {0}: {1}", ir.Key, ir.Value);
+                                }
+                            }
+                            if (csBulkReadOutput.BulkRecordsRead != null && csBulkReadOutput.BulkRecordsRead.Any())
+                            {
+                                csData.AddRange(csBulkReadOutput.BulkRecordsRead);
+                            }
+                            ieSections = (await BuildNonCachedSectionsAsync(csData)).ToList();
+                        }
+                    }
+                    // Set timestamp for last time cache was built
+                    ChangedInstantEnrollmentSectionsCacheBuildTime = DateTime.Now;
+
+                    return ieSections;
+                });
+                return sections;
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = string.Format("An error occurred while retrieving course section information for instant enrollment.");
+                logger.Error(ex, errorMessage);
+                throw new ApplicationException(errorMessage);
+            }
+        }
+
+        private async Task<string> GetInstantEnrollmentRegistrationUserAsync()
+        {
+            string regUserId = string.Empty;
+            Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS", true);
+            if (stwebDefaults != null && !string.IsNullOrWhiteSpace(stwebDefaults.StwebCeRegUsersId))
+            {
+                regUserId = stwebDefaults.StwebCeRegUsersId;
+            }
+            else
+            {
+                regUserId = "NAMELESS";
+            }
+            return regUserId;
+        }
         private async Task<Dictionary<string, string>> GetRegControlsIdsAsync(IEnumerable<string> ids)
         {
             var regControlsIdsDict = new Dictionary<string, string>();
@@ -3987,7 +4100,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     CensusDates = sec.SecOvrCensusDates == null ? new List<DateTime?>() : sec.SecOvrCensusDates,
                     WaitListNumberOfDays = sec.SecWaitlistNoDays,
                     GradeSubschemeCode = sec.SecGradeSubschemesId,
-                    Synonym = sec.SecSynonym
+                    Synonym = sec.SecSynonym,
+                    Subject = sec.SecSubject
+                    
                 };
             }
             catch (Exception e)
@@ -4005,10 +4120,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             // Other processes are already dependent on the course "type" code
             // so add the proper course category as well
 
-
-            foreach (var item in sec.SecCourseTypes)
+            if (sec.SecCourseTypes != null)
             {
-                section.AddCourseType(item);
+                foreach (var item in sec.SecCourseTypes)
+                {
+                    section.AddCourseType(item);
+                }
             }
 
             if (sec.SecInstrMethods != null && sec.SecInstrMethods.Any())
@@ -4695,7 +4812,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 AddOrUpdateCacheAsync,
                 transactionInvoker,
                 sectionMeegtingCacheKey,
-                "",
+                "COURSE.SEC.FACULTY",
                 offset,
                 limit,
                 SectionInstructorCacheTimeout,
@@ -5794,11 +5911,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>SectionFaculty object</returns>
         private SectionFaculty BuildSectionFaculty(CourseSecFaculty csf)
         {
-            // If the faculty percent responsible is 0%, log it (it's not an error, shouldn't stop processing, but logging it just in case it's of use)
-            if (csf.CsfFacultyPct <= 0)
-            {
-                logger.Info("CourseSecFaculty.RecordKey: " + csf.Recordkey + " has CsfFacultyPct of " + csf.CsfFacultyPct);
-            }
             if (!string.IsNullOrEmpty(csf.RecordGuid))
             {
                 var secFaculty = new SectionFaculty(csf.RecordGuid, csf.Recordkey, csf.CsfCourseSection, csf.CsfFaculty, csf.CsfInstrMethod, csf.CsfStartDate.GetValueOrDefault(),
@@ -6324,6 +6436,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return waitListStatusCodes;
         }
 
+        public async Task<Data.Student.DataContracts.StwebDefaults> GetStWebDefltsAsync()
+        {
+           return await this.GetStwebDefaultsAsync();
+        }
+
         private WaitlistStatus ConvertWaitlistActionToStatus(string actionCode)
         {
             WaitlistStatus status;
@@ -6413,6 +6530,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     return null;
             }
         }
+
+
 
         private async Task<Data.Student.DataContracts.StwebDefaults> GetStwebDefaultsAsync()
         {
@@ -6791,6 +6910,16 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             return ChangedRegistrationSectionsCacheBuildTime;
         }
+
+        /// <summary>
+        /// Get the time that the changed instant enrollment sections cache was last built.
+        /// </summary>
+        /// <returns>A DateTime representing the last time the changed instant enrollment section cache was built</returns>
+        public DateTime GetChangedInstantEnrollmentSectionsCacheBuildTime()
+        {
+            return ChangedInstantEnrollmentSectionsCacheBuildTime;
+        }
+        
 
         private async Task<ApplValcodes> GetWaitlistStatusesAsync()
         {

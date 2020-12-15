@@ -1177,6 +1177,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             domainEntity1095c.EmployeePostalCode = dataContract1095cWhist.TfcwhPostalCode;
             domainEntity1095c.EmployeeZipExtension = dataContract1095cWhist.TfcwhZipExtension;
             domainEntity1095c.EmployeeCountry = dataContract1095cWhist.TfcwhCountryName;
+            domainEntity1095c.EmployeeAge = dataContract1095cWhist.TfcwhAge;
 
             // Assign the offer of coverage codes
             domainEntity1095c.OfferOfCoverage12Month = dataContract1095cWhist.TfcwhOfferCode12mnth;
@@ -1222,6 +1223,21 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             domainEntity1095c.SafeHarborCodeOctober = dataContract1095cWhist.TfcwhSafeHarborCodeOct;
             domainEntity1095c.SafeHarborCodeNovember = dataContract1095cWhist.TfcwhSafeHarborCodeNov;
             domainEntity1095c.SafeHarborCodeDecember = dataContract1095cWhist.TfcwhSafeHarborCodeDec;
+
+            // Assign zip codes
+            domainEntity1095c.ZipCode12Month = dataContract1095cWhist.TfcwhZip12mnth;
+            domainEntity1095c.ZipCodeJanuary = dataContract1095cWhist.TfcwhZipJan;
+            domainEntity1095c.ZipCodeFebruary = dataContract1095cWhist.TfcwhZipFeb;
+            domainEntity1095c.ZipCodeMarch = dataContract1095cWhist.TfcwhZipMar;
+            domainEntity1095c.ZipCodeApril = dataContract1095cWhist.TfcwhZipApr;
+            domainEntity1095c.ZipCodeMay = dataContract1095cWhist.TfcwhZipMay;
+            domainEntity1095c.ZipCodeJune = dataContract1095cWhist.TfcwhZipJun;
+            domainEntity1095c.ZipCodeJuly = dataContract1095cWhist.TfcwhZipJul;
+            domainEntity1095c.ZipCodeAugust = dataContract1095cWhist.TfcwhZipAug;
+            domainEntity1095c.ZipCodeSeptember = dataContract1095cWhist.TfcwhZipSep;
+            domainEntity1095c.ZipCodeOctober = dataContract1095cWhist.TfcwhZipOct;
+            domainEntity1095c.ZipCodeNovember = dataContract1095cWhist.TfcwhZipNov;
+            domainEntity1095c.ZipCodeDecember = dataContract1095cWhist.TfcwhZipDec;
 
             // Is the employee self-insured
             domainEntity1095c.EmployeeIsSelfInsured = false;

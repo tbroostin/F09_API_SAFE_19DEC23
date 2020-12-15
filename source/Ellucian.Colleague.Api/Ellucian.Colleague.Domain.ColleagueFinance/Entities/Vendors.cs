@@ -1,5 +1,6 @@
 ﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
 
+using Ellucian.Colleague.Domain.Base.Entities;
 using System;
 using System.Collections.Generic;
 
@@ -98,9 +99,14 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         public string TaxForm { get; set; }
 
         /// <summary>
-        /// List of address Id and Type
+        /// Person Phones for the vendor
         /// </summary>
-        public List<Dictionary<string, string>> AddressInfo { get; set; }
+        public List<Phone> Phones { get; set; }
+           
+        /// <summary>
+        /// List of addresses for the vendors
+        /// </summary>
+        public List<Domain.Base.Entities.Address> Addresses { get; set; }
 
         public string Id
         {

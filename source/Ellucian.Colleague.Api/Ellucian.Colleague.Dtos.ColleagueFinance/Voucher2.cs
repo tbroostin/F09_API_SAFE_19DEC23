@@ -144,6 +144,12 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// This is the vendor country.
         /// </summary>
         public string VendorCountry { get; set; }
-        
+
+
+        /// <summary>
+        /// List of email addresses - confirmation email notifications would be sent to these email addresses on create / update .
+        /// </summary>
+        public List<string> ConfirmationEmailAddresses { get; set; }
+
     }
 }

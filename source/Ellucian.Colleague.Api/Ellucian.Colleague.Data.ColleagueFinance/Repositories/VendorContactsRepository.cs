@@ -127,8 +127,83 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 throw e;
             }
 
-        }
+        }       
 
+        /// <summary>
+        /// Get a list of vendor contacts for list of vendors
+        /// </summary>
+        /// <returns></returns>
+        public async Task<IEnumerable<OrganizationContact>> GetVendorContactsForVendorsAsync(string[] vendorIds)
+        {
+            try
+            {
+                List<OrganizationContact> entities = new List<OrganizationContact>();
+                var criteria = string.Format("WITH OCN.VENDOR.CONTACT EQ 'Y' AND OCN.VENDOR.ID EQ '?'");
+                var OrgContactIds = await DataReader.SelectAsync("ORGANIZATION.CONTACT", criteria, vendorIds);
+
+                //ORGANIZATION.CONTACT
+                var orgContactsData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.ColleagueFinance.DataContracts.OrganizationContact>(OrgContactIds);
+
+                if (orgContactsData == null || !orgContactsData.Any())
+                {
+                    return entities;
+                }
+
+                //persons for address, phone info
+                List<string> ocnPersonId = orgContactsData.Where(p => !string.IsNullOrWhiteSpace(p.OcnPersonId)).Select(i => i.OcnPersonId).Distinct().ToList();
+                IEnumerable<Person> persons = await DataReader.BulkReadRecordAsync<Person>(ocnPersonId.ToArray());
+
+                List<string> ocnAddressId = orgContactsData.Where(p => !string.IsNullOrWhiteSpace(p.OcnAddress)).Select(i => i.OcnAddress).Distinct().ToList();
+                IEnumerable<Address> addresses = await DataReader.BulkReadRecordAsync<Address>(ocnAddressId.ToArray());
+
+                //Relationship records
+                List<string> relIds = orgContactsData.Where(r => !string.IsNullOrWhiteSpace(r.OcnRelationship)).Select(t => t.OcnRelationship).Distinct().ToList();
+                IEnumerable<Relationship> reletionships = await DataReader.BulkReadRecordAsync<Relationship>(relIds.ToArray());
+
+                var newrepoError = new RepositoryException();
+
+                foreach (var orgContact in orgContactsData)
+                {
+                    try
+                    {
+                        OrganizationContact entity = BuildOrganizationContact(orgContact, persons, reletionships, addresses);
+                        entities.Add(entity);
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        if (ex.Errors != null && ex.Errors.Any())
+                        {
+
+                            foreach (var error in ex.Errors)
+                            {
+                                newrepoError.AddError(
+                              new RepositoryError("Bad.Data", error.Message)
+                              {
+                                  SourceId = orgContact.OcnCorpId
+                              });
+                            }
+                        }
+                    }
+                   
+                }
+
+                if (newrepoError!= null && newrepoError.Errors.Any())
+                {
+                    throw newrepoError;
+                }
+
+                return entities;
+            }
+            catch (ArgumentException e)
+            {
+                throw e;
+            }
+            catch (RepositoryException e)
+            {
+                throw e;
+            }
+
+        }
         /// <summary>
         /// Gets organization contact for a guid.
         /// </summary>
@@ -372,7 +447,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                 {
                                     pSeasonAddrs.ForEach(p =>
                                     {
-                                        if (!string.IsNullOrEmpty(p.AddrLocalPhoneAssocMember) && !string.IsNullOrEmpty(p.AddrLocalPhoneTypeAssocMember))
+                                        if (!string.IsNullOrEmpty(p.AddrLocalPhoneAssocMember))
                                         {
                                             string[] localPhones = p.AddrLocalPhoneAssocMember.Split(_SM);
                                             string[] localPhoneTypes = p.AddrLocalPhoneTypeAssocMember.Split(_SM);
@@ -399,7 +474,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                     if (address.AdrPhonesEntityAssociation != null && address.AdrPhonesEntityAssociation.Any())
                                     {
                                         var addrPhones = address.AdrPhonesEntityAssociation.
-                                                      Where(p => !string.IsNullOrEmpty(p.AddressPhonesAssocMember) && !string.IsNullOrEmpty(p.AddressPhoneTypeAssocMember))
+                                                      Where(p => !string.IsNullOrEmpty(p.AddressPhonesAssocMember))
                                                       .Select(p => new ContactPhoneInfo
                                                       {
                                                           PhoneType = p.AddressPhoneTypeAssocMember,

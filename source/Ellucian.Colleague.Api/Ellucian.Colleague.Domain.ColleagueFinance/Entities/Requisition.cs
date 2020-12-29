@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -23,6 +23,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// The requisition number
         /// </summary>
         public string Number { get { return number; } }
+
+        /// <summary>
+        /// The requistion type (procurement, eprocurement, etc.)
+        /// </summary>
+        public string Type { get; set; }
 
         /// <summary>
         /// The requisition desired date
@@ -63,6 +68,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// The requisition ship to code
         /// </summary>
         public string ShipToCode { get; set; }
+
+        /// <summary>
+        /// Requisition commodity code
+        /// </summary>
+        public string CommodityCode { get; set; }
 
         /// <summary>
         /// The blanket purchase order associated with the requisition
@@ -201,11 +211,26 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         public string IntgSubmittedBy { get; set; }
 
         /// <summary>
+        /// flag to bypass tax forms.
+        /// </summary>
+        public bool bypassTaxForms { get; set; }
+
+        /// <summary>
+        /// flag to bypass approvals
+        /// </summary>
+        public bool bypassApprovals { get; set; }
+
+        /// <summary>
         /// Vendor PreferredAddressId
         /// </summary>
         public string VendorPreferredAddressId { get; set; }
         public string VendorAlternativeAddressId { get; set; }
         public bool UseAltAddress { get; set; }
+
+        /// <summary>
+        /// List of email addresses - confirmation email notifications would be sent to these email addresses on create / update .
+        /// </summary>
+        public List<string> ConfirmationEmailAddresses { get; set; }
 
         /// <summary>
         /// This constructor initializes the requisition domain entity

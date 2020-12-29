@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Adapters;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -1998,5 +1998,643 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
         }
 
+        [TestClass]
+        public class QueryAcademicCreditsWithInvalidKeysAsync : CurrentUserSetup
+        {
+            private AcademicHistoryService academicHistoryService;
+            private Mock<IAcademicCreditRepository> academicCreditRepoMock;
+            private IAcademicCreditRepository academicCreditRepo;
+            private Mock<ISectionRepository> sectionRepoMock;
+            private ISectionRepository sectionRepo;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private ILogger logger;
+            private Domain.Student.Entities.Section section1;
+            private Domain.Student.Entities.Section section2;
+            private Mock<IRoleRepository> roleRepoMock;
+            private IRoleRepository roleRepo;
+            private ICurrentUserFactory currentUserFactory;
+            private ITermRepository termRepo;
+            private IStudentRepository studentRepo;
+            private IEnumerable<Domain.Student.Entities.AcademicCredit> academicCreditsIncludingCrossListed;
+            private IEnumerable<Domain.Student.Entities.AcademicCredit> academicCreditsExcludingCrossListed;
+            private IEnumerable<string> sectionIds;
+            private IEnumerable<string> sectionIdsNotCrossListed;
+            private IEnumerable<string> sectionIdsWithCrossListed;
+            private IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections;
+            private IConfigurationRepository baseConfigurationRepository;
+            private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                academicCreditRepoMock = new Mock<IAcademicCreditRepository>();
+                academicCreditRepo = academicCreditRepoMock.Object;
+                sectionRepoMock = new Mock<ISectionRepository>();
+                sectionRepo = sectionRepoMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                roleRepoMock = new Mock<IRoleRepository>();
+                roleRepo = roleRepoMock.Object;
+                logger = new Mock<ILogger>().Object;
+                baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
+                baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+
+                var academicCreditIds = new List<string>() { "1", "3", "18", "19", "28", "29", "44", "45", "102" };
+                sectionIds = new List<string>() { "section1", "section2" };
+                sectionIdsWithCrossListed = new List<string>() { "section1", "section3", "section4" };
+                academicCreditsIncludingCrossListed = new TestAcademicCreditRepository().GetAsync(academicCreditIds, false, false, false).Result;
+                var academicCreditsIncludingCrossListedWithDrops = new TestAcademicCreditRepository().GetAsync(academicCreditIds, false, true, true).Result;
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult(new AcademicCreditsWithInvalidKeys(academicCreditsIncludingCrossListed,new List<string>() )));
+                // Return a different number of academic credits when include crosslisted is false.
+                sectionIdsNotCrossListed = new List<string>() { "section1" };
+                academicCreditsExcludingCrossListed = academicCreditsIncludingCrossListed.Where(ac => ac.Id == "1");
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsNotCrossListed)).Returns(Task.FromResult(new AcademicCreditsWithInvalidKeys(academicCreditsExcludingCrossListed, new List<string>())));
+
+                sections = BuildSectionEntities();
+                sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(sectionIds, false)).Returns(Task.FromResult(sections));
+
+                // Mock Adapters
+                var academicHistoryDtoAdapter = new AcademicHistoryEntityToAcademicHistory4DtoAdapter(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.AcademicHistory, Ellucian.Colleague.Dtos.Student.AcademicHistory4>()).Returns(academicHistoryDtoAdapter);
+
+                var academicTermDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.AcademicTerm, Ellucian.Colleague.Dtos.Student.AcademicTerm3>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.AcademicTerm, Ellucian.Colleague.Dtos.Student.AcademicTerm3>()).Returns(academicTermDtoAdapter);
+
+                var academicCreditDtoAdapter = new AcademicCreditEntityToAcademicCredit3DtoAdapter(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.AcademicCredit, Ellucian.Colleague.Dtos.Student.AcademicCredit3>()).Returns(academicCreditDtoAdapter);
+
+                var midTermGradeDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.MidTermGrade, Ellucian.Colleague.Dtos.Student.MidTermGrade2>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.MidTermGrade, Ellucian.Colleague.Dtos.Student.MidTermGrade2>()).Returns(midTermGradeDtoAdapter);
+
+                var gradeDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.Grade, Ellucian.Colleague.Dtos.Student.Grade>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Grade, Ellucian.Colleague.Dtos.Student.Grade>()).Returns(gradeDtoAdapter);
+
+                // Set up current user
+                currentUserFactory = new CurrentUserSetup.StudentUserFactory();
+                termRepo = null;
+                studentRepo = null;
+                academicHistoryService = new AcademicHistoryService(adapterRegistry, studentRepo, academicCreditRepo, termRepo, sectionRepo, currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                studentRepo = null;
+                adapterRegistry = null;
+                currentUserFactory = null;
+                roleRepo = null;
+                logger = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task ThrowsErrorIfNoCriteriaProvided()
+            {
+                await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task ThrowsErrorIfNoSectionIdsInCriteria()
+            {
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria();
+                await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+            }
+
+            [TestMethod]
+            public async Task ReturnsEmptyAcademicCreditsWithInvalidKeysWhenNoSectionsReturned()
+            {
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIdsNotCrossListed.ToList() };
+                IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> emptySections = new List<Ellucian.Colleague.Domain.Student.Entities.Section>();
+                sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(sectionIdsNotCrossListed, false)).Returns(Task.FromResult(emptySections));
+                Dtos.Student.AcademicCreditsWithInvalidKeys academicCredits = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(0,academicCredits.AcademicCredits.Count());
+                Assert.AreEqual(0,academicCredits.InvalidAcademicCreditIds.Count());
+            }
+          
+
+            [TestMethod]
+            public async Task ReturnsCredits_ExcludingCrossListedSections()
+            {
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList() };
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(1, academicCreditWithInvalidKeys.AcademicCredits.Count());
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.InvalidAcademicCreditIds.Count());
+
+            }
+
+            [TestMethod]
+            public async Task ReturnsCredits_IncludingCrossListedSections_Unfiltered()
+            {
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList(), IncludeCrossListedCredits = true };
+                criteria.IncludeCrossListedCredits = true;
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(9, academicCreditWithInvalidKeys.AcademicCredits.Count());
+
+            }
+
+            [TestMethod]
+            public async Task ReturnsCredits_IncludingCrossListedSections_WithSelectedStatuses()
+            {
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList() };
+                criteria.IncludeCrossListedCredits = true;
+                // Excluding dropped and withdrawn. Should reduct the returned number to 5.
+                criteria.CreditStatuses = new List<Ellucian.Colleague.Dtos.Student.CreditStatus>() { Ellucian.Colleague.Dtos.Student.CreditStatus.Add, Ellucian.Colleague.Dtos.Student.CreditStatus.New, Ellucian.Colleague.Dtos.Student.CreditStatus.Preliminary, Ellucian.Colleague.Dtos.Student.CreditStatus.TransferOrNonCourse };
+
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(5, academicCreditWithInvalidKeys.AcademicCredits.Count());
+
+            }
+
+            [TestMethod]
+            public async Task ReturnsNoCredits_WhenSectionsAreNotForRequestor()
+            {
+                IEnumerable<string> singleSectionId = new List<string>() { "section2" };
+                IEnumerable<Section> singleSection = sections.Where(s => s.Id == "section2");
+                sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(singleSectionId, false)).Returns(Task.FromResult(singleSection));
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = singleSectionId.ToList() };
+
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.AcademicCredits.Count());
+
+            }
+
+            [TestMethod]
+            public async Task ReturnEmptyAcademicCreditsWithInvalidKeys_Dto_WithNullValues_FromRepository()
+            {
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult<AcademicCreditsWithInvalidKeys>(null));
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList(), IncludeCrossListedCredits = true };
+                criteria.IncludeCrossListedCredits = true;
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.AcademicCredits.Count());
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.InvalidAcademicCreditIds.Count());
+            }
+
+            [TestMethod]
+            public async Task ReturnEmptyAcademicCreditsWithInvalidKeys_Dto_WithNullInvalidKeys_FromRepository()
+            {
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult(new AcademicCreditsWithInvalidKeys(new List<Domain.Student.Entities.AcademicCredit>(), null)));
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList(), IncludeCrossListedCredits = true };
+                criteria.IncludeCrossListedCredits = true;
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.AcademicCredits.Count());
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.InvalidAcademicCreditIds.Count());
+            }
+           
+            [TestMethod]
+            public async Task ReturnEmptyAcademicCreditsWithInvalidKeys_Dto_WithEmptyValues_FromRepository()
+            {
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult(new AcademicCreditsWithInvalidKeys(new List<Domain.Student.Entities.AcademicCredit>(), new List<string>())));
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList(), IncludeCrossListedCredits = true };
+                criteria.IncludeCrossListedCredits = true;
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.AcademicCredits.Count());
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.InvalidAcademicCreditIds.Count());
+            }
+            [TestMethod]
+            public async Task ReturnEmptyAcademicCreditsWithInvalidKeys_Dto_WithOnlyInvalidKeysValues_FromRepository()
+            {
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult(new AcademicCreditsWithInvalidKeys(new List<Domain.Student.Entities.AcademicCredit>(), new List<string>() {"999" })));
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList(), IncludeCrossListedCredits = true };
+                criteria.IncludeCrossListedCredits = true;
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.AcademicCredits.Count());
+                Assert.AreEqual(1, academicCreditWithInvalidKeys.InvalidAcademicCreditIds.Count());
+            }
+            [TestMethod]
+            public async Task ReturnEmptyAcademicCreditsWithInvalidKeys_Dto_WithAcademicCreditsAndInvalidKeysValues_FromRepository()
+            {
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult(new AcademicCreditsWithInvalidKeys(academicCreditsIncludingCrossListed, new List<string>() { "999","9998"})));
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList(), IncludeCrossListedCredits = true };
+                criteria.IncludeCrossListedCredits = true;
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(9, academicCreditWithInvalidKeys.AcademicCredits.Count());
+                Assert.AreEqual(2, academicCreditWithInvalidKeys.InvalidAcademicCreditIds.Count());
+            }
+            [TestMethod]
+            public async Task ReturnEmptyAcademicCreditsWithInvalidKeys_Dto_WithNull_FromRepository()
+            {
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult<AcademicCreditsWithInvalidKeys>(null));
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList(), IncludeCrossListedCredits = true };
+                criteria.IncludeCrossListedCredits = true;
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.AcademicCredits.Count());
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.InvalidAcademicCreditIds.Count());
+            }
+
+            private IEnumerable<Section> BuildSectionEntities()
+            {
+                List<Section> sections = new List<Section>();
+                var section1 = new Section("section1", "course1", "01", DateTime.Now.AddDays(-30), 3.0m, null, "Section Title 1", "G", new List<OfferingDepartment>() { new OfferingDepartment("MATH") }, new List<string>() { "100" }, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Now) }, true, true, false, true, false, false);
+                section1.AddFaculty("0000894");
+
+                // This section has wrong faculty so it should NOT be in the list of sections when going to repo for academic credits.
+                var section2 = new Section("section2", "course2", "02", DateTime.Now.AddDays(-30), 3.0m, null, "Section Title 2", "G", new List<OfferingDepartment>() { new OfferingDepartment("MATH") }, new List<string>() { "100" }, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Now) }, true, true, false, true, false, false);
+                section1.AddFaculty("0000222");
+
+                // Thes sections are cross listed to section 1.
+                var section3 = new Section("section3", "course3", "03", DateTime.Now.AddDays(-30), 3.0m, null, "Section Title 3", "G", new List<OfferingDepartment>() { new OfferingDepartment("MATH") }, new List<string>() { "100" }, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Now) }, true, true, false, true, false, false);
+                var section4 = new Section("section4", "course4", "04", DateTime.Now.AddDays(-30), 3.0m, null, "Section Title 4", "G", new List<OfferingDepartment>() { new OfferingDepartment("MATH") }, new List<string>() { "100" }, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Now) }, true, true, false, true, false, false);
+                section1.AddCrossListedSection(section3);
+                section1.AddCrossListedSection(section4);
+
+                // sections returned by the repo will be section 1 and 2 and of those only 1 is for this faculty.
+                sections.Add(section1);
+                sections.Add(section2);
+                return sections;
+            }
+        }
+
+        [TestClass]
+        public class GetPilotAcademicHistoryLevelByIdsAsync : CurrentUserSetup
+        {
+            private AcademicHistoryService academicHistoryService;
+            private Mock<IAcademicCreditRepository> academicCreditRepoMock;
+            private IAcademicCreditRepository academicCreditRepo;
+            private Mock<ISectionRepository> sectionRepoMock;
+            private ISectionRepository sectionRepo;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<ILogger> loggerMock;
+            private ILogger logger;
+            private Mock<IRoleRepository> roleRepoMock;
+            private IRoleRepository roleRepo;
+            private ICurrentUserFactory currentUserFactory;
+            private Mock<ITermRepository> termRepoMock;
+            private ITermRepository termRepo;
+            private IStudentRepository studentRepo;
+            private IConfigurationRepository baseConfigurationRepository;
+            private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                academicCreditRepoMock = new Mock<IAcademicCreditRepository>();
+                academicCreditRepo = academicCreditRepoMock.Object;
+                sectionRepoMock = new Mock<ISectionRepository>();
+                sectionRepo = sectionRepoMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                roleRepoMock = new Mock<IRoleRepository>();
+                roleRepo = roleRepoMock.Object;
+                termRepoMock = new Mock<ITermRepository>();
+                termRepo = termRepoMock.Object;
+                loggerMock = new Mock<ILogger>();
+                logger = loggerMock.Object;
+                baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
+                baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+
+                // Initialize current user
+                currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
+
+                // Mock AdapterRegistry
+                adapterRegistryMock.Setup(ar => ar.GetAdapter<PilotAcademicHistoryLevel, Ellucian.Colleague.Dtos.Student.PilotAcademicHistoryLevel>()).Returns(new PilotAcademicHistoryLevelDtoAdapter(adapterRegistry, logger));
+
+                // Mock roles for current user
+                Role advisorRole = new Role(1, currentUserFactory.CurrentUser.Roles.ElementAt(0));
+                advisorRole.AddPermission(new Permission(StudentPermissionCodes.ViewStudentInformation));
+                roleRepoMock.Setup(r => r.Roles).Returns(new List<Role>()
+                {
+                    advisorRole
+                });
+
+                // Mock AcademicCreditRepository
+                academicCreditRepoMock.Setup(acr => acr.GetPilotCensusBooleanAsync()).ReturnsAsync(true);
+                academicCreditRepoMock.Setup(acr => acr.ConvertCreditStatusAsync("A")).ReturnsAsync(CreditStatus.Add);
+                academicCreditRepoMock.Setup(acr => acr.ConvertCreditStatusAsync("C")).ReturnsAsync(CreditStatus.Cancelled);
+                academicCreditRepoMock.Setup(acr => acr.ConvertCreditStatusAsync("X")).ReturnsAsync(CreditStatus.Deleted);
+                academicCreditRepoMock.Setup(acr => acr.ConvertCreditStatusAsync("D")).ReturnsAsync(CreditStatus.Dropped);
+                academicCreditRepoMock.Setup(acr => acr.ConvertCreditStatusAsync("N")).ReturnsAsync(CreditStatus.New);
+                academicCreditRepoMock.Setup(acr => acr.ConvertCreditStatusAsync("P")).ReturnsAsync(CreditStatus.Preliminary);
+                academicCreditRepoMock.Setup(acr => acr.ConvertCreditStatusAsync("T")).ReturnsAsync(CreditStatus.TransferOrNonCourse);
+                academicCreditRepoMock.Setup(acr => acr.ConvertCreditStatusAsync("U")).ReturnsAsync(CreditStatus.Unknown);
+                academicCreditRepoMock.Setup(acr => acr.ConvertCreditStatusAsync("W")).ReturnsAsync(CreditStatus.Withdrawn);
+
+                // Mock TermRepository
+                List<Term> allTerms = new List<Term>()
+                {
+                    null, // Nulls should be handled gracefully
+                    new Term("2020/SP1", "2020 Spring Term 1", DateTime.Today.AddDays(-90), DateTime.Today.AddDays(-10), 2020, 1, false, false, "2020", false),
+                    new Term("2020/SP2", "2020 Spring Term 2",  DateTime.Today.AddDays(-10), DateTime.Today.AddDays(80), 2020, 2, false, false, "2020", false),
+                    new Term("2020/SP3", "2020 Spring Term 3 - Ends Today",  DateTime.Today.AddDays(-10), DateTime.Today, 2020, 3, false, false, "2020", false),
+                    new Term("2020/TODAY", "2020 Today", DateTime.Today, DateTime.Today, 2020, 4, false, false, "2020", false),
+                    new Term("2020/SP4", "2020 Spring Term 4 - Starts Today",  DateTime.Today, DateTime.Today.AddDays(10), 2020, 5, false, false, "2020", false),
+                    new Term("2020/SP5", "2020 Spring Term 5",  DateTime.Today.AddDays(10), DateTime.Today.AddDays(90), 2020, 6, false, false, "2020", false)
+                };
+                termRepoMock.Setup(tr => tr.GetAsync()).ReturnsAsync(allTerms);
+
+                // Mock SectionRepository
+                List<Section> cachedSections = new List<Section>()
+                {
+                    null, // Nulls should be handled gracefully
+                    new Section("1", "1", "100", DateTime.Today.AddDays(-90), 3m, null, "Section starts and ends in past", "IN",
+                        new List<OfferingDepartment>() { new OfferingDepartment("HIST") },
+                        new List<string>() {"100"},
+                        "UG",
+                        new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddDays(-100)) }) { EndDate = DateTime.Today.AddDays(-10), TermId = "2020/SP1" },
+                    new Section("2", "2", "101", DateTime.Today.AddDays(-10), 3m, null, "Section starts in past and ends in future", "IN",
+                        new List<OfferingDepartment>() { new OfferingDepartment("HIST") },
+                        new List<string>() {"100"},
+                        "UG",
+                        new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddDays(-20)) }) { EndDate = DateTime.Today.AddDays(80), TermId = "2020/SP2" },
+                    new Section("3", "3", "102", DateTime.Today.AddDays(-10), 3m, null, "Section starts in past and ends today", "IN",
+                        new List<OfferingDepartment>() { new OfferingDepartment("HIST") },
+                        new List<string>() {"100"},
+                        "UG",
+                        new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddDays(-10)) }) { EndDate = DateTime.Today, TermId = "2020/SP3" },
+                    new Section("4", "4", "103", DateTime.Today, 3m, null, "Section starts and ends today", "IN",
+                        new List<OfferingDepartment>() { new OfferingDepartment("HIST") },
+                        new List<string>() {"100"},
+                        "UG",
+                        new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today) }) { EndDate = DateTime.Today, TermId = "2020/TODAY" },
+                    new Section("5", "5", "104", DateTime.Today, 3m, null, "Section starts today and ends in the future", "IN",
+                        new List<OfferingDepartment>() { new OfferingDepartment("HIST") },
+                        new List<string>() {"100"},
+                        "UG",
+                        new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddDays(-10)) }) { EndDate = DateTime.Today.AddDays(10), TermId = "2020/SP5" },
+                    new Section("6", "6", "105", DateTime.Today.AddDays(10), 3m, null, "Section starts and ends in the future", "IN",
+                        new List<OfferingDepartment>() { new OfferingDepartment("HIST") },
+                        new List<string>() {"100"},
+                        "UG",
+                        new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today) }) { EndDate = DateTime.Today.AddDays(90), TermId = "2020/SP6" },
+
+                };
+                sectionRepoMock.Setup(sr => sr.GetCachedSectionsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>())).ReturnsAsync(cachedSections);
+
+                // Initialize service
+                academicHistoryService = new AcademicHistoryService(adapterRegistry, studentRepo, academicCreditRepo, termRepo, sectionRepo, currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetPilotAcademicHistoryLevelByIdsAsync_null_StudentIds_throws_ArgumentNullException()
+            {
+                var acadHistoryLevel = await academicHistoryService.GetPilotAcademicHistoryLevelByIdsAsync(null, true, true);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetPilotAcademicHistoryLevelByIdsAsync_empty_StudentIds_throws_ArgumentNullException()
+            {
+                var acadHistoryLevel = await academicHistoryService.GetPilotAcademicHistoryLevelByIdsAsync(new List<string>(), true, true);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetPilotAcademicHistoryLevelByIdsAsync_list_with_null_empty_only_StudentIds_throws_ArgumentNullException()
+            {
+                var acadHistoryLevel = await academicHistoryService.GetPilotAcademicHistoryLevelByIdsAsync(new List<string>() { null, string.Empty }, true, true);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task GetPilotAcademicHistoryLevelByIdsAsync_user_without_VIEW_STUDENT_INFORMATION_permission_throws_PermissionsException()
+            {
+                // Mock roles for current user
+                Role advisorRole = new Role(1, currentUserFactory.CurrentUser.Roles.ElementAt(0));
+                roleRepoMock.Setup(r => r.Roles).Returns(new List<Role>()
+                {
+                    advisorRole
+                });
+
+                // Initialize service
+                academicHistoryService = new AcademicHistoryService(adapterRegistry, studentRepo, academicCreditRepo, termRepo, sectionRepo, currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                
+                // Call service method
+                var acadHistoryLevel = await academicHistoryService.GetPilotAcademicHistoryLevelByIdsAsync(new List<string>() { currentUserFactory.CurrentUser.PersonId }, true, true);
+            }
+
+            [TestMethod]
+            public async Task GetPilotAcademicHistoryLevelByIdsAsync_UseCensusDate_False_returns_earliest_term()
+            {
+                // Modify mocks
+                academicCreditRepoMock.Setup(acr => acr.GetPilotCensusBooleanAsync()).ReturnsAsync(false);
+
+                Dictionary<string, List<PilotAcademicCredit>> acadCreditDict = new Dictionary<string, List<PilotAcademicCredit>>();
+                acadCreditDict.Add(currentUserFactory.CurrentUser.PersonId, new List<PilotAcademicCredit>()
+                {
+                    null, // Nulls should be handled gracefully
+                    new PilotAcademicCredit("1") { Status = CreditStatus.Add, TermCode = "2020/SP1", SectionId = "1" },
+                    new PilotAcademicCredit("2") { Status = CreditStatus.Add, TermCode = "2020/SP2", AcademicLevelCode = "UG" },
+                    new PilotAcademicCredit("3") { Status = CreditStatus.Add, SectionId = "3", AcademicLevelCode = "UG" },
+                    new PilotAcademicCredit("4") { Status = CreditStatus.Dropped, TermCode = "2020/SP4", SectionId = "4", AcademicLevelCode = "UG" },
+                    new PilotAcademicCredit("5") { Status = CreditStatus.New, TermCode = "2020/SP5", SectionId = "5", AcademicLevelCode = "UG" },
+                });
+                academicCreditRepoMock.Setup(acr => acr.GetPilotAcademicCreditsByStudentIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<AcademicCreditDataSubset>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string>())).ReturnsAsync(acadCreditDict);
+
+                // Initialize service
+                academicHistoryService = new AcademicHistoryService(adapterRegistry, studentRepo, academicCreditRepo, termRepo, sectionRepo, currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+
+                // Call service method
+                var acadHistoryLevel = await academicHistoryService.GetPilotAcademicHistoryLevelByIdsAsync(new List<string>() { currentUserFactory.CurrentUser.PersonId }, true, true);
+                Assert.IsNotNull(acadHistoryLevel);
+                Assert.AreEqual(1, acadHistoryLevel.Count());
+                Assert.AreEqual("2020/SP2", acadHistoryLevel.ElementAt(0).FirstTermEnrolled);
+            }
+
+            [TestMethod]
+            public async Task GetPilotAcademicHistoryLevelByIdsAsync_UseCensusDate_True_returns_correct_term()
+            {
+                // Modify mocks
+                academicCreditRepoMock.Setup(acr => acr.GetPilotCensusBooleanAsync()).ReturnsAsync(true);
+
+                Dictionary<string, List<PilotAcademicCredit>> acadCreditDict = new Dictionary<string, List<PilotAcademicCredit>>();
+                acadCreditDict.Add(currentUserFactory.CurrentUser.PersonId, new List<PilotAcademicCredit>()
+                {
+                    null, // Nulls should be handled gracefully
+                    new PilotAcademicCredit("1") { Status = CreditStatus.Add, TermCode = "2020/SP1", SectionId = "1" },
+                    new PilotAcademicCredit("2") { Status = CreditStatus.Add, TermCode = "2020/SP2", AcademicLevelCode = "UG" },
+                    new PilotAcademicCredit("3") { Status = CreditStatus.Add, SectionId = "3", AcademicLevelCode = "UG" },
+                    new PilotAcademicCredit("4") { Status = CreditStatus.Dropped, TermCode = "2020/SP4", SectionId = "4", AcademicLevelCode = "UG" },
+                    new PilotAcademicCredit("5") { Status = CreditStatus.New, TermCode = "2020/SP5", SectionId = "5", AcademicLevelCode = "UG" },
+                });
+                academicCreditRepoMock.Setup(acr => acr.GetPilotAcademicCreditsByStudentIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<AcademicCreditDataSubset>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string>())).ReturnsAsync(acadCreditDict);
+
+                // Initialize service
+                academicHistoryService = new AcademicHistoryService(adapterRegistry, studentRepo, academicCreditRepo, termRepo, sectionRepo, currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+
+                // Call service method
+                var acadHistoryLevel = await academicHistoryService.GetPilotAcademicHistoryLevelByIdsAsync(new List<string>() { currentUserFactory.CurrentUser.PersonId }, true, true);
+                Assert.IsNotNull(acadHistoryLevel);
+                Assert.AreEqual(1, acadHistoryLevel.Count());
+                Assert.AreEqual("2020/SP5", acadHistoryLevel.ElementAt(0).FirstTermEnrolled);
+            }
+
+
+            [TestMethod]
+            public async Task GetPilotAcademicHistoryLevelByIdsAsync_UseCensusDate_True_Section_Census_Dates_returns_correct_term()
+            {
+                // Modify mocks
+                List<Section> cachedSections = new List<Section>()
+                {
+                    null, // Nulls should be handled gracefully
+                    new Section("1", "1", "100", DateTime.Today.AddDays(-90), 3m, null, "Section starts and ends in past", "IN",
+                        new List<OfferingDepartment>() { new OfferingDepartment("HIST") },
+                        new List<string>() {"100"},
+                        "UG",
+                        new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddDays(-100)) }) { EndDate = DateTime.Today.AddDays(-10), TermId = "2020/SP1",
+                        RegistrationDateOverrides = new RegistrationDate("", null, null, null, null, null, null, null, null, null, new List<DateTime?>() { DateTime.Today.AddDays(-180) }) },
+                    new Section("2", "2", "101", DateTime.Today.AddDays(-10), 3m, null, "Section starts in past and ends in future", "IN",
+                        new List<OfferingDepartment>() { new OfferingDepartment("HIST") },
+                        new List<string>() {"100"},
+                        "UG",
+                        new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddDays(-20)) }) { EndDate = DateTime.Today.AddDays(80), TermId = "2020/SP2",
+                        RegistrationDateOverrides = new RegistrationDate("", null, null, null, null, null, null, null, null, null, new List<DateTime?>() { DateTime.Today.AddDays(-270) })},
+                    new Section("3", "3", "102", DateTime.Today.AddDays(-10), 3m, null, "Section starts in past and ends today", "IN",
+                        new List<OfferingDepartment>() { new OfferingDepartment("HIST") },
+                        new List<string>() {"100"},
+                        "UG",
+                        new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddDays(-10)) }) { EndDate = DateTime.Today, TermId = "2020/SP3" },
+                    new Section("4", "4", "103", DateTime.Today, 3m, null, "Section starts and ends today", "IN",
+                        new List<OfferingDepartment>() { new OfferingDepartment("HIST") },
+                        new List<string>() {"100"},
+                        "UG",
+                        new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today) }) { EndDate = DateTime.Today, TermId = "2020/TODAY" },
+                    new Section("5", "5", "104", DateTime.Today, 3m, null, "Section starts today and ends in the future", "IN",
+                        new List<OfferingDepartment>() { new OfferingDepartment("HIST") },
+                        new List<string>() {"100"},
+                        "UG",
+                        new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddDays(-10)) }) { EndDate = DateTime.Today.AddDays(10), TermId = "2020/SP5" },
+                    new Section("6", "6", "105", DateTime.Today.AddDays(10), 3m, null, "Section starts and ends in the future", "IN",
+                        new List<OfferingDepartment>() { new OfferingDepartment("HIST") },
+                        new List<string>() {"100"},
+                        "UG",
+                        new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today) }) { EndDate = DateTime.Today.AddDays(90), TermId = "2020/SP6" },
+
+                };
+                sectionRepoMock.Setup(sr => sr.GetCachedSectionsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>())).ReturnsAsync(cachedSections);
+
+                academicCreditRepoMock.Setup(acr => acr.GetPilotCensusBooleanAsync()).ReturnsAsync(true);
+
+                Dictionary<string, List<PilotAcademicCredit>> acadCreditDict = new Dictionary<string, List<PilotAcademicCredit>>();
+                acadCreditDict.Add(currentUserFactory.CurrentUser.PersonId, new List<PilotAcademicCredit>()
+                {
+                    null, // Nulls should be handled gracefully
+                    new PilotAcademicCredit("1") { Status = CreditStatus.Add, TermCode = "2020/SP1", AcademicLevelCode = "UG", SectionId = "1", AcademicCreditStatuses = new List<AcademicCreditStatus>() { new AcademicCreditStatus("A", DateTime.Today.AddDays(-179), DateTime.Now, "X") } },
+                    new PilotAcademicCredit("2") { Status = CreditStatus.Add, TermCode = "2020/SP2", AcademicLevelCode = "UG", SectionId = "2", AcademicCreditStatuses = new List<AcademicCreditStatus>() { new AcademicCreditStatus("A", DateTime.Today.AddDays(-271), DateTime.Now, "X") } },
+                    new PilotAcademicCredit("3") { Status = CreditStatus.Add, SectionId = "3", AcademicLevelCode = "UG" },
+                    new PilotAcademicCredit("4") { Status = CreditStatus.Dropped, TermCode = "2020/SP4", SectionId = "4", AcademicLevelCode = "UG" },
+                    new PilotAcademicCredit("5") { Status = CreditStatus.New, TermCode = "2020/SP5", SectionId = "5", AcademicLevelCode = "UG" },
+                });
+                academicCreditRepoMock.Setup(acr => acr.GetPilotAcademicCreditsByStudentIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<AcademicCreditDataSubset>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string>())).ReturnsAsync(acadCreditDict);
+
+                // Initialize service
+                academicHistoryService = new AcademicHistoryService(adapterRegistry, studentRepo, academicCreditRepo, termRepo, sectionRepo, currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+
+                // Call service method
+                var acadHistoryLevel = await academicHistoryService.GetPilotAcademicHistoryLevelByIdsAsync(new List<string>() { currentUserFactory.CurrentUser.PersonId }, true, true);
+                Assert.IsNotNull(acadHistoryLevel);
+                Assert.AreEqual(1, acadHistoryLevel.Count());
+                Assert.AreEqual("2020/SP2", acadHistoryLevel.ElementAt(0).FirstTermEnrolled);
+            }
+
+            [TestMethod]
+            public async Task GetPilotAcademicHistoryLevelByIdsAsync_UseCensusDate_True_Term_Location_Census_Dates_returns_correct_term()
+            {
+                // Modify mocks
+                List<Section> cachedSections = new List<Section>()
+                {
+                    null, // Nulls should be handled gracefully
+                    new Section("1", "1", "100", DateTime.Today.AddDays(-90), 3m, null, "Section starts and ends in past", "IN",
+                        new List<OfferingDepartment>() { new OfferingDepartment("HIST") },
+                        new List<string>() {"100"},
+                        "UG",
+                        new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddDays(-100)) }) { EndDate = DateTime.Today.AddDays(-10), TermId = "2020/SP1" },
+                    new Section("2", "2", "101", DateTime.Today.AddDays(-10), 3m, null, "Section starts in past and ends in future", "IN",
+                        new List<OfferingDepartment>() { new OfferingDepartment("HIST") },
+                        new List<string>() {"100"},
+                        "UG",
+                        new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddDays(-20)) }) { EndDate = DateTime.Today.AddDays(80), TermId = "2020/SP2" }
+                };
+                sectionRepoMock.Setup(sr => sr.GetCachedSectionsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>())).ReturnsAsync(cachedSections);
+
+                academicCreditRepoMock.Setup(acr => acr.GetPilotCensusBooleanAsync()).ReturnsAsync(true);
+
+                Dictionary<string, List<PilotAcademicCredit>> acadCreditDict = new Dictionary<string, List<PilotAcademicCredit>>();
+                acadCreditDict.Add(currentUserFactory.CurrentUser.PersonId, new List<PilotAcademicCredit>()
+                {
+                    null, // Nulls should be handled gracefully
+                    new PilotAcademicCredit("1") { Status = CreditStatus.Add, TermCode = "2020/SP1", AcademicLevelCode = "UG", Location = "MC", SectionId = "1", AcademicCreditStatuses = new List<AcademicCreditStatus>() { new AcademicCreditStatus("A", DateTime.Today.AddDays(-179), DateTime.Now, "X") } },
+                    new PilotAcademicCredit("2") { Status = CreditStatus.Add, TermCode = "2020/SP2", AcademicLevelCode = "UG", Location = "SC", SectionId = "2", AcademicCreditStatuses = new List<AcademicCreditStatus>() { new AcademicCreditStatus("A", DateTime.Today.AddDays(-271), DateTime.Now, "X") } },
+                });
+                academicCreditRepoMock.Setup(acr => acr.GetPilotAcademicCreditsByStudentIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<AcademicCreditDataSubset>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string>())).ReturnsAsync(acadCreditDict);
+
+                var term1 = new Term("2020/SP1", "2020 Spring Term 1", DateTime.Today.AddDays(-90), DateTime.Today.AddDays(-10), 2020, 1, false, false, "2020", false);
+                term1.AddRegistrationDates(new RegistrationDate("MC", null, null, null, null,null,null,null,null,null, new List<DateTime?>() { DateTime.Today.AddDays(-180)}));
+                var term2 = new Term("2020/SP2", "2020 Spring Term 2", DateTime.Today.AddDays(-10), DateTime.Today.AddDays(80), 2020, 2, false, false, "2020", false);
+                term2.AddRegistrationDates(new RegistrationDate("SC", null, null, null, null, null, null, null, null, null, new List<DateTime?>() { DateTime.Today.AddDays(-270) }));
+
+                List<Term> allTerms = new List<Term>()
+                {
+                    term1,
+                    term2,
+                };
+                termRepoMock.Setup(tr => tr.GetAsync()).ReturnsAsync(allTerms);
+
+                // Initialize service
+                academicHistoryService = new AcademicHistoryService(adapterRegistry, studentRepo, academicCreditRepo, termRepo, sectionRepo, currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+
+                // Call service method
+                var acadHistoryLevel = await academicHistoryService.GetPilotAcademicHistoryLevelByIdsAsync(new List<string>() { currentUserFactory.CurrentUser.PersonId }, true, true);
+                Assert.IsNotNull(acadHistoryLevel);
+                Assert.AreEqual(1, acadHistoryLevel.Count());
+                Assert.AreEqual("2020/SP2", acadHistoryLevel.ElementAt(0).FirstTermEnrolled);
+            }
+
+            [TestMethod]
+            public async Task GetPilotAcademicHistoryLevelByIdsAsync_UseCensusDate_True_Term_Census_Dates_returns_correct_term()
+            {
+                // Modify mocks
+                List<Section> cachedSections = new List<Section>()
+                {
+                    null, // Nulls should be handled gracefully
+                    new Section("1", "1", "100", DateTime.Today.AddDays(-90), 3m, null, "Section starts and ends in past", "IN",
+                        new List<OfferingDepartment>() { new OfferingDepartment("HIST") },
+                        new List<string>() {"100"},
+                        "UG",
+                        new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddDays(-100)) }) { EndDate = DateTime.Today.AddDays(-10), TermId = "2020/SP1" },
+                    new Section("2", "2", "101", DateTime.Today.AddDays(-10), 3m, null, "Section starts in past and ends in future", "IN",
+                        new List<OfferingDepartment>() { new OfferingDepartment("HIST") },
+                        new List<string>() {"100"},
+                        "UG",
+                        new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddDays(-20)) }) { EndDate = DateTime.Today.AddDays(80), TermId = "2020/SP2" }
+                };
+                sectionRepoMock.Setup(sr => sr.GetCachedSectionsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>())).ReturnsAsync(cachedSections);
+
+                academicCreditRepoMock.Setup(acr => acr.GetPilotCensusBooleanAsync()).ReturnsAsync(true);
+
+                Dictionary<string, List<PilotAcademicCredit>> acadCreditDict = new Dictionary<string, List<PilotAcademicCredit>>();
+                acadCreditDict.Add(currentUserFactory.CurrentUser.PersonId, new List<PilotAcademicCredit>()
+                {
+                    null, // Nulls should be handled gracefully
+                    new PilotAcademicCredit("1") { Status = CreditStatus.Add, TermCode = "2020/SP1", AcademicLevelCode = "UG", Location = "MC", SectionId = "1", AcademicCreditStatuses = new List<AcademicCreditStatus>() { new AcademicCreditStatus("A", DateTime.Today.AddDays(-179), DateTime.Now, "X") } },
+                    new PilotAcademicCredit("2") { Status = CreditStatus.Add, TermCode = "2020/SP2", AcademicLevelCode = "UG", Location = "SC", SectionId = "2", AcademicCreditStatuses = new List<AcademicCreditStatus>() { new AcademicCreditStatus("A", DateTime.Today.AddDays(-271), DateTime.Now, "X") } },
+                });
+                academicCreditRepoMock.Setup(acr => acr.GetPilotAcademicCreditsByStudentIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<AcademicCreditDataSubset>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string>())).ReturnsAsync(acadCreditDict);
+
+                var term1 = new Term("2020/SP1", "2020 Spring Term 1", DateTime.Today.AddDays(-90), DateTime.Today.AddDays(-10), 2020, 1, false, false, "2020", false);
+                term1.AddRegistrationDates(new RegistrationDate(string.Empty, null, null, null, null, null, null, null, null, null, new List<DateTime?>() { DateTime.Today.AddDays(-180) }));
+                var term2 = new Term("2020/SP2", "2020 Spring Term 2", DateTime.Today.AddDays(-10), DateTime.Today.AddDays(80), 2020, 2, false, false, "2020", false);
+                term2.AddRegistrationDates(new RegistrationDate(string.Empty, null, null, null, null, null, null, null, null, null, new List<DateTime?>() { DateTime.Today.AddDays(-270) }));
+
+                List<Term> allTerms = new List<Term>()
+                {
+                    term1,
+                    term2,
+                };
+                termRepoMock.Setup(tr => tr.GetAsync()).ReturnsAsync(allTerms);
+
+                // Initialize service
+                academicHistoryService = new AcademicHistoryService(adapterRegistry, studentRepo, academicCreditRepo, termRepo, sectionRepo, currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+
+                // Call service method
+                var acadHistoryLevel = await academicHistoryService.GetPilotAcademicHistoryLevelByIdsAsync(new List<string>() { currentUserFactory.CurrentUser.PersonId }, true, true);
+                Assert.IsNotNull(acadHistoryLevel);
+                Assert.AreEqual(1, acadHistoryLevel.Count());
+                Assert.AreEqual("2020/SP2", acadHistoryLevel.ElementAt(0).FirstTermEnrolled);
+            }
+
+        }
     }
 }

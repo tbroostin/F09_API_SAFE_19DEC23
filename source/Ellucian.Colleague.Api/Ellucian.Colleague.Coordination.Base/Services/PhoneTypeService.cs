@@ -19,17 +19,19 @@ namespace Ellucian.Colleague.Coordination.Base.Services
     public class PhoneTypeService : BaseCoordinationService, IPhoneTypeService
     {
         private readonly IReferenceDataRepository _referenceDataRepository;
-        
+        private readonly IConfigurationRepository _configurationRepository;
+
         private const string _dataOrigin = "Colleague";
 
         public PhoneTypeService(IAdapterRegistry adapterRegistry, IReferenceDataRepository referenceDataRepository,
                                          ICurrentUserFactory currentUserFactory,
                                          IRoleRepository roleRepository,
-                                         ILogger logger)
-            : base(adapterRegistry, currentUserFactory, roleRepository, logger)
+                                         ILogger logger,
+                                         IConfigurationRepository configurationRepository)
+            : base(adapterRegistry, currentUserFactory, roleRepository, logger, null, configurationRepository)
         {
             _referenceDataRepository = referenceDataRepository;
-           
+            _configurationRepository = configurationRepository;
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>

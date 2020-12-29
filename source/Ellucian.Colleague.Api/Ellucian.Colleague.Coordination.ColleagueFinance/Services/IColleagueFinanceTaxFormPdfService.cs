@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using System.Threading.Tasks;
@@ -31,7 +31,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>Form1099MIPdfData domain entity</returns>
         Task<Form1099MIPdfData> Get1099MiscPdfDataAsync(string personId, string recordId); 
 
-
         /// <summary>
         /// Populates the 1099-MISC PDF with the supplied data.
         /// </summary>
@@ -39,5 +38,21 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="documentPath">Path to the PDF template</param>
         /// <returns>Byte array containing PDF data for the 1099-MISC tax form</returns>
         byte[] Populate1099MiscPdf(Form1099MIPdfData pdfData, string documentPath);
+
+        /// <summary>
+        /// Retrieves a Form1099NecPdfData DTO.
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the 1099-NEC.</param>
+        /// <param name="recordId">The record ID where the 1099-NEC pdf data is stored</param>
+        /// <returns>Form1099NecPdfData domain entity</returns>
+        Task<Form1099NecPdfData> Get1099NecPdfDataAsync(string personId, string recordId);
+
+        /// <summary>
+        /// Populates the 1099-NEC PDF with the supplied data.
+        /// </summary>
+        /// <param name="pdfData">1099-NEC PDF data</param>
+        /// <param name="documentPath">Path to the PDF template</param>
+        /// <returns>Byte array containing PDF data for the 1099-NEC tax form</returns>
+        byte[] Populate1099NecPdf(Form1099NecPdfData pdfData, string documentPath);
     }
 }

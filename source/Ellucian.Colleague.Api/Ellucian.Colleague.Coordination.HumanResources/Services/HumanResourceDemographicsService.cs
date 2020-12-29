@@ -133,7 +133,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 effectivePersonId = CurrentUser.PersonId;
             }
-            else if (!CurrentUser.IsPerson(effectivePersonId) && !HasProxyAccessForPerson(effectivePersonId, Domain.Base.Entities.ProxyWorkflowConstants.TimeManagementTimeApproval))
+            //To view other's info, logged in user must be a proxy or admin
+            else if (!CurrentUser.IsPerson(effectivePersonId) && !(HasProxyAccessForPerson(effectivePersonId, Domain.Base.Entities.ProxyWorkflowConstants.TimeManagementTimeApproval)
+                       || HasPermission(HumanResourcesPermissionCodes.ViewAllTimeHistory)))
             {
                 throw new PermissionsException("User does not have permission to view human resource demographic information");
             }
@@ -204,7 +206,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             if (!CurrentUser.IsPerson(id))
             {
-                if (!HasPermission(HumanResourcesPermissionCodes.ViewSuperviseeData))
+                if (!(HasPermission(HumanResourcesPermissionCodes.ViewSuperviseeData) || (HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest))))
                 {
                     throw new PermissionsException(string.Format("User {0} does not have permission to access demographics for {1}", CurrentUser.PersonId, id));
                 }

@@ -1,10 +1,11 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017=2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using Ellucian.Colleague.Dtos.Converters;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Dtos.DtoProperties;
+using Ellucian.Colleague.Dtos.Attributes;
 using Newtonsoft.Json;
 
 namespace Ellucian.Colleague.Dtos
@@ -27,6 +28,7 @@ namespace Ellucian.Colleague.Dtos
         /// The financial aid year for which the applicant applied.
         /// </summary>
         [JsonProperty("aidYear", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
         public GuidObject2 AidYear { get; set; }
 
         /// <summary>
@@ -34,12 +36,15 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>
 
         [DataMember(Name = "methodology", EmitDefaultValue = false)]
+        [FilterProperty("criteria")]
         public FinancialAidApplicationsMethodology Methodology { get; set; }
 
         /// <summary>
         /// The financial aid application.
         /// </summary>
         [JsonProperty("application", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
+        [JsonConverter(typeof(GuidObject2FilterConverter))]
         public GuidObject2 Application { get; set; }
 
         /// <summary>

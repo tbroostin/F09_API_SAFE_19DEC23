@@ -1,17 +1,12 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.HumanResources.Services;
-using Ellucian.Colleague.Domain.Base.Tests;
+using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
-using Ellucian.Colleague.Domain.HumanResources.Tests;
-using Ellucian.Colleague.Dtos;
-using Ellucian.Web.Adapters;
-using Ellucian.Web.Http.TestUtil;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
@@ -19,6 +14,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
     [TestClass]
     public class PayrollDeductionArrangementChangeReasonsServiceTests : HumanResourcesServiceTestsSetup
     {
+        private IConfigurationRepository _configurationRepository;
+        private Mock<IConfigurationRepository> _configurationRepositoryMock;
         public Mock<IHumanResourcesReferenceDataRepository> referenceDataRepository;
         PayrollDeductionArrangementChangeReasonsService payrollDeductionArrangementChangeReasonsService;
         List<Dtos.PayrollDeductionArrangementChangeReason> payrollDeductionArrangementChangeReasonDtoList = new List<Dtos.PayrollDeductionArrangementChangeReason>();
@@ -28,16 +25,20 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         [TestInitialize]
         public void Initialize()
         {
+            _configurationRepositoryMock = new Mock<IConfigurationRepository>();
+            _configurationRepository = _configurationRepositoryMock.Object;
             MockInitialize();
             BuildData();
             referenceDataRepository = new Mock<IHumanResourcesReferenceDataRepository>();
             payrollDeductionArrangementChangeReasonsService = new PayrollDeductionArrangementChangeReasonsService(referenceDataRepository.Object, adapterRegistryMock.Object,
-                employeeCurrentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
+                employeeCurrentUserFactory, _configurationRepository, roleRepositoryMock.Object, loggerMock.Object);
         }
 
         [TestCleanup]
         public void Cleanup()
         {
+            _configurationRepository = null;
+            _configurationRepositoryMock = null;
             referenceDataRepository = null;
             payrollDeductionArrangementChangeReasonsService = null;
             payrollDeductionArrangementChangeReasonDtoList = null;

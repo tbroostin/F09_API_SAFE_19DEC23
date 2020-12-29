@@ -24,6 +24,7 @@ using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
+using Ellucian.Colleague.Dtos;
 
 namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 {
@@ -55,8 +56,9 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <returns>List of AccountsPayableInvoices <see cref="Dtos.AccountsPayableInvoices2"/> objects representing matching accountsPayableInvoices</returns>
         [HttpGet]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
+        [QueryStringFilterFilter("criteria", typeof(AccountsPayableInvoices2))]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
-        public async Task<IHttpActionResult> GetAccountsPayableInvoices2Async(Paging page)
+        public async Task<IHttpActionResult> GetAccountsPayableInvoices2Async(Paging page, QueryStringFilter criteria)
         {
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
@@ -66,14 +68,19 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                     bypassCache = true;
                 }
             }
-            try
-            {
-                if (page == null)
-                {
-                    page = new Paging(100, 0);
-                }
 
-                var pageOfItems = await _accountsPayableInvoicesService.GetAccountsPayableInvoices2Async(page.Offset, page.Limit, bypassCache);
+            if (page == null)
+            {
+                page = new Paging(100, 0);
+            }
+            var criteriaFilter = GetFilterObject<Dtos.AccountsPayableInvoices2>(_logger, "criteria");
+
+            if (CheckForEmptyFilterParameters())
+                return new PagedHttpActionResult<IEnumerable<Dtos.AccountsPayableInvoices2>>(new List<Dtos.AccountsPayableInvoices2>(), page, 0, this.Request);
+            
+            try
+            {      
+                var pageOfItems = await _accountsPayableInvoicesService.GetAccountsPayableInvoices2Async(page.Offset, page.Limit, criteriaFilter, bypassCache);
 
                 AddEthosContextProperties(
                 await _accountsPayableInvoicesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -90,7 +97,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -154,7 +161,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -196,16 +203,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 if (accountsPayableInvoices.Id != Guid.Empty.ToString())
                 {
                     throw new ArgumentNullException("accountsPayableInvoicesDto", "Nil GUID must be used in POST operation.");
-                }
-                if ((accountsPayableInvoices.TransactionDate == DateTime.MinValue))
-                {
-                    throw new ArgumentNullException("accountsPayableInvoices.TransactionDate", "The transactionDate is a required field");
-                }
-
-                if (accountsPayableInvoices.VoidDate != null)
-                {
-                    throw new ArgumentNullException("accountsPayableInvoices.VoidDate", "Cannot have a void date on a POST");
-                }
+                }                
 
                 //call import extend method that needs the extracted extension dataa and the config
                 await _accountsPayableInvoicesService.ImportExtendedEthosData(await ExtractExtendedData(await _accountsPayableInvoicesService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
@@ -226,7 +224,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException e)
             {
@@ -320,7 +318,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 
@@ -38,6 +38,11 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// <summary>
         /// The tax form statement is not available.
         /// </summary>
-        NotAvailable
+        NotAvailable,
+
+        /// <summary>
+        /// The tax form statement is marked as cancelled.
+        /// </summary>
+        Cancelled
     }
 }

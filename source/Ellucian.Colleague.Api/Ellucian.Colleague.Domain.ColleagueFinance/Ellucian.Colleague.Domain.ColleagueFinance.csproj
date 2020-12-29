@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Ellucian.Colleague.Domain.ColleagueFinance</RootNamespace>
     <AssemblyName>Ellucian.Colleague.Domain.ColleagueFinance</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -36,57 +36,44 @@
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Ellucian.Colleague.Configuration, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Configuration.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Ellucian.Colleague.Configuration, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Colleague.Configuration.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Domain, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Domain.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Ellucian.Colleague.Domain, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Colleague.Domain.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Legacy, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Legacy.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Ellucian.Colleague.Legacy, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Colleague.Legacy.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Property, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Property.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Ellucian.Colleague.Property, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Colleague.Property.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Data.Colleague, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Data.Colleague.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Ellucian.Data.Colleague, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Data.Colleague.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Dmi.Client, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Dmi.Client.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Ellucian.Dmi.Client, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Dmi.Client.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Dmi.Runtime, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Dmi.Runtime.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Ellucian.Dmi.Runtime, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Dmi.Runtime.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Logging, Version=1.0.0.1, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.240\lib\net451\Ellucian.Logging.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.248\lib\net451\Ellucian.Logging.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Web.Cache, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Web.Cache.1.0.0.184\lib\net451\Ellucian.Web.Cache.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Ellucian.Web.Cache.1.0.0.188\lib\net451\Ellucian.Web.Cache.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Web.License, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Web.License.1.0.0.178\lib\net451\Ellucian.Web.License.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Ellucian.Web.License.1.0.0.181\lib\net451\Ellucian.Web.License.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Web.Security, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Web.Security.1.0.0.206\lib\net451\Ellucian.Web.Security.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Ellucian.Web.Security.1.0.0.209\lib\net451\Ellucian.Web.Security.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Web.Utility, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.181\lib\net451\Ellucian.Web.Utility.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.184\lib\net451\Ellucian.Web.Utility.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.WebServices.Core.Config.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.WebServices.Core.Config.dll</HintPath>
     </Reference>
     <Reference Include="KellermanSoftware.Compare-NET-Objects, Version=2.1.0.0, Culture=neutral, PublicKeyToken=d970ace04cc85217, processorArchitecture=MSIL">
       <HintPath>..\packages\CompareNETObjects.2.01.0.0\lib\net451\KellermanSoftware.Compare-NET-Objects.dll</HintPath>
@@ -123,12 +110,20 @@
     <Reference Include="slf4net">
       <HintPath>..\packages\slf4net.0.1.32.1\lib\net35\slf4net.dll</HintPath>
     </Reference>
-    <Reference Include="System" />
+    <Reference Include="System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\System.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ComponentModel.DataAnnotations, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\System.ComponentModel.DataAnnotations.dll</HintPath>
+    </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.IdentityModel" />
     <Reference Include="System.IdentityModel.Services" />
     <Reference Include="System.IdentityModel.Tokens.Jwt">
       <HintPath>..\packages\System.IdentityModel.Tokens.Jwt.4.0.1\lib\net45\System.IdentityModel.Tokens.Jwt.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.Serialization, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\System.Runtime.Serialization.dll</HintPath>
     </Reference>
     <Reference Include="System.Threading.Tasks.Dataflow, Version=4.5.24.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -146,9 +141,55 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Entities\AccountingStringSubcomponentValues.cs" />
+    <Compile Include="Entities\ContactEmailInfo.cs" />
+    <Compile Include="Entities\ContactPhoneInfo.cs" />
+    <Compile Include="Entities\Form1099NecPdfData.cs" />
+    <Compile Include="Entities\FixedAssetDesignations.cs" />
+    <Compile Include="Entities\Initiator.cs" />
+    <Compile Include="Entities\OrganizationContactInitiationProcess.cs" />
+    <Compile Include="Entities\PaymentTransactionVoucher.cs" />
     <Compile Include="Entities\AcctStructureIntg.cs" />
+    <Compile Include="Entities\ApprovalDocument.cs" />
+    <Compile Include="Entities\ApprovalDocumentRequest.cs" />
+    <Compile Include="Entities\ApprovalDocumentResponse.cs" />
+    <Compile Include="Entities\ApprovalItem.cs" />
+    <Compile Include="Entities\BaseGlComponentQueryCriteria.cs" />
     <Compile Include="Entities\BudgetAdjustmentPendingApprovalSummary.cs" />
+    <Compile Include="Entities\DocumentApproval.cs" />
+    <Compile Include="Entities\DocumentApprovalRequest.cs" />
+    <Compile Include="Entities\DocumentApprovalResponse.cs" />
+    <Compile Include="Entities\ProcurementAcceptReturnItemInformationRequest.cs" />
+    <Compile Include="Entities\ProcurementAcceptReturnItemInformationResponse.cs" />
+    <Compile Include="Entities\ProcurementItemInformation.cs" />
+    <Compile Include="Entities\ProcurementItemInformationResponse.cs" />
+    <Compile Include="Entities\LineItemStatus.cs" />
+    <Compile Include="Entities\ProjectQueryCriteria.cs" />
+    <Compile Include="Entities\PurchaseOrderVoidRequest.cs" />
+    <Compile Include="Entities\VoucherVoidRequest.cs" />
+    <Compile Include="Entities\VoucherVoidResponse.cs" />
+    <Compile Include="Entities\PurchaseOrderVoidResponse.cs" />
+    <Compile Include="Entities\VendorCommodity.cs" />
+    <Compile Include="Entities\VoucherWebConfiguration.cs" />
+    <Compile Include="Entities\RequisitionDeleteRequest.cs" />
+    <Compile Include="Entities\RequisitionDeleteResponse.cs" />
+    <Compile Include="Entities\RequisitionLinkSummary.cs" />
+    <Compile Include="Entities\PurchaseOrderCreateUpdateRequest.cs" />
+    <Compile Include="Entities\PurchaseOrderCreateUpdateResponse.cs" />
+    <Compile Include="Entities\ShipViaCode.cs" />
+    <Compile Include="Entities\TaxForm.cs" />
+    <Compile Include="Entities\FixedAssetsFlag.cs" />
+    <Compile Include="Entities\LineItemSummary.cs" />
+    <Compile Include="Entities\ProcurementCommodityCode.cs" />
+    <Compile Include="Entities\FinanceQueryComponentSortCriteria.cs" />
+    <Compile Include="Entities\FinanceQueryCriteria.cs" />
+    <Compile Include="Entities\FinanceQuery.cs" />
+    <Compile Include="Entities\FinanceQueryGlAccount.cs" />
+    <Compile Include="Entities\FinanceQueryGlAccountLineItem.cs" />
+    <Compile Include="Entities\FinanceQueryGlAccountLineItemBuilder.cs" />
+    <Compile Include="Entities\FinanceQuerySubtotal.cs" />
+    <Compile Include="Entities\FinanceQuerySubtotalComponent.cs" />
     <Compile Include="Entities\Form1099MIPdfData.cs" />
+    <Compile Include="Entities\LineItemReqTax.cs" />
     <Compile Include="Entities\NextApprover.cs" />
     <Compile Include="Entities\BudgetAdjustmentExcludedElements.cs" />
     <Compile Include="Entities\BudgetAdjustmentParameters.cs" />
@@ -157,6 +198,7 @@
     <Compile Include="Entities\DraftBudgetAdjustment.cs" />
     <Compile Include="Entities\FixedAssets.cs" />
     <Compile Include="Entities\ApproverValidationResponse.cs" />
+    <Compile Include="Entities\ColleagueFinanceWebConfiguration.cs" />
     <Compile Include="Entities\PurchaseOrderReceiptItem.cs" />
     <Compile Include="Entities\PurchaseOrderReceipt.cs" />
     <Compile Include="Entities\AccountingFormat.cs" />
@@ -165,15 +207,19 @@
     <Compile Include="Entities\AdjustmentLine.cs" />
     <Compile Include="Entities\BudgetAdjustmentAccountExclusions.cs" />
     <Compile Include="Entities\BudgetAdjustmentsEnabled.cs" />
-    <Compile Include="Entities\Budget.cs" />
     <Compile Include="Entities\Buyer.cs" />
     <Compile Include="Entities\AssetTypes.cs" />
-    <Compile Include="Entities\BudgetWork.cs" />
     <Compile Include="Entities\ProjectCF.cs" />
     <Compile Include="Entities\InvoiceOrRefund.cs" />
     <Compile Include="Entities\PaymentMethod.cs" />
     <Compile Include="Entities\FiscalYear.cs" />
+    <Compile Include="Entities\PurchaseOrderSummary.cs" />
+    <Compile Include="Entities\PurchasingDefaults.cs" />
+    <Compile Include="Entities\ReceiveProcurementSummary.cs" />
     <Compile Include="Entities\ReportingPeriod.cs" />
+    <Compile Include="Entities\RequisitionCreateUpdateResponse.cs" />
+    <Compile Include="Entities\RequisitionCreateUpdateRequest.cs" />
+    <Compile Include="Entities\RequisitionSummary.cs" />
     <Compile Include="Entities\TaxFormBoxesPdfData.cs" />
     <Compile Include="Entities\FormT4aPdfData.cs" />
     <Compile Include="Entities\FundsAvailableStatus.cs" />
@@ -188,6 +234,9 @@
     <Compile Include="Entities\FreeOnBoardType.cs" />
     <Compile Include="Entities\GeneralLedgerAccount.cs" />
     <Compile Include="Entities\GlSourceCodes.cs" />
+    <Compile Include="Entities\IntgVendorAddressUsages.cs" />
+    <Compile Include="Entities\VendorDefaultTaxFormInfo.cs" />
+    <Compile Include="Entities\VendorContactSummary.cs" />
     <Compile Include="Entities\VendorHoldReasonCodes.cs" />
     <Compile Include="Entities\AccountingStringComponentValues.cs" />
     <Compile Include="Entities\FundsAvailable.cs" />
@@ -201,6 +250,10 @@
     <Compile Include="Entities\AccountsPayableInvoices.cs" />
     <Compile Include="Entities\FiscalPeriodsIntg.cs" />
     <Compile Include="Entities\PaymentTransaction.cs" />
+    <Compile Include="Entities\VendorInfo.cs" />
+    <Compile Include="Entities\OrganizationContact.cs" />
+    <Compile Include="Entities\VendorSearchResult.cs" />
+    <Compile Include="Entities\VendorsVoucherSearchResult.cs" />
     <Compile Include="Entities\VendorTerm.cs" />
     <Compile Include="Entities\CommodityCode.cs" />
     <Compile Include="Entities\AccountingString.cs" />
@@ -260,18 +313,23 @@
     <Compile Include="Entities\Vendors.cs" />
     <Compile Include="Entities\Voucher.cs" />
     <Compile Include="Entities\BudgetEntryStatus.cs" />
+    <Compile Include="Entities\VoucherCreateUpdateRequest.cs" />
+    <Compile Include="Entities\VoucherCreateUpdateResponse.cs" />
     <Compile Include="Entities\VoucherStatus.cs" />
     <Compile Include="ColleagueFinancePermissionCodes.cs" />
+    <Compile Include="Entities\VoucherSummary.cs" />
     <Compile Include="Exceptions\NotApprovedStatusException.cs" />
     <Compile Include="Exceptions\AlreadyApprovedByUserException.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Repositories\IAccountFundsAvailableRepository.cs" />
     <Compile Include="Repositories\IAccountingStringRepository.cs" />
-    <Compile Include="Repositories\IBudgetRepository.cs" />
+    <Compile Include="Repositories\IDocumentApprovalRepository.cs" />
     <Compile Include="Repositories\IDraftBudgetAdjustmentsRepository.cs" />
     <Compile Include="Repositories\IApproverRepository.cs" />
+    <Compile Include="Repositories\IFinanceQueryRepository.cs" />
     <Compile Include="Repositories\IGrantsRepository.cs" />
     <Compile Include="Repositories\IFixedAssetsRepository.cs" />
+    <Compile Include="Repositories\IInitiatorRepository.cs" />
     <Compile Include="Repositories\IPaymentTransactionRepository.cs" />
     <Compile Include="Repositories\IBudgetAdjustmentsRepository.cs" />
     <Compile Include="Repositories\IBuyerRepository.cs" />
@@ -284,7 +342,9 @@
     <Compile Include="Repositories\IGeneralLedgerUserRepository.cs" />
     <Compile Include="Repositories\ICostCenterRepository.cs" />
     <Compile Include="Repositories\IColleagueFinanceTaxFormStatementRepository.cs" />
+    <Compile Include="Repositories\IColleagueFinanceWebConfigurationsRepository.cs" />
     <Compile Include="Repositories\IPurchaseOrderReceiptRepository.cs" />
+    <Compile Include="Repositories\IReceiveProcurementsRepository.cs" />
     <Compile Include="Repositories\IRecurringVoucherRepository.cs" />
     <Compile Include="Repositories\IBlanketPurchaseOrderRepository.cs" />
     <Compile Include="Repositories\IGeneralLedgerConfigurationRepository.cs" />
@@ -293,6 +353,8 @@
     <Compile Include="Repositories\ILedgerActivityRepository.cs" />
     <Compile Include="Repositories\IRequisitionRepository.cs" />
     <Compile Include="Repositories\IAccountsPayableInvoicesRepository.cs" />
+    <Compile Include="Repositories\IVendorCommodityRepository.cs" />
+    <Compile Include="Repositories\IVendorContactsRepository.cs" />
     <Compile Include="Repositories\IVendorsRepository.cs" />
     <Compile Include="Repositories\IVoucherRepository.cs" />
   </ItemGroup>
@@ -304,6 +366,10 @@
     <ProjectReference Include="..\Ellucian.Colleague.Domain.Base\Ellucian.Colleague.Domain.Base.csproj">
       <Project>{a3b49510-737b-4ffd-8bca-17bcce7fbaf7}</Project>
       <Name>Ellucian.Colleague.Domain.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.ColleagueFinance\Ellucian.Colleague.Dtos.ColleagueFinance.csproj">
+      <Project>{CA034D7A-0963-4463-B974-BEF18BE515AE}</Project>
+      <Name>Ellucian.Colleague.Dtos.ColleagueFinance</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

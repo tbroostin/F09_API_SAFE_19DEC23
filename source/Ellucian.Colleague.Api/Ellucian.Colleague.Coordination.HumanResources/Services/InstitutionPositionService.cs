@@ -186,6 +186,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 //check permissions
                 CheckGetInstitutionPositionsPermission();
 
+                var code = string.Empty;
+
                 //if campus filter present find code for location
                 var campusCode = string.Empty;
                 if (!string.IsNullOrEmpty(campus))
@@ -274,7 +276,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     endOnFilter = await ConvertDateArgument(endOn);
                 }
 
-                var positionEntitiesTuple = await _positionRepository.GetPositionsAsync(offset, limit, campusCode, status,
+                var positionEntitiesTuple = await _positionRepository.GetPositionsAsync(offset, limit, code, campusCode, status,
                             bargainingUnitCode, positionIdFilter, exemptionType, compensationType, startOnFilter, endOnFilter, bypassCache);
                 if (positionEntitiesTuple != null)
                 {
@@ -323,6 +325,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         {
             try
             {
+                var code = string.Empty;
+
                 //if campus filter present find code for location
                 var campusCode = string.Empty;
                 if (!string.IsNullOrEmpty(campus))
@@ -419,7 +423,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 //check permissions
                 CheckGetInstitutionPositionsPermission();
 
-                var positionEntitiesTuple = await _positionRepository.GetPositionsAsync(offset, limit, campusCode, status,
+                var positionEntitiesTuple = await _positionRepository.GetPositionsAsync(offset, limit, code, campusCode, status,
                             bargainingUnitCode, positionIdFilter, exemptionType, compensationType, startOnFilter, endOnFilter, bypassCache);
                 if (positionEntitiesTuple != null)
                 {
@@ -463,7 +467,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <param name="startOn">The date when the position is first available</param>
         /// <param name="endOn">The date when the position is last available</param>
         /// <returns>List of InstitutionPositions <see cref="Dtos.InstitutionPosition"/> objects representing matching Institution Position</returns>
-        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.InstitutionPosition2>, int>> GetInstitutionPositions3Async(int offset, int limit, string campus = "", string status = "", string bargainingUnit = "",
+        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.InstitutionPosition2>, int>> GetInstitutionPositions3Async(int offset, int limit, string code, string campus = "", string status = "", string bargainingUnit = "",
             List<string> reportsToPositions = null, string exemptionType = "", string compensationType = "", string startOn = "", string endOn = "", bool bypassCache = false)
         {
             try
@@ -563,7 +567,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 //check permissions
                 CheckGetInstitutionPositionsPermission();
 
-                var positionEntitiesTuple = await _positionRepository.GetPositionsAsync(offset, limit, campusCode, status,
+                var positionEntitiesTuple = await _positionRepository.GetPositionsAsync(offset, limit, code, campusCode, status,
                             bargainingUnitCode, positionIdFilter, exemptionType, compensationType, startOnFilter, endOnFilter, bypassCache);
                 if (positionEntitiesTuple != null)
                 {
@@ -1178,10 +1182,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
                 if (!string.IsNullOrEmpty(positionEntity.PositionDept))
                 {
-                    // Someone changes this to GetAllEmploymentDepartmentsAsync() - a nice idea, but there is no restriction
-                    // preventing a position from having an academic department.  This causes issues.
-
-                    var allDepartments = (await GetAllDepartmentsAsync(bypassCache)).ToList();
+                    var allDepartments = (await GetAllEmploymentDepartmentsAsync(bypassCache)).ToList();
                     if (allDepartments.Any())
                     {
                         var department = allDepartments.FirstOrDefault(sc => sc.Code == positionEntity.PositionDept);
@@ -1189,6 +1190,11 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                         {
                             institutionPositionDto.Departments = new List<GuidObject2>() { new GuidObject2(department.Guid) };
                         }
+                    }                   
+
+                    if (institutionPositionDto.Departments == null || institutionPositionDto.Departments.Count == 0)
+                    {
+                        logger.Error(string.Concat("Unable to translate postition entity department {0} to a department GUID for postition {1}, id {2}, title {3}.", positionEntity.PositionDept, institutionPositionDto.Id, positionEntity.Id, positionEntity.Title));
                     }
                 }
 

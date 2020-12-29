@@ -1,10 +1,11 @@
-//Copyright 2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
 using Ellucian.Colleague.Api.Controllers.ColleagueFinance;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -13,6 +14,7 @@ using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -37,13 +39,18 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         private List<Dtos.ProcurementReceipts> procurementReceiptsCollection;
         private Tuple<IEnumerable<Dtos.ProcurementReceipts>, int> procurementTuple;
         private string expectedGuid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc";
-        int offset = 0, limit = 3;
+        private int offset = 0, limit = 3;
+        private Ellucian.Web.Http.Models.QueryStringFilter criteriaFilter;
+        private Dtos.ProcurementReceipts procurementReceiptsFilter;
 
         [TestInitialize]
         public void Initialize() 
         {
             LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
             EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.DeploymentDirectory, "App_Data"));
+
+            criteriaFilter = new Web.Http.Models.QueryStringFilter("criteria", "");
+            procurementReceiptsFilter = new ProcurementReceipts();
 
             procurementReceiptsServiceMock = new Mock<IProcurementReceiptsService>();
             loggerMock = new Mock<ILogger>();
@@ -82,6 +89,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             procurementReceiptsCollection = null;
             loggerMock = null;
             procurementReceiptsServiceMock = null;
+            procurementReceiptsFilter = null;
         }
 
         [TestMethod]
@@ -90,9 +98,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             procurementReceiptsController.Request.Headers.CacheControl =
                  new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
             
-            procurementReceiptsServiceMock.Setup(x => x.GetProcurementReceiptsAsync(0, 100, true)).ReturnsAsync(procurementTuple);
+            procurementReceiptsServiceMock.Setup(x => x.GetProcurementReceiptsAsync(0, 100, It.IsAny<ProcurementReceipts>(), true)).ReturnsAsync(procurementTuple);
        
-            var sourceContexts = await procurementReceiptsController.GetProcurementReceiptsAsync(null);
+            var sourceContexts = await procurementReceiptsController.GetProcurementReceiptsAsync(null, criteriaFilter);
 
             var cancelToken = new System.Threading.CancellationToken(false);
             System.Net.Http.HttpResponseMessage httpResponseMessage = await sourceContexts.ExecuteAsync(cancelToken);
@@ -114,9 +122,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             procurementReceiptsController.Request.Headers.CacheControl =
                  new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
 
-            procurementReceiptsServiceMock.Setup(x => x.GetProcurementReceiptsAsync(offset, limit, false)).ReturnsAsync(procurementTuple);
+            procurementReceiptsServiceMock.Setup(x => x.GetProcurementReceiptsAsync(offset, limit, It.IsAny<ProcurementReceipts>(), false)).ReturnsAsync(procurementTuple);
 
-            var sourceContexts = await procurementReceiptsController.GetProcurementReceiptsAsync(new Web.Http.Models.Paging(limit, offset));
+            var sourceContexts = await procurementReceiptsController.GetProcurementReceiptsAsync(new Web.Http.Models.Paging(limit, offset), criteriaFilter);
 
             var cancelToken = new System.Threading.CancellationToken(false);
             System.Net.Http.HttpResponseMessage httpResponseMessage = await sourceContexts.ExecuteAsync(cancelToken);
@@ -137,9 +145,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task ProcurementReceiptsController_GetProcurementReceipts_KeyNotFoundException()
         {
             //
-            procurementReceiptsServiceMock.Setup(x => x.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
+            procurementReceiptsServiceMock.Setup(x => x.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.ProcurementReceipts>(), It.IsAny<bool>()))
                 .ThrowsAsync(new KeyNotFoundException());
-            await procurementReceiptsController.GetProcurementReceiptsAsync(It.IsAny<Paging>());
+            await procurementReceiptsController.GetProcurementReceiptsAsync(It.IsAny<Paging>(), criteriaFilter);
         }
 
         [TestMethod]
@@ -147,9 +155,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task ProcurementReceiptsController_GetProcurementReceipts_PermissionsException()
         {
 
-            procurementReceiptsServiceMock.Setup(x => x.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
+            procurementReceiptsServiceMock.Setup(x => x.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.ProcurementReceipts>(), It.IsAny<bool>()))
                 .ThrowsAsync(new PermissionsException());
-            await procurementReceiptsController.GetProcurementReceiptsAsync(It.IsAny<Paging>());
+            await procurementReceiptsController.GetProcurementReceiptsAsync(It.IsAny<Paging>(), criteriaFilter);
         }
 
         [TestMethod]
@@ -157,9 +165,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task ProcurementReceiptsController_GetProcurementReceipts_ArgumentException()
         {
 
-            procurementReceiptsServiceMock.Setup(x => x.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
+            procurementReceiptsServiceMock.Setup(x => x.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.ProcurementReceipts>(), It.IsAny<bool>()))
                 .ThrowsAsync(new ArgumentException());
-            await procurementReceiptsController.GetProcurementReceiptsAsync(It.IsAny<Paging>());
+            await procurementReceiptsController.GetProcurementReceiptsAsync(It.IsAny<Paging>(), criteriaFilter);
         }
 
         [TestMethod]
@@ -167,9 +175,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task ProcurementReceiptsController_GetProcurementReceipts_RepositoryException()
         {
 
-            procurementReceiptsServiceMock.Setup(x => x.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
+            procurementReceiptsServiceMock.Setup(x => x.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.ProcurementReceipts>(), It.IsAny<bool>()))
                 .ThrowsAsync(new RepositoryException());
-            await procurementReceiptsController.GetProcurementReceiptsAsync(It.IsAny<Paging>());
+            await procurementReceiptsController.GetProcurementReceiptsAsync(It.IsAny<Paging>(), criteriaFilter);
         }
 
         [TestMethod]
@@ -177,9 +185,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task ProcurementReceiptsController_GetProcurementReceipts_IntegrationApiException()
         {
 
-            procurementReceiptsServiceMock.Setup(x => x.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
+            procurementReceiptsServiceMock.Setup(x => x.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.ProcurementReceipts>(), It.IsAny<bool>()))
                 .ThrowsAsync(new IntegrationApiException());
-            await procurementReceiptsController.GetProcurementReceiptsAsync(It.IsAny<Paging>());
+            await procurementReceiptsController.GetProcurementReceiptsAsync(It.IsAny<Paging>(), criteriaFilter);
         }
 
         [TestMethod]
@@ -199,9 +207,81 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         [ExpectedException(typeof(HttpResponseException))]
         public async Task ProcurementReceiptsController_GetProcurementReceipts_Exception()
         {
-            procurementReceiptsServiceMock.Setup(x => x.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
-            await procurementReceiptsController.GetProcurementReceiptsAsync(It.IsAny<Paging>());
+            procurementReceiptsServiceMock.Setup(x => x.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.ProcurementReceipts>(),  It.IsAny<bool>())).ThrowsAsync(new Exception());
+            await procurementReceiptsController.GetProcurementReceiptsAsync(It.IsAny<Paging>(), criteriaFilter);
         }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
+        public async Task ProcurementReceiptsController_GetProcurementReceiptsAsync_InvalidFilter()
+        {
+            var contextSuffix = "criteria";
+            var queryStringCriteria = new QueryStringFilter(contextSuffix, "{'packingSlipNumber':\'" + Guid.NewGuid().ToString() + "\'}");
+            try
+            {
+                var queryStringFilter = new QueryStringFilterFilter(contextSuffix, typeof(Dtos.ProcurementReceipts));
+
+                var controllerContext = procurementReceiptsController.ControllerContext;
+                var actionDescriptor = procurementReceiptsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+
+                _context.ActionArguments.Add(contextSuffix, queryStringCriteria);
+
+                await queryStringFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            }
+            catch (Exception ex)
+            {
+                Assert.AreEqual("'packingSlipNumber' is an invalid property on the schema.", ex.Message.Trim());
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        public async Task ProcurementReceiptsController_GetProcurementReceiptsAsync_ValidFilter()
+        {
+            var contextPrefix = "FilterObject";
+            var contextSuffix = "criteria";
+
+            var queryStringCriteria = new QueryStringFilter(contextSuffix, "{'purchaseOrder':{'id':\'" + Guid.NewGuid().ToString() + "\'}}");
+
+            var contextPropertyName = string.Format("{0}{1}", contextPrefix, contextSuffix);
+
+            var queryStringFilter = new QueryStringFilterFilter(contextSuffix, typeof(Dtos.ProcurementReceipts));
+
+            var controllerContext = procurementReceiptsController.ControllerContext;
+            var actionDescriptor = procurementReceiptsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+
+            _context.ActionArguments.Add(contextSuffix, queryStringCriteria);
+
+            await queryStringFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            procurementReceiptsServiceMock.Setup(x => x.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.ProcurementReceipts>(), It.IsAny<bool>()))
+                .ReturnsAsync(procurementTuple);
+
+
+            var sourceContexts = await procurementReceiptsController.GetProcurementReceiptsAsync(new Paging(0, 1), queryStringCriteria);
+
+
+            Object filterObject;
+            procurementReceiptsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+
+            Assert.IsNotNull(filterObject);
+
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+            System.Net.Http.HttpResponseMessage httpResponseMessage = await sourceContexts.ExecuteAsync(cancelToken);
+            var actualsAPI = ((ObjectContent<IEnumerable<ProcurementReceipts>>)httpResponseMessage.Content).Value as List<ProcurementReceipts>;
+
+            Assert.AreEqual(procurementReceiptsCollection.Count, actualsAPI.Count);
+        }
+        
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]

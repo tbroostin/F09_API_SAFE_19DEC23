@@ -36,6 +36,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         private IEnumerable<Domain.HumanResources.Entities.JobChangeReason> _jobChangeReasons;
         private IEnumerable<Domain.HumanResources.Entities.PayClass> _payClasses;
         private IEnumerable<Domain.HumanResources.Entities.PayCycle2> _payCycles;
+        private IEnumerable<Domain.HumanResources.Entities.TimeUnits> _timeUnits;
 
         private Dictionary<string, string> _employerGuidDictionary;
 
@@ -156,7 +157,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 var institutionJobsEntitiesTuple = await _institutionJobsRepository.GetInstitutionJobsAsync(offset, limit, personCode,
                     employerCode, positionCode, department, convertedStartOn, convertedEndOn, status, classificationCode,
                     preference, bypassCache);
-                if (institutionJobsEntitiesTuple != null)
+                if (institutionJobsEntitiesTuple != null && institutionJobsEntitiesTuple.Item1.Any())
                 {
                     var institutionJobsEntities = institutionJobsEntitiesTuple.Item1.ToList();
                     var totalCount = institutionJobsEntitiesTuple.Item2;
@@ -176,6 +177,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 }
                 //no results
                 return new Tuple<IEnumerable<Dtos.InstitutionJobs>, int>(new List<Dtos.InstitutionJobs>(), 0);
+            }
+            catch( PermissionsException e )
+            {
+                throw;
             }
             catch (Exception e)
             {
@@ -304,7 +309,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 var institutionJobsEntitiesTuple = await _institutionJobsRepository.GetInstitutionJobsAsync(offset, limit, personCode,
                     employerCode, positionCode, department, convertedStartOn, convertedEndOn, status, classificationCode,
                     preference, bypassCache);
-                if (institutionJobsEntitiesTuple != null)
+                if (institutionJobsEntitiesTuple != null && institutionJobsEntitiesTuple.Item1.Any())
                 {
                     var institutionJobsEntities = institutionJobsEntitiesTuple.Item1.ToList();
                     var totalCount = institutionJobsEntitiesTuple.Item2;
@@ -325,6 +330,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 //no results
                 return new Tuple<IEnumerable<Dtos.InstitutionJobs2>, int>(new List<Dtos.InstitutionJobs2>(), 0);
             }
+            catch( PermissionsException e )
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 throw new ArgumentException(e.Message);
@@ -338,7 +347,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns>Collection of InstitutionJobs DTO objects</returns>
         public async Task<Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>> GetInstitutionJobs3Async(int offset, int limit,
             string person = "", string employer = "", string position = "", string department = "", string startOn = "",
-            string endOn = "", string status = "", string classification = "", string preference = "", bool bypassCache = false)
+            string endOn = "", string status = "", string classification = "", string preference = "", bool bypassCache = false, Dictionary<string, string> filterQualifiers = null)
         {
             try
             {
@@ -462,8 +471,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
                 var institutionJobsEntitiesTuple = await _institutionJobsRepository.GetInstitutionJobsAsync(offset, limit, personCode,
                     employerCode, positionCode, departmentCode, convertedStartOn, convertedEndOn, status, classificationCode,
-                    preference, bypassCache);
-                if (institutionJobsEntitiesTuple != null)
+                    preference, bypassCache, filterQualifiers);
+                if (institutionJobsEntitiesTuple != null && institutionJobsEntitiesTuple.Item1.Any())
                 {
                     var ids = new List<string>();
 
@@ -497,6 +506,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 //no results
                 return new Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>(new List<Dtos.InstitutionJobs3>(), 0);
             }
+            catch( PermissionsException e )
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 throw new ArgumentException(e.Message);
@@ -524,6 +537,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 }
                 return await ConvertInstitutionJobsEntityToDtoAsync(institutionJobsEntity);
             }
+            catch( PermissionsException e )
+            {
+                throw;
+            }
             catch (KeyNotFoundException)
             {
                 throw new KeyNotFoundException("Institution Job not found for GUID " + guid);
@@ -550,6 +567,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     throw new KeyNotFoundException("Institution Job not found for GUID " + guid);
                 }
                 return await ConvertInstitutionJobsEntityToDto2Async(institutionJobsEntity);
+            }
+            catch( PermissionsException e )
+            {
+                throw;
             }
             catch (KeyNotFoundException)
             {
@@ -580,6 +601,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 var ids = new List<string>() { institutionJobsEntity.PersonId, institutionJobsEntity.Employer, institutionJobsEntity.SupervisorId, institutionJobsEntity.AlternateSupervisorId };
                 var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(ids);
                 return await ConvertInstitutionJobsEntityToDto3Async(institutionJobsEntity, personGuidCollection, bypassCache);
+            }
+            catch( PermissionsException e )
+            {
+                throw;
             }
             catch (KeyNotFoundException)
             {
@@ -629,6 +654,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     return await ConvertInstitutionJobsEntityToDto3Async(updatedInstitutionJobsEntity, personGuidCollection, false);
 
                 }
+                catch( PermissionsException e )
+                {
+                    throw;
+                }
                 catch (RepositoryException ex)
                 {
                     throw ex;
@@ -674,6 +703,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(ids);
                 return await ConvertInstitutionJobsEntityToDto3Async(newEntity, personGuidCollection, false);
 
+            }
+            catch( PermissionsException e )
+            {
+                throw;
             }
             catch (RepositoryException ex)
             {
@@ -771,12 +804,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 {
                     throw new ArgumentNullException("Employer ID is required for Institution Jobs. Id:" + institutionJobsId);
                 }
-                var employer = await _personRepository.GetPersonIdFromGuidAsync(institutionJobs.Employer.Id);
-                if (string.IsNullOrEmpty(employer))
-                {
-                    throw new ArgumentNullException("Employer not found for Id:" + institutionJobs.Employer.Id);
-                }
-
+                var employer = await _institutionJobsRepository.GetInstitutionEmployerGuidAsync();
                 response.Employer = employer;
 
                 if (institutionJobs.Department != null && string.IsNullOrWhiteSpace(institutionJobs.Department.Id))
@@ -998,21 +1026,28 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 {
                     foreach (var hoursPerPeriod in institutionJobs.HoursPerPeriod)
                     {
+                        var timeUnits = await GetAllTimeUnitsAsync(bypassCache);
+                        if (timeUnits != null && timeUnits.Any())
+                        {
+                            var hoursCode = timeUnits.FirstOrDefault(tu => tu.Category == TimeUnitCategory.Hours);
+                            if (hoursCode != null)
+                            {
+                                if (hoursPerPeriod.Period == Ellucian.Colleague.Dtos.EnumProperties.PayPeriods.PayPeriod)
+                                {
+                                    response.CycleWorkTimeUnits = hoursCode.Code;
+                                    response.CycleWorkTimeAmount = hoursPerPeriod.Hours;
 
-                        if (hoursPerPeriod.Period == Ellucian.Colleague.Dtos.EnumProperties.PayPeriods.PayPeriod)
-                        {
-                            response.CycleWorkTimeUnits = "HRS";
-                            response.CycleWorkTimeAmount = hoursPerPeriod.Hours;
-
-                        }
-                        else if (hoursPerPeriod.Period == Ellucian.Colleague.Dtos.EnumProperties.PayPeriods.Year)
-                        {
-                            response.YearWorkTimeUnits = "HRS";
-                            response.YearWorkTimeAmount = hoursPerPeriod.Hours;
-                        }
-                        else
-                        {
-                            throw new ArgumentException("HoursPerPeriod.period only supports enumerations for 'year' and/or 'payPeriod'");
+                                }
+                                else if (hoursPerPeriod.Period == Ellucian.Colleague.Dtos.EnumProperties.PayPeriods.Year)
+                                {
+                                    response.YearWorkTimeUnits = hoursCode.Code;
+                                    response.YearWorkTimeAmount = hoursPerPeriod.Hours;
+                                }
+                                else
+                                {
+                                    throw new ArgumentException("HoursPerPeriod.period only supports enumerations for 'year' and/or 'payPeriod'");
+                                }
+                            }
                         }
                     }
                 }
@@ -1713,30 +1748,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     throw new KeyNotFoundException(string.Concat("Person guid not found, PersonId: '", source.PersonId, "', Record ID: '", source.Id, "'"));
                 }
                 institutionJobs.Person = new GuidObject2(personGuid);
-
-                /*
-                 var employerGuid = string.Empty;
-                 if (!_employerGuidDictionary.TryGetValue(source.Employer, out employerGuid))
-                 {
-                     employerGuid = await _personRepository.GetPersonGuidFromIdAsync(source.Employer);
-                     if (!(string.IsNullOrEmpty(employerGuid)))
-                         _employerGuidDictionary.Add(source.Employer, employerGuid);
-                 }
-                 if (!(string.IsNullOrEmpty(employerGuid)))
-                     institutionJobs.Employer = new GuidObject2(employerGuid);
-                */
-                if (!string.IsNullOrEmpty(source.Employer))
-                {
-                    var employerGuid = string.Empty;
-
-                    personGuidCollection.TryGetValue(source.Employer, out employerGuid);
-                    if (string.IsNullOrEmpty(employerGuid))
-                    {
-                        throw new KeyNotFoundException(string.Concat("Guid not found, Employer: '", source.Employer, "', Record ID: '", source.Id, "'"));
-                    }
-
-                    institutionJobs.Employer = new GuidObject2(employerGuid);
-                }
+                institutionJobs.Employer = new GuidObject2(await _institutionJobsRepository.GetInstitutionEmployerGuidAsync());
 
                 if (string.IsNullOrEmpty(source.PositionId))
                 {
@@ -1758,8 +1770,15 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                             institutionJobs.Department = new GuidObject2(employDepartment.Guid);
                         }
                     }
+                    // making sure change sticks
+                    if (institutionJobs.Department == null) { throw new ArgumentNullException("Unable to locate department for code " + source.Department + ", Position " + source.PositionId + " is required to have a department."); }
+
                 }
-               
+                else
+                {
+                    throw new ArgumentNullException("Position " + source.PositionId + " is required to have a department.");
+                }
+
                 institutionJobs.StartOn = source.StartDate;
                 institutionJobs.EndOn = source.EndDate;
 
@@ -1791,24 +1810,33 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     throw new Exception("Unable to determine institution job status.  Id" + source.Id);
                 }
 
-                var hoursPerPeriodDtoProperties = new List<HoursPerPeriodDtoProperty>();
-                if ((source.CycleWorkTimeUnits == "HRS") && (source.CycleWorkTimeAmount.HasValue))
+                var timeUnits = await GetAllTimeUnitsAsync(bypassCache);
+                if (timeUnits != null && timeUnits.Any())
                 {
-                    hoursPerPeriodDtoProperties.Add(new HoursPerPeriodDtoProperty()
+                    var hoursPerPeriodDtoProperties = new List<HoursPerPeriodDtoProperty>();
+                    var cycleUnits = timeUnits.FirstOrDefault(tu => tu.Code.Equals(source.CycleWorkTimeUnits, StringComparison.OrdinalIgnoreCase));
+                    if (cycleUnits != null && cycleUnits.Category == TimeUnitCategory.Hours && source.CycleWorkTimeAmount.HasValue)
                     {
-                        Hours = source.CycleWorkTimeAmount,
-                        Period = Ellucian.Colleague.Dtos.EnumProperties.PayPeriods.PayPeriod
-                    });
-                }
-                if ((source.YearWorkTimeUnits == "HRS") && (source.YearWorkTimeAmount.HasValue))
-                {
-                    hoursPerPeriodDtoProperties.Add(new HoursPerPeriodDtoProperty()
+                        hoursPerPeriodDtoProperties.Add(new HoursPerPeriodDtoProperty()
+                        {
+                            Hours = source.CycleWorkTimeAmount,
+                            Period = Ellucian.Colleague.Dtos.EnumProperties.PayPeriods.PayPeriod
+                        });
+                    }
+                    var yearTimeUnits = timeUnits.FirstOrDefault(tu => tu.Code.Equals(source.YearWorkTimeUnits, StringComparison.OrdinalIgnoreCase));
+                    if (yearTimeUnits != null && yearTimeUnits.Category == TimeUnitCategory.Hours && source.YearWorkTimeAmount.HasValue)
                     {
-                        Hours = source.YearWorkTimeAmount,
-                        Period = Ellucian.Colleague.Dtos.EnumProperties.PayPeriods.Year
-                    });
+                        hoursPerPeriodDtoProperties.Add(new HoursPerPeriodDtoProperty()
+                        {
+                            Hours = source.YearWorkTimeAmount,
+                            Period = Ellucian.Colleague.Dtos.EnumProperties.PayPeriods.Year
+                        });
+                    }
+                    if (hoursPerPeriodDtoProperties != null && hoursPerPeriodDtoProperties.Any())
+                    {
+                        institutionJobs.HoursPerPeriod = hoursPerPeriodDtoProperties;
+                    }
                 }
-                institutionJobs.HoursPerPeriod = hoursPerPeriodDtoProperties.Any() ? hoursPerPeriodDtoProperties : null;
 
                 if ((source.FullTimeEquivalent != null) && (source.FullTimeEquivalent > 0))
                     institutionJobs.FullTimeEquivalent = source.FullTimeEquivalent;
@@ -2077,9 +2105,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
         private void CheckGetInstitutionJobsPermission()
         {
-            var hasPermission = HasPermission(HumanResourcesPermissionCodes.ViewInstitutionJob);
-
-            if (!hasPermission)
+            if ( !HasPermission( HumanResourcesPermissionCodes.ViewInstitutionJob ) && !HasPermission( HumanResourcesPermissionCodes.CreateInstitutionJob ) )
             {
                 throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view Institution Jobs.");
             }
@@ -2091,9 +2117,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
         private void CheckCreateInstitutionJobsPermission()
         {
-            var hasPermission = HasPermission(HumanResourcesPermissionCodes.CreateInstitutionJob);
-
-            if (!hasPermission)
+            if ( !HasPermission( HumanResourcesPermissionCodes.CreateInstitutionJob ) )
             {
                 throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to create or update Institution Jobs.");
             }
@@ -2188,6 +2212,20 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 }
             }
             return _payCycles;
+        }
+
+        /// <summary>
+        /// Get all TimeUnits Entity Objects
+        /// </summary>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        private async Task<IEnumerable<Domain.HumanResources.Entities.TimeUnits>> GetAllTimeUnitsAsync(bool bypassCache)
+        {
+            if (_timeUnits == null)
+            {
+                _timeUnits = await _hrReferenceDataRepository.GetTimeUnitsAsync(bypassCache);
+            }
+            return _timeUnits;
         }
 
         private string _hostCountry = null;

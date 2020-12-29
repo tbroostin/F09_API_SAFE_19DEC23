@@ -272,7 +272,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         if (string.IsNullOrEmpty(studentTerm.StudentId))
                         {
-                            throw new ArgumentNullException(string.Concat("Student ID is required, Entity:'STUDENT.TERMS', Record ID:'", studentTerm.Guid, "'"));
+                            throw new ArgumentException(string.Concat("Student ID is required, Entity:'STUDENT.TERMS', Record ID:'", studentTerm.Guid, "'"));
                         }
                         //we are looking for studentTerm.Term here so calling the guid suber to check if it is in cache and refresh it if it is not so that other calls are always going to be from cache
                         if (!string.IsNullOrEmpty(studentTerm.Term))
@@ -286,7 +286,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         if (!string.IsNullOrEmpty(studentTerm.Guid))
                             studentAcadPeriodProfileDto.Id = studentTerm.Guid;
                         else
-                            throw new ArgumentNullException(string.Concat("No Guid found, Entity:'STUDENT.TERMS', Record ID:'", studentTerm.StudentId,"*",studentTerm.Term, "*", studentTerm.AcademicLevel,  "'"));
+                            throw new ArgumentException(string.Concat("No Guid found, Entity:'STUDENT.TERMS', Record ID:'", studentTerm.StudentId,"*",studentTerm.Term, "*", studentTerm.AcademicLevel,  "'"));
 
                         if (!string.IsNullOrEmpty(studentTerm.StudentId))
                         {
@@ -298,7 +298,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             }
                             else
                             {
-                                throw new ArgumentNullException(string.Concat("No Guid for Person found, Entity:'PERSONS', Record ID:'", studentTerm.StudentId, "'"));
+                                throw new ArgumentException(string.Concat("No Guid for Person found, Entity:'PERSONS', Record ID:'", studentTerm.StudentId, "'"));
                             }
                             // get student entities
                             if (students != null && students.Any())
@@ -308,7 +308,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                             if (student == null)
                             {
-                                throw new ArgumentNullException(string.Concat("Student record is not found, Entity:'STUDENT', Record ID:'", studentTerm.StudentId, "'"));
+                                throw new ArgumentException(string.Concat("Student record is not found, Entity:'STUDENT', Record ID:'", studentTerm.StudentId, "'"));
                             }
                             //get type info
                             if ((student.StudentTypeInfo != null) && (student.StudentTypeInfo.Any()))
@@ -404,7 +404,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                                             // lookup the residency guid
                                             if (!string.IsNullOrEmpty(residencyCode))
                                             {
-                                                var residency = await _studentRepository.GetResidencyStatusGuidAsync(residencyCode);
+                                                var residency = await _studentReferenceDataRepository.GetAdmissionResidencyTypesGuidAsync(residencyCode);
 
                                                 if (!string.IsNullOrEmpty(residency))
                                                 {
@@ -513,9 +513,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         studentAcadPeriodProfileDto.Measures = measures;
                         studentAcadPeriodProfileDtos.Add(studentAcadPeriodProfileDto);
                     }
+                    catch (ArgumentException ex)
+                    {
+                        throw ex;
+                    }
                     catch (Exception ex)
                     {
-                        throw new ArgumentNullException(string.Concat(ex.Message, "Student terms is not found, Entity:'STUDENT.TERMS', Record ID:'", studentTerm.Guid, "'"));
+                        throw new ArgumentException(string.Concat("Student terms is not found, Entity:'STUDENT.TERMS', Record ID:'", studentTerm.Guid, "' ", ex.Message));
                     }
                 }
 
@@ -523,6 +527,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             }
             catch (RepositoryException ex)
+            {
+                throw ex;
+            }
+            catch (ArgumentException ex)
             {
                 throw ex;
             }

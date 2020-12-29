@@ -1,4 +1,4 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -69,13 +69,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 newSection = (section == string.Empty? string.Empty : await _sectionRepository.GetSectionIdFromGuidAsync(section));
                 if (!string.IsNullOrEmpty(section) && string.IsNullOrEmpty(newSection))
                 {
-                    // throw new ArgumentException("Invalid section Id argument");
                     return new Tuple<IEnumerable<SectionInstructors>, int>(new List<SectionInstructors>(), 0);
                 }
             }
             catch
             {
-                // throw new ArgumentException("Invalid section Id argument");
                 return new Tuple<IEnumerable<SectionInstructors>, int>(new List<SectionInstructors>(), 0);
             }
             try
@@ -83,13 +81,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 newInstructor = (instructor == string.Empty ? string.Empty : await _personRepository.GetPersonIdFromGuidAsync(instructor));
                 if (!string.IsNullOrEmpty(instructor) && string.IsNullOrEmpty(newInstructor))
                 {
-                    // throw new ArgumentException("Invalid instructor Id argument");
                     return new Tuple<IEnumerable<SectionInstructors>, int>(new List<SectionInstructors>(), 0);
                 }
             }
             catch
             {
-                // throw new ArgumentException("Invalid instructor Id argument");
                 return new Tuple<IEnumerable<SectionInstructors>, int>(new List<SectionInstructors>(), 0);
             }
             try
@@ -102,25 +98,44 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 if (instructionalEvents.Count() != newInstructionalEvents.Count())
                 {
-                    // throw new ArgumentException("Invalid instructional event Id argument");
                     return new Tuple<IEnumerable<SectionInstructors>, int>(new List<SectionInstructors>(), 0);
                 }
             }
             catch
             {
-                // throw new ArgumentException("Invalid instructional event Id argument");
                 return new Tuple<IEnumerable<SectionInstructors>, int>(new List<SectionInstructors>(), 0);
             }
 
-            var pageOfItems = await _sectionRepository.GetSectionFacultyAsync(offset, limit, newSection, newInstructor, newInstructionalEvents);
-            var entities = pageOfItems.Item1;
-
-            foreach (var entity in entities)
+            Tuple<IEnumerable<SectionFaculty>, int> sectionInstructors = null;
+            var sectionInstructorsDto = new List<Dtos.SectionInstructors>();
+            try
             {
-                var sectionDto = await ConvertSectionInstructorsEntityToDtoAsync(entity, bypassCache);
-                sectionInstructorsCollection.Add(sectionDto);
+                sectionInstructors = await _sectionRepository.GetSectionFacultyAsync(offset, limit, newSection, newInstructor, newInstructionalEvents);
             }
-            return new Tuple<IEnumerable<SectionInstructors>, int>(sectionInstructorsCollection,pageOfItems.Item2);
+            catch (RepositoryException ex)
+            {
+                throw ex;
+            }
+
+            var entities = sectionInstructors.Item1;
+
+            if (entities != null)
+            {
+                foreach (var entity in entities)
+                {
+                    var sectionDto = await ConvertSectionInstructorsEntityToDtoAsync(entity, bypassCache);
+                    sectionInstructorsCollection.Add(sectionDto);
+                }
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+                return new Tuple<IEnumerable<SectionInstructors>, int>(sectionInstructorsCollection, sectionInstructors.Item2);
+            }
+            else
+            {
+                return new Tuple<IEnumerable<SectionInstructors>, int>(new List<SectionInstructors>(), 0);
+            }
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -135,15 +150,39 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             try
             {
                 var sectionFaculty = await _sectionRepository.GetSectionFacultyByGuidAsync(guid);
-                return await ConvertSectionInstructorsEntityToDtoAsync(sectionFaculty);
+                var sectionDto = await ConvertSectionInstructorsEntityToDtoAsync(sectionFaculty);
+                if (IntegrationApiException == null)
+                {
+                    return sectionDto;
+                }
+                {
+                    throw IntegrationApiException;
+                }
+            }
+            catch(RepositoryException e)
+            {
+                IntegrationApiExceptionAddError(e.Message, guid: guid);
+                throw IntegrationApiException;
             }
             catch (KeyNotFoundException ex)
             {
-                throw new KeyNotFoundException("section-instructors not found for GUID " + guid, ex);
+                IntegrationApiExceptionAddError(ex.Message, guid: guid);
+                throw IntegrationApiException;
             }
             catch (InvalidOperationException ex)
             {
-                throw new KeyNotFoundException("section-instructors not found for GUID " + guid, ex);
+                IntegrationApiExceptionAddError(ex.Message, guid: guid);
+                throw IntegrationApiException;
+            }
+            catch (ArgumentNullException e)
+            {
+                IntegrationApiExceptionAddError(e.Message, guid: guid);
+                throw IntegrationApiException;
+            }
+            catch (ArgumentOutOfRangeException e)
+            {
+                IntegrationApiExceptionAddError(e.Message, guid: guid);
+                throw IntegrationApiException;
             }
         }
 
@@ -160,10 +199,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             _sectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
             var sectionFaculty = await ConvertSectionInstructorsDtoToEntityAsync(sectionInstructors);
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
             var updatedEntity = await _sectionRepository.PostSectionFacultyAsync(sectionFaculty, sectionInstructors.Id);
             var dto = await ConvertSectionInstructorsEntityToDtoAsync(updatedEntity);
-
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
             return dto;
+
         }
 
         /// <summary>
@@ -179,10 +227,20 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             _sectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
             var sectionFaculty = await ConvertSectionInstructorsDtoToEntityAsync(sectionInstructors);
-            var updatedEntity = await _sectionRepository.PutSectionFacultyAsync(sectionFaculty, sectionInstructors.Id);
-            var dto = await ConvertSectionInstructorsEntityToDtoAsync(updatedEntity);
-
-            return dto;
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            else
+            {
+                var updatedEntity = await _sectionRepository.PutSectionFacultyAsync(sectionFaculty, sectionInstructors.Id);
+                var dto = await ConvertSectionInstructorsEntityToDtoAsync(updatedEntity);
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+                return dto;
+            }
         }
 
         /// <summary>
@@ -190,7 +248,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="guid">The GUID of the section instructor</param>
         public async Task DeleteSectionInstructorsAsync(string guid)
-        {           
+        {
             if (string.IsNullOrEmpty(guid))
             {
                 throw new ArgumentNullException("guid", "GUID is required to delete a section-instructors.");
@@ -205,7 +263,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     throw new KeyNotFoundException();
                 }
 
-                await _sectionRepository.DeleteSectionFacultyAsync(sectionInstructors, sectionInstructors.Id);
+                await _sectionRepository.DeleteSectionFacultyAsync(sectionInstructors, guid);
+            }
+            catch (RepositoryException)
+            {
+                throw;
             }
             catch (Exception)
             {
@@ -225,40 +287,78 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (source == null || string.IsNullOrEmpty(source.Guid))
             {
-                throw new ArgumentNullException("source", "SectionFaculty Entity is a required parameter. ");
+                IntegrationApiExceptionAddError(string.Concat("SectionFaculty Entity is a required parameter."));
             }
-            sectionInstructors.Id = source.Guid;
-            sectionInstructors.Section = new GuidObject2(await _sectionRepository.GetSectionGuidFromIdAsync(source.SectionId));
-            sectionInstructors.Instructor = new GuidObject2(await _personRepository.GetPersonGuidFromIdAsync(source.FacultyId));
-            if (source.SecMeetingIds != null && source.SecMeetingIds.Any())
+            else
             {
-                sectionInstructors.InstructionalEvents = new List<GuidObject2>();
-                foreach (var meeting in source.SecMeetingIds)
+                sectionInstructors.Id = source.Guid;
+
+                try
                 {
-                    var secMeetingGuid = await _sectionRepository.GetSectionMeetingGuidFromIdAsync(meeting);
-                    if (!string.IsNullOrEmpty(secMeetingGuid))
+                    sectionInstructors.Section = new GuidObject2(await _sectionRepository.GetSectionGuidFromIdAsync(source.SectionId));
+                }
+                catch (Exception)
+                {
+                    IntegrationApiExceptionAddError(string.Concat("GUID not found for section '" + source.SectionId + "'."), guid: source.Guid, id: source.Id);
+                }
+
+                try
+                {
+                    sectionInstructors.Instructor = new GuidObject2(await _personRepository.GetPersonGuidFromIdAsync(source.FacultyId));
+                }
+                catch (Exception)
+                {
+                    IntegrationApiExceptionAddError(string.Concat("GUID not found for faculty '" + source.FacultyId + "'."), guid: source.Guid, id: source.Id);
+                }
+
+                if (source.SecMeetingIds != null && source.SecMeetingIds.Any())
+                {
+                    sectionInstructors.InstructionalEvents = new List<GuidObject2>();
+                    foreach (var meeting in source.SecMeetingIds)
                     {
-                        sectionInstructors.InstructionalEvents.Add(new GuidObject2(secMeetingGuid));
+                        try
+                        {
+                            var secMeetingGuid = await _sectionRepository.GetSectionMeetingGuidFromIdAsync(meeting);
+                            if (!string.IsNullOrEmpty(secMeetingGuid))
+                            {
+                                sectionInstructors.InstructionalEvents.Add(new GuidObject2(secMeetingGuid));
+                            }
+                        }
+                        catch
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("GUID not found for instructional event '" + meeting + "'."), guid: source.Guid, id: source.Id);
+                        }
                     }
                 }
-            }
-            if (source.PrimaryIndicator)
-            {
-                sectionInstructors.InstructorRole = SectionInstructorsInstructorRole.Primary;
-            }
-            if (!string.IsNullOrEmpty(source.InstructionalMethodCode))
-            {
-                var instructionalMethodEntity = (await _referenceDataRepository.GetInstructionalMethodsAsync(bypassCache)).FirstOrDefault(im => im.Code == source.InstructionalMethodCode);
-                if (instructionalMethodEntity != null)
+                if (source.PrimaryIndicator)
                 {
-                    sectionInstructors.InstructionalMethod = new GuidObject2(instructionalMethodEntity.Guid);
+                    sectionInstructors.InstructorRole = SectionInstructorsInstructorRole.Primary;
                 }
+                if (!string.IsNullOrEmpty(source.InstructionalMethodCode))
+                {
+                    Domain.Student.Entities.InstructionalMethod instructionalMethodEntity = null;
+                    try
+                    {
+                        instructionalMethodEntity = (await _referenceDataRepository.GetInstructionalMethodsAsync(bypassCache)).FirstOrDefault(im => im.Code == source.InstructionalMethodCode);
+                        if (instructionalMethodEntity != null && instructionalMethodEntity.Guid != null)
+                        {
+                            sectionInstructors.InstructionalMethod = new GuidObject2(instructionalMethodEntity.Guid);
+                        }
+                    }
+                    catch (ArgumentNullException e)
+                    {
+                        IntegrationApiExceptionAddError(e.Message, guid: source.Guid, id: source.Id);
+                    }
+                }
+                sectionInstructors.ResponsibilityPercentage = source.ResponsibilityPercentage;
+                if (source.LoadFactor != null && source.LoadFactor.HasValue)
+                {
+                    sectionInstructors.WorkLoad = source.LoadFactor.Value;
+                }
+                sectionInstructors.WorkStartOn = source.StartDate;
+                sectionInstructors.WorkEndOn = source.EndDate;
             }
-            sectionInstructors.ResponsibilityPercentage = source.ResponsibilityPercentage;
-            sectionInstructors.WorkLoad = source.LoadFactor.Value;
-            sectionInstructors.WorkStartOn = source.StartDate;
-            sectionInstructors.WorkEndOn = source.EndDate;
-                                                                                                                                               
+
             return sectionInstructors;
         }
 
@@ -272,14 +372,58 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             if (source == null)
             {
-                throw new ArgumentNullException("source", "The section instructors is a required parameter for updates/creates. ");
+                IntegrationApiExceptionAddError("The section instructors is a required parameter for updates/creates.");
+                return null;
             }
-            var allInstructionalMethods = await _referenceDataRepository.GetInstructionalMethodsAsync(false);
+
+            string sectionId = null;
+            string instructorId = null;
+            try
+            {
+                if (source.Section != null && source.Section.Id != null)
+                {
+                    sectionId = await _sectionRepository.GetSectionIdFromGuidAsync(source.Section.Id);
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError("Section is a required property.", guid: source.Id);
+                }
+            }
+            catch
+            {
+                IntegrationApiExceptionAddError("Section not found for guid :'" + source.Section.Id + "'.", guid: source.Id);
+            }
+
+            try
+            {
+                if (source.Instructor != null && source.Instructor.Id != null)
+                {
+                    instructorId = await _personRepository.GetPersonIdFromGuidAsync(source.Instructor.Id);
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError("Instructor is a required property.", guid: source.Id);
+                }
+            }
+            catch
+            {
+                IntegrationApiExceptionAddError("Instructor not found for guid :'" + source.Instructor.Id + "'.", guid: source.Id);
+            }
+
+            IEnumerable<Domain.Student.Entities.InstructionalMethod> allInstructionalMethods = null;
+            string instructionalMethodCode = null;
+            try
+            {
+                allInstructionalMethods = await _referenceDataRepository.GetInstructionalMethodsAsync(false);
+            }
+            catch (Exception e)
+            {
+                IntegrationApiExceptionAddError(e.Message, guid: source.Id);
+            }
+
             if (allInstructionalMethods == null)
             {
-                var repoError = new RepositoryException("sectionInstructors");
-                repoError.AddError(new Domain.Entities.RepositoryError("Instructional Methods call returns no values.Required for updates / creates. "));
-                throw repoError;
+                IntegrationApiExceptionAddError("Instructional Methods call returns no values.  Required for updates/creates.", guid: source.Id);
             }
             if (source.InstructionalMethod == null || string.IsNullOrEmpty(source.InstructionalMethod.Id))
             {
@@ -287,52 +431,84 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     foreach (var meetingGuid in source.InstructionalEvents)
                     {
-                        var meeting = await _sectionRepository.GetSectionMeetingByGuidAsync(meetingGuid.Id);
-                        var instrMethod = allInstructionalMethods.FirstOrDefault(im => im.Code == meeting.InstructionalMethodCode);
-                        source.InstructionalMethod = new GuidObject2(instrMethod.Guid);
+                        SectionMeeting meeting = null;
+                        try
+                        {
+                            meeting = await _sectionRepository.GetSectionMeetingByGuidAsync(meetingGuid.Id);
+                        }
+                        catch (Exception e)
+                        {
+                            IntegrationApiExceptionAddError(e.Message, guid: source.Id);
+                        }
+                        if (meeting != null && meeting.InstructionalMethodCode != null)
+                        {
+                            var instrMethod = allInstructionalMethods.FirstOrDefault(im => im.Code == meeting.InstructionalMethodCode);
+                            source.InstructionalMethod = new GuidObject2(instrMethod.Guid);
+                        }
                     }
                 }
                 else
                 {
-                    throw new ArgumentNullException("source.instructionalMethod.id", "The instructional Method is required for updates/creates. ");
+                    IntegrationApiExceptionAddError("The instructional Method is required for updates/creates.", guid: source.Id);
+                }
+            }
+            if (source.InstructionalMethod != null && allInstructionalMethods != null)
+            {
+                var instructionalMethodEntity = allInstructionalMethods.FirstOrDefault(im => im.Guid == source.InstructionalMethod.Id);
+                if (instructionalMethodEntity != null)
+                {
+                    instructionalMethodCode = instructionalMethodEntity.Code;
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError("Instructional method not found for GUID '" + source.InstructionalMethod.Id + "'.", guid: source.Id);
                 }
             }
 
-            var instructionalMethodEntity = allInstructionalMethods.FirstOrDefault(im => im.Guid == source.InstructionalMethod.Id);
-            var sectionId = await _sectionRepository.GetSectionIdFromGuidAsync(source.Section.Id);
-            var instructorId = await _personRepository.GetPersonIdFromGuidAsync(source.Instructor.Id);
-            if (string.IsNullOrEmpty(instructorId))
-            {
-                throw new ArgumentException("Instructor not found for guid :'" + source.Instructor.Id + "'.");
-            }
-            if (string.IsNullOrEmpty(sectionId))
-            {
-                throw new ArgumentException("Section not found for guid :'" + source.Section.Id + "'.");
-            }
-            var instructionalMethodCode = instructionalMethodEntity.Code;
+
             var sectionFacultyId = await _sectionRepository.GetSectionFacultyIdFromGuidAsync(source.Id);
             if (string.IsNullOrEmpty(sectionFacultyId)) sectionFacultyId = "$NEW";
 
-            var sectionFacultyEntity = new SectionFaculty(source.Id, sectionFacultyId, sectionId, instructorId, instructionalMethodCode,
-                source.WorkStartOn, source.WorkEndOn, source.ResponsibilityPercentage);
-
-            if (source.InstructionalEvents != null && source.InstructionalEvents.Any())
+            try
             {
-                sectionFacultyEntity.SecMeetingIds = new List<string>();
-                foreach (var meeting in source.InstructionalEvents)
+                var sectionFacultyEntity = new SectionFaculty(source.Id, sectionFacultyId, sectionId, instructorId, instructionalMethodCode,
+                    source.WorkStartOn, source.WorkEndOn, source.ResponsibilityPercentage);
+
+                if (source.InstructionalEvents != null && source.InstructionalEvents.Any())
                 {
-                    var meetingId = await _sectionRepository.GetSectionMeetingIdFromGuidAsync(meeting.Id);
-                    if (!string.IsNullOrEmpty(meetingId))
+                    sectionFacultyEntity.SecMeetingIds = new List<string>();
+                    foreach (var meeting in source.InstructionalEvents)
                     {
-                        sectionFacultyEntity.SecMeetingIds.Add(meetingId);
+                        var meetingId = await _sectionRepository.GetSectionMeetingIdFromGuidAsync(meeting.Id);
+                        if (!string.IsNullOrEmpty(meetingId))
+                        {
+                            sectionFacultyEntity.SecMeetingIds.Add(meetingId);
+                        }
                     }
                 }
-            }
-            sectionFacultyEntity.PrimaryIndicator = source.InstructorRole == SectionInstructorsInstructorRole.Primary ? true : false;
-            sectionFacultyEntity.LoadFactor = source.WorkLoad;
+                sectionFacultyEntity.PrimaryIndicator = source.InstructorRole == SectionInstructorsInstructorRole.Primary ? true : false;
+                sectionFacultyEntity.LoadFactor = source.WorkLoad;
 
-            return sectionFacultyEntity;
-        }
+                if (sectionFacultyEntity != null)
+                {
+                    return sectionFacultyEntity;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            catch (ArgumentNullException e)
+            {
+                IntegrationApiExceptionAddError(e.Message, guid: source.Id);
+                throw IntegrationApiException;                
+            }
+            catch (ArgumentOutOfRangeException e)
+            {
+                IntegrationApiExceptionAddError(e.Message, guid: source.Id);
+                throw IntegrationApiException;
+            }
+        } 
 
         /// <summary>
         /// Helper method to determine if the user has permission to view section-instructors
@@ -342,13 +518,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private void CheckViewPermission()
         {
             bool hasViewPermission = HasPermission(StudentPermissionCodes.ViewSectionInstructors);
+            bool hasCreatePermission = HasPermission(StudentPermissionCodes.CreateSectionInstructors);
 
-            // User is not allowed to view section-instructors without the appropriate permissions
-            if (!hasViewPermission)
+            // User is not allowed to view section-instructors without the appropriate permissions to either view or create section instructors
+            if (!hasViewPermission && !hasCreatePermission)
             {
-                var message = "User " + CurrentUser.UserId + " does not have permission to create or view section-instructors.";
+                var message = "User '" + CurrentUser.UserId + "' is not authorized to create or view section-instructors.";
                 logger.Error(message);
-                throw new PermissionsException(message);
+                IntegrationApiExceptionAddError(message, "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
+                throw IntegrationApiException;
             }
         }
 
@@ -366,7 +544,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 var message = "User " + CurrentUser.UserId + " does not have permission to create or update section-instructors.";
                 logger.Error(message);
-                throw new PermissionsException(message);
+                IntegrationApiExceptionAddError(message, "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
+                throw IntegrationApiException;
             }
         }
 
@@ -396,19 +575,22 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             if (sectionInstructors == null)
             {
-                throw new ArgumentNullException("sectionInstructors", "SectionInstructors body is required in PUT or POST request. ");
+                IntegrationApiExceptionAddError("SectionInstructors body is required in PUT or POST request. ");
             }
-            if (sectionInstructors.InstructionalMethod == null && sectionInstructors.InstructionalEvents == null)
+            else
             {
-                throw new ArgumentNullException("Either an instructional event or an instructional method must be specified. ");
-            }
-            if (sectionInstructors.Section == null || string.IsNullOrEmpty(sectionInstructors.Section.Id))
-            {
-                throw new ArgumentNullException("sectionInstructors.section.id", "The section id is a required parameter for updates/creates. ");
-            }
-            if (sectionInstructors.Instructor == null || string.IsNullOrEmpty(sectionInstructors.Instructor.Id))
-            {
-                throw new ArgumentNullException("sectionInstructors.instructor.id", "The instructor id is a required parameter for updates/creates. ");
+                if (sectionInstructors.InstructionalMethod == null && sectionInstructors.InstructionalEvents == null)
+                {
+                    IntegrationApiExceptionAddError("Either an instructional event or an instructional method must be specified.", guid: sectionInstructors.Id);
+                }
+                if (sectionInstructors.Section == null || string.IsNullOrEmpty(sectionInstructors.Section.Id))
+                {
+                    IntegrationApiExceptionAddError("The section id is a required parameter for updates/creates.", guid: sectionInstructors.Id);
+                }
+                if (sectionInstructors.Instructor == null || string.IsNullOrEmpty(sectionInstructors.Instructor.Id))
+                {
+                    IntegrationApiExceptionAddError("The instructor id is a required parameter for updates/creates.", guid: sectionInstructors.Id);
+                }
             }
         }
     }

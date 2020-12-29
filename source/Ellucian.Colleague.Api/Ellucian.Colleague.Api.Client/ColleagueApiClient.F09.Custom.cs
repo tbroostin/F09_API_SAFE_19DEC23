@@ -359,6 +359,239 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
-        
+
+        // F09 teresa@toad-code.com 06/17/19
+        public async Task<F09KaSelectResponseDto> GetF09KaSelectAsync(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "ID cannot be empty/null for F09KaSelect.");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(getF09KaSelect, personId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(baseUrl, headers: headers);
+                var dtoResponse = JsonConvert.DeserializeObject<F09KaSelectResponseDto>(await response.Content.ReadAsStringAsync());
+
+                return dtoResponse;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to GetF09KaSelectAsync");
+                throw;
+            }
+        }
+
+        // F09 teresa@toad-code.com 06/18/19
+        public async Task<dtoF09KaGradingResponse> GetF09KaGradingAsync(string stcId)
+        {
+            if (string.IsNullOrEmpty(stcId))
+            {
+                throw new ArgumentNullException("stcId", "stcID cannot be empty/null for F09KaGrading.");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(getF09KaGrading, stcId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(baseUrl, headers: headers);
+                var dtoResponse = JsonConvert.DeserializeObject<dtoF09KaGradingResponse>(await response.Content.ReadAsStringAsync());
+
+                return dtoResponse;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to GetF09KaGradingAsync");
+                throw;
+            }
+        }
+
+        // F09 teresa@toad-code.com 06/18/19
+        public async Task<HttpResponseMessage> PutF09KaGradingAsync(dtoF09KaGradingRequest dtoRequest)
+        {
+            if (dtoRequest == null)
+            {
+                throw new ArgumentNullException("F09KaGradingRequest", "F09KaGrading Request cannot be null.");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(updateF09KaGrading);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var dtoResponse = await ExecutePutRequestWithResponseAsync(dtoRequest, baseUrl, headers: headers);
+                return dtoResponse;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to PutF09KaGradingAsync.");
+                throw;
+            }
+        }
+
+        public async Task<F09PaymentFormDto> GetF09TuitionPaymentAsync(string personId, string paymentType ="")
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException(nameof(personId), "ID cannot be empty/null for the tuition payment plan");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(_getF09Payment, personId, paymentType);
+
+                var headers = new NameValueCollection {{AcceptHeaderKey, _mediaTypeHeaderVersion1}};
+
+                var response = await ExecuteGetRequestWithResponseAsync(baseUrl, headers: headers);
+                var tuitionPayment = JsonConvert.DeserializeObject<F09PaymentFormDto>(await response.Content.ReadAsStringAsync());
+
+                return tuitionPayment;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get Tuition Payment");
+                throw;
+            }
+        }
+
+        public async Task<F09PaymentInvoiceDto> SubmitF09TuitionPaymentPlanAsync(F09TuitionPaymentPlanDto paymentPlan)
+        {
+            if(paymentPlan == null) throw new ArgumentNullException(nameof(paymentPlan));
+            if(String.IsNullOrWhiteSpace(paymentPlan.StudentId)) throw new ArgumentNullException(nameof(paymentPlan.StudentId), "Student Id is Required");
+
+            try
+            {
+                var headers = new NameValueCollection {{AcceptHeaderKey, _mediaTypeHeaderVersion1}};
+
+                var response = await ExecutePostRequestWithResponseAsync(paymentPlan, _getF09Payment, headers: headers);
+                var invoice = JsonConvert.DeserializeObject<F09PaymentInvoiceDto>(await response.Content.ReadAsStringAsync());
+
+                return invoice;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to submit Tuition Payment or receive invoice");
+                throw;
+            }
+        }
+
+        public async Task<HttpResponseMessage> SubmitF09TuitionChangePlanAsync(F09TuitionPaymentPlanDto paymentPlan)
+        {
+            if(paymentPlan == null) throw new ArgumentNullException(nameof(paymentPlan));
+            if(String.IsNullOrWhiteSpace(paymentPlan.StudentId)) throw new ArgumentNullException(nameof(paymentPlan.StudentId), "Student Id is Required");
+
+            try
+            {
+                var headers = new NameValueCollection {{AcceptHeaderKey, _mediaTypeHeaderVersion1}};
+
+                var response = await ExecutePutRequestWithResponseAsync(paymentPlan, _getF09Payment, headers: headers);
+                return response;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to submit Tuition Payment or receive invoice");
+                throw;
+            }
+        }
+
+        // F09 teresa@toad-code.com 11/30/19
+        public async Task<dtoF09ReportResponse> GetF09ReportAsync(dtoF09ReportRequest dtoRequest)
+        {
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(getF09Report);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                //var dtoResponse = await ExecutePutRequestWithResponseAsync(dtoRequest, baseUrl, headers: headers);
+                var response = await ExecutePutRequestWithResponseAsync(dtoRequest, baseUrl, headers: headers);
+                var dtoResponse = JsonConvert.DeserializeObject<dtoF09ReportResponse>(await response.Content.ReadAsStringAsync());
+
+                return dtoResponse;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to GetF09ReportAsync.");
+                throw;
+            }
+        }
+
+        // F09 teresa@toad-code.com 07/30/20
+        public async Task<dtoF09EvalSelectResponse> GetF09EvalSelectAsync(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "ID cannot be empty/null for F09EvalSelect.");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(getF09EvalSelect, personId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(baseUrl, headers: headers);
+                var dtoResponse = JsonConvert.DeserializeObject<dtoF09EvalSelectResponse>(await response.Content.ReadAsStringAsync());
+
+                return dtoResponse;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to GetF09EvalSelectAsync");
+                throw;
+            }
+        }
+
+        // F09 teresa@toad-code.com 07/30/20
+        public async Task<dtoF09EvalFormResponse> GetF09EvalFormAsync(string key)
+        {
+            if (string.IsNullOrEmpty(key))
+            {
+                throw new ArgumentNullException("key", "eval key cannot be empty/null for F09EvalForm.");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(getF09EvalForm, key);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(baseUrl, headers: headers);
+                var dtoResponse = JsonConvert.DeserializeObject<dtoF09EvalFormResponse>(await response.Content.ReadAsStringAsync());
+
+                return dtoResponse;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to GetF09EvalFormAsync");
+                throw;
+            }
+        }
+
+        // F09 teresa@toad-code.com 07/30/20
+        public async Task<HttpResponseMessage> PutF09EvalFormAsync(dtoF09EvalFormRequest dtoRequest)
+        {
+            if (dtoRequest == null)
+            {
+                throw new ArgumentNullException("F09EvalFormRequest", "F09EvalForm Request cannot be null.");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(updateF09EvalForm);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var dtoResponse = await ExecutePutRequestWithResponseAsync(dtoRequest, baseUrl, headers: headers);
+                return dtoResponse;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to PutF09EvalFormAsync.");
+                throw;
+            }
+        }
+
     }
 }

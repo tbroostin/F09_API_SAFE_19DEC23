@@ -1,4 +1,4 @@
-﻿//Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -2507,7 +2507,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 awardLetterRepositoryMock = new Mock<IAwardLetterRepository>();
 
                 awardLetterHistoryRepositoryMock = new Mock<IAwardLetterHistoryRepository>();
-                awardLetterHistoryRepositoryMock.Setup(l => l.GetAwardLetterByIdAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<StudentAwardYear>>(), It.IsAny<IEnumerable<Award>>()))
+                awardLetterHistoryRepositoryMock.Setup(l => l.GetAwardLetterByIdAsync(It.IsAny<string>(), It.IsAny<IEnumerable<StudentAwardYear>>(), It.IsAny<IEnumerable<Award>>()))
                     .ReturnsAsync(inputAwardLetterEntity);
 
                 financialAidReferenceDataRepositoryMock = new Mock<IFinancialAidReferenceDataRepository>();
@@ -2743,7 +2743,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             [TestCategory("GetAwardLetterByIdAsync")]
             public async Task EmptyAwardLetterEntityReceived_InitializedDtoIsReturnedTest()
             {
-                awardLetterHistoryRepositoryMock.Setup(r => r.GetAwardLetterByIdAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<StudentAwardYear>>(), It.IsAny<IEnumerable<Award>>()))
+                awardLetterHistoryRepositoryMock.Setup(r => r.GetAwardLetterByIdAsync(It.IsAny<string>(), It.IsAny<IEnumerable<StudentAwardYear>>(), It.IsAny<IEnumerable<Award>>()))
                     .ReturnsAsync(new AwardLetter2());
 
                 awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
@@ -4026,7 +4026,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 awardLetterRepositoryMock = new Mock<IAwardLetterRepository>();
 
                 awardLetterHistoryRepositoryMock = new Mock<IAwardLetterHistoryRepository>();
-                awardLetterHistoryRepositoryMock.Setup(l => l.GetAwardLetterById2Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<StudentAwardYear>>(), It.IsAny<IEnumerable<Award>>()))
+                awardLetterHistoryRepositoryMock.Setup(l => l.GetAwardLetterById2Async(It.IsAny<string>(), It.IsAny<IEnumerable<StudentAwardYear>>(), It.IsAny<IEnumerable<Award>>()))
                     .ReturnsAsync(inputAwardLetterEntity);
 
                 financialAidReferenceDataRepositoryMock = new Mock<IFinancialAidReferenceDataRepository>();
@@ -4262,7 +4262,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             [TestCategory("GetAwardLetterByIdAsync")]
             public async Task EmptyAwardLetterEntityReceived_InitializedDtoIsReturnedTest()
             {
-                awardLetterHistoryRepositoryMock.Setup(r => r.GetAwardLetterById2Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<StudentAwardYear>>(), It.IsAny<IEnumerable<Award>>()))
+                awardLetterHistoryRepositoryMock.Setup(r => r.GetAwardLetterById2Async(It.IsAny<string>(), It.IsAny<IEnumerable<StudentAwardYear>>(), It.IsAny<IEnumerable<Award>>()))
                     .ReturnsAsync(new AwardLetter3());
 
                 awardLetterService = new AwardLetterService(adapterRegistryMock.Object,

@@ -1,4 +1,4 @@
-//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -82,11 +82,20 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// Get a AdmissionDecisionTypes from its GUID
         /// </summary>
         /// <returns>AdmissionDecisionTypes DTO object</returns>
-        public async Task<Ellucian.Colleague.Dtos.AdmissionDecisionType2> GetAdmissionDecisionTypesByGuidAsync(string guid)
+        public async Task<Ellucian.Colleague.Dtos.AdmissionDecisionType2> GetAdmissionDecisionTypesByGuidAsync(string guid, bool bypassCache = false)
         {
+            Domain.Student.Entities.AdmissionDecisionType admissionDecisionType = null;
             try
             {
-                return ConvertAdmissionDecisionTypes2EntityToDto((await _referenceDataRepository.GetAdmissionDecisionTypesAsync(true)).Where(r => r.Guid == guid).First());
+                if (bypassCache == true)
+                {
+                    admissionDecisionType = await _referenceDataRepository.GetAdmissionDecisionTypeByGuidAsync(guid);
+                }
+                else
+                {
+                    admissionDecisionType = (await _referenceDataRepository.GetAdmissionDecisionTypesAsync(true)).Where(r => r.Guid == guid).First();
+                }
+                return ConvertAdmissionDecisionTypes2EntityToDto(admissionDecisionType);
             }
             catch (KeyNotFoundException ex)
             {
@@ -96,6 +105,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new KeyNotFoundException("admission-decision-types not found for GUID " + guid, ex);
             }
+            catch
+            {
+                throw new KeyNotFoundException("admission-decision-types not found for GUID " + guid);
+            }            
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM VERSION 6</remarks>

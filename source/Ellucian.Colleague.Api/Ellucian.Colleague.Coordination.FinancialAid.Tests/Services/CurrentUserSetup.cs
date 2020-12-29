@@ -1,4 +1,4 @@
-﻿//Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Web.Security;
@@ -46,7 +46,8 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                         SessionFixationId = "abc123",
                         ProxySubjectClaims = new ProxySubjectClaims()
                         {
-                            PersonId = "0003914"
+                            PersonId = "0003914",
+                            Permissions = new List<string>() { "FAAL"}
                         }
                     });
                 }

@@ -1,28 +1,31 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Text;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Coordination.Base;
+using Ellucian.Colleague.Coordination.Student.Adapters;
+using Ellucian.Colleague.Coordination.Student.Services;
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
-using Ellucian.Colleague.Coordination.Student.Services;
-using Ellucian.Colleague.Domain.Student.Repositories;
-using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Student.Entities;
+using Ellucian.Colleague.Domain.Student.Entities.Transcripts;
+using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Domain.Student.Tests;
-using slf4net;
+using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
-using Ellucian.Colleague.Coordination.Student.Adapters;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using slf4net;
+using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using StudentCohortEntity = Ellucian.Colleague.Domain.Student.Entities.StudentCohort;
 using StudentClassificationEntity = Ellucian.Colleague.Domain.Student.Entities.StudentClassification;
-using Ellucian.Colleague.Coordination.Base;
+using StudentCohortEntity = Ellucian.Colleague.Domain.Student.Entities.StudentCohort;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -32,9 +35,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         // Sets up a Current user that is a student and one that is an advisor
         public abstract class CurrentUserSetup
         {
-            protected Role advisorRole = new Role(105, "Advisor");
-            protected Role viewStudentRole = new Role(1, "VIEW.STUDENT.INFORMATION");
+            //protected Role advisorRole = new Role(105, "Advisor");
+            //protected Role facultyRole = new Role(999, "Faculty");
 
+
+            protected Role advisorRole = new Role(105, "Advisor");
+            protected Role advisorRole1 = new Role(106, "Advisor1");
+            protected Role viewStudentRole = new Role(1, "VIEW.STUDENT.INFORMATION");
+            protected Role viewAnyAdviseeRole = new Role(18, "Advisor");
+            
             public class StudentUserFactory : ICurrentUserFactory
             {
                 public ICurrentUser CurrentUser
@@ -106,6 +115,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private StudentService studentService;
             private Mock<IStudentRepository> studentRepoMock;
             private IStudentRepository studentRepo;
+            private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+            private IPlanningStudentRepository planningStudentRepo;
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
             private Mock<IAcademicCreditRepository> acadCreditRepoMock;
@@ -135,13 +146,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private IStaffRepository staffRepository;
             private ICurrentUserFactory currentUserFactory;
 
-
             private IConfigurationRepository baseConfigurationRepository;
             private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
 
             private IEnumerable<StudentCohort> cohorts;
             private IEnumerable<StudentType> studentTypes;
-            private IEnumerable<ResidencyStatus> residencyTypes;
+            private IEnumerable<AdmissionResidencyType> residencyTypes;
+            private IEnumerable<AcademicLevel> academicLevels;
+            private IEnumerable<StudentClassification> studentClassifications;
             private Permission permissionViewAnyStudent;
 
             private string student1Guid = "6b227dcc-db1c-41a2-b809-8e400e5d0682";
@@ -165,13 +177,22 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private string residency2Guid = "bd54668d-50d9-416c-81e9-2318e88571a1";
             private string residency2Code = "code2";
 
+            private string academicLevel1Guid = "0dbf5ac4-b25d-46e2-97a9-8353edd63b63";
+            private string academicLevel1Code = "UG";
+            private string academicLevel2Guid = "d0543c34-d3e1-45a9-a67d-b25ad3e0a4683";
+            private string academicLevel2Code = "GR";
+            private string studentClassification1Guid = "531c5ce4-580c-4868-91fb-24d5080566c2";
+            private string studentClassification1Code = "FR";
+            private string studentClassification2Guid = "d97c6abc-e6fc-40aa-bf91-84bd1d30090c";
+            private string studentClassification2Code = "SO";
 
             [TestInitialize]
             public void Initialize()
             {
                 studentRepoMock = new Mock<IStudentRepository>();
                 studentRepo = studentRepoMock.Object;
-
+                planningStudentRepoMock = new Mock<IPlanningStudentRepository>();
+                planningStudentRepo = planningStudentRepoMock.Object;
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
                 acadCreditRepoMock = new Mock<IAcademicCreditRepository>();
@@ -202,7 +223,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 logger = new Mock<ILogger>().Object;
 
                 //Mock roles repo and permission
-                permissionViewAnyStudent = new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation);
+                permissionViewAnyStudent = new Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation);
                 viewStudentRole.AddPermission(permissionViewAnyStudent);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentRole });
 
@@ -223,22 +244,38 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentReferenceDataRepositoryMock.Setup(repo => repo.GetStudentTypesAsync(It.IsAny<bool>())).ReturnsAsync(studentTypes);
 
                 // Mock the repo call for residency types
-                residencyTypes = new List<ResidencyStatus>()
+                residencyTypes = new List<AdmissionResidencyType>()
                 {
-                    new ResidencyStatus(residency1Guid, residency1Code, "Test Data1"),
-                    new ResidencyStatus(residency2Guid, residency2Guid, "Test Data2")
+                    new AdmissionResidencyType(residency1Guid, residency1Code, "Test Data1"),
+                    new AdmissionResidencyType(residency2Guid, residency2Guid, "Test Data2")
                 };
-                studentRepoMock.Setup(repo => repo.GetResidencyStatusesAsync(It.IsAny<bool>())).ReturnsAsync(residencyTypes);
+                studentReferenceDataRepositoryMock.Setup(repo => repo.GetAdmissionResidencyTypesAsync(It.IsAny<bool>())).ReturnsAsync(residencyTypes);
+
+                // Mock the repo call for academic levels
+                academicLevels = new List<AcademicLevel>()
+                {
+                    new AcademicLevel(academicLevel1Guid, academicLevel1Code, "Undergraduate"),
+                    new AcademicLevel(academicLevel2Guid, academicLevel2Code, "Graduate")
+                };
+                studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync(It.IsAny<bool>())).ReturnsAsync(academicLevels);
+
+                // Mock the repo call for student classifications
+                studentClassifications = new List<StudentClassification>()
+                {
+                    new StudentClassification(studentClassification1Guid, studentClassification1Code, "Freshman"),
+                    new StudentClassification(studentClassification2Guid, studentClassification2Code, "Sophmore")
+                };
+                studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync(It.IsAny<bool>())).ReturnsAsync(academicLevels);
 
                 //mock the call to get the personid
                 personRepoMock.Setup(repo => repo.GetPersonIdFromGuidAsync(student1Guid)).ReturnsAsync(student1Id);
 
                 //setup student entity data
-                student1 = new Domain.Student.Entities.Student(student1Guid, student1Id, new List<string>(){program1Guid, program2Guid}, new List<string>(){academicCred1Guid, academicCred2Guid},"Boyd", false);
-                student2 = new Domain.Student.Entities.Student(student2Guid, student2Id, new List<string>(){program1Guid, program2Guid}, new List<string>(){academicCred1Guid, academicCred2Guid},"Boyd", false);
+                student1 = new Domain.Student.Entities.Student(student1Guid, student1Id, new List<string>() { program1Guid, program2Guid }, new List<string>() { academicCred1Guid, academicCred2Guid }, "Boyd", false);
+                student2 = new Domain.Student.Entities.Student(student2Guid, student2Id, new List<string>() { program1Guid, program2Guid }, new List<string>() { academicCred1Guid, academicCred2Guid }, "Boyd", false);
 
 
-                studentList = new List<Domain.Student.Entities.Student>() {student1, student2};
+                studentList = new List<Domain.Student.Entities.Student>() { student1, student2 };
 
                 oneStudentList = new List<Domain.Student.Entities.Student>() { student1 };
 
@@ -275,14 +312,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo,
                     academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo,
-                    referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo,
-                    staffRepository, logger);
+                    referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository,
+                    currentUserFactory, roleRepo, staffRepository, logger, planningStudentRepo);
             }
 
             [TestCleanup]
             public void Cleanup()
             {
                 studentRepo = null;
+                planningStudentRepo = null;
                 adapterRegistry = null;
                 currentUserFactory = null;
                 roleRepo = null;
@@ -325,7 +363,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task GetStudents_StudentResidencyFitler_V7()
             {
-                var studentDtoList = await studentService.GetStudentsAsync(0, 100, false, null, null,null, residency1Guid);
+                var studentDtoList = await studentService.GetStudentsAsync(0, 100, false, null, null, null, residency1Guid);
 
                 Assert.AreEqual(2, studentDtoList.Item1.Count());
             }
@@ -365,13 +403,260 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestClass]
+        public class GetEedmStudentTests2 : CurrentUserSetup
+        {
+            private StudentService studentService;
+            private Mock<IStudentRepository> studentRepoMock;
+            private IStudentRepository studentRepo;
+            private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+            private IPlanningStudentRepository planningStudentRepo;
+            private Mock<IPersonRepository> personRepoMock;
+            private IPersonRepository personRepo;
+            private Mock<IAcademicCreditRepository> acadCreditRepoMock;
+            private IAcademicCreditRepository acadCreditRepo;
+            private IAcademicHistoryService academicHistoryService;
+            private Mock<IAcademicHistoryService> academicHistoryServiceMock;
+            private ITermRepository termRepo;
+            private Mock<ITermRepository> termRepoMock;
+            private IRegistrationPriorityRepository regPriorityRepo;
+            private Mock<IRegistrationPriorityRepository> regPriorityRepoMock;
+            private IStudentConfigurationRepository studentConfigurationRepo;
+            private Mock<IStudentConfigurationRepository> studentConfigurationRepoMock;
+            private IReferenceDataRepository referenceDataRepositoryRepo;
+            private Mock<IReferenceDataRepository> referenceDataRepositoryRepoMock;
+            private Mock<IStudentReferenceDataRepository> studentReferenceDataRepositoryMock;
+
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private ILogger logger;
+            private Domain.Student.Entities.Student student1;
+            private Domain.Student.Entities.Student student2;
+            private IEnumerable<Domain.Student.Entities.Student> studentList;
+            private IEnumerable<Domain.Student.Entities.Student> oneStudentList;
+            private IEnumerable<Domain.Student.Entities.Student> twoStudentList;
+            private Mock<IRoleRepository> roleRepoMock;
+            private IRoleRepository roleRepo;
+            private Mock<IStaffRepository> staffRepositoryMock;
+            private IStaffRepository staffRepository;
+            private ICurrentUserFactory currentUserFactory;
+
+
+            private IConfigurationRepository baseConfigurationRepository;
+            private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+
+            private IEnumerable<StudentCohort> cohorts;
+            private IEnumerable<StudentType> studentTypes;
+            private IEnumerable<AdmissionResidencyType> residencyTypes;
+            private Permission permissionViewAnyStudent;
+
+            private string student1Guid = "6b227dcc-db1c-41a2-b809-8e400e5d0682";
+            private string student2Guid = "b88342ca-03d3-4255-9d69-3dfd434c60ff";
+            private string student1Id = "1234567";
+            private string student2Id = "7654321";
+            private string program1Guid = "cbac5aee-71e9-4f2d-ab44-3266d43390d4";
+            private string program2Guid = "1f5d03d9-e3cb-43be-8ec9-dc606f5cf90f";
+            private string academicCred1Guid = "911f1522-3fee-409e-a782-535f588a3419";
+            private string academicCred2Guid = "4f2ead3b-210d-435c-a2c3-624e2683dbef";
+            private string studentType1Guid = "8ce0fddc-b10d-4de6-885f-30d0aeaf9887";
+            private string studentType1Code = "typ";
+            private string studentType2Guid = "83b6a42b-4667-457b-93e8-8735ac4f6d3f";
+            private string studentType2Code = "top";
+            private string residency1Guid = "b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09";
+            private string residency1Code = "code1";
+            private string residency2Guid = "bd54668d-50d9-416c-81e9-2318e88571a1";
+            private string residency2Code = "code2";
+
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                studentRepoMock = new Mock<IStudentRepository>();
+                studentRepo = studentRepoMock.Object;
+                planningStudentRepoMock = new Mock<IPlanningStudentRepository>();
+                planningStudentRepo = planningStudentRepoMock.Object;
+                personRepoMock = new Mock<IPersonRepository>();
+                personRepo = personRepoMock.Object;
+                acadCreditRepoMock = new Mock<IAcademicCreditRepository>();
+                acadCreditRepo = acadCreditRepoMock.Object;
+
+                academicHistoryServiceMock = new Mock<IAcademicHistoryService>();
+                academicHistoryService = academicHistoryServiceMock.Object;
+                termRepoMock = new Mock<ITermRepository>();
+                termRepo = termRepoMock.Object;
+                regPriorityRepoMock = new Mock<IRegistrationPriorityRepository>();
+                regPriorityRepo = regPriorityRepoMock.Object;
+                studentConfigurationRepoMock = new Mock<IStudentConfigurationRepository>();
+                studentConfigurationRepo = studentConfigurationRepoMock.Object;
+                referenceDataRepositoryRepoMock = new Mock<IReferenceDataRepository>();
+                referenceDataRepositoryRepo = referenceDataRepositoryRepoMock.Object;
+                studentReferenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
+
+                baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
+                baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+
+                staffRepositoryMock = new Mock<IStaffRepository>();
+                staffRepository = staffRepositoryMock.Object;
+
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                roleRepoMock = new Mock<IRoleRepository>();
+                roleRepo = roleRepoMock.Object;
+                logger = new Mock<ILogger>().Object;
+
+                //Mock roles repo and permission
+                permissionViewAnyStudent = new Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation);
+                viewStudentRole.AddPermission(permissionViewAnyStudent);
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentRole });
+
+                // Mock the repo call for Student types
+                studentTypes = new List<StudentType>()
+                {
+                    new StudentType(studentType1Guid, studentType1Code, "Test Data"),
+                    new StudentType(studentType2Guid, studentType2Code, "Test Data")
+                };
+                studentReferenceDataRepositoryMock.Setup(repo => repo.GetStudentTypesAsync(It.IsAny<bool>())).ReturnsAsync(studentTypes);
+
+                // Mock the repo call for residency types
+                residencyTypes = new List<AdmissionResidencyType>()
+                {
+                    new AdmissionResidencyType(residency1Guid, residency1Code, "Test Data1"),
+                    new AdmissionResidencyType(residency2Guid, residency2Guid, "Test Data2")
+                };
+                studentReferenceDataRepositoryMock.Setup(repo => repo.GetAdmissionResidencyTypesAsync(It.IsAny<bool>())).ReturnsAsync(residencyTypes);
+
+                //mock the call to get the personid
+                personRepoMock.Setup(repo => repo.GetPersonIdFromGuidAsync(student1Guid)).ReturnsAsync(student1Id);
+
+                //setup student entity data
+                var studentResidency1 = new StudentResidency(residency1Code, new DateTime(2012, 05, 01));
+                var studentResidencies1 = new List<StudentResidency> { studentResidency1 };
+                student1 = new Domain.Student.Entities.Student(student1Guid, student1Id, new List<string>() { program1Guid, program2Guid }, new List<string>() { academicCred1Guid, academicCred2Guid }, "Boyd", false) { StudentResidencies = studentResidencies1 };
+
+                var studentTypeInfo2 = new StudentTypeInfo(studentType1Code, new DateTime(2013, 06, 01));
+                var studentTypeInfos2 = new List<StudentTypeInfo> { studentTypeInfo2 };
+                student2 = new Domain.Student.Entities.Student(student2Guid, student2Id, new List<string>() { program1Guid, program2Guid }, new List<string>() { academicCred1Guid, academicCred2Guid }, "Boyd", false) { StudentTypeInfo = studentTypeInfos2 };
+
+
+                studentList = new List<Domain.Student.Entities.Student>() { student1, student2 };
+
+                oneStudentList = new List<Domain.Student.Entities.Student>() { student1 };
+
+                twoStudentList = new List<Domain.Student.Entities.Student>() { student2 };
+
+
+                // Mock student repo response
+
+                studentRepoMock.Setup(
+                    repo =>
+                        repo.GetDataModelStudents2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string[]>(), "",
+                        It.IsAny<List<string>>(), It.IsAny<List<string>>())).ReturnsAsync(new Tuple<IEnumerable<Domain.Student.Entities.Student>, int>(studentList, 2));
+
+                studentRepoMock.Setup(
+                    repo =>
+                        repo.GetDataModelStudents2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string[]>(), student1Id,
+                        It.IsAny<List<string>>(), It.IsAny<List<string>>())).ReturnsAsync(new Tuple<IEnumerable<Domain.Student.Entities.Student>, int>(oneStudentList, 1));
+
+
+                studentRepoMock.Setup(
+                    repo =>
+                        repo.GetDataModelStudents2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string[]>(), "",
+                        new List<string>() { studentType2Code }, It.IsAny<List<string>>())).ReturnsAsync(new Tuple<IEnumerable<Domain.Student.Entities.Student>, int>(twoStudentList, 2));
+
+
+                //studentRepoMock.Setup(
+                //    repo =>
+                //        repo.GetDataModelStudents2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), "", "",
+                //        It.IsAny<List<string>>(), It.IsAny<List<string>>())).ReturnsAsync(new Tuple<IEnumerable<Domain.Student.Entities.Student>, int>(oneStudentList, 2));
+
+                studentRepoMock.Setup(
+                    repo =>
+                        repo.GetDataModelStudents2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string[]>(), "",
+                        It.IsAny<List<string>>(), new List<string>() { residency1Code })).ReturnsAsync(new Tuple<IEnumerable<Domain.Student.Entities.Student>, int>(oneStudentList, 2));
+
+                // Set up current user
+                currentUserFactory = new CurrentUserSetup.EthosUserFactory();
+
+                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo,
+                    academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo,
+                    referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository,
+                    currentUserFactory, roleRepo, staffRepository, logger, planningStudentRepo);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                studentRepo = null;
+                planningStudentRepo = null;
+                adapterRegistry = null;
+                currentUserFactory = null;
+                roleRepo = null;
+                logger = null;
+            }
+
+            [TestMethod]
+            public async Task GetStudents_NoFilters_V16()
+            {
+                //var students2Dto = new Dtos.Students2();
+                var studentDtoList = await studentService.GetStudents2Async(0, 100, null, null, false);
+
+                Assert.AreEqual(2, studentDtoList.Item1.Count());
+            }
+
+            [TestMethod]
+            public async Task GetStudents_PersonFilter_V16()
+            {
+                var criteriaStudentFilter = new Dtos.Students2()
+                {
+                    Person = new Dtos.GuidObject2(student1Guid)
+                };
+                var studentDtoList = await studentService.GetStudents2Async(0, 100, criteriaStudentFilter, null, false);
+
+                Assert.AreEqual(studentDtoList.Item2, studentDtoList.Item1.Count());
+                Assert.AreEqual(student1Guid, studentDtoList.Item1.ToList()[0].Id);
+            }
+
+            [TestMethod]
+            public async Task GetStudents_StudentTypeFilter_V16()
+            {
+                var criteriaType = new Dtos.GuidObject2(studentType2Guid);
+                var criteriaTypes = new Dtos.StudentTypesDtoProperty() { Type = criteriaType, StartOn = new DateTime(2013, 06, 01) };
+                var criteriaTypesCollection = new List<Dtos.StudentTypesDtoProperty>() { criteriaTypes };
+                var criteriaStudentTypeFilter = new Dtos.Students2()
+                {
+                    Types = criteriaTypesCollection
+                };
+                var studentDtoList = await studentService.GetStudents2Async(0, 100, criteriaStudentTypeFilter, null, false);
+
+                Assert.AreEqual(1, studentDtoList.Item1.Count());
+                Assert.AreEqual(student2Guid, studentDtoList.Item1.ToList()[0].Id);
+            }
+
+            [TestMethod]
+            public async Task GetStudents_StudentResidencyFilter_V16()
+            {
+                var criteriaResidency = new Dtos.GuidObject2(residency1Guid);
+                var criteriaResidencies = new Dtos.StudentResidenciesDtoProperty() { Residency = criteriaResidency, StartOn = new DateTime(2013, 06, 01) };
+                var criteriaResidenciesCollection = new List<Dtos.StudentResidenciesDtoProperty>() { criteriaResidencies };
+                var criteriaStudentResidenciesFilter = new Dtos.Students2()
+                {
+                    Residencies = criteriaResidenciesCollection
+                };
+                var studentDtoList = await studentService.GetStudents2Async(0, 100, criteriaStudentResidenciesFilter, null, false);
+
+                Assert.AreEqual(1, studentDtoList.Item1.Count());
+                Assert.AreEqual(student1Guid, studentDtoList.Item1.ToList()[0].Id);
+            }
+        }
+
+        [TestClass]
         public class Get_AsStudentUser : CurrentUserSetup
         {
             private StudentService studentService;
             private Mock<IStudentRepository> studentRepoMock;
             private IStudentRepository studentRepo;
-
-            private Mock<IPersonRepository>personRepoMock;
+            private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+            private IPlanningStudentRepository planningStudentRepo;
+            private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
             private Mock<IAcademicCreditRepository> acadCreditRepoMock;
             private IAcademicCreditRepository acadCreditRepo;
@@ -406,13 +691,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 studentRepoMock = new Mock<IStudentRepository>();
                 studentRepo = studentRepoMock.Object;
-
+                planningStudentRepoMock = new Mock<IPlanningStudentRepository>();
+                planningStudentRepo = planningStudentRepoMock.Object;
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
                 acadCreditRepoMock = new Mock<IAcademicCreditRepository>();
                 acadCreditRepo = acadCreditRepoMock.Object;
-
-
                 academicHistoryServiceMock = new Mock<IAcademicHistoryService>();
                 academicHistoryService = academicHistoryServiceMock.Object;
                 termRepoMock = new Mock<ITermRepository>();
@@ -437,25 +721,29 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 logger = new Mock<ILogger>().Object;
 
                 // Mock student repo response
-                student1 = new Domain.Student.Entities.Student("0000894", "Smith", 2, new List<string>() { "BA.ENGL" }, new List<string>()) { FirstName = "Bob", MiddleName = "Blakely", PersonalPronounCode = "XHE"};
+                student1 = new Domain.Student.Entities.Student("0000894", "Smith", 2, new List<string>() { "BA.ENGL" }, new List<string>()) { FirstName = "Bob", MiddleName = "Blakely", PersonalPronounCode = "XHE" };
                 studentRepoMock.Setup(repo => repo.GetAsync("0000894")).ReturnsAsync(student1);
                 student2 = new Domain.Student.Entities.Student("00004002", "Jones", 802, new List<string>() { "BA.MATH" }, new List<string>());
                 studentRepoMock.Setup(repo => repo.GetAsync("00004002")).ReturnsAsync(student2);
 
                 // Mock Adapters
-                var studentDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.Student>(adapterRegistry, logger);
-                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.Student>()).Returns(studentDtoAdapter);
+                var studentDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.Student, Dtos.Student.Student>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.Student, Dtos.Student.Student>()).Returns(studentDtoAdapter);
 
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.StudentUserFactory();
 
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo,logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object,
+                    baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
             }
 
             [TestCleanup]
             public void Cleanup()
             {
                 studentRepo = null;
+                planningStudentRepo = null;
                 adapterRegistry = null;
                 currentUserFactory = null;
                 roleRepo = null;
@@ -498,6 +786,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private StudentService studentService;
             private Mock<IStudentRepository> studentRepoMock;
             private IStudentRepository studentRepo;
+            private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+            private IPlanningStudentRepository planningStudentRepo;
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
             private Mock<IAcademicCreditRepository> acadCreditRepoMock;
@@ -534,7 +824,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 studentRepoMock = new Mock<IStudentRepository>();
                 studentRepo = studentRepoMock.Object;
-
+                planningStudentRepoMock = new Mock<IPlanningStudentRepository>();
+                planningStudentRepo = planningStudentRepoMock.Object;
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
                 acadCreditRepoMock = new Mock<IAcademicCreditRepository>();
@@ -564,12 +855,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 // Mock student repo response
                 student1 = new Domain.Student.Entities.Student("0000894", "Smith", 2, new List<string>() { "BA.ENGL" }, new List<string>()) { FirstName = "Bob", MiddleName = "Blakely" };
-                
                 studentRepoMock.Setup(repo => repo.GetAsync("0000894")).ReturnsAsync(student1);
                 student2 = new Domain.Student.Entities.Student("00004002", "Jones", 802, new List<string>() { "BA.MATH" }, new List<string>());
                 studentRepoMock.Setup(repo => repo.GetAsync("00004002")).ReturnsAsync(student2);
                 //student with privacy code
-                studentWithPrivacyCode = new Domain.Student.Entities.Student("00004003", "Jones", 803, new List<string>() { "BA.MATH" }, new List<string>() { "1", "2" },"A");
+                studentWithPrivacyCode = new Domain.Student.Entities.Student("00004003", "Jones", 803, new List<string>() { "BA.MATH" }, new List<string>() { "1", "2" }, "A");
                 studentRepoMock.Setup(repo => repo.GetAsync("00004003")).ReturnsAsync(studentWithPrivacyCode);
 
                 studentWithPrivacyCode = new Domain.Student.Entities.Student("00004004", "Jones", 803, new List<string>() { "BA.MATH" }, new List<string>() { "1", "2" }, "B");
@@ -581,20 +871,25 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 staffRepoMock.Setup(r => r.Get("0000111")).Returns(staff);
 
                 // Mock Adapters
-                var studentDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.Student>(adapterRegistry, logger);
-                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.Student>()).Returns(studentDtoAdapter);
+                var studentDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.Student, Dtos.Student.Student>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.Student, Dtos.Student.Student>()).Returns(studentDtoAdapter);
                 var advisementDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.Advisement, Dtos.Student.Advisement>(adapterRegistry, logger);
                 adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.Advisement, Dtos.Student.Advisement>()).Returns(advisementDtoAdapter);
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
 
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo,staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService,
+                    termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepositoryRepo,
+                    studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory,
+                    roleRepo, staffRepo, logger, planningStudentRepo);
             }
 
             [TestCleanup]
             public void Cleanup()
             {
                 studentRepo = null;
+                planningStudentRepo = null;
                 adapterRegistry = null;
                 currentUserFactory = null;
                 roleRepo = null;
@@ -605,7 +900,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task AllowsAccessIfAdvisorHasViewAnyAdviseesPermission()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 studentRepoMock.Setup(repo => repo.GetAsync("0000894")).ReturnsAsync(student1);
 
@@ -616,7 +911,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task AllowsAccessIfAdvisorHasReviewAnyAdviseesPermission()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ReviewAnyAdvisee));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ReviewAnyAdvisee));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 studentRepoMock.Setup(repo => repo.GetAsync("0000894")).ReturnsAsync(student1);
 
@@ -627,7 +922,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task AllowsAccessIfAdvisorHasUpdateAnyAdviseesPermission()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.UpdateAnyAdvisee));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.UpdateAnyAdvisee));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 studentRepoMock.Setup(repo => repo.GetAsync("0000894")).ReturnsAsync(student1);
 
@@ -638,7 +933,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task AllowsAccessIfAdvisorHasAllAccessAnyAdviseesPermission()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAnyAdvisee));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAnyAdvisee));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 studentRepoMock.Setup(repo => repo.GetAsync("0000894")).ReturnsAsync(student1);
 
@@ -649,7 +944,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task AllowsAccessIfUserHasViewStudentInformationPermission()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation));
+                advisorRole.AddPermission(new Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 roleRepoMock.Setup(repo => repo.Roles).Returns(new List<Role>() { advisorRole });
                 studentRepoMock.Setup(repo => repo.GetAsync("0000894")).ReturnsAsync(student1);
@@ -670,7 +965,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task AllowsAccessIfAdvisorInStudentsAdvisorList()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 // Add advisor to student's advisor list
                 student1.AddAdvisor("0000896");
@@ -687,7 +982,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task ThrowsErrorIfAdvisorNotInStudentsAdvisorList()
             {
                 // Set up needed permission. Advisor is personid 0000111
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 // Add advisor to student's advisor list
                 student1.AddAdvisor("0000896");
@@ -701,7 +996,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task AllowedIfUpdateccessAndAdvisor()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.UpdateAssignedAdvisees));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.UpdateAssignedAdvisees));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 // Add advisor to student's advisor list
                 student1.AddAdvisor("0000896");
@@ -718,7 +1013,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task ThrowsErrorIfUpdateAccessButNotAdvisor()
             {
                 // Set up needed permission. Advisor is personid 0000111
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.UpdateAssignedAdvisees));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.UpdateAssignedAdvisees));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 // Add advisor to student's advisor list
                 student1.AddAdvisor("0000896");
@@ -732,7 +1027,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task AllowedIfReviewAccessAndAdvisor()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ReviewAssignedAdvisees));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ReviewAssignedAdvisees));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 // Add advisor to student's advisor list
                 student1.AddAdvisor("0000896");
@@ -749,7 +1044,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task ThrowsErrorIfReviewAccessButNotAdvisor()
             {
                 // Set up needed permission. Advisor is personid 0000111
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ReviewAssignedAdvisees));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ReviewAssignedAdvisees));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 // Add advisor to student's advisor list
                 student1.AddAdvisor("0000896");
@@ -763,7 +1058,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task AllowedIfAllAccessAndAdvisor()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAssignedAdvisees));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAssignedAdvisees));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 // Add advisor to student's advisor list
                 student1.AddAdvisor("0000896");
@@ -773,7 +1068,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentRepoMock.Setup(repo => repo.GetAsync("0000894")).ReturnsAsync(student1);
 
                 await studentService.GetAsync("0000894");
-                
+
             }
 
             [TestMethod]
@@ -781,7 +1076,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task ThrowsErrorIfAllAccessButNotAdvisor()
             {
                 // Set up needed permission. Advisor is personid 0000111
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAssignedAdvisees));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAssignedAdvisees));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 // Add advisor to student's advisor list
                 student1.AddAdvisor("0000896");
@@ -794,10 +1089,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task StaffRecordHaveSamePrivacyCodeAsStudent()
             {
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation));
+                advisorRole.AddPermission(new Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 roleRepoMock.Setup(repo => repo.Roles).Returns(new List<Role>() { advisorRole });
-                var studentDtoWithWrapper= await studentService.GetAsync("00004003");
+                var studentDtoWithWrapper = await studentService.GetAsync("00004003");
                 Assert.AreEqual(studentDtoWithWrapper.Dto.Id, "00004003");
                 Assert.AreEqual(studentDtoWithWrapper.Dto.DegreePlanId, studentWithPrivacyCode.DegreePlanId);
                 Assert.IsNotNull(studentDtoWithWrapper.Dto.DegreePlanId);
@@ -809,7 +1104,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task StaffRecordDoesNotHaveSamePrivacyCodeAsStudent()
             {
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation));
+                advisorRole.AddPermission(new Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 roleRepoMock.Setup(repo => repo.Roles).Returns(new List<Role>() { advisorRole });
                 var studentDtoWithWrapper = await studentService.GetAsync("00004004");
@@ -827,6 +1122,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private StudentService studentService;
             private Mock<IStudentRepository> studentRepoMock;
             private IStudentRepository studentRepo;
+            private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+            private IPlanningStudentRepository planningStudentRepo;
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
             private Mock<IAcademicCreditRepository> acadCreditRepoMock;
@@ -855,10 +1152,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private ICurrentUserFactory currentUserFactory;
 
             private string id1 = "00001";
-            private List<Ellucian.Colleague.Domain.Student.Entities.RegistrationMessage> messages1;
+            private List<Domain.Student.Entities.RegistrationMessage> messages1;
 
             private string id2 = "0000894";
-            private List<Ellucian.Colleague.Domain.Student.Entities.RegistrationMessage> messages2;
+            private List<Domain.Student.Entities.RegistrationMessage> messages2;
 
             private Domain.Student.Entities.Student student1;
             private Domain.Student.Entities.Student student2;
@@ -868,6 +1165,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 studentRepoMock = new Mock<IStudentRepository>();
                 studentRepo = studentRepoMock.Object;
+                planningStudentRepoMock = new Mock<IPlanningStudentRepository>();
+                planningStudentRepo = planningStudentRepoMock.Object;
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
                 acadCreditRepoMock = new Mock<IAcademicCreditRepository>();
@@ -903,29 +1202,33 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var student2Access = student2.ConvertToStudentAccess();
                 studentRepoMock.Setup(repo => repo.GetStudentAccessAsync(It.Is<List<string>>(l => l.Contains("0000894")))).ReturnsAsync(new List<StudentAccess>() { student2Access }.AsEnumerable());
 
-                messages1 = new List<Ellucian.Colleague.Domain.Student.Entities.RegistrationMessage>();
+                messages1 = new List<Domain.Student.Entities.RegistrationMessage>();
                 studentRepoMock.Setup(repo => repo.CheckRegistrationEligibilityAsync(id1)).ReturnsAsync(new Domain.Student.Entities.RegistrationEligibility(messages1, true));
-                messages2 = new List<Ellucian.Colleague.Domain.Student.Entities.RegistrationMessage>() { new Ellucian.Colleague.Domain.Student.Entities.RegistrationMessage() { Message = "Failed Registration Eligibility" } };
+                messages2 = new List<Domain.Student.Entities.RegistrationMessage>() { new Domain.Student.Entities.RegistrationMessage() { Message = "Failed Registration Eligibility" } };
                 studentRepoMock.Setup(repo => repo.CheckRegistrationEligibilityAsync(id2)).ReturnsAsync(new Domain.Student.Entities.RegistrationEligibility(messages2, false));
 
                 // Mock Adapters
-                var regEligDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.RegistrationEligibility, Ellucian.Colleague.Dtos.Student.RegistrationEligibility>(adapterRegistry, logger);
-                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.RegistrationEligibility, Ellucian.Colleague.Dtos.Student.RegistrationEligibility>()).Returns(regEligDtoAdapter);
-                var regMessageDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.RegistrationMessage, Ellucian.Colleague.Dtos.Student.RegistrationMessage>(adapterRegistry, logger);
-                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.RegistrationMessage, Ellucian.Colleague.Dtos.Student.RegistrationMessage>()).Returns(regMessageDtoAdapter);
-                var studentDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.Student>(adapterRegistry, logger);
-                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.Student>()).Returns(studentDtoAdapter);
+                var regEligDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.RegistrationEligibility, Dtos.Student.RegistrationEligibility>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.RegistrationEligibility, Dtos.Student.RegistrationEligibility>()).Returns(regEligDtoAdapter);
+                var regMessageDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.RegistrationMessage, Dtos.Student.RegistrationMessage>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.RegistrationMessage, Dtos.Student.RegistrationMessage>()).Returns(regMessageDtoAdapter);
+                var studentDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.Student, Dtos.Student.Student>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.Student, Dtos.Student.Student>()).Returns(studentDtoAdapter);
 
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
 
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo,staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object,
+                    baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
             }
 
             [TestCleanup]
             public void Cleanup()
             {
                 studentRepo = null;
+                planningStudentRepo = null;
                 adapterRegistry = null;
                 currentUserFactory = null;
                 roleRepo = null;
@@ -937,7 +1240,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task CheckRegistrationEligibility2_ViewStudentInformationPermission()
             {
                 // A user with VIEW.STUDENT.INFORMATION - such as a faculty member - is not enough to see a student's registration eligibility
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation));
+                advisorRole.AddPermission(new Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 roleRepoMock.Setup(repo => repo.Roles).Returns(new List<Role>() { advisorRole });
 
@@ -949,7 +1252,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task CheckRegistrationEligibility2_AdvisorViewAnyAdviseePermission_Allowed()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 var result = await studentService.CheckRegistrationEligibility2Async(id2);
                 Assert.AreEqual(messages2.Count(), result.Messages.Count());
@@ -959,7 +1262,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task CheckRegistrationEligibility2_ViewAssignedAdviseesPermission_Allowed()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 var result = await studentService.CheckRegistrationEligibility2Async(id2);
                 Assert.AreEqual(messages2.Count(), result.Messages.Count());
@@ -969,7 +1272,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task CheckRegistrationEligibility_ViewStudentInformationPermission()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation));
+                advisorRole.AddPermission(new Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 roleRepoMock.Setup(repo => repo.Roles).Returns(new List<Role>() { advisorRole });
 
@@ -981,7 +1284,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task CheckRegistrationEligibility_ViewAnyAdviseePermission()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 var result = await studentService.CheckRegistrationEligibilityAsync(id2);
                 Assert.AreEqual(messages2.Count(), result.Count());
@@ -991,7 +1294,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task CheckRegistrationEligibility_ViewAssignedAdviseesPermission()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 // Mock get of studentAccess entity from repository since student is not read in this version
                 var student2Access = student2.ConvertToStudentAccess();
@@ -1021,6 +1324,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private StudentService studentService;
             private Mock<IStudentRepository> studentRepoMock;
             private IStudentRepository studentRepo;
+            private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+            private IPlanningStudentRepository planningStudentRepo;
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
             private Mock<IAcademicCreditRepository> acadCreditRepoMock;
@@ -1049,7 +1354,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
 
             private string id1 = "0000894";
-            private List<Ellucian.Colleague.Domain.Student.Entities.RegistrationMessage> messages1;
+            private List<Domain.Student.Entities.RegistrationMessage> messages1;
             private Domain.Student.Entities.Student student1;
 
             [TestInitialize]
@@ -1100,36 +1405,40 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentRepoMock.Setup(repo => repo.CheckRegistrationEligibilityAsync(id1)).ReturnsAsync(regEligibility);
 
                 // Mock the term repository get for terms - instead of getting all just getting some that matter.
-                List<Ellucian.Colleague.Domain.Student.Entities.Term> allTerms = new List<Ellucian.Colleague.Domain.Student.Entities.Term>();
-                Ellucian.Colleague.Domain.Student.Entities.Term term3 = new Ellucian.Colleague.Domain.Student.Entities.Term("term3", "Term 3", DateTime.Now, DateTime.Now.AddDays(180), 2014, 1, true, true, "term3", true);
+                List<Domain.Student.Entities.Term> allTerms = new List<Domain.Student.Entities.Term>();
+                Domain.Student.Entities.Term term3 = new Domain.Student.Entities.Term("term3", "Term 3", DateTime.Now, DateTime.Now.AddDays(180), 2014, 1, true, true, "term3", true);
                 allTerms.Add(term3);
-                Ellucian.Colleague.Domain.Student.Entities.Term term4 = new Ellucian.Colleague.Domain.Student.Entities.Term("term4", "Term 4", DateTime.Now, DateTime.Now.AddDays(180), 2014, 1, true, true, "term4", false);
+                Domain.Student.Entities.Term term4 = new Domain.Student.Entities.Term("term4", "Term 4", DateTime.Now, DateTime.Now.AddDays(180), 2014, 1, true, true, "term4", false);
                 allTerms.Add(term4);
                 termRepoMock.Setup(trepo => trepo.GetAsync()).ReturnsAsync(allTerms);
 
                 // Mock Adapters
-                var regEligibilityDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.RegistrationEligibility, Ellucian.Colleague.Dtos.Student.RegistrationEligibility>(adapterRegistry, logger);
-                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.RegistrationEligibility, Ellucian.Colleague.Dtos.Student.RegistrationEligibility>()).Returns(regEligibilityDtoAdapter);
+                var regEligibilityDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.RegistrationEligibility, Dtos.Student.RegistrationEligibility>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.RegistrationEligibility, Dtos.Student.RegistrationEligibility>()).Returns(regEligibilityDtoAdapter);
 
-                var studentDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.Student>(adapterRegistry, logger);
-                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.Student>()).Returns(studentDtoAdapter);
+                var studentDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.Student, Dtos.Student.Student>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.Student, Dtos.Student.Student>()).Returns(studentDtoAdapter);
 
-                var registrationEligibilityDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.RegistrationEligibility, Ellucian.Colleague.Dtos.Student.RegistrationEligibility>(adapterRegistry, logger);
-                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.RegistrationEligibility, Ellucian.Colleague.Dtos.Student.RegistrationEligibility>()).Returns(registrationEligibilityDtoAdapter);
+                var registrationEligibilityDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.RegistrationEligibility, Dtos.Student.RegistrationEligibility>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.RegistrationEligibility, Dtos.Student.RegistrationEligibility>()).Returns(registrationEligibilityDtoAdapter);
 
-                var registrationEligibilityTermDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.RegistrationEligibilityTerm, Ellucian.Colleague.Dtos.Student.RegistrationEligibilityTerm>(adapterRegistry, logger);
-                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.RegistrationEligibilityTerm, Ellucian.Colleague.Dtos.Student.RegistrationEligibilityTerm>()).Returns(registrationEligibilityTermDtoAdapter);
-                
+                var registrationEligibilityTermDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.RegistrationEligibilityTerm, Dtos.Student.RegistrationEligibilityTerm>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.RegistrationEligibilityTerm, Dtos.Student.RegistrationEligibilityTerm>()).Returns(registrationEligibilityTermDtoAdapter);
+
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.StudentUserFactory();
 
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo,staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object,
+                    baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
             }
 
             [TestCleanup]
             public void Cleanup()
             {
                 studentRepo = null;
+                planningStudentRepo = null;
                 adapterRegistry = null;
                 currentUserFactory = null;
                 roleRepo = null;
@@ -1139,7 +1448,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task CheckRegistrationEligibilty_Original_ReturnsMessages()
             {
-                messages1 = new List<Ellucian.Colleague.Domain.Student.Entities.RegistrationMessage>();
+                messages1 = new List<Domain.Student.Entities.RegistrationMessage>();
                 studentRepoMock.Setup(repo => repo.CheckRegistrationEligibilityAsync(id1)).ReturnsAsync(new Domain.Student.Entities.RegistrationEligibility(messages1, true, true));
                 var result = await studentService.CheckRegistrationEligibilityAsync(id1);
                 Assert.AreEqual(messages1.Count(), result.Count());
@@ -1162,7 +1471,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task Eligible2_NoPriorities_NoTerms_Success()
             {
-                messages1 = new List<Ellucian.Colleague.Domain.Student.Entities.RegistrationMessage>();
+                messages1 = new List<Domain.Student.Entities.RegistrationMessage>();
                 studentRepoMock.Setup(repo => repo.CheckRegistrationEligibilityAsync(id1)).ReturnsAsync(new Domain.Student.Entities.RegistrationEligibility(messages1, true, true));
                 regPriorityRepoMock.Setup(rrepo => rrepo.GetAsync(student1.Id)).ReturnsAsync(new List<RegistrationPriority>().AsEnumerable());
                 var result = await studentService.CheckRegistrationEligibility2Async(id1);
@@ -1173,7 +1482,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task Eligible2_IsEligible()
             {
-                messages1 = new List<Ellucian.Colleague.Domain.Student.Entities.RegistrationMessage>();
+                messages1 = new List<Domain.Student.Entities.RegistrationMessage>();
                 studentRepoMock.Setup(repo => repo.CheckRegistrationEligibilityAsync(id1)).ReturnsAsync(new Domain.Student.Entities.RegistrationEligibility(messages1, true, true));
                 var result = await studentService.CheckRegistrationEligibility2Async(id1);
                 Assert.AreEqual(true, result.IsEligible);
@@ -1182,7 +1491,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task Eligible2_HasOverride()
             {
-                messages1 = new List<Ellucian.Colleague.Domain.Student.Entities.RegistrationMessage>();
+                messages1 = new List<Domain.Student.Entities.RegistrationMessage>();
                 studentRepoMock.Setup(repo => repo.CheckRegistrationEligibilityAsync(id1)).ReturnsAsync(new Domain.Student.Entities.RegistrationEligibility(messages1, true, true));
                 var result = await studentService.CheckRegistrationEligibility2Async(id1);
                 Assert.AreEqual(true, result.HasOverride);
@@ -1198,8 +1507,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.AreEqual(6, result.Terms.Count());
                 // Term 3 should be open
                 var t3 = result.Terms.Where(t => t.TermCode == "term3").FirstOrDefault();
-                Assert.AreEqual(Ellucian.Colleague.Dtos.Student.RegistrationEligibilityTermStatus.NotEligible, t3.Status);
-        }
+                Assert.AreEqual(Dtos.Student.RegistrationEligibilityTermStatus.NotEligible, t3.Status);
+            }
 
             [TestMethod]
             public async Task Eligible2_WithTerms_WithFuturePriorities()
@@ -1217,7 +1526,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.AreEqual(6, result.Terms.Count());
                 // Term 3 should be future now instead of not eligible.
                 var t3 = result.Terms.Where(t => t.TermCode == "term3").FirstOrDefault();
-                Assert.AreEqual(Ellucian.Colleague.Dtos.Student.RegistrationEligibilityTermStatus.Future, t3.Status);
+                Assert.AreEqual(Dtos.Student.RegistrationEligibilityTermStatus.Future, t3.Status);
                 Assert.IsTrue(t3.FailedRegistrationPriorities);
             }
 
@@ -1237,7 +1546,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.AreEqual(6, result.Terms.Count());
                 // Term 3 should be future now instead of not eligible.
                 var t3 = result.Terms.Where(t => t.TermCode == "term3").FirstOrDefault();
-                Assert.AreEqual(Ellucian.Colleague.Dtos.Student.RegistrationEligibilityTermStatus.Past, t3.Status);
+                Assert.AreEqual(Dtos.Student.RegistrationEligibilityTermStatus.Past, t3.Status);
                 Assert.IsTrue(t3.FailedRegistrationPriorities);
             }
 
@@ -1259,6 +1568,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private StudentService studentService;
             private Mock<IStudentRepository> studentRepoMock;
             private IStudentRepository studentRepo;
+            private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+            private IPlanningStudentRepository planningStudentRepo;
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
             private Mock<IAcademicCreditRepository> acadCreditRepoMock;
@@ -1291,6 +1602,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 studentRepoMock = new Mock<IStudentRepository>();
                 studentRepo = studentRepoMock.Object;
+                planningStudentRepoMock = new Mock<IPlanningStudentRepository>();
+                planningStudentRepo = planningStudentRepoMock.Object;
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
                 acadCreditRepoMock = new Mock<IAcademicCreditRepository>();
@@ -1305,9 +1618,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentConfigurationRepo = studentConfigurationRepoMock.Object;
                 referenceDataRepositoryRepoMock = new Mock<IReferenceDataRepository>();
                 referenceDataRepositoryRepo = referenceDataRepositoryRepoMock.Object;
-                 studentReferenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
-                 baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
-                 baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+                studentReferenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
+                baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
+                baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
 
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 adapterRegistry = adapterRegistryMock.Object;
@@ -1320,13 +1633,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Mock student repo response
 
                 // mock a valid student search response
-                var student1 = new Ellucian.Colleague.Domain.Student.Entities.Student("00000001", "Dog", null, null, null, null) { FirstName = "Able" };
-                var student2 = new Ellucian.Colleague.Domain.Student.Entities.Student("00000002", "Dog", null, null, null, null) { FirstName = "Baker" };
-                var student3 = new Ellucian.Colleague.Domain.Student.Entities.Student("00000003", "Dog", null, null, null, null) { FirstName = "Charlie" };
+                var student1 = new Domain.Student.Entities.Student("00000001", "Dog", null, null, null, null) { FirstName = "Able" };
+                var student2 = new Domain.Student.Entities.Student("00000002", "Dog", null, null, null, null) { FirstName = "Baker" };
+                var student3 = new Domain.Student.Entities.Student("00000003", "Dog", null, null, null, null) { FirstName = "Charlie" };
 
-                var justOne = new List<Ellucian.Colleague.Domain.Student.Entities.Student>() { student1 };
-                var justTwo = new List<Ellucian.Colleague.Domain.Student.Entities.Student>() { student2 };
-                var allThree = new List<Ellucian.Colleague.Domain.Student.Entities.Student>() { student1, student2, student3 };
+                var justOne = new List<Domain.Student.Entities.Student>() { student1 };
+                var justTwo = new List<Domain.Student.Entities.Student>() { student2 };
+                var allThree = new List<Domain.Student.Entities.Student>() { student1, student2, student3 };
 
                 studentRepoMock.Setup(svc => svc.SearchAsync("Dog", null, null, null, null, null)).ReturnsAsync(allThree.AsEnumerable());
                 studentRepoMock.Setup(svc => svc.SearchAsync("Dog", null, DateTime.Parse("3/3/33"), null, null, null)).ReturnsAsync(justTwo.AsEnumerable());
@@ -1336,24 +1649,28 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentRepoMock.Setup(svc => svc.SearchAsync(null, null, null, null, null, null)).Throws(new KeyNotFoundException("x"));
 
                 // Mock Adapters
-                var studentDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.Student>(adapterRegistry, logger);
-                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.Student>()).Returns(studentDtoAdapter);
+                var studentDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.Student, Dtos.Student.Student>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.Student, Dtos.Student.Student>()).Returns(studentDtoAdapter);
 
                 // Mock advisor role so that permission exception not thrown
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 roleRepoMock.Setup(repo => repo.Roles).Returns(new List<Role>() { advisorRole });
 
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
 
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object,
+                    baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
             }
 
             [TestCleanup]
             public void Cleanup()
             {
                 studentRepo = null;
+                planningStudentRepo = null;
                 adapterRegistry = null;
                 currentUserFactory = null;
                 roleRepo = null;
@@ -1405,6 +1722,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private StudentService studentStudentService;
             private Mock<IStudentRepository> studentRepoMock;
             private IStudentRepository studentRepo;
+            private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+            private IPlanningStudentRepository planningStudentRepo;
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
             private Mock<IAcademicCreditRepository> acadCreditRepoMock;
@@ -1430,6 +1749,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 studentRepoMock = new Mock<IStudentRepository>();
                 studentRepo = studentRepoMock.Object;
+                planningStudentRepoMock = new Mock<IPlanningStudentRepository>();
+                planningStudentRepo = planningStudentRepoMock.Object;
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
                 acadCreditRepoMock = new Mock<IAcademicCreditRepository>();
@@ -1468,23 +1789,30 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 IEnumerable<Domain.Student.Entities.TranscriptRestriction> oneRestriction = new List<Domain.Student.Entities.TranscriptRestriction>() { new Domain.Student.Entities.TranscriptRestriction() { Code = "TEST", Description = "TEST" } };
                 studentRepoMock.Setup(repo => repo.GetTranscriptRestrictionsAsync(studentId2)).ReturnsAsync(oneRestriction);
-                
+
                 // Mock Adapters
-                var restrictionDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.TranscriptRestriction, Ellucian.Colleague.Dtos.Student.TranscriptRestriction>(adapterRegistry, logger);
-                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.TranscriptRestriction, Ellucian.Colleague.Dtos.Student.TranscriptRestriction>()).Returns(restrictionDtoAdapter);
+                var restrictionDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.TranscriptRestriction, Dtos.Student.TranscriptRestriction>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.TranscriptRestriction, Dtos.Student.TranscriptRestriction>()).Returns(restrictionDtoAdapter);
 
                 // Mock advisor role so that permission exception not thrown
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
 
-                advisorStudentService = new StudentService(adapterRegistry, studentRepo, null, null, null, null, null, studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, new CurrentUserSetup.AdvisorUserFactory(), roleRepo,staffRepo, logger);
-                studentStudentService = new StudentService(adapterRegistry, studentRepo, null, null, null, null, null, studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, new CurrentUserSetup.StudentUserFactory(), roleRepo, staffRepo, logger);
+                advisorStudentService = new StudentService(
+                    adapterRegistry, studentRepo, null, null, null, null, null, studentConfigurationRepo, referenceDataRepositoryRepo,
+                    studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, new CurrentUserSetup.AdvisorUserFactory(),
+                    roleRepo, staffRepo, logger, planningStudentRepo);
+                studentStudentService = new StudentService(
+                    adapterRegistry, studentRepo, null, null, null, null, null, studentConfigurationRepo, referenceDataRepositoryRepo,
+                    studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, new CurrentUserSetup.StudentUserFactory(),
+                    roleRepo, staffRepo, logger, planningStudentRepo);
             }
 
             [TestCleanup]
             public void Cleanup()
             {
                 studentRepo = null;
+                planningStudentRepo = null;
                 studentConfigurationRepo = null;
                 adapterRegistry = null;
                 roleRepo = null;
@@ -1501,7 +1829,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var transcriptAccess = await advisorStudentService.GetTranscriptRestrictions2Async("00004001");
                 Assert.AreEqual(0, transcriptAccess.TranscriptRestrictions.Count());
                 Assert.IsTrue(transcriptAccess.EnforceTranscriptRestriction);
-        }
+            }
 
             [TestMethod]
             public async Task GetTranscriptRestrictions2_UnenforceRestrictionsWithNoTranscriptRestrictions()
@@ -1582,7 +1910,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 // Set up student 0000894 as the current user.
                 //Mock roles repo and permission for VIEW.STUDENT.INFORMATION but this permission should not allow it.
-                var permissionViewAnyStudent = new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation);
+                var permissionViewAnyStudent = new Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation);
                 viewStudentRole.AddPermission(permissionViewAnyStudent);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentRole });
                 var studentConfigEnforced = new StudentConfiguration() { FacultyPhoneTypeCode = "OFFICE", FacultyEmailTypeCode = "WORK", EnforceTranscriptRestriction = true };
@@ -1602,11 +1930,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestClass]
-        public class GetUngradedTerms:CurrentUserSetup
+        public class GetUngradedTerms : CurrentUserSetup
         {
             private StudentService studentService;
             private Mock<IStudentRepository> studentRepoMock;
             private IStudentRepository studentRepo;
+            private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+            private IPlanningStudentRepository planningStudentRepo;
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
             private Mock<IAcademicCreditRepository> acadCreditRepoMock;
@@ -1662,8 +1992,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 adapterRegistry = adapterRegistryMock.Object;
                 roleRepoMock = new Mock<IRoleRepository>();
                 roleRepo = roleRepoMock.Object;
-           
-            logger = new Mock<ILogger>().Object;
+
+                logger = new Mock<ILogger>().Object;
 
 
                 // Mock acad history repo response
@@ -1676,22 +2006,26 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
 
                 // Mock Adapters
-                var studentDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.Student>(adapterRegistry, logger);
-                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.Student>()).Returns(studentDtoAdapter);
+                var studentDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.Student, Dtos.Student.Student>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.Student, Dtos.Student.Student>()).Returns(studentDtoAdapter);
 
-                var termDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.Term, Ellucian.Colleague.Dtos.Student.Term>(adapterRegistry, logger);
-                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Term, Ellucian.Colleague.Dtos.Student.Term>()).Returns(termDtoAdapter);
+                var termDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.Term, Dtos.Student.Term>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.Term, Dtos.Student.Term>()).Returns(termDtoAdapter);
 
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
 
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, null, studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, null,
+                    studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object,
+                    baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
             }
 
             [TestCleanup]
             public void Cleanup()
             {
                 studentRepo = null;
+                planningStudentRepo = null;
                 adapterRegistry = null;
                 currentUserFactory = null;
                 roleRepo = null;
@@ -1715,14 +2049,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task OldTermDiscarded()
             {
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission("VIEW.STUDENT.INFORMATION"));
+                advisorRole.AddPermission(new Domain.Entities.Permission("VIEW.STUDENT.INFORMATION"));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { advisorRole });
-                //Mock roles repo and permission
-                //permissionViewAnyStudent = new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation);
-                //viewStudentRole.AddPermission(permissionViewAnyStudent);
-                //roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentRole });
-                // Mock term response
 
                 DateTime SixtyOneDaysAgo = DateTime.Today.AddDays(-61);
 
@@ -1737,7 +2066,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task NewerTermKept()
             {
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
                 // Mock term response
                 DateTime FiftyNineDaysAgo = DateTime.Today.AddDays(-59);
@@ -1764,11 +2093,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestClass]
-        public class OrderTranscript : CurrentUserSetup
+        public class OrderTranscriptAsync : CurrentUserSetup
         {
             private StudentService studentService;
             private Mock<IStudentRepository> studentRepoMock;
             private IStudentRepository studentRepo;
+            private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+            private IPlanningStudentRepository planningStudentRepo;
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
             private Mock<IAcademicCreditRepository> acadCreditRepoMock;
@@ -1801,6 +2132,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 studentRepoMock = new Mock<IStudentRepository>();
                 studentRepo = studentRepoMock.Object;
+                planningStudentRepoMock = new Mock<IPlanningStudentRepository>();
+                planningStudentRepo = planningStudentRepoMock.Object;
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
                 acadCreditRepoMock = new Mock<IAcademicCreditRepository>();
@@ -1831,17 +2164,26 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 // Mock Adapter
                 var requestDtoAdapter = new TranscriptRequestEntityAdapter(adapterRegistry, logger);
-                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Dtos.Student.Transcripts.TranscriptRequest, Ellucian.Colleague.Domain.Student.Entities.Transcripts.TranscriptRequest>()).Returns(requestDtoAdapter);
-                
+                adapterRegistryMock.Setup(x => x.GetAdapter<Dtos.Student.Transcripts.TranscriptRequest, Domain.Student.Entities.Transcripts.TranscriptRequest>()).Returns(requestDtoAdapter);
+
+                // Mock advisor role so that permission exception not thrown
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
+                roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
+                roleRepoMock.Setup(repo => repo.Roles).Returns(new List<Role>() { advisorRole });
+
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, null, studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, null,
+                    studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object,
+                    baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
             }
 
             [TestCleanup]
             public void Cleanup()
             {
                 studentRepo = null;
+                planningStudentRepo = null;
                 adapterRegistry = null;
                 currentUserFactory = null;
                 roleRepo = null;
@@ -1872,11 +2214,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                                                 AreaCityCode= "xxx",
                                                 PhoneNumber = "yyy"
 }
-}    
+}
                                     }
                                 }
                             }
-                          
+
                         },
                         RequestedStudent = new Dtos.Student.Transcripts.RequestedStudent()
                         {
@@ -1892,14 +2234,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     NoteMessage = "X",
                     UserDefinedExtensions = new Dtos.Student.Transcripts.UserDefinedExtensions()
                 };
-                
+
 
                 var adapter = (TranscriptRequestEntityAdapter)adapterRegistry.GetAdapter<Dtos.Student.Transcripts.TranscriptRequest, Domain.Student.Entities.Transcripts.TranscriptRequest>();
-         
+
                 Domain.Student.Entities.Transcripts.TranscriptRequest target = adapter.MapToType(source);
 
                 Assert.IsNotNull(source.TransmissionData.DocumentID);
-                
+
                 Assert.AreEqual(source.TransmissionData.DocumentID, target.TransmissionData.DocumentID);
                 Assert.AreEqual(source.Request.RequestedStudent.Attendance.AcademicAwardsReported.First().AcademicAwardTitle, target.Request.RequestedStudent.Attendance.AcademicAwardsReported.First().AcademicAwardTitle);
 
@@ -1910,6 +2252,141 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.AreEqual(source.Request.Recipient.Receiver.RequestorReceiverOrganization.Contacts.First().FaxPhone.PhoneNumber,
                     target.Request.Recipient.Receiver.RequestorReceiverOrganization.Contacts.First().FaxPhone.PhoneNumber);
 
+            }
+
+            /// <summary>
+            /// In this test we call OrderTranscriptAsync with a user who has the VIEW.ANY.ADVISEE permission, so the request should be successful
+            /// </summary>
+            [TestMethod]
+            public async Task StudentService_OrderTranscriptAsync_Valid()
+            {
+                // Return "success" to coordination service when repository method is called
+                studentRepoMock.Setup(repo => repo.OrderTranscriptAsync(It.IsAny<TranscriptRequest>())).ReturnsAsync("success");
+                roleRepoMock.Setup(repo => repo.Roles).Returns(new List<Role>() { advisorRole });
+
+                // Create TranscriptRequest DTO to call OrderTranscriptAsync
+                var transcriptRequestDto = new Dtos.Student.Transcripts.TranscriptRequest()
+                {
+                    TransmissionData = new Dtos.Student.Transcripts.TransmissionData()
+                    {
+                        DocumentID = "X"
+                    },
+                    Request = new Dtos.Student.Transcripts.Request()
+                    {
+                        Recipient = new Dtos.Student.Transcripts.Recipient()
+                        {
+                            Receiver = new Dtos.Student.Transcripts.Receiver()
+                            {
+                                RequestorReceiverOrganization = new Dtos.Student.Transcripts.RequestorReceiverOrganization()
+                                {
+                                    Contacts = new List<Dtos.Student.Transcripts.Contacts>()
+                                    {
+                                        new Dtos.Student.Transcripts.Contacts(){
+                                            FaxPhone = new Dtos.Student.Transcripts.Phone(){
+                                                AreaCityCode= "xxx",
+                                                PhoneNumber = "yyy"
+}
+}
+                                    }
+                                }
+                            }
+
+                        },
+                        RequestedStudent = new Dtos.Student.Transcripts.RequestedStudent()
+                        {
+                            Attendance = new Dtos.Student.Transcripts.Attendance()
+                            {
+                                AcademicAwardsReported = new List<Dtos.Student.Transcripts.AcademicAwardsReported>() {
+                                    new Dtos.Student.Transcripts.AcademicAwardsReported() { AcademicAwardDate = DateTime.Now, AcademicAwardTitle = "X" }
+                                }
+                            }
+                        }
+                    },
+                    DocumentID = "X",
+                    NoteMessage = "X",
+                    UserDefinedExtensions = new Dtos.Student.Transcripts.UserDefinedExtensions()
+                };
+
+                // Set up current user
+                currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, null,
+                    studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object,
+                    baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
+
+                // Call OrderTranscriptAsync with DTO
+                var result = await studentService.OrderTranscriptAsync(transcriptRequestDto);
+
+                // Verify that the repository returned the correct response
+                Assert.AreEqual("success", result);
+            }
+
+            /// <summary>
+            /// In this test we call OrderTranscriptAsync but the user does not have the VIEW.ANY.ADVISEE permission, so a PermissionsException should be thrown
+            /// </summary>
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task StudentService_OrderTranscriptAsync_PermissionsException()
+            {
+                // Set up the advisorRole so that it does NOT have the VIEW.ANY.ADVISEE permission code (which is needed when calling OrderTranscriptAsync)
+                advisorRole1 = new Role(advisorRole1.Id, advisorRole1.Title);
+                advisorRole1.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.UpdateAdviseeDegreePlan));
+                roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole1 });
+                roleRepoMock.Setup(repo => repo.Roles).Returns(new List<Role>() { advisorRole1 });
+                
+                // Create TranscriptRequest DTO to call OrderTranscriptAsync
+                var transcriptRequestDto = new Dtos.Student.Transcripts.TranscriptRequest()
+                {
+                    TransmissionData = new Dtos.Student.Transcripts.TransmissionData()
+                    {
+                        DocumentID = "X"
+                    },
+                    Request = new Dtos.Student.Transcripts.Request()
+                    {
+                        Recipient = new Dtos.Student.Transcripts.Recipient()
+                        {
+                            Receiver = new Dtos.Student.Transcripts.Receiver()
+                            {
+                                RequestorReceiverOrganization = new Dtos.Student.Transcripts.RequestorReceiverOrganization()
+                                {
+                                    Contacts = new List<Dtos.Student.Transcripts.Contacts>()
+                                    {
+                                        new Dtos.Student.Transcripts.Contacts(){
+                                            FaxPhone = new Dtos.Student.Transcripts.Phone(){
+                                                AreaCityCode= "xxx",
+                                                PhoneNumber = "yyy"
+}
+}
+                                    }
+                                }
+                            }
+
+                        },
+                        RequestedStudent = new Dtos.Student.Transcripts.RequestedStudent()
+                        {
+                            Attendance = new Dtos.Student.Transcripts.Attendance()
+                            {
+                                AcademicAwardsReported = new List<Dtos.Student.Transcripts.AcademicAwardsReported>() {
+                                    new Dtos.Student.Transcripts.AcademicAwardsReported() { AcademicAwardDate = DateTime.Now, AcademicAwardTitle = "X" }
+                                }
+                            }
+                        }
+                    },
+                    DocumentID = "X",
+                    NoteMessage = "X",
+                    UserDefinedExtensions = new Dtos.Student.Transcripts.UserDefinedExtensions()
+                };
+
+                // Set up current user
+                currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, null,
+                    studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object,
+                    baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
+
+
+                // Call OrderTranscriptAsync with DTO
+                var result = await studentService.OrderTranscriptAsync(transcriptRequestDto);
             }
 
             public MemoryStream GetTestOrder()
@@ -2022,14 +2499,149 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 MemoryStream stream = new MemoryStream(byteArray);
                 return stream;
             }
+                       
+        }
+
+        [TestClass]
+        public class CheckTranscriptStatusAsync : CurrentUserSetup
+        {
+            private StudentService studentService;
+            private Mock<IStudentRepository> studentRepoMock;
+            private IStudentRepository studentRepo;
+            private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+            private IPlanningStudentRepository planningStudentRepo;
+            private Mock<IPersonRepository> personRepoMock;
+            private IPersonRepository personRepo;
+            private Mock<IAcademicCreditRepository> acadCreditRepoMock;
+            private IAcademicCreditRepository acadCreditRepo;
+            private IAcademicHistoryService academicHistoryService;
+            private Mock<IAcademicHistoryService> academicHistoryServiceMock;
+            private ITermRepository termRepo;
+            private Mock<ITermRepository> termRepoMock;
+            private IStudentConfigurationRepository studentConfigurationRepo;
+            private Mock<IStudentConfigurationRepository> studentConfigurationRepoMock;
+            private IReferenceDataRepository referenceDataRepositoryRepo;
+            private Mock<IReferenceDataRepository> referenceDataRepositoryRepoMock;
+            private Mock<IStudentReferenceDataRepository> studentReferenceDataRepositoryMock;
+            private IConfigurationRepository baseConfigurationRepository;
+            private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private ILogger logger;
+            private Domain.Student.Entities.Student student1;
+            private Mock<IRoleRepository> roleRepoMock;
+            private IRoleRepository roleRepo;
+            private Mock<IStaffRepository> staffRepoMock;
+            private IStaffRepository staffRepo;
+
+            private ICurrentUserFactory currentUserFactory;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                studentRepoMock = new Mock<IStudentRepository>();
+                studentRepo = studentRepoMock.Object;
+                planningStudentRepoMock = new Mock<IPlanningStudentRepository>();
+                planningStudentRepo = planningStudentRepoMock.Object;
+                personRepoMock = new Mock<IPersonRepository>();
+                personRepo = personRepoMock.Object;
+                acadCreditRepoMock = new Mock<IAcademicCreditRepository>();
+                acadCreditRepo = acadCreditRepoMock.Object;
+                academicHistoryServiceMock = new Mock<IAcademicHistoryService>();
+                academicHistoryService = academicHistoryServiceMock.Object;
+                termRepoMock = new Mock<ITermRepository>();
+                termRepo = termRepoMock.Object;
+                studentConfigurationRepoMock = new Mock<IStudentConfigurationRepository>();
+                studentConfigurationRepo = studentConfigurationRepoMock.Object;
+                studentReferenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
+                referenceDataRepositoryRepoMock = new Mock<IReferenceDataRepository>();
+                referenceDataRepositoryRepo = referenceDataRepositoryRepoMock.Object;
+                baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
+                baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                roleRepoMock = new Mock<IRoleRepository>();
+                roleRepo = roleRepoMock.Object;
+                staffRepoMock = new Mock<IStaffRepository>();
+                staffRepo = staffRepoMock.Object;
+                logger = new Mock<ILogger>().Object;
+
+                // Mock student repo response
+                student1 = new Domain.Student.Entities.Student("0000894", "Smith", 2, new List<string>() { "BA.ENGL" }, new List<string>()) { FirstName = "Bob", MiddleName = "Blakely" };
+                studentRepoMock.Setup(repo => repo.GetAsync("0000894")).ReturnsAsync(student1);
+
+                // Mock Adapter
+                var requestDtoAdapter = new TranscriptRequestEntityAdapter(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Dtos.Student.Transcripts.TranscriptRequest, Domain.Student.Entities.Transcripts.TranscriptRequest>()).Returns(requestDtoAdapter);
+
+                // Mock advisor role so that permission exception not thrown
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
+                roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
+                roleRepoMock.Setup(repo => repo.Roles).Returns(new List<Role>() { advisorRole });
+
+                // Set up current user
+                currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, null,
+                    studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object,
+                    baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                studentRepo = null;
+                planningStudentRepo = null;
+                adapterRegistry = null;
+                currentUserFactory = null;
+                roleRepo = null;
+                logger = null;
+            }
+
+            /// <summary>
+            /// In this test we call CheckTranscriptStatusAsync with a user who has the VIEW.ANY.ADVISEE permission, so the request should be successful
+            /// </summary>
+            [TestMethod]
+            public async Task StudentService_CheckTranscriptStatusAsync_Valid()
+            {
+                // Return "success" to coordination service when repository method is called
+                studentRepoMock.Setup(repo => repo.CheckTranscriptStatusAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync("success");
+
+                // Call CheckTranscriptStatusAsync with arguments
+                var result = await studentService.CheckTranscriptStatusAsync("1", "PROCESSING");
+
+                // Verify that the repository returned the correct response
+                Assert.AreEqual("success", result);
+            }
+
+            /// <summary>
+            /// In this test we call CheckTranscriptStatusAsync but the user does not have the VIEW.ANY.ADVISEE permission, so a PermissionsException should be thrown
+            /// </summary>
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task StudentService_CheckTranscriptStatusAsync_PermissionsException()
+            {
+                // Set up the advisorRole so that it does NOT have the VIEW.ANY.ADVISEE permission code (which is needed when calling CheckTranscriptStatusAsync)
+                advisorRole = new Role(advisorRole.Id, advisorRole.Title);
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.UpdateAdviseeDegreePlan));
+                roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
+                roleRepoMock.Setup(repo => repo.Roles).Returns(new List<Role>() { advisorRole });
+
+                // Call CheckTranscriptStatusAsync with arguments
+                var result = await studentService.CheckTranscriptStatusAsync("1", "PROCESSING");
+            }
         }
 
         [TestClass]
         public class Register : CurrentUserSetup
-        { 
+        {
             private StudentService studentService;
             private Mock<IStudentRepository> studentRepoMock;
             private IStudentRepository studentRepo;
+            private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+            private IPlanningStudentRepository planningStudentRepo;
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
             private Mock<IAcademicCreditRepository> acadCreditRepoMock;
@@ -2046,15 +2658,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private Mock<IRoleRepository> roleRepoMock;
             private IRoleRepository roleRepo;
             private ICurrentUserFactory currentUserFactory;
-            private IEnumerable<Ellucian.Colleague.Dtos.Student.SectionRegistration> sectionRegistrations;
+            private IEnumerable<Dtos.Student.SectionRegistration> sectionRegistrations;
             private IConfigurationRepository baseConfigurationRepository;
             private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
             private Mock<IStaffRepository> staffRepoMock;
             private IStaffRepository staffRepo;
 
             // Used by Two_Section_Registration_Successful
-            private List<Ellucian.Colleague.Domain.Student.Entities.RegistrationMessage> messagesTwoElementRegRequest;
-            private List<Ellucian.Colleague.Dtos.Student.SectionRegistration> sectionRegDtoTwoElementList;
+            private List<Domain.Student.Entities.RegistrationMessage> messagesTwoElementRegRequest;
+            private List<Dtos.Student.SectionRegistration> sectionRegDtoTwoElementList;
 
 
             [TestInitialize]
@@ -2062,6 +2674,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 studentRepoMock = new Mock<IStudentRepository>();
                 studentRepo = studentRepoMock.Object;
+                planningStudentRepoMock = new Mock<IPlanningStudentRepository>();
+                planningStudentRepo = planningStudentRepoMock.Object;
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
                 acadCreditRepoMock = new Mock<IAcademicCreditRepository>();
@@ -2075,11 +2689,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentReferenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
                 baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
                 baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
-                 staffRepoMock = new Mock<IStaffRepository>();
-                  staffRepo = staffRepoMock.Object;
+                staffRepoMock = new Mock<IStaffRepository>();
+                staffRepo = staffRepoMock.Object;
                 logger = new Mock<ILogger>().Object;
 
-            studentConfigurationRepo = studentConfigurationRepoMock.Object;
+                studentConfigurationRepo = studentConfigurationRepoMock.Object;
                 referenceDataRepositoryRepoMock = new Mock<IReferenceDataRepository>();
                 referenceDataRepositoryRepo = referenceDataRepositoryRepoMock.Object;
 
@@ -2106,19 +2720,19 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
 
                 // Mock the student repository register method
-                var messages = new List<Ellucian.Colleague.Domain.Student.Entities.RegistrationMessage>() { new Ellucian.Colleague.Domain.Student.Entities.RegistrationMessage() { Message = "Success", SectionId = "" } };
-                var response = new Ellucian.Colleague.Domain.Student.Entities.RegistrationResponse(messages, null);
-                studentRepoMock.Setup(x => x.RegisterAsync(It.IsAny<Ellucian.Colleague.Domain.Student.Entities.RegistrationRequest>())).ReturnsAsync(response);
+                var messages = new List<Domain.Student.Entities.RegistrationMessage>() { new Domain.Student.Entities.RegistrationMessage() { Message = "Success", SectionId = "" } };
+                var response = new Domain.Student.Entities.RegistrationResponse(messages, null, null);
+                studentRepoMock.Setup(x => x.RegisterAsync(It.IsAny<Domain.Student.Entities.RegistrationRequest>())).ReturnsAsync(response);
 
                 // Setup a SectionRegistration dto with two entries
-                sectionRegDtoTwoElementList = new List<Ellucian.Colleague.Dtos.Student.SectionRegistration>();
-                var sectionRegDto = new Ellucian.Colleague.Dtos.Student.SectionRegistration();
+                sectionRegDtoTwoElementList = new List<Dtos.Student.SectionRegistration>();
+                var sectionRegDto = new Dtos.Student.SectionRegistration();
                 sectionRegDto.Action = Dtos.Student.RegistrationAction.Drop;
                 sectionRegDto.Credits = 3.5m;
                 sectionRegDto.DropReasonCode = "DropCode1";
                 sectionRegDto.SectionId = "SectionID1";
                 sectionRegDtoTwoElementList.Add(sectionRegDto);
-                var sectionRegDto2 = new Ellucian.Colleague.Dtos.Student.SectionRegistration();
+                var sectionRegDto2 = new Dtos.Student.SectionRegistration();
                 sectionRegDto2.Action = Dtos.Student.RegistrationAction.Add;
                 sectionRegDto2.Credits = 3.0m;
                 sectionRegDto2.DropReasonCode = null;
@@ -2127,18 +2741,18 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 // Mock the student repository RegisterAsync when passed a RegistrationRequest object with the exact same data that is contained int the
                 // sectionRegDtoTwoElementList defined above. This will test that the RegisterAsync service method correctly translates the dto to the entity.
-                messagesTwoElementRegRequest = new List<Ellucian.Colleague.Domain.Student.Entities.RegistrationMessage>()
-                    { new Ellucian.Colleague.Domain.Student.Entities.RegistrationMessage() { Message = "Successful Two Element Reg Request", SectionId = "" } };
-                var responseTwoElementRegRequest = new Ellucian.Colleague.Domain.Student.Entities.RegistrationResponse(messagesTwoElementRegRequest, null);
+                messagesTwoElementRegRequest = new List<Domain.Student.Entities.RegistrationMessage>()
+                    { new Domain.Student.Entities.RegistrationMessage() { Message = "Successful Two Element Reg Request", SectionId = "" } };
+                var responseTwoElementRegRequest = new Domain.Student.Entities.RegistrationResponse(messagesTwoElementRegRequest, null, null);
                 studentRepoMock.Setup(x => x.RegisterAsync(
-                       It.Is<Ellucian.Colleague.Domain.Student.Entities.RegistrationRequest>(
+                       It.Is<Domain.Student.Entities.RegistrationRequest>(
                            r => (r.Sections.Count == sectionRegDtoTwoElementList.Count) && (r.Sections[0].SectionId == sectionRegDtoTwoElementList[0].SectionId) &&
-                                (r.Sections[0].Action.ToString() == sectionRegDtoTwoElementList[0].Action.ToString()) && 
-                                (r.Sections[0].Credits == sectionRegDtoTwoElementList[0].Credits) && 
-                                (r.Sections[0].DropReasonCode == sectionRegDtoTwoElementList[0].DropReasonCode) && 
+                                (r.Sections[0].Action.ToString() == sectionRegDtoTwoElementList[0].Action.ToString()) &&
+                                (r.Sections[0].Credits == sectionRegDtoTwoElementList[0].Credits) &&
+                                (r.Sections[0].DropReasonCode == sectionRegDtoTwoElementList[0].DropReasonCode) &&
                                 (r.Sections[1].SectionId == sectionRegDtoTwoElementList[1].SectionId) &&
                                 (r.Sections[1].Action.ToString() == sectionRegDtoTwoElementList[1].Action.ToString()) &&
-                                (r.Sections[1].Credits == sectionRegDtoTwoElementList[1].Credits) && 
+                                (r.Sections[1].Credits == sectionRegDtoTwoElementList[1].Credits) &&
                                 (r.Sections[1].DropReasonCode == sectionRegDtoTwoElementList[1].DropReasonCode)
                                 )))
                            .ReturnsAsync(responseTwoElementRegRequest);
@@ -2149,13 +2763,17 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Set up sectionRegistrations
                 sectionRegistrations = new List<Dtos.Student.SectionRegistration>() { new Dtos.Student.SectionRegistration() { Action = Dtos.Student.RegistrationAction.Add, Credits = null, SectionId = "1111" } };
 
-                studentService = new StudentService(adapterRegistry, studentRepo, null, null, null, null, null, studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, null, null, null, null, null, studentConfigurationRepo, referenceDataRepositoryRepo,
+                    studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo,
+                    logger, planningStudentRepo);
             }
 
             [TestCleanup]
             public void Cleanup()
             {
                 studentRepo = null;
+                planningStudentRepo = null;
                 adapterRegistry = null;
                 studentService = null;
                 currentUserFactory = null;
@@ -2181,7 +2799,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task ZeroSectionRegistrations_ThrowsException()
             {
-                await studentService.RegisterAsync("00004002", new List<Ellucian.Colleague.Dtos.Student.SectionRegistration>());
+                await studentService.RegisterAsync("00004002", new List<Dtos.Student.SectionRegistration>());
             }
 
             [TestMethod]
@@ -2198,11 +2816,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 // Add just the AllAccessAssignedAdvisees permission to advisor's role
                 // Student 00004003 does not have 0000111 as an advisor so this should still not be allowed.
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAssignedAdvisees));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAssignedAdvisees));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
 
                 currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
-                studentService = new StudentService(adapterRegistry, studentRepo, null, null, null, null, null, studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, null, null, null, null, null, studentConfigurationRepo, referenceDataRepositoryRepo,
+                    studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo,
+                    logger, planningStudentRepo);
 
                 // Now try to register for a student who has this advisor as an assigned advisor.
                 var registrationResponse = await studentService.RegisterAsync("00004003", sectionRegistrations);
@@ -2229,11 +2850,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task AssignedAdviseePermission_RegistrationSuccessful()
             {
                 // Set up update permissions on advisor's role
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAssignedAdvisees));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAssignedAdvisees));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
 
                 currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
-                studentService = new StudentService(adapterRegistry, studentRepo, null, null, null, null, null, studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, null, null, null, null, null, studentConfigurationRepo, referenceDataRepositoryRepo,
+                    studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo,
+                    logger, planningStudentRepo);
 
                 // Now try to register for a student who has this advisor as an assigned advisor.
                 var registrationResponse = await studentService.RegisterAsync("00004002", sectionRegistrations);
@@ -2244,15 +2868,43 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task AllAdviseePermission_RegistrationSuccessful()
             {
                 // Set up update permissions on advisor's role
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAnyAdvisee));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAnyAdvisee));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
 
                 currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
-                studentService = new StudentService(adapterRegistry, studentRepo, null, null, null, null, null, studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, null, null, null, null, null, studentConfigurationRepo, referenceDataRepositoryRepo,
+                    studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo,
+                    logger, planningStudentRepo);
 
                 // Now try to register for a student who has this advisor as an assigned advisor.
                 var registrationResponse = await studentService.RegisterAsync("00004003", sectionRegistrations);
                 Assert.AreEqual(1, registrationResponse.Messages.Count());
+            }
+
+            [TestMethod]
+            public async Task StudentService_RegisterAsync_Entity_Properties_Copied_to_DTO()
+            {
+                List<RegistrationMessage> regMessages = new List<RegistrationMessage>() { new RegistrationMessage() { SectionId = "123", Message = "Warning"}, new RegistrationMessage() { SectionId = "234", Message = "Error" } };
+                string rpcId = "123";
+                List<string> registeredSections = new List<string>() { "123", "456", "789" };
+                var response = new Domain.Student.Entities.RegistrationResponse(regMessages, rpcId, registeredSections);
+                studentRepoMock.Setup(x => x.RegisterAsync(It.IsAny<Domain.Student.Entities.RegistrationRequest>())).ReturnsAsync(response);
+
+                var registrationResponse = await studentService.RegisterAsync("0000894", sectionRegistrations);
+
+                Assert.AreEqual(regMessages.Count, registrationResponse.Messages.Count);
+                for(int i = 0; i < regMessages.Count; i++)
+                {
+                    Assert.AreEqual(regMessages[i].Message, registrationResponse.Messages[i].Message);
+                    Assert.AreEqual(regMessages[i].SectionId, registrationResponse.Messages[i].SectionId);
+                }
+                Assert.AreEqual(rpcId, registrationResponse.PaymentControlId);
+                Assert.AreEqual(registeredSections.Count, registrationResponse.RegisteredSectionIds.Count);
+                for (int i = 0; i < registeredSections.Count; i++)
+                {
+                    Assert.AreEqual(registeredSections[i], registrationResponse.RegisteredSectionIds[i]);
+                }
             }
         }
 
@@ -2262,6 +2914,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private StudentService studentService;
             private Mock<IStudentRepository> studentRepoMock;
             private IStudentRepository studentRepo;
+            private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+            private IPlanningStudentRepository planningStudentRepo;
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
             private Mock<IAcademicCreditRepository> acadCreditRepoMock;
@@ -2297,6 +2951,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 studentRepoMock = new Mock<IStudentRepository>();
                 studentRepo = studentRepoMock.Object;
+                planningStudentRepoMock = new Mock<IPlanningStudentRepository>();
+                planningStudentRepo = planningStudentRepoMock.Object;
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
                 acadCreditRepoMock = new Mock<IAcademicCreditRepository>();
@@ -2339,18 +2995,22 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentRepoMock.Setup(repo => repo.GetStudentAccessAsync(It.Is<List<string>>(s => s.Contains(id2)))).ReturnsAsync(new List<StudentAccess>() { student2Access }.AsEnumerable());
 
                 // Mock adapter
-                var studentDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.Student>(adapterRegistry, logger);
-                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.Student>()).Returns(studentDtoAdapter);
+                var studentDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.Student, Dtos.Student.Student>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.Student, Dtos.Student.Student>()).Returns(studentDtoAdapter);
 
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, null, studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, null,
+                    studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object,
+                    baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
             }
 
             [TestCleanup]
             public void Cleanup()
             {
                 studentRepo = null;
+                planningStudentRepo = null;
                 adapterRegistry = null;
                 currentUserFactory = null;
                 roleRepo = null;
@@ -2361,9 +3021,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task CheckUserAccess_ViewStudentInformation_AccessAllowed()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation));
+                advisorRole.AddPermission(new Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
-                roleRepoMock.Setup(repo => repo.Roles).Returns(new List<Role>() {advisorRole});
+                roleRepoMock.Setup(repo => repo.Roles).Returns(new List<Role>() { advisorRole });
 
                 // Act -- Call async Task method: CheckUserAccess throws exception if access not allowed
                 await studentService.CheckUserAccessAsync(student1.Id, student1.ConvertToStudentAccess());
@@ -2373,7 +3033,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task CheckUserAccess_ViewAnyAdvisee_AccessAllowed()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
 
                 // Act -- Call async Task method: CheckUserAccess throws exception if access not allowed
@@ -2384,7 +3044,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task CheckUserAccess_ReviewAnyAdvisee_AccessAllowed()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ReviewAnyAdvisee));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ReviewAnyAdvisee));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
 
                 // Act -- Call async Task method: CheckUserAccess throws exception if access not allowed
@@ -2395,7 +3055,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task CheckUserAccess_UpdateAnyAdvisee_AccessAllowed()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.UpdateAnyAdvisee));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.UpdateAnyAdvisee));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
 
                 // Act -- Call async Task method: CheckUserAccess throws exception if access not allowed
@@ -2406,7 +3066,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task CheckUserAccess_AllAccessAnyAdvisee_AccessAllowed()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAnyAdvisee));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAnyAdvisee));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
 
                 // Act -- Call async Task method: CheckUserAccess throws exception if access not allowed
@@ -2418,7 +3078,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task CheckUserAccess_ViewAssignedAdvisees_UnassignedAdvisee_ThrowsException()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
 
                 // Act -- Call async Task method: CheckUserAccess throws exception if access not allowed
@@ -2429,7 +3089,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task CheckUserAccess_ViewAssignedAdvisee_AssignedAdvisee_AllowsAccess()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
 
                 // Act -- Call async Task method: CheckUserAccess throws exception if access not allowed
@@ -2442,7 +3102,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task CheckUserAccess_UpdateAssignedAdvisees_UnassignedAdvisee_ThrowsException()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.UpdateAssignedAdvisees));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.UpdateAssignedAdvisees));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
 
                 // Act -- Call async Task method: CheckUserAccess throws exception if access not allowed
@@ -2453,7 +3113,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task CheckUserAccess_UpdateAssignedAdvisee_AssignedAdvisee_AllowsAccess()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.UpdateAssignedAdvisees));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.UpdateAssignedAdvisees));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
 
                 // Act -- Call async Task method: CheckUserAccess throws exception if access not allowed
@@ -2466,7 +3126,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task CheckUserAccess_AllAccessAssignedAdvisees_UnassignedAdvisee_ThrowsException()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAssignedAdvisees));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAssignedAdvisees));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
 
                 // Act -- Call async Task method: CheckUserAccess throws exception if access not allowed
@@ -2477,7 +3137,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task CheckUserAccess_AllAccessAssignedAdvisee_AssignedAdvisee_AllowsAccess()
             {
                 // Set up needed permission
-                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAssignedAdvisees));
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAssignedAdvisees));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
 
                 // Act -- Call async Task method: CheckUserAccess throws exception if access not allowed
@@ -2492,6 +3152,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private StudentService studentService;
             private Mock<IStudentRepository> studentRepoMock;
             private IStudentRepository studentRepo;
+            private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+            private IPlanningStudentRepository planningStudentRepo;
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
             private Mock<IAcademicCreditRepository> acadCreditRepoMock;
@@ -2527,6 +3189,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 studentRepoMock = new Mock<IStudentRepository>();
                 studentRepo = studentRepoMock.Object;
+                planningStudentRepoMock = new Mock<IPlanningStudentRepository>();
+                planningStudentRepo = planningStudentRepoMock.Object;
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
                 acadCreditRepoMock = new Mock<IAcademicCreditRepository>();
@@ -2562,22 +3226,26 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentRepoMock.Setup(repo => repo.GetAsync("00004002")).ReturnsAsync(student2);
 
                 // Mock Adapters
-                var studentDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.Student>(adapterRegistry, logger);
-                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.Student>()).Returns(studentDtoAdapter);
+                var studentDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.Student, Dtos.Student.Student>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.Student, Dtos.Student.Student>()).Returns(studentDtoAdapter);
 
-                var emailDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Base.Entities.EmailAddress, Ellucian.Colleague.Dtos.Base.EmailAddress>(adapterRegistry, logger);
-                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.EmailAddress, Ellucian.Colleague.Dtos.Base.EmailAddress>()).Returns(emailDtoAdapter);
+                var emailDtoAdapter = new AutoMapperAdapter<Domain.Base.Entities.EmailAddress, Dtos.Base.EmailAddress>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Base.Entities.EmailAddress, Dtos.Base.EmailAddress>()).Returns(emailDtoAdapter);
 
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.StudentUserFactory();
 
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object,
+                    baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
             }
 
             [TestCleanup]
             public void Cleanup()
             {
                 studentRepo = null;
+                planningStudentRepo = null;
                 adapterRegistry = null;
                 currentUserFactory = null;
                 roleRepo = null;
@@ -2592,7 +3260,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 student1.AddEmailAddress(new EmailAddress("aaa@a.com", "COL"));
                 student1.AddEmailAddress(new EmailAddress("bbb@a.com", "PRI"));
                 studentRepoMock.Setup(repo => repo.GetAsync("0000894")).ReturnsAsync(student1);
-                var studentDtoWrapper=await studentService.GetAsync("0000894");
+                var studentDtoWrapper = await studentService.GetAsync("0000894");
                 Assert.IsNotNull(studentDtoWrapper.Dto.EmailAddresses);
                 Assert.AreEqual(studentDtoWrapper.Dto.EmailAddresses.Count(), student1.EmailAddresses.Count());
             }
@@ -2615,6 +3283,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private StudentService studentService;
             private Mock<IStudentRepository> studentRepoMock;
             private IStudentRepository studentRepo;
+            private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+            private IPlanningStudentRepository planningStudentRepo;
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
             private Mock<IAcademicCreditRepository> acadCreditRepoMock;
@@ -2651,6 +3321,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 studentRepoMock = new Mock<IStudentRepository>();
                 studentRepo = studentRepoMock.Object;
+                planningStudentRepoMock = new Mock<IPlanningStudentRepository>();
+                planningStudentRepo = planningStudentRepoMock.Object;
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
                 acadCreditRepoMock = new Mock<IAcademicCreditRepository>();
@@ -2685,6 +3357,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 student2 = new Domain.Student.Entities.Student("00004002", "Jones", 802, new List<string>() { "BA.MATH" }, new List<string>());
                 studentRepoMock.Setup(repo => repo.GetAsync("00004002")).ReturnsAsync(student2);
 
+                // Mock advisor role so that permission exception not thrown
+                advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
+                roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
+                roleRepoMock.Setup(repo => repo.Roles).Returns(new List<Role>() { advisorRole });
+
                 // Set up student 0000894 as the current user.
                 currentUserFactory = new CurrentUserSetup.StudentUserFactory();
 
@@ -2692,13 +3369,17 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 string transcriptText = "Ellucian University Transcript";
                 studentRepoMock.Setup(repo => repo.GetTranscriptAsync("0000894", "UG")).ReturnsAsync(transcriptText);
 
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object,
+                    baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
             }
 
             [TestCleanup]
             public void Cleanup()
             {
                 studentService = null;
+                planningStudentRepo = null;
                 studentRepo = null;
                 adapterRegistry = null;
                 currentUserFactory = null;
@@ -2708,56 +3389,50 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             [TestMethod]
             [ExpectedException(typeof(PermissionsException))]
-            public async Task GetUnofficialTranscript_ThrowsErrorIfNotSelfOrAdvisorWithPermissions()
+            public async Task GetUnofficialTranscriptAsync_ThrowsErrorIfNotSelfOrAdvisorWithPermissions()
             {
-                 var result = await studentService.GetUnofficialTranscriptAsync("00004002", "rdlc path", "UG", "water mark path", "device info path");
+                var result = await studentService.GetUnofficialTranscriptAsync("00004002", "rdlc path", "UG", "water mark path", "device info path");
             }
 
             [TestMethod]
             [ExpectedException(typeof(PermissionsException))]
-            public async Task GetUnofficialTranscript_UserHasViewStudentInformationPermission()
+            public async Task GetUnofficialTranscriptAsync_UserHasViewStudentInformationPermission()
             {
                 // Set up student 0000894 as the current user.
                 //Mock roles repo and permission
-                var permissionViewAnyStudent = new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation);
+                var permissionViewAnyStudent = new Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation);
                 viewStudentRole.AddPermission(permissionViewAnyStudent);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentRole });
                 studentRepoMock.Setup(repo => repo.GetAsync("0004002")).ReturnsAsync(student2);
                 var result = await studentService.GetUnofficialTranscriptAsync("0004002", "rdlc path", "UG", "water mark path", "device info path");
             }
 
-            //[TestMethod]
-            //public async Task GetUnofficialTranscript_UserIsSelf()
-            //{
-            //    // Set up student 0000894 as the current user.
-                  // ToDo: figure out how to mock the Local Processing for these pdfs.
-            //    var result = await studentService.GetUnofficialTranscriptAsync("0000894", "rdlc path", "UG", "water mark path", "device info path");
-            //}
+            [TestMethod]
+            public async Task GetUnofficialTranscriptAsync_Returns_Pdf_for_student_requesting_own_data()
+            {
+                var expectedPdfFileName = Regex.Replace(
+                    (student2.LastName +
+                    " " + student2.FirstName +
+                    " " + student2.Id +
+                    " " + DateTime.Now.ToShortDateString()),
+                    "[^a-zA-Z0-9_]", "_")
+                    + ".pdf";
+                studentRepoMock.Setup(repo => repo.GetAsync(currentUserFactory.CurrentUser.PersonId)).ReturnsAsync(student2);
+                var result = await studentService.GetUnofficialTranscriptAsync(currentUserFactory.CurrentUser.PersonId, "../../../Ellucian.Colleague.Coordination.Student/Reports/UnofficialTranscript.rdlc", "UG", "water mark path", "../../../Ellucian.Colleague.Coordination.Student/Reports/UnofficialTranscriptDeviceInfo.txt");
 
-
-            //[TestMethod]
-            //public async Task GetUnofficialTranscript_ViewAnyAdviseePermitted()
-            //{
-            //    // Set up needed permission
-            //    // Set up student 0000894 as the current user.
-            //    var currentAdvisorUserFactory = new CurrentUserSetup.AdvisorUserFactory();
-            //    studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentAdvisorUserFactory, roleRepo, logger);
-            //    advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
-            //    roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
-            //    studentRepoMock.Setup(repo => repo.GetAsync("0000894")).ReturnsAsync(student1);
-            //    var result = await studentService.GetUnofficialTranscriptAsync("00004002", "rdlc path", "UG", "water mark path", "device info path");
-            //    //await studentService.GetAsync("0000894");
-
-                
-            //}
+                Assert.IsNotNull(result);
+                Assert.IsNotNull(result.Item1);
+                Assert.AreEqual(expectedPdfFileName, result.Item2);
+            }
         }
 
         [TestClass]
         public class StudentCohort_GET : CurrentUserSetup
         {
             Mock<IStudentRepository> studentRepositoryMock;
-            private Mock<IPersonRepository> personRepoMock;        
-            private Mock<IAcademicCreditRepository> acadCreditRepoMock;         
+            private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+            private Mock<IPersonRepository> personRepoMock;
+            private Mock<IAcademicCreditRepository> acadCreditRepoMock;
             Mock<IAcademicHistoryService> acadHistServiceMock;
             Mock<ITermRepository> termRepositoryMock;
             Mock<IRegistrationPriorityRepository> priorityRepositoryMock;
@@ -2783,9 +3458,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public void Initialize()
             {
                 studentRepositoryMock = new Mock<IStudentRepository>();
+                planningStudentRepoMock = new Mock<IPlanningStudentRepository>();
                 personRepoMock = new Mock<IPersonRepository>();
                 acadCreditRepoMock = new Mock<IAcademicCreditRepository>();
-
                 acadHistServiceMock = new Mock<IAcademicHistoryService>();
                 termRepositoryMock = new Mock<ITermRepository>();
                 priorityRepositoryMock = new Mock<IRegistrationPriorityRepository>();
@@ -2805,14 +3480,19 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 BuildData();
 
-                studentService = new StudentService(adapterRegistryMock.Object, studentRepositoryMock.Object, personRepoMock.Object, acadCreditRepoMock.Object, acadHistServiceMock.Object, termRepositoryMock.Object, priorityRepositoryMock.Object,
-                                                    studentConfigurationRepositoryMock.Object, referenceDataRepositoryMock.Object, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepoMock.Object, staffRepo, logger);
-            }           
+                studentService = new StudentService(
+                    adapterRegistryMock.Object, studentRepositoryMock.Object, personRepoMock.Object, acadCreditRepoMock.Object,
+                    acadHistServiceMock.Object, termRepositoryMock.Object, priorityRepositoryMock.Object,
+                    studentConfigurationRepositoryMock.Object, referenceDataRepositoryMock.Object,
+                    studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory,
+                    roleRepoMock.Object, staffRepo, logger, planningStudentRepoMock.Object);
+            }
 
             [TestCleanup]
             public void Cleanup()
             {
                 studentRepositoryMock = null;
+                planningStudentRepoMock = null;
                 acadHistServiceMock = null;
                 termRepositoryMock = null;
                 priorityRepositoryMock = null;
@@ -2826,7 +3506,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task StudentCohort_GetAllStudentCohorts()
             {
                 studentReferenceDataRepositoryMock.Setup(i => i.GetAllStudentCohortAsync(It.IsAny<bool>())).ReturnsAsync(studentCohortEntities);
-                var actuals = await studentService.GetAllStudentCohortsAsync(It.IsAny<bool>());
+                var actuals = await studentService.GetAllStudentCohortsAsync( It.IsAny<Dtos.Filters.CodeItemFilter>(), It.IsAny<bool>() );
 
                 Assert.IsNotNull(actuals);
 
@@ -2838,6 +3518,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     Assert.AreEqual(expected.Guid, actual.Id);
                     Assert.AreEqual(expected.Code, actual.Code);
                     Assert.AreEqual(expected.Description, actual.Description);
+                    if(!string.IsNullOrEmpty(expected.CohortType) && expected.CohortType.Equals("FED", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Assert.AreEqual(CohortType.Federal, actual.StudentCohortType);
+                    }
+                    else
+                    {
+                        Assert.AreEqual(CohortType.NotSet, actual.StudentCohortType);
+                    }
                 }
             }
 
@@ -2856,6 +3544,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.AreEqual(expected.Guid, actual.Id);
                 Assert.AreEqual(expected.Code, actual.Code);
                 Assert.AreEqual(expected.Description, actual.Description);
+                if (!string.IsNullOrEmpty(expected.CohortType) && expected.CohortType.Equals("FED", StringComparison.OrdinalIgnoreCase))
+                {
+                    Assert.AreEqual(CohortType.Federal, actual.StudentCohortType);
+                }
+                else
+                {
+                    Assert.AreEqual(CohortType.NotSet, actual.StudentCohortType);
+                }
             }
 
             [TestMethod]
@@ -2870,16 +3566,16 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             private void BuildData()
             {
-                studentCohortEntities = new List<StudentCohortEntity>() 
+                studentCohortEntities = new List<StudentCohortEntity>()
                 {
-                    new StudentCohortEntity("e8dbcea5-ffb8-471e-87b7-ce5d36d5c2e7", "ATHL", "Athletes"),
+                    new StudentCohortEntity("e8dbcea5-ffb8-471e-87b7-ce5d36d5c2e7", "ATHL", "Athletes"){ CohortType = "FED" },
                     new StudentCohortEntity("c2f57ee5-1c30-44a5-9d18-311f71f7b722", "FRAT", "Fraternity"),
                     new StudentCohortEntity("f05a6c0f-3a56-4a87-b931-bc2901da5ef9", "SORO", "Sorority"),
                     new StudentCohortEntity("05872218-f749-4cdc-b4f0-43200cc21335", "ROTC", "ROTC Participants"),
-                    new StudentCohortEntity("827fffc4-3dd2-4492-8f51-4134597ec4bf", "VETS", "Military Veterans"),
+                    new StudentCohortEntity("827fffc4-3dd2-4492-8f51-4134597ec4bf", "VETS", "Military Veterans"){ CohortType = "FED" }
                 };
 
-                studentCohortDtos = new List<Dtos.StudentCohort>() 
+                studentCohortDtos = new List<Dtos.StudentCohort>()
                 {
                     new Dtos.StudentCohort(){ Id = "e8dbcea5-ffb8-471e-87b7-ce5d36d5c2e7", Code = "ATHL", Description = "Athletes", Title = "Athletes" },
                     new Dtos.StudentCohort(){ Id = "c2f57ee5-1c30-44a5-9d18-311f71f7b722", Code = "FRAT", Description = "Fraternity", Title = "Fraternity" },
@@ -2894,8 +3590,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public class StudentClassification_GET : CurrentUserSetup
         {
             Mock<IStudentRepository> studentRepositoryMock;
+            private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+            private IPlanningStudentRepository planningStudentRepo;
             private Mock<IPersonRepository> personRepoMock;
-            private Mock<IAcademicCreditRepository> acadCreditRepoMock;  
+            private Mock<IAcademicCreditRepository> acadCreditRepoMock;
             Mock<IAcademicHistoryService> acadHistServiceMock;
             Mock<ITermRepository> termRepositoryMock;
             Mock<IRegistrationPriorityRepository> priorityRepositoryMock;
@@ -2938,18 +3636,24 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
                 staffRepoMock = new Mock<IStaffRepository>();
                 staffRepo = staffRepoMock.Object;
-
+                planningStudentRepoMock = new Mock<IPlanningStudentRepository>();
+                planningStudentRepo = planningStudentRepoMock.Object;
 
                 BuildData();
 
-                studentService = new StudentService(adapterRegistryMock.Object, studentRepositoryMock.Object, personRepoMock.Object, acadCreditRepoMock.Object, acadHistServiceMock.Object, termRepositoryMock.Object, priorityRepositoryMock.Object,
-                                                   studentConfigurationRepositoryMock.Object, referenceDataRepositoryMock.Object, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepoMock.Object, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistryMock.Object, studentRepositoryMock.Object, personRepoMock.Object, acadCreditRepoMock.Object,
+                    acadHistServiceMock.Object, termRepositoryMock.Object, priorityRepositoryMock.Object,
+                    studentConfigurationRepositoryMock.Object, referenceDataRepositoryMock.Object,
+                    studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory,
+                    roleRepoMock.Object, staffRepo, logger, planningStudentRepo);
             }
 
             [TestCleanup]
             public void Cleanup()
             {
                 studentRepositoryMock = null;
+                planningStudentRepo = null;
                 acadHistServiceMock = null;
                 termRepositoryMock = null;
                 priorityRepositoryMock = null;
@@ -3005,7 +3709,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             private void BuildData()
             {
-                studentClassiicationEntities = new List<StudentClassificationEntity>() 
+                studentClassiicationEntities = new List<StudentClassificationEntity>()
                 {
                     new StudentClassificationEntity("3b8f02a3-d349-46b5-a0df-710121fa1f64", "1G", "First Year Graduate"),
                     new StudentClassificationEntity("7b8c4ba7-ea28-4604-bca7-da7223f6e2b3", "1L", "First Year Law"),
@@ -3014,7 +3718,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     new StudentClassificationEntity("7e990bda-9427-4de6-b0ef-bba9b015e399", "2L", "Second Year Law"),
                 };
 
-                studentClassificationDtos = new List<Dtos.StudentClassification>() 
+                studentClassificationDtos = new List<Dtos.StudentClassification>()
                 {
                     new Dtos.StudentClassification(){ Id = "3b8f02a3-d349-46b5-a0df-710121fa1f64", Code = "1G", Description = "First Year Graduate", Title = "First Year Graduate" },
                     new Dtos.StudentClassification(){ Id = "7b8c4ba7-ea28-4604-bca7-da7223f6e2b3", Code = "1L", Description = "First Year Law", Title = "First Year Law" },
@@ -3031,6 +3735,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private StudentService studentService;
             private Mock<IStudentRepository> studentRepoMock;
             private IStudentRepository studentRepo;
+            private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+            private IPlanningStudentRepository planningStudentRepo;
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
             private Mock<IAcademicCreditRepository> acadCreditRepoMock;
@@ -3060,17 +3766,21 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private IStaffRepository staffRepo;
 
 
-            IEnumerable<Ellucian.Colleague.Domain.Student.Entities.ResidencyStatus> residencyStatuses;
+            IEnumerable<Domain.Student.Entities.AdmissionResidencyType> residencyStatuses;
 
             [TestInitialize]
             public void Initialize()
             {
                 studentRepoMock = new Mock<IStudentRepository>();
                 studentRepo = studentRepoMock.Object;
+                planningStudentRepoMock = new Mock<IPlanningStudentRepository>();
+                planningStudentRepo = planningStudentRepoMock.Object;
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
                 acadCreditRepoMock = new Mock<IAcademicCreditRepository>();
                 acadCreditRepo = acadCreditRepoMock.Object;
+                studentReferenceDataRepoMock = new Mock<IStudentReferenceDataRepository>();
+                studentReferenceDataRepository = studentReferenceDataRepoMock.Object;
                 academicHistoryServiceMock = new Mock<IAcademicHistoryService>();
                 academicHistoryService = academicHistoryServiceMock.Object;
                 termRepoMock = new Mock<ITermRepository>();
@@ -3094,13 +3804,17 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 currentUserFactory = new CurrentUserSetup.StudentUserFactory();
 
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository,
+                    currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
             }
 
             [TestCleanup]
             public void Cleanup()
             {
                 studentRepo = null;
+                planningStudentRepo = null;
                 adapterRegistry = null;
                 currentUserFactory = null;
                 roleRepo = null;
@@ -3110,7 +3824,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task StudentService__GetAllAsync()
             {
-                studentRepoMock.Setup(i => i.GetResidencyStatusesAsync(It.IsAny<bool>())).ReturnsAsync(residencyStatuses);
+                studentReferenceDataRepoMock.Setup(i => i.GetAdmissionResidencyTypesAsync(It.IsAny<bool>())).ReturnsAsync(residencyStatuses);
 
                 var results = await studentService.GetResidentTypesAsync(It.IsAny<bool>());
                 Assert.AreEqual(residencyStatuses.ToList().Count, (results.Count()));
@@ -3128,7 +3842,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task StudentService__GetByIdAsync()
             {
-                studentRepoMock.Setup(i => i.GetResidencyStatusesAsync(It.IsAny<bool>())).ReturnsAsync(residencyStatuses);
+                studentReferenceDataRepoMock.Setup(i => i.GetAdmissionResidencyTypesAsync(It.IsAny<bool>())).ReturnsAsync(residencyStatuses);
 
                 string id = "b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09";
                 var residentType = residencyStatuses.FirstOrDefault(i => i.Guid == id);
@@ -3144,7 +3858,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task StudentService__GetByIdAsync_KeyNotFoundException()
             {
-                studentRepoMock.Setup(i => i.GetResidencyStatusesAsync(true)).ReturnsAsync(residencyStatuses);
+                studentReferenceDataRepoMock.Setup(i => i.GetAdmissionResidencyTypesAsync(It.IsAny<bool>())).ReturnsAsync(residencyStatuses);
                 var result = await studentService.GetResidentTypeByIdAsync("123");
             }
         }
@@ -3155,6 +3869,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private StudentService studentService;
             private Mock<IStudentRepository> studentRepoMock;
             private IStudentRepository studentRepo;
+            private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+            private IPlanningStudentRepository planningStudentRepo;
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
             private Mock<IAcademicCreditRepository> acadCreditRepoMock;
@@ -3223,7 +3939,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     new Domain.Student.Entities.Student("0001234", "Smith", null, null, null, "S")
                 };
                 studentRepoMock = new Mock<IStudentRepository>();
-                studentRepoMock.Setup(r => r.GetStudentsByIdAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<Term>(), It.IsAny<IEnumerable<CitizenshipStatus>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).ReturnsAsync(students);               
+                studentRepoMock.Setup(r => r.GetStudentsByIdAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<Term>(), It.IsAny<IEnumerable<CitizenshipStatus>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).ReturnsAsync(students);
                 studentRepo = studentRepoMock.Object;
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
@@ -3254,12 +3970,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 staffRepoMock = new Mock<IStaffRepository>();
                 staffRepo = staffRepoMock.Object;
                 var studentBatch3DtoAdapter = new StudentEntityToStudentBatch3DtoAdapter(adapterRegistry, logger);
-                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.StudentBatch3>()).Returns(studentBatch3DtoAdapter);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.Student, Dtos.Student.StudentBatch3>()).Returns(studentBatch3DtoAdapter);
                 currentUserFactory = new CurrentUserSetup.StudentUserFactory();
 
                 studentIds = new List<string>() { currentUserFactory.CurrentUser.PersonId };
 
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository,
+                    currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
             }
 
             [TestCleanup]
@@ -3283,7 +4002,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task QueryStudentsById4Async_Valid()
             {
                 currentUserFactory = new ViewStudentUserFactory();
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository,
+                    currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
                 var result = await studentService.QueryStudentsById4Async(studentIds);
                 Assert.AreEqual(students.Count, result.Dto.Count());
                 Assert.AreEqual(students.First().Id, result.Dto.First().Id);
@@ -3294,7 +4016,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 currentUserFactory = new ViewStudentUserFactory();
                 studentRepoMock.Setup(r => r.GetStudentsByIdAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<Term>(), It.IsAny<IEnumerable<CitizenshipStatus>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).ReturnsAsync(null);
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository,
+                    currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
                 var result = await studentService.QueryStudentsById4Async(studentIds);
                 Assert.AreEqual(0, result.Dto.Count());
             }
@@ -3304,7 +4029,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 currentUserFactory = new ViewStudentUserFactory();
                 studentRepoMock.Setup(r => r.GetStudentsByIdAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<Term>(), It.IsAny<IEnumerable<CitizenshipStatus>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).ReturnsAsync(new List<Domain.Student.Entities.Student>());
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository,
+                    currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
                 var result = await studentService.QueryStudentsById4Async(studentIds);
                 Assert.AreEqual(0, result.Dto.Count());
             }
@@ -3319,7 +4047,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentRepoMock.Setup(r => r.GetStudentsByIdAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<Term>(), It.IsAny<IEnumerable<CitizenshipStatus>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).ReturnsAsync(restrictedStudents);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentInformationRole });
                 staffRepoMock.Setup(rpm => rpm.Get(It.IsAny<string>())).Returns(new Staff(currentUserFactory.CurrentUser.PersonId, "Smith") { PrivacyCodes = new List<string>() { "S" } });
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository,
+                    currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
                 var result = await studentService.QueryStudentsById4Async(studentIds);
                 Assert.AreEqual(1, result.Dto.Count());
                 Assert.IsTrue(result.HasPrivacyRestrictions);
@@ -3334,7 +4065,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentRepoMock.Setup(r => r.GetStudentsByIdAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<Term>(), It.IsAny<IEnumerable<CitizenshipStatus>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).ReturnsAsync(privilegedStudents);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentInformationRole });
                 staffRepoMock.Setup(rpm => rpm.Get(It.IsAny<string>())).Returns(new Staff(currentUserFactory.CurrentUser.PersonId, "Smith") { PrivacyCodes = new List<string>() { "S" } });
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository,
+                    currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
                 var result = await studentService.QueryStudentsById4Async(studentIds);
                 Assert.AreEqual(1, result.Dto.Count());
                 Assert.IsFalse(result.HasPrivacyRestrictions);
@@ -3347,6 +4081,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private StudentService studentService;
             private Mock<IStudentRepository> studentRepoMock;
             private IStudentRepository studentRepo;
+            private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+            private IPlanningStudentRepository planningStudentRepo;
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
             private Mock<IAcademicCreditRepository> acadCreditRepoMock;
@@ -3451,8 +4187,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentConfigurationRepo = studentConfigurationRepoMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 adapterRegistry = adapterRegistryMock.Object;
-                var studentDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.Student>(adapterRegistry, logger);
-                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.Student>()).Returns(studentDtoAdapter);
+                var studentDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.Student, Dtos.Student.Student>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.Student, Dtos.Student.Student>()).Returns(studentDtoAdapter);
 
                 roleRepoMock = new Mock<IRoleRepository>();
                 roleRepo = roleRepoMock.Object;
@@ -3464,7 +4200,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 currentUserFactory = new CurrentUserSetup.StudentUserFactory();
 
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository,
+                    currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
             }
 
             [TestCleanup]
@@ -3485,7 +4224,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task Search3Async_criteria_StudentKeyword_is_Student_ID_invalid_permissions()
             {
                 currentUserFactory = new CurrentUserSetup.StudentUserFactory();
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository,
+                    currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
                 var student = await studentService.Search3Async(new Dtos.Student.StudentSearchCriteria() { StudentKeyword = "1234567" });
             }
 
@@ -3501,7 +4243,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 });
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentInformationRole });
                 staffRepoMock.Setup(rpm => rpm.Get(It.IsAny<string>())).Returns(new Staff(currentUserFactory.CurrentUser.PersonId, "Smith") { PrivacyCodes = new List<string>() { "S" } });
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository,
+                    currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
                 var student = await studentService.Search3Async(new Dtos.Student.StudentSearchCriteria() { StudentKeyword = currentUserFactory.CurrentUser.PersonId });
                 Assert.AreEqual(1, student.Dto.Count);
                 Assert.IsTrue(student.HasPrivacyRestrictions);
@@ -3519,7 +4264,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 });
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentInformationRole });
                 staffRepoMock.Setup(rpm => rpm.Get(It.IsAny<string>())).Returns(new Staff(currentUserFactory.CurrentUser.PersonId, "Smith") { PrivacyCodes = new List<string>() { "S" } });
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository,
+                    currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
                 var student = await studentService.Search3Async(new Dtos.Student.StudentSearchCriteria() { StudentKeyword = currentUserFactory.CurrentUser.PersonId });
                 Assert.AreEqual(1, student.Dto.Count);
                 Assert.IsFalse(student.HasPrivacyRestrictions);
@@ -3533,7 +4281,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 viewStudentInformationRole.AddPermission(new Permission(StudentPermissionCodes.ViewStudentInformation));
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentInformationRole });
                 studentRepoMock.Setup(repo => repo.GetStudentsSearchAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(null);
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository,
+                    baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
                 var student = await studentService.Search3Async(new Dtos.Student.StudentSearchCriteria() { StudentKeyword = currentUserFactory.CurrentUser.PersonId });
                 Assert.AreEqual(0, student.Dto.Count);
             }
@@ -3546,7 +4297,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Role viewStudentInformationRole = new Role(108, "ViewStudentInformation");
                 viewStudentInformationRole.AddPermission(new Permission(StudentPermissionCodes.ViewStudentInformation));
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentInformationRole });
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository,
+                    currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
                 var student = await studentService.Search3Async(new Dtos.Student.StudentSearchCriteria() { StudentKeyword = "John" });
             }
 
@@ -3557,7 +4311,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Role viewStudentInformationRole = new Role(108, "ViewStudentInformation");
                 viewStudentInformationRole.AddPermission(new Permission(StudentPermissionCodes.ViewStudentInformation));
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentInformationRole });
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository,
+                    currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
                 var student = await studentService.Search3Async(new Dtos.Student.StudentSearchCriteria() { StudentKeyword = "Smith, John" });
                 Assert.AreEqual(1, student.Dto.Count);
             }
@@ -3574,7 +4331,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 });
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentInformationRole });
                 staffRepoMock.Setup(rpm => rpm.Get(It.IsAny<string>())).Returns(new Staff(currentUserFactory.CurrentUser.PersonId, "Smith") { PrivacyCodes = new List<string>() { "S" } });
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository,
+                    currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
                 var student = await studentService.Search3Async(new Dtos.Student.StudentSearchCriteria() { StudentKeyword = "Smith, John" });
                 Assert.AreEqual(1, student.Dto.Count);
                 Assert.IsFalse(student.HasPrivacyRestrictions);
@@ -3592,10 +4352,315 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 });
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentInformationRole });
                 staffRepoMock.Setup(rpm => rpm.Get(It.IsAny<string>())).Returns(new Staff(currentUserFactory.CurrentUser.PersonId, "Smith") { PrivacyCodes = new List<string>() { "S" } });
-                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                studentService = new StudentService(
+                    adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                    studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository,
+                    currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
                 var student = await studentService.Search3Async(new Dtos.Student.StudentSearchCriteria() { StudentKeyword = "John Michael Smith" });
                 Assert.AreEqual(1, student.Dto.Count);
                 Assert.IsTrue(student.HasPrivacyRestrictions);
+            }
+        }
+
+
+        [TestClass]
+        public class PlanningStudentServiceTests
+        {
+            [TestClass]
+            public class PlanningStudentServiceTests_GetPlanningStudent : CurrentUserSetup
+            {
+                private IAdapterRegistry adapterRegistry;
+                private Mock<IAdapterRegistry> adapterRegistryMock;
+
+                private IStudentRepository studentRepo;
+                private Mock<IStudentRepository> studentRepoMock;
+
+                private IPlanningStudentRepository planningStudentRepo;
+                private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+
+                private IPersonRepository personRepo;
+                private Mock<IPersonRepository> personRepoMock;
+
+                private IAcademicCreditRepository acadCreditRepo;
+                private Mock<IAcademicCreditRepository> acadCreditRepoMock;
+
+                private ITermRepository termRepo;
+                private Mock<ITermRepository> termRepoMock;
+
+                private IRegistrationPriorityRepository regPriorityRepo;
+                private Mock<IRegistrationPriorityRepository> regPriorityRepoMock;
+
+                private IConfigurationRepository baseConfigurationRepository;
+                private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+
+                private IStudentConfigurationRepository studentConfigurationRepo;
+                private Mock<IStudentConfigurationRepository> studentConfigurationRepoMock;
+
+                private IRoleRepository roleRepo;
+                private Mock<IRoleRepository> roleRepoMock;
+
+                private IStaffRepository staffRepo;
+                private Mock<IStaffRepository> staffRepoMock;
+
+                private IReferenceDataRepository referenceDataRepositoryRepo;
+                private Mock<IReferenceDataRepository> referenceDataRepositoryRepoMock;
+                private Mock<IStudentReferenceDataRepository> studentReferenceDataRepositoryMock;
+
+                private StudentService studentService;
+                private IAcademicHistoryService academicHistoryService;
+                private Mock<IAcademicHistoryService> academicHistoryServiceMock;
+
+                private ICurrentUserFactory currentUserFactory;
+                private ILogger logger;
+
+                string studentId;
+                PlanningStudent planningStudent;
+
+                [TestInitialize]
+                public void Initialize()
+                {
+                    logger = new Mock<ILogger>().Object;
+
+                    adapterRegistryMock = new Mock<IAdapterRegistry>();
+                    adapterRegistry = adapterRegistryMock.Object;
+
+                    studentRepoMock = new Mock<IStudentRepository>();
+                    studentRepo = studentRepoMock.Object;
+
+                    planningStudentRepoMock = new Mock<IPlanningStudentRepository>();
+                    planningStudentRepo = planningStudentRepoMock.Object;
+
+                    personRepoMock = new Mock<IPersonRepository>();
+                    personRepo = personRepoMock.Object;
+
+                    acadCreditRepoMock = new Mock<IAcademicCreditRepository>();
+                    acadCreditRepo = acadCreditRepoMock.Object;
+
+                    termRepoMock = new Mock<ITermRepository>();
+                    termRepo = termRepoMock.Object;
+
+                    regPriorityRepoMock = new Mock<IRegistrationPriorityRepository>();
+                    regPriorityRepo = regPriorityRepoMock.Object;
+
+                    baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
+                    baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+
+                    studentConfigurationRepoMock = new Mock<IStudentConfigurationRepository>();
+                    studentConfigurationRepo = studentConfigurationRepoMock.Object;
+
+                    roleRepoMock = new Mock<IRoleRepository>();
+                    roleRepo = roleRepoMock.Object;
+
+                    staffRepoMock = new Mock<IStaffRepository>();
+                    staffRepo = staffRepoMock.Object;
+
+                    referenceDataRepositoryRepoMock = new Mock<IReferenceDataRepository>();
+                    referenceDataRepositoryRepo = referenceDataRepositoryRepoMock.Object;
+                    studentReferenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
+
+                    academicHistoryServiceMock = new Mock<IAcademicHistoryService>();
+                    academicHistoryService = academicHistoryServiceMock.Object;
+
+                    currentUserFactory = new StudentUserFactory();
+
+                    var planningStudentAdapter = new AutoMapperAdapter<Domain.Student.Entities.PlanningStudent, Dtos.Student.PlanningStudent>(adapterRegistry, logger);
+                    adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.Student.Entities.PlanningStudent, Dtos.Student.PlanningStudent>()).Returns(planningStudentAdapter);
+                    var advisementAdapter = new AutoMapperAdapter<Domain.Student.Entities.Advisement, Dtos.Student.Advisement>(adapterRegistry, logger);
+                    adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.Student.Entities.Advisement, Dtos.Student.Advisement>()).Returns(advisementAdapter);
+
+                    studentId = "0000894";
+                    planningStudent = new Domain.Student.Entities.PlanningStudent(studentId, "brown", 3, new List<string>() { "ENGL.BA", "MATH.BS" });
+                    // This will be the response regardless of the student requested--it's ok.
+                    planningStudentRepoMock.Setup(repo => repo.GetAsync(It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult(planningStudent));
+
+                    studentService = new StudentService(
+                        adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                        studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object,
+                        baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
+                }
+
+                [TestMethod]
+                public async Task UserIsSelf_ReturnsPlanningStudent()
+                {
+                    // Act
+                    var planningStudentResponse = await studentService.GetPlanningStudentAsync(studentId);
+
+                    // Assert - spot-check the response
+                    Assert.AreEqual(planningStudent.Id, planningStudentResponse.Dto.Id);
+                    Assert.AreEqual(planningStudent.LastName, planningStudentResponse.Dto.LastName);
+                    Assert.AreEqual(planningStudent.ProgramIds.Count(), planningStudentResponse.Dto.ProgramIds.Count());
+                }
+
+                [TestMethod]
+                public async Task PlanningStudent_With_PrivacyStatusCode()
+                {
+                    planningStudent = new Domain.Student.Entities.PlanningStudent(studentId, "brown", 3, new List<string>() { "ENGL.BA", "MATH.BS" }, "S");
+                    planningStudentRepoMock.Setup(repo => repo.GetAsync(It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult(planningStudent));
+
+                    studentService = new StudentService(
+                        adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                        studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object,
+                        baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
+
+                    var planningStudentResponse = await studentService.GetPlanningStudentAsync(studentId);
+                    Assert.AreEqual(planningStudent.PrivacyStatusCode, planningStudentResponse.Dto.PrivacyStatusCode);
+                }
+
+                [TestMethod]
+                [ExpectedException(typeof(PermissionsException))]
+                public async Task AdvisorWithViewAssignedAccess_NotAssigned_ThrowsException()
+                {
+                    // Arrange
+                    currentUserFactory = new AdvisorUserFactory();
+
+                    studentService = new StudentService(
+                        adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                        studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object,
+                        baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
+
+                    // Set up view assigned advisee permissions on advisor's role--so that advisor cannot access this student
+                    advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
+                    roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { advisorRole });
+
+                    // Act
+                    var result = await studentService.GetPlanningStudentAsync("0000894");
+                }
+
+                [TestMethod]
+                public async Task AdvisorWithViewAssignedAccess_AssignedToStudent_ReturnsResult()
+                {
+                    // Arrange
+                    // In TestStudentRepository, Student 0004012 has advisor 0000111 (Id for advisor from AdvisorUserFactory) set as current advisor
+                    studentId = "00004012";
+                    planningStudent = new Domain.Student.Entities.PlanningStudent(studentId, "brown", 3, new List<string>() { "ENGL.BA", "MATH.BS" });
+                    planningStudent.AddAdvisement("0000111", null, null, null);
+                    planningStudentRepoMock.Setup(repo => repo.GetAsync(It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult(planningStudent));
+
+                    // View Assigned advisees permissions
+                    advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
+                    roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { advisorRole });
+
+                    currentUserFactory = new AdvisorUserFactory();
+
+                    studentService = new StudentService(
+                        adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                        studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object,
+                        baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
+
+                    // Act
+                    var planningStudentResponse = await studentService.GetPlanningStudentAsync(studentId);
+
+                    // Assert - spot-check the response
+                    Assert.AreEqual(planningStudent.Id, planningStudentResponse.Dto.Id);
+                    Assert.AreEqual(planningStudent.LastName, planningStudentResponse.Dto.LastName);
+                    Assert.AreEqual(planningStudent.ProgramIds.Count(), planningStudentResponse.Dto.ProgramIds.Count());
+                    Assert.AreEqual(planningStudent.AdvisorIds.ElementAt(0), planningStudentResponse.Dto.AdvisorIds.ElementAt(0));
+                }
+
+                [TestMethod]
+                public async Task AdvisorWithViewAssignedAccess_AssignedToStudent_With_PrivacyCode()
+                {
+                    // Arrange
+                    // In TestStudentRepository, Student 0004012 has advisor 0000111 (Id for advisor from AdvisorUserFactory) set as current advisor
+                    studentId = "00004012";
+                    planningStudent = new Domain.Student.Entities.PlanningStudent(studentId, "brown", 3, new List<string>() { "ENGL.BA", "MATH.BS" }, "S");
+                    planningStudent.AddAdvisement("0000111", null, null, null);
+                    planningStudentRepoMock.Setup(repo => repo.GetAsync(It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult(planningStudent));
+
+                    // View Assigned advisees permissions
+                    advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
+                    roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { advisorRole });
+
+                    currentUserFactory = new AdvisorUserFactory();
+
+                    studentService = new StudentService(
+                        adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                        studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object,
+                        baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
+
+                    // Act
+                    var planningStudentResponse = await studentService.GetPlanningStudentAsync(studentId);
+
+                    // Assert - spot-check the response
+                    Assert.AreEqual(planningStudent.PrivacyStatusCode, planningStudentResponse.Dto.PrivacyStatusCode);
+                }
+
+                [TestMethod]
+                public async Task AdvisorWithViewAssignedAccess_AssignedToStudent_With_StaffRecord_SamePrivacyCode()
+                {
+                    Domain.Base.Entities.Staff staff;
+                    // Arrange
+                    // In TestStudentRepository, Student 0004012 has advisor 0000111 (Id for advisor from AdvisorUserFactory) set as current advisor
+                    studentId = "00004012";
+                    planningStudent = new Domain.Student.Entities.PlanningStudent(studentId, "brown", 3, new List<string>() { "ENGL.BA", "MATH.BS" }, "S");
+                    planningStudent.AddAdvisement("0000111", null, null, null);
+                    planningStudentRepoMock.Setup(repo => repo.GetAsync(It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult(planningStudent));
+                    //staff record for the advisor
+                    staff = new Domain.Base.Entities.Staff("0000111", "staff member");
+                    staff.IsActive = true;
+                    staff.PrivacyCodes = new List<string>() { "S" };
+                    staffRepoMock.Setup(r => r.Get("0000111")).Returns(staff);
+
+                    // View Assigned advisees permissions
+                    advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
+                    roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { advisorRole });
+
+                    currentUserFactory = new AdvisorUserFactory();
+
+                    studentService = new StudentService(
+                        adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                        studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object,
+                        baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
+
+                    // Act
+                    var planningStudentResponse = await studentService.GetPlanningStudentAsync(studentId);
+
+                    // Assert - spot-check the response
+                    Assert.AreEqual(planningStudent.PrivacyStatusCode, planningStudentResponse.Dto.PrivacyStatusCode);
+                    Assert.AreEqual(planningStudentResponse.Dto.Id, studentId);
+                    Assert.AreEqual(planningStudentResponse.Dto.DegreePlanId, planningStudent.DegreePlanId);
+                    Assert.IsNotNull(planningStudentResponse.Dto.DegreePlanId);
+                    Assert.AreEqual(planningStudentResponse.Dto.LastName, planningStudent.LastName);
+                    Assert.IsNotNull(planningStudentResponse.Dto.ProgramIds);
+                    Assert.AreEqual(planningStudentResponse.Dto.ProgramIds.Count, planningStudent.ProgramIds.Count);
+                }
+                [TestMethod]
+                public async Task AdvisorWithViewAssignedAccess_AssignedToStudent_With_StaffRecord_Different_PrivacyCode()
+                {
+                    Domain.Base.Entities.Staff staff;
+                    // Arrange
+                    // In TestStudentRepository, Student 0004012 has advisor 0000111 (Id for advisor from AdvisorUserFactory) set as current advisor
+                    studentId = "00004012";
+                    planningStudent = new Domain.Student.Entities.PlanningStudent(studentId, "brown", 3, new List<string>() { "ENGL.BA", "MATH.BS" }, "S");
+                    planningStudent.AddAdvisement("0000111", null, null, null);
+                    planningStudentRepoMock.Setup(repo => repo.GetAsync(It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult(planningStudent));
+                    //staff record for the advisor
+                    staff = new Domain.Base.Entities.Staff("0000111", "staff member");
+                    staff.IsActive = true;
+                    staff.PrivacyCodes = new List<string>() { "A" };
+                    staffRepoMock.Setup(r => r.Get("0000111")).Returns(staff);
+
+                    // View Assigned advisees permissions
+                    advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
+                    roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { advisorRole });
+
+                    currentUserFactory = new AdvisorUserFactory();
+
+                    studentService = new StudentService(
+                        adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo,
+                        studentConfigurationRepo, referenceDataRepositoryRepo, studentReferenceDataRepositoryMock.Object,
+                        baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger, planningStudentRepo);
+
+                    // Act
+                    var planningStudentResponse = await studentService.GetPlanningStudentAsync(studentId);
+
+                    // Assert - spot-check the response
+                    Assert.AreEqual(planningStudent.PrivacyStatusCode, planningStudentResponse.Dto.PrivacyStatusCode);
+                    Assert.AreEqual(planningStudentResponse.Dto.Id, studentId);
+                    Assert.IsNull(planningStudentResponse.Dto.DegreePlanId);
+                    Assert.AreEqual(planningStudentResponse.Dto.LastName, planningStudent.LastName);
+                    Assert.IsNull(planningStudentResponse.Dto.ProgramIds);
+                }
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -1465,9 +1465,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             public async Task GetPerson5_Credentials()
             {
                 var page = new Paging(10, 0);
-                var filterGroupName = "criteria";
-                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
-                      new Dtos.Person5() { Credentials = new List<Credential3DtoProperty> { new Credential3DtoProperty { Type = Dtos.EnumProperties.Credential3Type.ColleaguePersonId, Value = "00009999" } } });
+                //var filterGroupName = "criteria";
+                //personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                //      new Dtos.Person5() { Credentials = new List<Credential3DtoProperty> { new Credential3DtoProperty { Type = Dtos.EnumProperties.Credential3Type.ColleaguePersonId, Value = "00009999" } } });
                 var personList = await personsController.GetPerson5Async(page, personFilterFilter, criteriaFilter);
                 Assert.IsTrue(personList is IHttpActionResult);
             }
@@ -1487,9 +1487,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             public async Task GetPerson5_credentials_Invalid()
             {
                 var page = new Paging(10, 0);
-                var filterGroupName = "criteria";
-                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
-                      new Dtos.Person5() { Credentials = new List<Credential3DtoProperty> { new Credential3DtoProperty { Type = Dtos.EnumProperties.Credential3Type.ColleaguePersonId, Value = "0000009999" } } });
+                //var filterGroupName = "criteria";
+                //personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                //      new Dtos.Person5() { Credentials = new List<Credential3DtoProperty> { new Credential3DtoProperty { Type = Dtos.EnumProperties.Credential3Type.ColleaguePersonId, Value = "0000009999" } } });
                 var personList = await personsController.GetPerson5Async(page, personFilterFilter, criteriaFilter);
                 Assert.IsTrue(personList is IHttpActionResult);
 
@@ -2141,10 +2141,12 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             }
 
             [TestMethod]
-            public async Task GetPersonCredential4ByGuid_NotFoundException()
+            public async Task GetPersonCredential4ByGuid_IntegrationApiException()
             {
-                HttpStatusCode statusCode = HttpStatusCode.Unused;
-                personServiceMock.Setup(s => s.GetPersonCredential4ByGuidAsync(personGuid)).Throws(new Exception());
+                HttpStatusCode statusCode = HttpStatusCode.NotFound;
+                var exc = new IntegrationApiException();
+                exc.AddError( new IntegrationApiError( "GUID.Not.Found", "", string.Format( "No person credentials was found for guid '{0}'.", personGuid ), HttpStatusCode.NotFound ) );
+                personServiceMock.Setup( s => s.GetPersonCredential4ByGuidAsync( personGuid ) ).ThrowsAsync( exc );
                 try
                 {
                     await personsController.GetPersonCredential4ByGuidAsync(personGuid);
@@ -2155,6 +2157,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 }
                 Assert.AreEqual(HttpStatusCode.NotFound, statusCode);
             }
+
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task GetPersonCredential4ByGuid_KeyNotFoundException()
@@ -2162,11 +2165,33 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 personServiceMock.Setup(i => i.GetPersonCredential4ByGuidAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
                 await personsController.GetPersonCredential4ByGuidAsync("invalid");
             }
+
+            [TestMethod]
+            [ExpectedException( typeof( HttpResponseException ) )]
+            public async Task GetPersonCredential4ByGuid_ArgumentException()
+            {
+                personServiceMock.Setup( i => i.GetPersonCredential4ByGuidAsync( It.IsAny<string>() ) ).ThrowsAsync( new ArgumentException() );
+                await personsController.GetPersonCredential4ByGuidAsync( "invalid" );
+            }
+
+            [TestMethod]
+            [ExpectedException( typeof( HttpResponseException ) )]
+            public async Task GetPersonCredential4ByGuid_RepositoryException()
+            {
+                personServiceMock.Setup( i => i.GetPersonCredential4ByGuidAsync( It.IsAny<string>() ) ).ThrowsAsync( new RepositoryException() );
+                await personsController.GetPersonCredential4ByGuidAsync( "invalid" );
+            }
+
+            [TestMethod]
+            [ExpectedException( typeof( HttpResponseException ) )]
+            public async Task GetPersonCredential4ByGuid_Exception()
+            {
+                personServiceMock.Setup( i => i.GetPersonCredential4ByGuidAsync( It.IsAny<string>() ) ).ThrowsAsync( new Exception() );
+                await personsController.GetPersonCredential4ByGuidAsync( "invalid" );
+            }
         }
 
         #endregion
-
-
 
         #region Get PersonCredentials Tests
 
@@ -3009,9 +3034,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                     It.IsAny<PersonCredential3>(), It.IsAny<bool>())).ReturnsAsync(personCredentialDtosTuple);
 
                 //string criteria = @"{'credentials':[{'type':'colleaguePersonId'}]}";
-                var filterGroupName = "criteria";
-                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
-                new Dtos.PersonCredential3() { Credentials = new List<Credential3DtoProperty> { new Credential3DtoProperty { Type = Dtos.EnumProperties.Credential3Type.ColleaguePersonId, Value = "" } } });
+                //var filterGroupName = "criteria";
+                //personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                //new Dtos.PersonCredential3() { Credentials = new List<Credential3DtoProperty> { new Credential3DtoProperty { Type = Dtos.EnumProperties.Credential3Type.ColleaguePersonId, Value = "" } } });
                 var personCredential = await personsController.GetPersonCredentials4Async(It.IsAny<Paging>(), criteriaFilter);
 
                 var cancelToken = new System.Threading.CancellationToken(false);
@@ -3024,6 +3049,40 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             }
 
             [TestMethod]
+            [ExpectedException( typeof( HttpResponseException ) )]
+            public async Task GetPersonAllCredential4_KeyNotFoundException()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.NotFound;
+                personServiceMock.Setup( s => s.GetAllPersonCredentials4Async( It.IsAny<int>(), It.IsAny<int>(),
+                     It.IsAny<PersonCredential3>(), It.IsAny<bool>() ) ).ThrowsAsync( new KeyNotFoundException() );
+                try
+                {
+                    var personCredential = await personsController.GetPersonCredentials4Async( It.IsAny<Paging>(), criteriaFilter );
+                }
+                catch(KeyNotFoundException e)
+                {
+                    Assert.AreEqual( HttpStatusCode.NotFound, statusCode );
+                }
+            }
+
+            [TestMethod]
+            public async Task GetPersonAllCredential4_PermissionsException()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.Forbidden;
+                personServiceMock.Setup( s => s.GetAllPersonCredentials4Async( It.IsAny<int>(), It.IsAny<int>(),
+                     It.IsAny<PersonCredential3>(), It.IsAny<bool>() ) ).ThrowsAsync( new PermissionsException() );
+                try
+                {
+                    var personCredential = await personsController.GetPersonCredentials4Async( It.IsAny<Paging>(), criteriaFilter );
+                }
+                catch( HttpResponseException e )
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual( HttpStatusCode.Forbidden, statusCode );
+            }
+
+            [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task GetPersonAllCredential4_ArgumentNullException()
             {
@@ -3033,12 +3092,21 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             }
 
             [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task GetPersonAllCredential4_KeyNotFoundException()
+            [ExpectedException( typeof( HttpResponseException ) )]
+            public async Task GetPersonAllCredential4_RepositoryException()
             {
-                personServiceMock.Setup(s => s.GetAllPersonCredentials4Async(It.IsAny<int>(), It.IsAny<int>(),
-                    It.IsAny<PersonCredential3>(), It.IsAny<bool>())).ThrowsAsync(new KeyNotFoundException());
-                var personCredential = await personsController.GetPersonCredentials4Async(It.IsAny<Paging>(), criteriaFilter);
+                personServiceMock.Setup( s => s.GetAllPersonCredentials4Async( It.IsAny<int>(), It.IsAny<int>(),
+                    It.IsAny<PersonCredential3>(), It.IsAny<bool>() ) ).ThrowsAsync( new RepositoryException() );
+                var personCredential = await personsController.GetPersonCredentials4Async( It.IsAny<Paging>(), criteriaFilter );
+            }
+
+            [TestMethod]
+            [ExpectedException( typeof( HttpResponseException ) )]
+            public async Task GetPersonAllCredential4_IntegrationApiException()
+            {
+                personServiceMock.Setup( s => s.GetAllPersonCredentials4Async( It.IsAny<int>(), It.IsAny<int>(),
+                    It.IsAny<PersonCredential3>(), It.IsAny<bool>() ) ).ThrowsAsync( new IntegrationApiException() );
+                var personCredential = await personsController.GetPersonCredentials4Async( It.IsAny<Paging>(), criteriaFilter );
             }
 
             [TestMethod]
@@ -3386,7 +3454,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 var personProxyDetails = await personsController.GetPersonProxyDetailsAsync(personId);
                 Assert.IsTrue(personProxyDetails is Dtos.Base.PersonProxyDetails);
             }
-            
+
             [TestMethod]
             public async Task GetPersonProxyDetailsAsync_PermissionsException()
             {
@@ -3412,7 +3480,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 {
                     await personsController.GetPersonProxyDetailsAsync(personId);
                 }
-                catch(HttpResponseException e)
+                catch (HttpResponseException e)
                 {
                     statusCode = e.Response.StatusCode;
                 }
@@ -3428,7 +3496,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 {
                     await personsController.GetPersonProxyDetailsAsync(null);
                 }
-                catch(HttpResponseException e)
+                catch (HttpResponseException e)
                 {
                     statusCode = e.Response.StatusCode;
                 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -16,6 +16,7 @@ using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
 using Ellucian.Data.Colleague.DataContracts;
 using System.Collections.ObjectModel;
 using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
+using System.Text;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
@@ -44,9 +45,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <param name="fiscalYear">The GL fiscal year.</param>
         /// <param name="costCenterStructure">List of objects with information to build the cost center definitions.</param>
         /// <param name="glClassConfiguration">GL configuration information.</param>
+        /// <param name="majorComponentStartPosition">List of the major component start positions.</param>
         /// <returns>Returns the list of activity detail posted to the GL account for the fiscal year.</returns>
         public async Task<GlAccountActivityDetail> QueryGlActivityDetailAsync(string glAccount, string fiscalYear,
-            CostCenterStructure costCenterStructure, GeneralLedgerClassConfiguration glClassConfiguration)
+            CostCenterStructure costCenterStructure, GeneralLedgerClassConfiguration glClassConfiguration, IList<string> majorComponentStartPosition)
         {
             var glAccountDomain = new GlAccountActivityDetail(glAccount);
 
@@ -58,6 +60,26 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (string.IsNullOrEmpty(fiscalYear))
             {
                 throw new ArgumentNullException("fiscalYear", "A fiscal year must be specified.");
+            }
+
+            glAccountDomain.ShowJustificationNotes = false;
+            glAccountDomain.JustificationNotes = string.Empty;
+
+            try
+            {
+                // Get parameter value
+                var budgetDevDefaults = await DataReader.ReadRecordAsync<BudgetDevDefaults>("CF.PARMS", "BUDGET.DEV.DEFAULTS");
+
+                if (budgetDevDefaults != null && !string.IsNullOrWhiteSpace(budgetDevDefaults.BudDevShowNotes) && 
+                    budgetDevDefaults.BudDevShowNotes.Equals("Y",StringComparison.InvariantCultureIgnoreCase))
+                {
+                    glAccountDomain.ShowJustificationNotes = true;
+                    glAccountDomain.JustificationNotes = await GetBudgetJustificationNotes(glAccount, fiscalYear);
+                }
+            }
+            catch(Exception e)
+            {
+                logger.Error(e, "Could not retrieve budget data needed for justification note retrieval.");
             }
 
             try
@@ -322,7 +344,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 try
                 {
                     // Obtain the GL class for the GL account.
-                    glClass = GlAccountUtility.GetGlAccountGlClass(glAccountDomain.GlAccountNumber, glClassConfiguration);
+                    glClass = GlAccountUtility.GetGlAccountGlClass(glAccountDomain.GlAccountNumber, glClassConfiguration, majorComponentStartPosition);
                 }
                 catch (ApplicationException aex)
                 {
@@ -581,6 +603,47 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 LogDataError("CF.VALCODES", "GL.SOURCE.CODES", GlSourceCodesValidationTable, ex);
                 throw new Exception("Unable to retrieve GL.SOURCE.CODES validation table from Colleague.");
             }
+        }
+
+        /// <summary>
+        /// Gets the justification notes for the working budget based on the GL Account and fiscal year combination.
+        /// </summary>
+        /// <param name="glAccount">General Ledger number</param>
+        /// <param name="fiscalYear">Fiscal year to determine what work record to go after</param>
+        /// <returns></returns>
+        private async Task<string> GetBudgetJustificationNotes(string glAccount, string fiscalYear)
+        {
+            GenLdgr generalLedgerRecord = await DataReader.ReadRecordAsync<GenLdgr>(fiscalYear);
+            if (generalLedgerRecord == null)
+            {
+                throw new ApplicationException("Missing GEN.LDGR record for fiscal year " + fiscalYear);
+            }
+
+            var justificationNotes = new StringBuilder();
+            if (!string.IsNullOrEmpty(generalLedgerRecord.GenLdgrBudgetId))
+            {
+                BudWork budWorkRecord = await DataReader.ReadRecordAsync<BudWork>("BWK." + generalLedgerRecord.GenLdgrBudgetId, glAccount);
+                if (budWorkRecord != null && budWorkRecord.BwNotes != null && budWorkRecord.BwNotes.Any())
+                {
+                    // Convert the justification notes multi-valued field into a single string.
+                    foreach (var note in budWorkRecord.BwNotes)
+                    {
+                        if (string.IsNullOrWhiteSpace(note))
+                        {
+                            justificationNotes.Append(Environment.NewLine + Environment.NewLine);
+                        }
+                        else
+                        {
+                            if (justificationNotes.Length > 0)
+                            {
+                                justificationNotes.Append(" ");
+                            }
+                            justificationNotes.Append(note);
+                        }
+                    }
+                }
+            }
+            return justificationNotes.ToString();
         }
 
         #endregion

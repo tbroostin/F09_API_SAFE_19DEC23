@@ -142,9 +142,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// 1. A Student is accessing its own data.
         /// 3. An Advisor with any of the following codes is accessing the student's data if the student is not assigned advisee.
         /// VIEW.ANY.ADVISEE
-        /// REVIEW.ANY.ADVISEES
-        /// UPDATE.ANY.ADVISEES
-        /// ALL.ACCESS.ANY.ADVISEES
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
         /// 4. An Advisor with any of the following codes is accessing the student's data if the student is assigned advisee.
         /// VIEW.ASSIGNED.ADVISEES
         /// REVIEW.ASSIGNED.ADVISEES
@@ -274,9 +274,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// 1. A Student is requesting their own eligibility or
         /// 2. An Advisor with any of the following codes is accessing the student's data if the student is not assigned advisee.
         /// VIEW.ANY.ADVISEE
-        /// REVIEW.ANY.ADVISEES
-        /// UPDATE.ANY.ADVISEES
-        /// ALL.ACCESS.ANY.ADVISEES
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
         /// 3. An Advisor with any of the following codes is accessing the student's data if the student is assigned advisee.
         /// VIEW.ASSIGNED.ADVISEES
         /// REVIEW.ASSIGNED.ADVISEES

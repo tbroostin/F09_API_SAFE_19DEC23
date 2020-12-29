@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 using System;
 
 namespace Ellucian.Colleague.Dtos.Student
@@ -67,6 +67,31 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Attendance can be recorded with presence and absence or in minutes, but not both.
         /// </summary>
         public int? CumulativeMinutesAttended { get; set; }
+
+        /// <summary>
+        /// Last date on which attedance was recorded 
+        /// </summary>
+        public DateTime? LastAttendanceRecorded { get; set; }
+
+        /// <summary>
+        /// Total days present
+        /// </summary>
+        public int NumberOfDaysPresent { get; set; }
+
+        /// <summary>
+        /// Total days  absent
+        /// </summary>
+        public int NumberOfDaysAbsent { get; set; }
+
+        /// <summary>
+        /// Total days absence excused
+        /// </summary>
+        public int NumberOfDaysExcused { get; set; }
+
+        /// <summary>
+        /// Total days late
+        /// </summary>
+        public int NumberOfDaysLate { get; set; }
 
     }
 }

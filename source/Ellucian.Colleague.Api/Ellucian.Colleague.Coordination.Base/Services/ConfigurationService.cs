@@ -1,4 +1,5 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Coordination.Base.Adapters;
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -33,6 +34,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private IApiSettingsRepository apiSettingsRepository;
         private ISettingsRepository xmlSettingsRepository;
         private IResourceRepository resourceRepository;
+        private IReferenceDataRepository referenceDataRepository;
         private string environmentName;
 
         private const string CreateApiBackupConfigPermission = "CREATE.API.BACKUP.CONFIGURATION";
@@ -48,11 +50,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="currentUserFactory">The current user factory.</param>
         /// <param name="roleRepository">The role repository.</param>
         /// <param name="logger">The logger.</param>
-        public ConfigurationService(IConfigurationRepository configurationRepository, IAdapterRegistry adapterRegistry, 
+        public ConfigurationService(IConfigurationRepository configurationRepository, IAdapterRegistry adapterRegistry,
             ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository,
             ApiSettings settings, ISettingsRepository xmlSettingsRepository,
             IApiSettingsRepository apiSettingsRepository,
-            IResourceRepository resourceRepository, ILogger logger)
+            IResourceRepository resourceRepository, IReferenceDataRepository referenceDataRepository, ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger)
         {
             this.configurationRepository = configurationRepository;
@@ -67,6 +69,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             this.apiSettingsRepository = apiSettingsRepository;
             this.xmlSettingsRepository = xmlSettingsRepository;
             this.resourceRepository = resourceRepository;
+            this.referenceDataRepository = referenceDataRepository;
 
             var xmlSettings = this.xmlSettingsRepository.Get();
             environmentName = "";
@@ -88,53 +91,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             var configEntity = await configurationRepository.GetIntegrationConfiguration(id);
             var integrationConfigurationAdapter = new IntegrationConfigurationEntityAdapter(_adapterRegistry, base.logger);
             return integrationConfigurationAdapter.MapToType(configEntity);
-        }
-
-        /// <summary>
-        /// Gets the tax form configuration.
-        /// </summary>
-        /// <param name="taxFormId">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
-        /// <returns>Tax form configuration DTO.</returns>
-        public async Task<Dtos.Base.TaxFormConfiguration> GetTaxFormConsentConfigurationAsync(Dtos.Base.TaxForms taxFormId)
-        {
-            Domain.Base.Entities.TaxForms taxFormDomain = new Domain.Base.Entities.TaxForms();
-
-            // Convert the tax form dto into the domain dto.
-            switch (taxFormId)
-            {
-                case Dtos.Base.TaxForms.FormW2:
-                    taxFormDomain = Domain.Base.Entities.TaxForms.FormW2;
-                    break;
-                case Dtos.Base.TaxForms.Form1095C:
-                    taxFormDomain = Domain.Base.Entities.TaxForms.Form1095C;
-                    break;
-                case Dtos.Base.TaxForms.Form1098:
-                    taxFormDomain = Domain.Base.Entities.TaxForms.Form1098;
-                    break;
-                case Dtos.Base.TaxForms.FormT4:
-                    taxFormDomain = Domain.Base.Entities.TaxForms.FormT4;
-                    break;
-                case Dtos.Base.TaxForms.FormT4A:
-                    taxFormDomain = Domain.Base.Entities.TaxForms.FormT4A;
-                    break;
-                case Dtos.Base.TaxForms.FormT2202A:
-                    taxFormDomain = Domain.Base.Entities.TaxForms.FormT2202A;
-                    break;
-                case Dtos.Base.TaxForms.Form1099MI:
-                    taxFormDomain = Domain.Base.Entities.TaxForms.Form1099MI;
-                    break;
-            }
-
-            // Retrieve the configuration parameters for this tax form
-            var configuration = await this.configurationRepository.GetTaxFormConsentConfigurationAsync(taxFormDomain);
-
-            if (configuration == null)
-                throw new ArgumentNullException("configuration", "configuration cannot be null.");
-
-            var taxFormConfigurationDtoAdapter = new TaxFormConfigurationEntityToDtoAdapter(_adapterRegistry, base.logger);
-            var configurationDto = taxFormConfigurationDtoAdapter.MapToType(configuration);
-
-            return configurationDto;
         }
 
         /// <summary>
@@ -173,7 +129,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns><see cref="Dtos.Base.UserProfileConfiguration2">User Profile Configuration</see> data transfer object.</returns>
         public async Task<Dtos.Base.UserProfileConfiguration2> GetUserProfileConfiguration2Async()
         {
-            var configuration = await configurationRepository.GetUserProfileConfiguration2Async();
+            // Retrieve all ADREL.TYPE codes.
+            var allAdrelTypes = referenceDataRepository.AddressRelationTypes;
+            var configuration = await configurationRepository.GetUserProfileConfiguration2Async(allAdrelTypes.ToList());
             var adapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.UserProfileConfiguration2, Dtos.Base.UserProfileConfiguration2>();
             var configurationDto = adapter.MapToType(configuration);
             return configurationDto;
@@ -310,7 +268,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if (criteria.ConfigurationIds != null && criteria.ConfigurationIds.Count() > 0)
             {
                 entityResultSet = await configurationRepository.GetBackupConfigurationByIdsAsync(criteria.ConfigurationIds.ToList());
-            }else
+            }
+            else
             {
                 entityResultSet = await configurationRepository.GetBackupConfigurationByNamespaceAsync(criteria.Namespace);
             }
@@ -329,7 +288,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// </summary>
         /// <returns></returns>
         public async Task BackupApiConfigurationAsync()
-        {            
+        {
             // verify permission
             if (!HasPermission(CreateApiBackupConfigPermission))
             {
@@ -397,6 +356,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             AddOrUpdateAppSettings("BulkReadSize", apiBackupConfigData.ApiSettings.BulkReadSize.ToString());
             AddOrUpdateAppSettings("IncludeLinkSelfHeaders", apiBackupConfigData.ApiSettings.IncludeLinkSelfHeaders.ToString());
             AddOrUpdateAppSettings("EnableConfigBackup", apiBackupConfigData.ApiSettings.EnableConfigBackup.ToString());
+            AddOrUpdateAppSettings("AttachRequestMaxSize", apiBackupConfigData.ApiSettings.AttachRequestMaxSize.ToString());
+            AddOrUpdateAppSettings("DetailedHealthCheckApiEnabled", apiBackupConfigData.ApiSettings.DetailedHealthCheckApiEnabled.ToString());
 
             // plus any other appSettings values in web.config that's not in appsettings
             var maxQueryAttributeLimit = apiBackupConfigData.WebConfigAppSettingsMaxQueryAttributeLimit;
@@ -529,5 +490,122 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             var configurationDto = adapter.MapToType(configuration);
             return configurationDto;
         }
+
+        /// <summary>
+        /// Returns the session configuration
+        /// </summary>
+        /// <returns>Session configuration</returns>
+        public async Task<Dtos.Base.SessionConfiguration> GetSessionConfigurationAsync()
+        {
+            var configuration = await configurationRepository.GetSessionConfigurationAsync();
+            var adapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.SessionConfiguration, Dtos.Base.SessionConfiguration>();
+            var configurationDto = adapter.MapToType(configuration);
+            return configurationDto;
+        }
+
+
+        ///////////////////////////////////////////////////////////////////////////////////
+        ///                                                                             ///
+        ///                               CF Team                                       ///                                                                             
+        ///                         TAX INFORMATION VIEWS                               ///
+        ///           TAX FORMS CONFIGURATION, CONSENTs, STATEMENTs, PDFs               ///
+        ///                                                                             ///
+        ///////////////////////////////////////////////////////////////////////////////////
+
+        #region CF Views
+
+        /// <summary>
+        /// Gets the tax form configuration.
+        /// </summary>
+        /// <param name="taxForm>The tax form (W-2, 1095-C, 1098-T, etc.)</param>
+        /// <returns>Tax form configuration DTO.</returns>
+        public async Task<Dtos.Base.TaxFormConfiguration2> GetTaxFormConsentConfiguration2Async(string taxForm)
+        {
+            if (string.IsNullOrWhiteSpace(taxForm))
+                throw new ArgumentNullException("taxForm", "The tax form type must be specified.");
+
+
+            switch (taxForm)
+            {
+                case Domain.Base.TaxFormTypes.FormW2:
+                case Domain.Base.TaxFormTypes.Form1095C:
+                case Domain.Base.TaxFormTypes.Form1098:
+                case Domain.Base.TaxFormTypes.FormT4:
+                case Domain.Base.TaxFormTypes.FormT4A:
+                case Domain.Base.TaxFormTypes.FormT2202A:
+                case Domain.Base.TaxFormTypes.Form1099MI:
+                case Domain.Base.TaxFormTypes.Form1099NEC:
+                    break;
+                default:
+                    throw new ArgumentNullException("taxForm", "Invalid tax form.");
+            }
+
+            // Retrieve the configuration parameters for this tax form.
+            var configuration = await this.configurationRepository.GetTaxFormConsentConfiguration2Async(taxForm);
+
+            if (configuration == null)
+                throw new ArgumentNullException("configuration", "configuration cannot be null.");
+
+            var taxFormConfiguration2DtoAdapter = new TaxFormConfiguration2EntityToDtoAdapter(_adapterRegistry, base.logger);
+            var configurationDto = taxFormConfiguration2DtoAdapter.MapToType(configuration);
+
+
+            return configurationDto;
+        }
+
+
+        #region OBSOLETE METHODS
+
+        /// <summary>
+        /// Gets the tax form configuration.
+        /// </summary>
+        /// <param name="taxFormId">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
+        /// <returns>Tax form configuration DTO.</returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use GetTaxFormConsentConfiguration2Async instead.")]
+        public async Task<Dtos.Base.TaxFormConfiguration> GetTaxFormConsentConfigurationAsync(Dtos.Base.TaxForms taxFormId)
+        {
+            Domain.Base.Entities.TaxForms taxFormDomain = new Domain.Base.Entities.TaxForms();
+
+            // Convert the tax form dto into the domain dto.
+            switch (taxFormId)
+            {
+                case Dtos.Base.TaxForms.FormW2:
+                    taxFormDomain = Domain.Base.Entities.TaxForms.FormW2;
+                    break;
+                case Dtos.Base.TaxForms.Form1095C:
+                    taxFormDomain = Domain.Base.Entities.TaxForms.Form1095C;
+                    break;
+                case Dtos.Base.TaxForms.Form1098:
+                    taxFormDomain = Domain.Base.Entities.TaxForms.Form1098;
+                    break;
+                case Dtos.Base.TaxForms.FormT4:
+                    taxFormDomain = Domain.Base.Entities.TaxForms.FormT4;
+                    break;
+                case Dtos.Base.TaxForms.FormT4A:
+                    taxFormDomain = Domain.Base.Entities.TaxForms.FormT4A;
+                    break;
+                case Dtos.Base.TaxForms.FormT2202A:
+                    taxFormDomain = Domain.Base.Entities.TaxForms.FormT2202A;
+                    break;
+                case Dtos.Base.TaxForms.Form1099MI:
+                    taxFormDomain = Domain.Base.Entities.TaxForms.Form1099MI;
+                    break;
+            }
+
+            // Retrieve the configuration parameters for this tax form
+            var configuration = await this.configurationRepository.GetTaxFormConsentConfigurationAsync(taxFormDomain);
+
+            if (configuration == null)
+                throw new ArgumentNullException("configuration", "configuration cannot be null.");
+
+            var taxFormConfigurationDtoAdapter = new TaxFormConfigurationEntityToDtoAdapter(_adapterRegistry, base.logger);
+            var configurationDto = taxFormConfigurationDtoAdapter.MapToType(configuration);
+
+            return configurationDto;
+        }
+
+        #endregion
+
+        #endregion
     }
 }

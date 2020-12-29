@@ -1,4 +1,4 @@
-﻿//Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.FinancialAid.Services;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Repositories;
@@ -35,7 +35,10 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 
             public bool IsSelf(string studentId) { return base.UserIsSelf(studentId); }
 
-            public bool HasAccessPermission(string studentId) { return base.UserHasAccessPermission(studentId); }
+            public bool HasAccessPermission(string studentId, params Domain.Base.Entities.ProxyWorkflowConstants[] proxyPermissions)
+            {
+                return base.UserHasAccessPermission(studentId, proxyPermissions);
+            }
         }
 
         /// <summary>
@@ -63,7 +66,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             testRoleRepository = new TestRoleRepository();
             roleRepositoryMock.Setup(r => r.Roles).Returns(testRoleRepository.roles);
 
-            financialAidCoordinationService = new FinancialAidCoordinationServiceUnderTest(baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory,
+                        financialAidCoordinationService = new FinancialAidCoordinationServiceUnderTest(baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory,
                     roleRepositoryMock.Object,
                     loggerMock.Object); 
            
@@ -102,6 +105,26 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                     roleRepositoryMock.Object,
                     loggerMock.Object); 
             Assert.IsTrue(financialAidCoordinationService.HasAccessPermission("0003914"));
+        }
+
+        [TestMethod]
+        public void UserHasAccessPermission_PermissionCodeMatch_HasProxyAccessReturnsTrueTest()
+        {
+            currentUserFactory = new CurrentUserSetup.StudentUserFactoryWithProxy();
+            financialAidCoordinationService = new FinancialAidCoordinationServiceUnderTest(baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+            Assert.IsTrue(financialAidCoordinationService.HasAccessPermission("0003914", new Domain.Base.Entities.ProxyWorkflowConstants[] { Domain.Base.Entities.ProxyWorkflowConstants.FinancialAidAwardLetter }));
+        }
+
+        [TestMethod]
+        public void UserHasAccessPermission_PermissionCodeNoMatch_HasProxyAccessReturnsTrueTest()
+        {
+            currentUserFactory = new CurrentUserSetup.StudentUserFactoryWithProxy();
+            financialAidCoordinationService = new FinancialAidCoordinationServiceUnderTest(baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+            Assert.IsFalse(financialAidCoordinationService.HasAccessPermission("0003914", new Domain.Base.Entities.ProxyWorkflowConstants[] { Domain.Base.Entities.ProxyWorkflowConstants.FinancialAidCorrespondenceOption }));
         }
 
         [TestMethod]

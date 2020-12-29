@@ -1,6 +1,7 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Client;
 using Ellucian.Colleague.Api.Models;
+using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Data.Colleague;
@@ -12,6 +13,7 @@ using Ellucian.Logging;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Mvc.Filter;
+using Ellucian.Web.Resource;
 using Ellucian.Web.Security;
 using Newtonsoft.Json;
 using slf4net;
@@ -642,29 +644,60 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         public void PerformBackupConfig()
         {
-            if (!apiSettings.EnableConfigBackup)
+
+            // SaaS backup
+            if (AppConfigUtility.ConfigServiceClientSettings != null && AppConfigUtility.ConfigServiceClientSettings.IsSaaSEnvironment)
             {
-                return;
-            }
-            try
-            {
-                var cookie = LocalUserUtilities.GetCookie(Request);
-                var cookieValue = cookie == null ? null : cookie.Value;
-                if (string.IsNullOrEmpty(cookieValue))
+                string username = "unknown";
+                try
                 {
-                    throw new Exception("Log in first");
+                    username = HttpContext.User.Identity.Name;
                 }
-                var baseUrl = cookieValue.Split('*')[0];
-                var token = cookieValue.Split('*')[1];
-                var client = new ColleagueApiClient(baseUrl, logger);
-                client.Credentials = token;
-                Task.Run(() => client.PostBackupApiConfigDataAsync()).Wait();
+                catch (Exception)
+                {
+                }
+
+                try
+                {
+                    // send a copy of this latest config data to the storage service.
+                    var configObject = AppConfigUtility.GetApiConfigurationObject();
+                    var result = AppConfigUtility.StorageServiceClient.PostConfigurationAsync(
+                        configObject.Namespace, configObject.ConfigData, username,
+                        configObject.ConfigVersion, configObject.ProductId, configObject.ProductVersion).GetAwaiter().GetResult();
+                }
+                catch (Exception e)
+                {
+                    logger.Error(e, "Configuration changes have been saved, but the backup to config storage service failed. See API log for more details.");
+                }
             }
-            catch (Exception e)
+            else
             {
-                logger.Error(e, "Configuration changes have been saved, but the backup action failed. See API log for more details.");
-                throw;
-            }
+                // Colleague-based backup
+                if (!apiSettings.EnableConfigBackup)
+                {
+                    return;
+                }
+                try
+                {
+                    var cookie = LocalUserUtilities.GetCookie(Request);
+                    var cookieValue = cookie == null ? null : cookie.Value;
+                    if (string.IsNullOrEmpty(cookieValue))
+                    {
+                        throw new Exception("Log in first");
+                    }
+                    var baseUrl = cookieValue.Split('*')[0];
+                    var token = cookieValue.Split('*')[1];
+                    var client = new ColleagueApiClient(baseUrl, logger);
+                    client.Credentials = token;
+                    Task.Run(() => client.PostBackupApiConfigDataAsync()).Wait();
+                }
+                catch (Exception e)
+                {
+                    logger.Error(e, "Configuration changes have been saved, but the backup action failed. See API log for more details.");
+                    throw;
+                }
+            }           
+
         }
 
         private string GetWebAppRoot()

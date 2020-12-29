@@ -16,6 +16,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using CampusOrganization = Ellucian.Colleague.Dtos.CampusOrganization;
+using Ellucian.Colleague.Dtos.Student;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -37,6 +38,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             CampusOrganizationsController campusOrganizationsController;
             List<CampusOrganization> campusOrganizationDtos;
+            List<CampusOrganization2> campusOrganization2Dtos;
+            CampusOrganizationQueryCriteria criteria;
 
             [TestInitialize]
             public void Initialize()
@@ -49,9 +52,15 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 loggerMock = new Mock<ILogger>();
 
                 campusOrganizationDtos = BuildData();
-                
+                campusOrganization2Dtos = BuildCampusOrganization2Data();
+
                 campusOrganizationsController = new CampusOrganizationsController(adapterRegistryMock.Object, campusOrganizationServiceMock.Object, loggerMock.Object) { Request = new HttpRequestMessage() };
-                campusOrganizationsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());               
+                campusOrganizationsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+
+                criteria = new CampusOrganizationQueryCriteria()
+                {
+                    CampusOrganizationIds = new List<string>() { "CYC" }
+                };                    
             }
 
             private List<CampusOrganization> BuildData()
@@ -89,11 +98,45 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 return campusOrgs;
             }
 
+            private List<CampusOrganization2> BuildCampusOrganization2Data()
+            {
+                List<CampusOrganization2> campusOrgs2 = new List<CampusOrganization2>()
+                {
+                    new CampusOrganization2()
+                    {
+                       CampusOrganizationId = "CYC",
+                       CampusOrganizationDescription = "Cycling Club"
+                    },
+                    new CampusOrganization2()
+                    {
+                       CampusOrganizationId = "BIOS",
+                       CampusOrganizationDescription = "Amateur Bioinformatics Group"
+                    },
+                    new CampusOrganization2()
+                    {
+                       CampusOrganizationId = "DEB",
+                       CampusOrganizationDescription = "Debate Society"
+                    },
+                    new CampusOrganization2()
+                    {
+                       CampusOrganizationId = "ANTHS",
+                       CampusOrganizationDescription = "Society Of Anthropologists"
+                    },
+                      new CampusOrganization2()
+                    {
+                       CampusOrganizationId = "PGD",
+                       CampusOrganizationDescription = "Phi Gamma Delta"
+                    }
+                };
+                return campusOrgs2;
+            }
+
             [TestCleanup]
             public void Cleanup()
             {
                 campusOrganizationsController = null;
                 campusOrganizationDtos = null;
+                campusOrganization2Dtos = null;
             }
 
             [TestMethod]
@@ -201,6 +244,49 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task CampusOrganizationTypesController_DELETE_Exception()
             {
                 await campusOrganizationsController.DeleteCampusOrganizationAsync(It.IsAny<string>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CampusOrganizationsController_GetCampusOrganizations2Async_Null_Criteria_EXCEPTION()
+            {
+                criteria = null;
+                var results = await campusOrganizationsController.GetCampusOrganizations2Async(criteria);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CampusOrganizationsController_GetCampusOrganizations2Async_Null_CampusOrganizationIds_EXCEPTION()
+            {
+                criteria.CampusOrganizationIds = null;
+                var results = await campusOrganizationsController.GetCampusOrganizations2Async(criteria);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CampusOrganizationsController_GetCampusOrganizations2Async_No_CampusOrganizationIds_EXCEPTION()
+            {
+                criteria.CampusOrganizationIds = new List<string>();
+                var results = await campusOrganizationsController.GetCampusOrganizations2Async(criteria);
+            }
+
+            [TestMethod]
+            public async Task CampusOrganizationsController_GetCampusOrganizations2Async_ActualEqualsExpected_Test()
+            {
+                var expected = new List<CampusOrganization2>()
+                {
+                    new CampusOrganization2()
+                    {
+                        CampusOrganizationId = "CYC",
+                        CampusOrganizationDescription = "Cycling Club"
+                    }                    
+                };
+
+                campusOrganizationServiceMock.Setup(ac => ac.GetCampusOrganizations2ByCampusOrgIdsAsync(criteria.CampusOrganizationIds)).ReturnsAsync(expected);
+
+                var actual = await campusOrganizationsController.GetCampusOrganizations2Async(criteria);
+                Assert.AreEqual(expected[0].CampusOrganizationId, actual.First().CampusOrganizationId);
+                Assert.AreEqual(expected[0].CampusOrganizationDescription, actual.First().CampusOrganizationDescription);
             }
         }
     }

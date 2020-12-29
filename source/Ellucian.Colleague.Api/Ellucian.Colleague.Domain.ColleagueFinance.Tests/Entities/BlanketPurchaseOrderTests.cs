@@ -38,7 +38,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests.Entities
         public async Task BlanketPurchaseOrder_ConstructorInitialization()
         {
             var repoBlanketPurchaseOrder = await blanketPurchaseOrderRepository.GetBlanketPurchaseOrderAsync("1", personId, GlAccessLevel.Full_Access, null);
-            var testBlanketPurchaseOrder = new BlanketPurchaseOrder(repoBlanketPurchaseOrder.Id, repoBlanketPurchaseOrder.Number, repoBlanketPurchaseOrder.VendorName,
+            var testBlanketPurchaseOrder = new BlanketPurchaseOrder(repoBlanketPurchaseOrder.Id, repoBlanketPurchaseOrder.Guid, repoBlanketPurchaseOrder.Number, repoBlanketPurchaseOrder.VendorName,
                 repoBlanketPurchaseOrder.Status, repoBlanketPurchaseOrder.StatusDate, repoBlanketPurchaseOrder.Date);
 
             Assert.AreEqual(repoBlanketPurchaseOrder.Number, testBlanketPurchaseOrder.Number, "Number should be initialized.");

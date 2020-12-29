@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using System.Web.Http;
 
@@ -52,7 +53,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true), EedmResponseFilter]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.CommodityCode>> GetCommodityCodesAsync()
         {
-            bool bypassCache = false; 
+            bool bypassCache = false;
             if (Request.Headers.CacheControl != null)
             {
                 if (Request.Headers.CacheControl.NoCache)
@@ -167,6 +168,69 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         {
             //Delete is not supported for Colleague but HEDM requires full crud support.
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+        }
+
+
+        /// <summary>
+        /// Returns all CommodityCodes
+        /// </summary>
+        /// <returns>List of CommodityCodes DTO objects </returns>
+        /// <accessComments>
+        /// No permission is needed.
+        /// </accessComments>
+        [HttpGet]
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode>> GetAllCommodityCodesAsync()
+        {
+            try
+            {
+                var dtos = await _commodityCodesService.GetAllCommodityCodesAsync();
+                return dtos;
+            }
+            // Application exceptions will be caught below.
+            catch (Exception ex)
+            {
+                _logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException("Unable to get Commodity Codes.", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Returns a commodity code
+        /// </summary>
+        /// <param name="commodityCode">commodity code</param>
+        /// <returns>Procurement commodity code DTO</returns>
+        /// <accessComments>
+        /// No permission is needed.
+        /// </accessComments>
+        [HttpGet]
+        public async Task<Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode> GetCommodityCodeAsync(string commodityCode)
+        {
+            if (string.IsNullOrEmpty(commodityCode))
+            {
+                string message = "commodityCode must be specified.";
+                _logger.Error(message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+            try
+            {
+                var dto = await _commodityCodesService.GetCommodityCodeByCodeAsync(commodityCode);
+                return dto;
+            }
+            catch (ArgumentNullException anex)
+            {
+                _logger.Error(anex, "Invalid argument to get Commodity Code.");
+                throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
+            }
+            catch (KeyNotFoundException knfex)
+            {
+                _logger.Error(knfex, "Commodity Code not found.");
+                throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Unable to get Commodity Code.");
+                throw CreateHttpResponseException("Unable to get Commodity Code.", HttpStatusCode.BadRequest);
+            }
         }
     }
 }

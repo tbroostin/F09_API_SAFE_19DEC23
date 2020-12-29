@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
@@ -86,7 +86,6 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 _logger.Info(e.ToString());
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
             }
-
         }
 
         /// <summary>
@@ -205,6 +204,41 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 _logger.Info(e.ToString());
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Retrieve add authorizations for a student
+        /// </summary>
+        /// <param name="studentId">ID of the student for whom add authorizations are being retrieved</param>
+        /// <returns>Add Authorizations for the student</returns>
+        /// <accessComments>
+        /// Users may request their own data. Additionally, users who have at least one of the following permissions can request other users' data:
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// VIEW.ANY.ADVISEE
+        /// ALL.ACCESS.ASSIGNED.ADVISEES (the student must be an assigned advisee for the user)
+        /// UPDATE.ASSIGNED.ADVISEES (the student must be an assigned advisee for the user)
+        /// REVIEW.ASSIGNED.ADVISEES (the student must be an assigned advisee for the user)
+        /// VIEW.ASSIGNED.ADVISEES (the student must be an assigned advisee for the user)
+        /// </accessComments>
+        public async Task<IEnumerable<AddAuthorization>> GetStudentAddAuthorizationsAsync(string studentId)
+        {
+            try
+            {
+                var notices = await _addAuthorizationService.GetStudentAddAuthorizationsAsync(studentId);
+                return notices;
+            }
+            catch (PermissionsException pex)
+            {
+                _logger.Error(pex.Message);
+                throw CreateHttpResponseException("User does not have permission to retrieve add authorizations for student.", HttpStatusCode.Forbidden);
+            }
+            catch (Exception exception)
+            {
+                _logger.Error(exception.ToString());
+                throw CreateHttpResponseException("Unable to retrieve add authorizations for student.", HttpStatusCode.BadRequest);
             }
         }
 

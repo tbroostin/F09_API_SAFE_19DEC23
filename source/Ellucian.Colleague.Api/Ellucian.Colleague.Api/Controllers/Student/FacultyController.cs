@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
@@ -244,7 +244,7 @@ namespace Ellucian.Colleague.Api.Controllers
         public async Task<Faculty> GetFacultyAsync(string id)
         {
             try
-            {
+            {            
                 return await _facultyService.GetAsync(id);
             }
             catch (Exception ex)
@@ -280,6 +280,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="criteria">criteria object including a comma delimited list of IDs from request body</param>
         /// <returns>List of <see cref="Faculty">Faculty</see></returns>
+        ///<accessComments>Any authenticated user can request faculty information.</accessComments>
         [HttpPost]
         public async Task<IEnumerable<Faculty>> QueryFacultyByPostAsync([FromBody] FacultyQueryCriteria criteria)
         {
@@ -301,7 +302,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="criteria">Contains flags for Faculty only and Advisor only.</param>
         /// <returns>List of faculty IDs</returns>
-        /// <accessComments>Any authenticated user can request faculty information.</accessComments>
+        /// <accessComments>Only users with permission VIEW.ANY.ADVISEE can retrieve list of Faculty IDs.</accessComments>
         [HttpPost]
         public async Task<IEnumerable<string>> PostFacultyIdsAsync([FromBody] FacultyQueryCriteria criteria)
         {
@@ -312,6 +313,10 @@ namespace Ellucian.Colleague.Api.Controllers
                     return await _facultyService.SearchFacultyIdsAsync(false, true);
                 }
                 return await _facultyService.SearchFacultyIdsAsync(criteria.IncludeFacultyOnly, criteria.IncludeAdvisorOnly);
+            }
+            catch (PermissionsException pex)
+            {
+                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
@@ -354,6 +359,33 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 _logger.Error(ex.ToString());
                 throw CreateHttpResponseException("An error occurred while retrieving faculty permissions.", HttpStatusCode.BadRequest);
+            }
+        }
+
+
+        /// <summary>
+        /// Returns the faculty office hours for the list of faculty ids.
+        /// </summary>
+        /// <returns>A list of FacultyOfficeHours for each faculty id</returns>
+        /// <accessComments>Any authenticated user can request faculty information.</accessComments>
+        [HttpPost]
+        public async Task<IEnumerable<FacultyOfficeHours>> GetFacultyOfficeHoursAsync([FromBody]IEnumerable<string> facultyIds)
+        {
+            try
+            {
+                if (facultyIds != null)
+                {
+                    return await _facultyService.GetFacultyOfficeHoursAsync(facultyIds);
+                }
+                else
+                {                   
+                  throw new ArgumentNullException("facultyIds", "IDs cannot be empty/null for Faculty office hours retrieval.");                    
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException("An error occurred while retrieving faculty office hours", HttpStatusCode.BadRequest);
             }
         }
     }

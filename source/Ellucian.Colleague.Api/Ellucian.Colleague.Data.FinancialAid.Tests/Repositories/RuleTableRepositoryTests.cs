@@ -187,16 +187,6 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 Assert.IsTrue(actualRuleTables.All(rt => rt.RuleResultPairs[0].Key == expectedRuleId && rt.RuleResultPairs[0].Value == expectedResult));
                 Assert.IsTrue(actualRuleTables.All(rt => rt.RuleResultPairs[1].Key == expectedRuleId && rt.RuleResultPairs[1].Value == expectedResult));
             }
-
-            [TestMethod]
-            public async Task ErrorCreatingRuleTableTest()
-            {
-                expectedRepository.ruleTableData.ForEach(rt => rt.defaultResultString = string.Empty);
-                actualRuleTables = await actualRepository.GetShoppingSheetRuleTablesAsync(inputAwardYears);
-
-                Assert.AreEqual(0, actualRuleTables.Count());
-                loggerMock.Verify(l => l.Info(It.IsAny<Exception>(), It.IsAny<string>(), It.IsAny<object[]>()));
-            }
         }
     }
 }

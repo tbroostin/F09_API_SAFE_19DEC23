@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates
 
 using System;
 using System.Collections.Generic;
@@ -24,6 +24,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class MealPlanAssignmentRepository : BaseColleagueRepository, IMealPlanAssignmentRepository
     {
+        RepositoryException repositoryException = new RepositoryException();
+
         /// <summary>
         /// Constructor to instantiate a Meal Plan Assignment repository object
         /// </summary>
@@ -34,6 +36,38 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             : base(cacheProvider, transactionFactory, logger)
         {
 
+        }
+
+        /// <summary>
+        /// Get the record key from a GUID
+        /// </summary>
+        /// <param name="guid">The GUID</param>
+        /// <returns>Primary key</returns>
+        public async Task<string> GetMealPlanAssignmentIdFromGuidAsync( string guid )
+        {
+            if( string.IsNullOrEmpty( guid ) )
+            {
+                throw new ArgumentNullException( "guid" );
+            }
+
+            var idDict = await DataReader.SelectAsync( new GuidLookup[] { new GuidLookup( guid ) } );
+            if( idDict == null || idDict.Count == 0 )
+            {
+                throw new KeyNotFoundException( "MealPlanAssignment GUID " + guid + " not found." );
+            }
+
+            var foundEntry = idDict.FirstOrDefault();
+            if( foundEntry.Value == null )
+            {
+                throw new KeyNotFoundException( "MealPlanAssignment GUID " + guid + " lookup failed." );
+            }
+
+            if( foundEntry.Value.Entity != "MEAL.PLAN.ASSIGNMENT" || !string.IsNullOrEmpty( foundEntry.Value.SecondaryKey ) )
+            {
+                throw new RepositoryException( "GUID '" + guid + "' is not valid for student-academic-programs." );
+            }
+
+            return foundEntry.Value.PrimaryKey;
         }
 
         /// <summary>
@@ -75,12 +109,46 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>A list of MealPlanAssignment domain entities</returns>
         /// <exception cref="ArgumentNullException">Thrown if the id argument is null or empty</exception>
         /// <exception cref="KeyNotFoundException">Thrown if no database records exist for the given id argument</exception>
-        public async Task<Tuple<IEnumerable<Domain.Student.Entities.MealPlanAssignment>,int>> GetAsync(int offset, int limit)
+        public async Task<Tuple<IEnumerable<Domain.Student.Entities.MealPlanAssignment>,int>> GetAsync(int offset, int limit, string person = "", string term = "", string mealplan="", string status="", string startDate="", string endDate="")
         {
             var mealPlanAssignmentEntities = new List<Domain.Student.Entities.MealPlanAssignment>();
             var criteria = new StringBuilder();
-            
-            string select = criteria.ToString();
+            String select = string.Empty;
+            if (!string.IsNullOrEmpty(person))
+                criteria.AppendFormat("WITH MPAS.PERSON.ID EQ '{0}'", person);
+            if (!string.IsNullOrEmpty(term))
+            {
+                if (criteria.Length > 0)
+                    criteria.Append(" AND ");
+                criteria.AppendFormat("WITH MPAS.TERM EQ '{0}'", term);
+            }
+            if (!string.IsNullOrEmpty(mealplan))
+            {
+                if (criteria.Length > 0)
+                    criteria.Append(" AND ");
+                criteria.AppendFormat("WITH MPAS.MEAL.PLAN EQ '{0}'", mealplan);
+            }
+            if (!string.IsNullOrEmpty(status))
+            {
+                if (criteria.Length > 0)
+                    criteria.Append(" AND ");
+                criteria.AppendFormat("WITH MPAS.CURRENT.STATUS EQ '{0}'", status);
+            }
+            if (!string.IsNullOrEmpty(startDate))
+            {
+                if (criteria.Length > 0)
+                    criteria.Append(" AND ");
+                criteria.AppendFormat("WITH MPAS.START.DATE GE '{0}'", startDate);
+            }
+            if (!string.IsNullOrEmpty(endDate))
+            {
+                if (criteria.Length > 0)
+                    criteria.Append(" AND ");
+                criteria.AppendFormat("WITH MPAS.END.DATE NE '' AND MPAS.END.DATE LE '{0}'", endDate);
+            }
+
+            if (criteria.Length > 0)
+                select = criteria.ToString();
             string[] mealPlanAssignmentIds = await DataReader.SelectAsync("MEAL.PLAN.ASSIGNMENT", select);
             var totalCount = mealPlanAssignmentIds.Count();
 
@@ -95,32 +163,44 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
             }
 
-            foreach (var intgStudentMealPlansEntity in mealPlanAssignments)
+            foreach( var source in mealPlanAssignments )
             {
-                mealPlanAssignmentEntities.Add(BuildMealPlanAssignment(intgStudentMealPlansEntity));
+                try
+                {
+                    mealPlanAssignmentEntities.Add( BuildMealPlanAssignment( source ) );
+                }
+                catch( ArgumentNullException e )
+                {
+                    repositoryException.AddError( new RepositoryError( "Missing.Required.Property", e.Message )
+                    {
+                        Id = source.RecordGuid,
+                        SourceId = source.Recordkey
+                    } );
+                }
             }
+
+            if( repositoryException.Errors != null && repositoryException.Errors.Any() )
+            {
+                throw repositoryException;
+            }
+
             return new Tuple<IEnumerable<Domain.Student.Entities.MealPlanAssignment>, int>(mealPlanAssignmentEntities, totalCount);
         }
 
       
         private Domain.Student.Entities.MealPlanAssignment BuildMealPlanAssignment(DataContracts.MealPlanAssignment source)
         {
-            
-
-           var statusAssociation = source.MpasStatusesEntityAssociation;
+            var statusAssociation = source.MpasStatusesEntityAssociation;
             string crntStatus = string.Empty;
-            DateTime? crntStatusDate =  new DateTime();
+            DateTime? crntStatusDate =  new DateTime();           
             if ((statusAssociation != null) && (statusAssociation.Any()))
             {
-                //get the most current status only
-                var currentStatus = statusAssociation
-                     .Where(i => i.MpasStatusDateAssocMember != null)
-                        .OrderByDescending(dt => dt.MpasStatusDateAssocMember)
-                        .FirstOrDefault();
+                //get the first row for status
+                var currentStatus = statusAssociation.FirstOrDefault();
                 if (currentStatus != null)
                 {
-                   crntStatus = currentStatus.MpasStatusAssocMember;
-                   crntStatusDate = currentStatus.MpasStatusDateAssocMember;
+                    crntStatus = currentStatus.MpasStatusAssocMember;
+                    crntStatusDate = currentStatus.MpasStatusDateAssocMember;
                 }
             }
 

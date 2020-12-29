@@ -1,26 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Web;
-using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Domain.Student.Entities;
 using System.Threading.Tasks;
 
-
-
 namespace Ellucian.Colleague.Domain.Student.Tests
 {
     public class TestTermRepository : ITermRepository
     {
-
         private Dictionary<string, Term> terms = new Dictionary<string, Term>();
 
         public async Task<Term> GetAsync(string id)
         {
             return (await GetAsync(new List<string>() { id }.AsEnumerable())).FirstOrDefault();
-
         }
 
         public async Task <IEnumerable<Term>> GetAsync()
@@ -236,12 +230,23 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                                     {"2014/FA","2014","2","2014 Fall Term                ","2014-08-23" ,"",           "UG   ", "Y", "Y", "2014RFA", "F;FS", "E", "subterm", "FA"},
                                     {"2014/GR","2014","3","2014 Fall Term Graduate       ","2014-08-24" ,"2014-12-11", "GR   ", "Y", "Y", "2014RFA", "GR",    "", "subterm", "FA"},
                                     {"2014/SP","2014","4","2014 Spring Term              ","2014-01-23", "2014-05-12", "     ", "Y", "Y", "2014/SP", "",    "", "term",    "SP"},
-                                    {"2015/SP","2014","2","2015 Spring Term              ","2015-01-23" ,"2015-05-12", "     ", "Y", "Y", "2015/SP", "",    "", "term",    "SP"},
-                                    {"2015/FA","2015","1","2015 Fall Term                ","2015-08-23" ,"2015-12-12", "     ", "Y", "Y", "2015/FA", "F",   "", "term",    "FA"},
-                                    {"2016/SP","2015","2","2016 Spring Term              ","2016-01-23" ,"2016-05-12", "     ", "Y", "Y", "2016/SP", "",   "E,O", "term",  "SP"},
-                                    {"2016/FA","2016","1","2016 Fall Term                ","2016-08-23" ,""          , "     ", "Y", "Y", "2016/FA", "F",  "E;O", "term",  "SP"},
-                                    {"2017/SP","2016","2","2017 Fall Term                ","2030-01-23" ,"2030-05-12", "     ", "Y", "Y", "",        "",    "",  "term",  ""},
-                                     {"2018/SP","2018","2","2018 spring Term                ","2030-01-23" ,"2030-05-12", "     ", "Y", "Y", "",        "",    "",  "term",  ""}
+                                    
+                                    {"2015/SP","2014","2","2015 Spring Term              ","2015-01-23" ,"2015-05-12", "UG   ", "Y", "Y", "2015/SP", "",   "",   "term",   "SP"},
+                                    {"2015/FA","2015","1","2015 Fall Term                ","2015-08-23" ,"2015-12-12", "UG   ", "Y", "Y", "2015/FA", "F",  "",   "term",   "FA"},
+                                    {"2016/SP","2015","2","2016 Spring Term              ","2016-01-23" ,"2016-05-12", "UG   ", "Y", "Y", "2016/SP", "",   "E,O","term",   "SP"},
+                                    {"2016/FA","2016","1","2016 Fall Term                ","2016-08-23" ,"", "UG   ", "Y", "Y", "2016/FA", "F",  "E;O","term",   "SP"},
+                                    {"2017/SP","2016","2","2017 Spring Term              ","2030-01-23" ,"2030-05-12", "UG   ", "Y", "Y", "2017/SP", "",   "",   "term",   ""},
+                                    {"2017/FA","2017","1","2017 Fall Term                ","2017-08-23" ,"2017-12-13", "UG   ", "Y", "Y", "2017/FA", "F",  "E;O","term",   "SP"},
+                                    {"2018/SP","2018","2","2018 Spring Term              ","2018-01-23" ,"2018-05-12", "UG   ", "Y", "Y", "2018/SP", "",   "",   "term",   ""},
+                                    {"2018/FA","2018","1","2018 Fall Term                ","2018-08-23" ,"2018-12-13", "UG   ", "Y", "Y", "2018/FA", "F",  "E;O","term",   "SP"},
+
+                                    {"2019/SP","2019","3","2019 Spring Term              ","2019-01-20" ,"2019-05-11", "UG   ", "Y", "Y", "2019/SP", "",   "",   "term",   "SP"},
+                                    {"2019/S1","2019","4","2019 Summer 1 Term            ","2019-05-18" ,"2019-07-05", "UG   ", "N", "Y", "2019RSU", "",   "",   "subterm","S1"},
+                                    {"2019/S2","2019","5","2019 Summer 2 Term            ","2019-07-06" ,"2019-08-16", "UG   ", "N", "Y", "2019RSU", "",   "",   "subterm","S2"},
+                                    {"2019/FA","2019","1","2019 Fall Term                ","2019-08-24" ,"2019-12-13", "UG   ", "Y", "Y", "2019/FA", "",   "",   "term",   "FA"},
+                                    {"2019/WI","2019","2","2019 Winterim Term            ","2018-12-27" ,"2019-01-31", "UG   ", "N", "Y", "2019RWI", "",   "",   "subterm","WI"},
+                                    {"2019RSU","2019","7","Summer Reporting Term         ","2019-05-22" ,"2019-08-16", "     ", "N", "N", "2019RSU", "",    "",  "term",   "SU"},
+                                    {"2019RWI","2019","6","Winter Reporting Term         ","2018-12-27" ,"2019-01-31", "     ", "N", "N", "2019RWI", "",    "",  "term",   "SU"},
                                      };
             int termcnt = termdata.Length / 14;
 
@@ -312,6 +317,16 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
 
         public  IEnumerable<AcademicPeriod> GetAcademicPeriods(IEnumerable<Term> term)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetAcademicPeriodsCodeFromGuidAsync(string guid)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Dictionary<string, string>> GetGuidsCollectionAsync( IEnumerable<string> ids )
         {
             throw new NotImplementedException();
         }

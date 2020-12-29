@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -94,7 +94,16 @@ namespace Ellucian.Colleague.Api.Controllers
             try
             {
                 AddDataPrivacyContextProperty((await _courseCategoriesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
-                return await _courseCategoriesService.GetCourseCategoriesAsync(bypassCache);
+                var courseTypes = await _courseCategoriesService.GetCourseCategoriesAsync(bypassCache);
+
+                if (courseTypes != null && courseTypes.Any())
+                {
+                    AddEthosContextProperties(await _courseCategoriesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _courseCategoriesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              courseTypes.Select(a => a.Id).ToList()));
+                }
+
+                return courseTypes;                
             }
             catch (KeyNotFoundException e)
             {
@@ -152,6 +161,10 @@ namespace Ellucian.Colleague.Api.Controllers
             try
             {
                 AddDataPrivacyContextProperty((await _courseCategoriesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
+                AddEthosContextProperties(
+                    await _courseCategoriesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _courseCategoriesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { guid }));
                 return await _courseCategoriesService.GetCourseCategoriesByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)

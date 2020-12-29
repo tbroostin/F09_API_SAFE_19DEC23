@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -88,7 +88,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
                 EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
                 PersonEmploymentStatusesControllerTestsInitialize();
 
-                personEmploymentStatusServiceMock.Setup(s => s.GetPersonEmploymentStatusesAsync(null))
+                personEmploymentStatusServiceMock.Setup(s => s.GetPersonEmploymentStatusesAsync(null, null))
                     .Returns(async () => await getExpectedEmploymentStatuses());
             }
 
@@ -105,7 +105,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             [ExpectedException(typeof(HttpResponseException))]
             public async Task CatchGenericExceptionTest()
             {
-                personEmploymentStatusServiceMock.Setup(s => s.GetPersonEmploymentStatusesAsync(null)).Throws(new Exception());
+                personEmploymentStatusServiceMock.Setup(s => s.GetPersonEmploymentStatusesAsync(null, null)).Throws(new Exception());
 
                 try
                 {

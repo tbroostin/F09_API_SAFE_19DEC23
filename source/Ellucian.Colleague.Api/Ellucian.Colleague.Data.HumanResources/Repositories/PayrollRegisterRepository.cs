@@ -1,4 +1,4 @@
-﻿/*Copyright 2017-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2020 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
@@ -61,7 +61,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <returns></returns>
         public async Task<IEnumerable<PayrollRegisterEntry>> GetPayrollRegisterByEmployeeIdsAsync(IEnumerable<string> employeeIds, DateTime? startDate = null, DateTime? endDate = null)
         {
-            if (employeeIds == null || !employeeIds.Any()) 
+            if (employeeIds == null || !employeeIds.Any())
             {
                 return new List<PayrollRegisterEntry>();
             }
@@ -71,7 +71,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             //this is the return list
             var payrollRegister = new List<PayrollRegisterEntry>();
 
-            
+
             //build a set of tuples with
             //item1: personId
             //item2: full cache key
@@ -111,18 +111,18 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 return payrollRegister;
             }
 
-            var criteria = "WITH PTD.EMPLOYEE.ID EQ ? AND PTD.SEQ.NO NE \"\"";
+            var criteria = "WITH PTD.EMPLOYEE.INDEX EQ ? AND PTD.SEQ.NO NE \"\"";
             var values = uncachedEmployeeIds.Select(id => string.Format("\"{0}\"", id)).ToArray();
 
             if (startDate.HasValue)
-            {                
-                var uniDataStartDate = DmiString.DateTimeToPickDate(DateTime.SpecifyKind(startDate.Value, DateTimeKind.Unspecified));
+            {
+                var uniDataStartDate = await GetUnidataFormatDateAsync(startDate.Value);
                 criteria = string.Concat(criteria, string.Format(" AND WITH PTD.CHECK.ADVICE.DATE GE '{0}'", uniDataStartDate)); //PTD.CHECK.ADVICE.DATE is a computed column so we use the Pick Date here (as opposed to a date string, like in the PayStatementRepository
             }
 
             if (endDate.HasValue)
             {
-                var uniDataEndDate = DmiString.DateTimeToPickDate(DateTime.SpecifyKind(endDate.Value, DateTimeKind.Unspecified));
+                var uniDataEndDate = await GetUnidataFormatDateAsync(endDate.Value);
                 criteria = string.Concat(criteria, string.Format(" AND WITH PTD.CHECK.ADVICE.DATE LE '{0}'", uniDataEndDate)); //PTD.CHECK.ADVICE.DATE is a computed column so we use the Pick Date here (as opposed to a date string, like in the PayStatementRepository
             }
 
@@ -165,7 +165,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     Level1CacheTimeoutValue);
 
                 payrollRegister.AddRange(employeeEntries);
-                    
+
             }
 
 
@@ -250,19 +250,19 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             int sequenceNumber;
 
             string payControlKey;
-            
+
             try
             {
                 var keyParts = record.Recordkey.Split('*');
                 var internalEndDateString = keyParts[0];
                 payCycleId = keyParts[1];
                 employeeId = keyParts[2];
-                var sequence = keyParts[3];                
+                var sequence = keyParts[3];
                 sequenceNumber = int.Parse(sequence);
                 periodEndDate = DmiString.PickDateToDateTime(int.Parse(internalEndDateString));
 
                 payControlKey = string.Format("{0}*{1}", internalEndDateString, payCycleId);
-                
+
             }
             catch (Exception e)
             {
@@ -282,7 +282,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 logger.Error(string.Format("PaycontrolRecord {0} does not have a valid period start date", paycontrolRecord.Recordkey));
             }
 
-            var registerEntry = new PayrollRegisterEntry(record.Recordkey, employeeId, paycontrolRecord.PclPeriodStartDate, periodEndDate, payCycleId, sequenceNumber, record.PtdCheckNo, record.PtdAdviceNo);
+            var registerEntry = new PayrollRegisterEntry(record.Recordkey, employeeId, paycontrolRecord.PclPeriodStartDate, periodEndDate, payCycleId, sequenceNumber, record.PtdCheckNo, record.PtdAdviceNo, !string.IsNullOrEmpty(record.PtdW4NewFlag) && record.PtdW4NewFlag.Equals("Y", StringComparison.CurrentCultureIgnoreCase));
 
             //build earnings
             foreach (var earningsRecord in record.PtdearnEntityAssociation)
@@ -362,7 +362,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 }
                 catch (Exception e)
                 {
-                    LogDataError("PAYTODAT~PTDLEAVE", record.Recordkey, leaveRecord, e);                    
+                    LogDataError("PAYTODAT~PTDLEAVE", record.Recordkey, leaveRecord, e);
                 }
             }
 
@@ -375,7 +375,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 }
                 catch (Exception e)
                 {
-                    LogDataError("PAYTODAT~PTDTXBLBD", record.Recordkey, taxableBenefit, e);                    
+                    LogDataError("PAYTODAT~PTDTXBLBD", record.Recordkey, taxableBenefit, e);
                 }
             }
 
@@ -448,7 +448,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 return PayrollTaxProcessingCode.Regular;
             }
 
-            switch(code.ToUpperInvariant())
+            switch (code.ToUpperInvariant())
             {
                 case "F":
                     return PayrollTaxProcessingCode.FixedAmount;
@@ -499,12 +499,12 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             if (string.IsNullOrWhiteSpace(earningsRecord.PtdStipendIdAssocMember))
             {
-                var earningsEntry = new PayrollRegisterEarningsEntry(earningsRecord.PtdEarnTypesAssocMember, 
-                    earningsRecord.PtdAmountsAssocMember.Value, 
+                var earningsEntry = new PayrollRegisterEarningsEntry(earningsRecord.PtdEarnTypesAssocMember,
+                    earningsRecord.PtdAmountsAssocMember.Value,
                     earningsRecord.PtdBaseEarningsAssocMember ?? 0,
                     earningsRecord.PtdEarnFactorEarningsAssocMember ?? 0,
-                    earningsRecord.PtdHoursAssocMember, 
-                    rate, 
+                    earningsRecord.PtdHoursAssocMember,
+                    rate,
                     hsIndicator);
 
                 if (!string.IsNullOrEmpty(earningsRecord.PtdEarndiffIdAssocMember))
@@ -525,13 +525,13 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             else
             {
-                return new PayrollRegisterEarningsEntry(earningsRecord.PtdEarnTypesAssocMember, 
-                    earningsRecord.PtdStipendIdAssocMember, 
-                    earningsRecord.PtdAmountsAssocMember.Value, 
+                return new PayrollRegisterEarningsEntry(earningsRecord.PtdEarnTypesAssocMember,
+                    earningsRecord.PtdStipendIdAssocMember,
+                    earningsRecord.PtdAmountsAssocMember.Value,
                     earningsRecord.PtdBaseEarningsAssocMember ?? 0,
                     earningsRecord.PtdEarnFactorEarningsAssocMember ?? 0,
-                    earningsRecord.PtdHoursAssocMember, 
-                    rate, 
+                    earningsRecord.PtdHoursAssocMember,
+                    rate,
                     hsIndicator);
             }
         }

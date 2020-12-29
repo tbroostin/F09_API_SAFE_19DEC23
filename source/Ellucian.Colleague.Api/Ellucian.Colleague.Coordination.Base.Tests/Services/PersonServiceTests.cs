@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -44,6 +44,9 @@ using Relationship = Ellucian.Colleague.Domain.Base.Entities.Relationship;
 using Role = Ellucian.Colleague.Domain.Entities.Role;
 using SocialMediaType = Ellucian.Colleague.Domain.Base.Entities.SocialMediaType;
 using SocialMediaTypeCategory = Ellucian.Colleague.Domain.Base.Entities.SocialMediaTypeCategory;
+using Ellucian.Web.Http.Exceptions;
+using Ellucian.Data.Colleague.DataContracts;
+using System.Net;
 
 namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 {
@@ -270,6 +273,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var personSocialMedia = new SocialMedia(socialMediaTypeCode, socialMediaHandle);
                 personIntegration.AddSocialMedia(personSocialMedia);
 
+                // Mock the person languages
+                personIntegration.PrimaryLanguage = "E";
+                personIntegration.SecondaryLanguages = new List<String> { "SP", "TA" };
+
                 personRepoMock.Setup(repo => repo.GetPersonIntegrationByGuidNonCachedAsync(personGuid)).ReturnsAsync(personIntegration);
                 personRepoMock.Setup(repo => repo.GetPersonIntegrationByGuidAsync(personGuid, It.IsAny<bool>())).ReturnsAsync(personIntegration);
 
@@ -447,6 +454,20 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 permissionViewAnyPerson = new Ellucian.Colleague.Domain.Entities.Permission(BasePermissionCodes.ViewAnyPerson);
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { personRole });
+
+                // Mock LANGUAGES valcode 
+                var languages = new Ellucian.Data.Colleague.DataContracts.ApplValcodes()
+                {
+
+                    ValsEntityAssociation = new List<Ellucian.Data.Colleague.DataContracts.ApplValcodesVals>()
+                    {
+                        new ApplValcodesVals() { ValInternalCodeAssocMember = "E", ValExternalRepresentationAssocMember = "English", ValActionCode3AssocMember = "ENG" },
+                        new ApplValcodesVals() { ValInternalCodeAssocMember = "SP", ValExternalRepresentationAssocMember = "Spanish", ValActionCode3AssocMember = "SPA" },
+                        new ApplValcodesVals() { ValInternalCodeAssocMember = "TA", ValExternalRepresentationAssocMember = "Tagalog", ValActionCode3AssocMember = "TGL" }
+                    }
+                };
+                personBaseRepoMock.Setup(repo => repo.GetLanguagesAsync()).ReturnsAsync(languages);
+
 
                 personService = new PersonService(adapterRegistry, personRepo, personBaseRepo, refRepo, null, null, null, null, currentUserFactory, roleRepo, logger);
             }
@@ -807,17 +828,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task GetPerson2Dto_PersonLanguages()
             {
-                var languageCode = "eng";
-                PersonLanguage personLanguage = new PersonLanguage(personGuid, languageCode);
-                personIntegration.AddPersonLanguage(personLanguage);
-
                 // Act--get person
                 var personDto = await personService.GetPerson2ByGuidNonCachedAsync(personGuid);
                 var personLanguages = personDto.Languages.Where(x => x.Code == PersonLanguageCode.eng).FirstOrDefault();
 
                 // Assert
                 Assert.AreEqual(PersonLanguageCode.eng, personLanguages.Code);
-                Assert.AreEqual(Dtos.EnumProperties.PersonLanguagePreference.Secondary, personLanguages.Preference);
+                Assert.AreEqual(Dtos.EnumProperties.PersonLanguagePreference.Primary, personLanguages.Preference);
             }
 
 
@@ -1122,6 +1139,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 workPhone = new Domain.Base.Entities.Phone("444-444-4444", "BU", "4444");
                 personIntegration.AddPhone(workPhone);
 
+                // Mock the person languages
+                personIntegration.PrimaryLanguage = "E";
+                personIntegration.SecondaryLanguages = new List<String>{"SP", "TA" };
+
                 // Mock the social media
                 var socialMedia = new List<Domain.Base.Entities.SocialMedia>();
                 var socialMediaTypeCode = "TW";
@@ -1306,6 +1327,19 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 permissionViewAnyPerson = new Ellucian.Colleague.Domain.Entities.Permission(BasePermissionCodes.ViewAnyPerson);
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { personRole });
+
+                // Mock LANGUAGES valcode 
+                var languages = new Ellucian.Data.Colleague.DataContracts.ApplValcodes()
+                {
+                    
+                    ValsEntityAssociation = new List<Ellucian.Data.Colleague.DataContracts.ApplValcodesVals>()
+                    {
+                        new ApplValcodesVals() { ValInternalCodeAssocMember = "E", ValExternalRepresentationAssocMember = "English", ValActionCode3AssocMember = "ENG" },
+                        new ApplValcodesVals() { ValInternalCodeAssocMember = "SP", ValExternalRepresentationAssocMember = "Spanish", ValActionCode3AssocMember = "SPA" },
+                        new ApplValcodesVals() { ValInternalCodeAssocMember = "TA", ValExternalRepresentationAssocMember = "Tagalog", ValActionCode3AssocMember = "TGL" }
+                    }
+                };                
+                personBaseRepoMock.Setup(repo => repo.GetLanguagesAsync()).ReturnsAsync(languages);
 
                 personService = new PersonService(adapterRegistry, personRepo, personBaseRepo, refRepo, null, null, null, null, currentUserFactory, roleRepo, logger);
             }
@@ -1510,17 +1544,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task GetPerson2ByGuid_PersonLanguages()
             {
-                var languageCode = "eng";
-                PersonLanguage personLanguage = new PersonLanguage(personGuid, languageCode);
-                personIntegration.AddPersonLanguage(personLanguage);
-
                 // Act--get person
                 var personDto = await personService.GetPerson2ByGuidAsync(personGuid, false);
                 var personLanguages = personDto.Languages.Where(x => x.Code == PersonLanguageCode.eng).FirstOrDefault();
 
                 // Assert
                 Assert.AreEqual(PersonLanguageCode.eng, personLanguages.Code);
-                Assert.AreEqual(Dtos.EnumProperties.PersonLanguagePreference.Secondary, personLanguages.Preference);
+                Assert.AreEqual(Dtos.EnumProperties.PersonLanguagePreference.Primary, personLanguages.Preference);
             }
 
             [TestMethod]
@@ -1834,6 +1864,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var personSocialMedia = new SocialMedia(socialMediaTypeCode, socialMediaHandle);
                 personIntegration.AddSocialMedia(personSocialMedia);
 
+                // Mock the person languages
+                personIntegration.PrimaryLanguage = "E";
+                personIntegration.SecondaryLanguages = new List<String> { "SP", "TA" };
+
                 personRepoMock.Setup(repo => repo.GetPersonIntegrationByGuidNonCachedAsync(personGuid)).ReturnsAsync(personIntegration);
                 personRepoMock.Setup(repo => repo.GetPersonIntegrationByGuidAsync(personGuid, It.IsAny<bool>())).ReturnsAsync(personIntegration);
 
@@ -1864,6 +1898,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var personPins = new List<PersonPin>();
                 personPins.Add(personPin);
                 personRepoMock.Setup(repo => repo.GetPersonPinsAsync(It.IsAny<string[]>())).ReturnsAsync(personPins);
+                var personUserName = new PersonUserName("0000011", "testUsername");
+                var personUserNames = new List<PersonUserName>();
+                personUserNames.Add(personUserName);
+                personRepoMock.Setup(repo => repo.GetPersonUserNamesAsync(It.IsAny<string[]>())).ReturnsAsync(personUserNames);
 
                 refRepoMock.Setup(repo => repo.GetPrivacyStatusesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(
@@ -1900,7 +1938,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                         new EmailType( Guid.NewGuid().ToString(), "BUS", "Business", EmailTypeCategory.Business)
                         }
                      );
-
+                
                 refRepoMock.Setup(repo => repo.GetSocialMediaTypesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(
                          new List<SocialMediaType>() {
@@ -2017,6 +2055,19 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 permissionViewAnyPerson = new Ellucian.Colleague.Domain.Entities.Permission(BasePermissionCodes.ViewAnyPerson);
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { personRole });
+
+                // Mock LANGUAGES valcode 
+                var languages = new Ellucian.Data.Colleague.DataContracts.ApplValcodes()
+                {
+
+                    ValsEntityAssociation = new List<Ellucian.Data.Colleague.DataContracts.ApplValcodesVals>()
+                    {
+                        new ApplValcodesVals() { ValInternalCodeAssocMember = "E", ValExternalRepresentationAssocMember = "English", ValActionCode3AssocMember = "ENG" },
+                        new ApplValcodesVals() { ValInternalCodeAssocMember = "SP", ValExternalRepresentationAssocMember = "Spanish", ValActionCode3AssocMember = "SPA" },
+                        new ApplValcodesVals() { ValInternalCodeAssocMember = "TA", ValExternalRepresentationAssocMember = "Tagalog", ValActionCode3AssocMember = "TGL" }
+                    }
+                };
+                personBaseRepoMock.Setup(repo => repo.GetLanguagesAsync()).ReturnsAsync(languages);
 
                 personService = new PersonService(adapterRegistry, personRepo, personBaseRepo, refRepo, null, null, null, null, currentUserFactory, roleRepo, logger);
             }
@@ -2224,17 +2275,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task GetPerson3ByGuid_PersonLanguages()
             {
-                var languageCode = "eng";
-                PersonLanguage personLanguage = new PersonLanguage(personGuid, languageCode);
-                personIntegration.AddPersonLanguage(personLanguage);
-
                 // Act--get person
                 var personDto = await personService.GetPerson3ByGuidAsync(personGuid, false);
                 var personLanguages = personDto.Languages.Where(x => x.Code == PersonLanguageCode.eng).FirstOrDefault();
 
                 // Assert
                 Assert.AreEqual(PersonLanguageCode.eng, personLanguages.Code);
-                Assert.AreEqual(Dtos.EnumProperties.PersonLanguagePreference.Secondary, personLanguages.Preference);
+                Assert.AreEqual(Dtos.EnumProperties.PersonLanguagePreference.Primary, personLanguages.Preference);
             }
 
             [TestMethod]
@@ -2756,9 +2803,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     }
                 };
                 int counter = 1;
-                foreach (var person in people)
+                foreach (var singlePerson in people)
                 {
-                    person.AddPersonAlt(new PersonAlt(counter.ToString(), "ELEV"));
+                    singlePerson.AddPersonAlt(new PersonAlt(counter.ToString(), "ELEV"));
                     counter++;
                 }
                 personIds = new List<string>() { "1", "2" };
@@ -2900,9 +2947,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     }
                 };
                 int counter = 1;
-                foreach (var person in people)
+                foreach (var singlePerson in people)
                 {
-                    person.AddPersonAlt(new PersonAlt(counter.ToString(), "ELEV"));
+                    singlePerson.AddPersonAlt(new PersonAlt(counter.ToString(), "ELEV"));
                     counter++;
                 }
                 personIds = new List<string>() { "1", "2" };
@@ -2992,7 +3039,278 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     personCredentials, It.IsAny<bool>());
                 // Assert
                 Assert.IsNotNull(actuals);
-                Assert.AreEqual(0, actuals.Item2);
+                Assert.AreEqual( 0, actuals.Item2 );
+            }
+        }
+
+        #endregion
+
+        #region GetPersonsCredentials4_GET_ALL
+
+        [TestClass]
+        public class GetPersonsCredentials4_GET_ALL: CurrentUserSetup
+        {
+            private string personId = "0000011";
+            private string personGuid = "5674f28b-b216-4055-b236-81a922d93b4c";
+
+            private Mock<IPersonRepository> personRepoMock;
+            private IPersonRepository personRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository personBaseRepo;
+            private Mock<IReferenceDataRepository> refRepoMock;
+            private IReferenceDataRepository refRepo;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private PersonService personService;
+            private ILogger logger;
+            private IEnumerable<Domain.Base.Entities.PersonIntegration> people; 
+            private Ellucian.Colleague.Domain.Base.Entities.Person person;
+
+            private IEnumerable<string> personIds;
+            private IEnumerable<PersonPin> personPins;
+            private Tuple<IEnumerable<string>, int> peopleIdsTuple;
+            private Mock<IRoleRepository> roleRepoMock;
+            private IRoleRepository roleRepo;
+            private ICurrentUserFactory currentUserFactory;
+            private Ellucian.Colleague.Domain.Entities.Permission permissionViewAnyPerson;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                personRepoMock = new Mock<IPersonRepository>();
+                personRepo = personRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                personBaseRepo = personBaseRepoMock.Object;
+                refRepoMock = new Mock<IReferenceDataRepository>();
+                refRepo = refRepoMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                roleRepoMock = new Mock<IRoleRepository>();
+                roleRepo = roleRepoMock.Object;
+                logger = new Mock<ILogger>().Object;
+
+                // Mock person response from the person repository
+                BuildData();
+
+                personRepoMock.Setup( repo => repo.GetPersonGuidsAsync( It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>() ) ).ReturnsAsync( peopleIdsTuple );
+
+                personRepoMock.Setup( repo => repo.GetPersonCredentialsIntegrationByGuidNonCachedAsync( peopleIdsTuple.Item1 ) ).ReturnsAsync( people );
+
+                // International Parameters Host Country
+                personRepoMock.Setup( repo => repo.GetHostCountryAsync() ).ReturnsAsync( "USA" );
+
+                // Set up current user
+                currentUserFactory = new CurrentUserSetup.PersonUserFactory();
+
+                // Mock permissions
+                permissionViewAnyPerson = new Ellucian.Colleague.Domain.Entities.Permission( BasePermissionCodes.ViewAnyPerson );
+                personRole.AddPermission( permissionViewAnyPerson );
+                roleRepoMock.Setup( rpm => rpm.Roles ).Returns( new List<Role>() { personRole } );
+
+                personService = new PersonService( adapterRegistry, personRepo, personBaseRepo, refRepo, null, null, null, null, currentUserFactory, roleRepo, logger );
+            }
+
+            private void BuildData()
+            {
+                people = new List<Domain.Base.Entities.PersonIntegration>()
+                {
+                    new Domain.Base.Entities.PersonIntegration("1", "Mouse")
+                    {
+                        Guid = "5674f28b-b216-4055-b236-81a922d93b4c",
+                        Prefix = "Mr.",
+                        FirstName = "Mickey",
+                        MiddleName = "Lee",
+                        GovernmentId = "111-11-1111"
+                    },
+                     new Domain.Base.Entities.PersonIntegration("2", "Brown")
+                    {
+                        Guid = "1674f28b-b216-4055-b236-81a922d93b4a",
+                        Prefix = "Mr.",
+                        FirstName = "Charlie",
+                        MiddleName = "Lee",
+                        GovernmentId = "222-22-2222"
+                    }
+                };
+                int counter = 1;
+                foreach( var singlePerson in people )
+                {
+                    singlePerson.AddPersonAlt( new PersonAlt( counter.ToString(), "ELEV" ) );
+                    counter++;
+                }
+                personIds = new List<string>() { "1", "2" };
+                peopleIdsTuple = new Tuple<IEnumerable<string>, int>( personIds, personIds.Count() );
+
+                personPins = new List<PersonPin>
+                {
+                    new PersonPin("1", "PersonUserId1"),
+                    new PersonPin("2", "PersonUserId2")
+                };
+                personRepoMock.Setup( repo => repo.GetPersonPinsAsync( It.IsAny<string[]>() ) ).ReturnsAsync( personPins );
+                person = new Domain.Base.Entities.Person( personId, "Brown" );
+                person.Guid = personGuid;
+                person.Prefix = "Mr.";
+                person.FirstName = "Ricky";
+                person.MiddleName = "Lee";
+                person.GovernmentId = "111-11-1111";
+                person.AddPersonAlt( new PersonAlt( "22908", "ELEV" ) );
+
+                personRepoMock.Setup( repo => repo.GetPersonCredentialByGuidNonCachedAsync( personGuid ) ).ReturnsAsync( person );
+                refRepoMock.Setup( repo => repo.GetAlternateIdTypesAsync( It.IsAny<bool>() ) ).ReturnsAsync( new List<AltIdTypes>()
+                {
+                    new AltIdTypes("AE44FE48-2534-480B-8618-5480617CE74A", "ELEV2", "Elevate ID 2"),
+                    new AltIdTypes("D525E2B2-CD7D-4995-93F0-97DA468EBE90", "GOVID2", "Government ID 2")
+                } );
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                adapterRegistry = null;
+                personRepo = null;
+                personBaseRepo = null;
+                refRepo = null;
+                roleRepo = null;
+                personService = null;
+                personRole = null;
+            }
+
+            [TestMethod]
+            public async Task GetAllPersonCredentials3()
+            {
+                personRepoMock.Setup( repo => repo.GetFilteredPerson2GuidsAsync( It.IsAny<int>(), It.IsAny<int>(),
+                     It.IsAny<bool>(), null, null ) ).ReturnsAsync( peopleIdsTuple );
+
+                // Act--get person
+                var personCredentials = new PersonCredential3();
+                var actuals = await personService.GetAllPersonCredentials4Async( It.IsAny<int>(), It.IsAny<int>(),
+                    personCredentials, It.IsAny<bool>() );
+                // Assert
+                Assert.IsNotNull( actuals );
+                Assert.AreEqual( 2, actuals.Item1.Count() );
+
+                foreach( var actual in actuals.Item1 )
+                {
+                    var expected = people.FirstOrDefault( i => i.Guid.Equals( actual.Id, StringComparison.OrdinalIgnoreCase ) );
+                    Assert.IsNotNull(expected);
+                    var cred = actual.Credentials.FirstOrDefault( c => c.Type == Credential3Type.TaxIdentificationNumber ).Value;
+                    Assert.AreEqual( expected.GovernmentId, cred );
+                }
+            }
+
+            [TestMethod]
+            public async Task GetAllPersonCredentials3_WithCriteria()
+            {
+                PersonFilterCriteria personFilterCriteria = new PersonFilterCriteria();
+                personFilterCriteria.AlternativeCredentials = null;
+                personRepoMock.Setup( repo => repo.GetFilteredPerson2GuidsAsync( It.IsAny<int>(), It.IsAny<int>(),
+                     It.IsAny<bool>(),It.IsAny< PersonFilterCriteria>(), null ) ).ReturnsAsync( peopleIdsTuple );
+
+                // Act--get person
+                var personCredentials = new PersonCredential3()
+                {
+                    Credentials = new List<Credential3DtoProperty>()
+                    {
+                        new Credential3DtoProperty()
+                        {
+                            Type = Credential3Type.TaxIdentificationNumber,
+                            Value = "111-11-1111"
+                        }
+                    },
+                    AlternativeCredentials = new List<AlternativeCredentials>()
+                    {
+                        new AlternativeCredentials()
+                        {
+                            Type = new GuidObject2("AE44FE48-2534-480B-8618-5480617CE74A"),
+                            Value = "ELEV2"
+                        }
+                    }
+                };
+                var actuals = await personService.GetAllPersonCredentials4Async( It.IsAny<int>(), It.IsAny<int>(),
+                    personCredentials, It.IsAny<bool>() );
+                // Assert
+                Assert.IsNotNull( actuals );
+                Assert.AreEqual( 2, actuals.Item1.Count() );
+
+                foreach( var actual in actuals.Item1 )
+                {
+                    var expected = people.FirstOrDefault( i => i.Guid.Equals( actual.Id, StringComparison.OrdinalIgnoreCase ) );
+                    Assert.IsNotNull( expected );
+                    var cred = actual.Credentials.FirstOrDefault( c => c.Type == Credential3Type.TaxIdentificationNumber ).Value;
+                    Assert.AreEqual( expected.GovernmentId, cred );
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof( RepositoryException ) )]
+            public async Task GetAllPersonCredentials3_RepositoryException()
+            {
+                var message = "Repository error message.";
+                personRepoMock.Setup( repo => repo.GetFilteredPerson2GuidsAsync( It.IsAny<int>(), It.IsAny<int>(),
+                     It.IsAny<bool>(), null, null ) ).ThrowsAsync( new RepositoryException(message));
+
+                // Act--get person                
+                var actuals = await personService.GetAllPersonCredentials4Async( It.IsAny<int>(), It.IsAny<int>(), null, It.IsAny<bool>() );               
+            }
+
+            [TestMethod]
+            [ExpectedException( typeof( Exception ) )]
+            public async Task GetAllPersonCredentials3_Exception()
+            {
+                var message = "Repository error message.";
+                personRepoMock.Setup( repo => repo.GetFilteredPerson2GuidsAsync( It.IsAny<int>(), It.IsAny<int>(),
+                     It.IsAny<bool>(), null, null ) ).ThrowsAsync( new Exception( message ) );
+
+                // Act--get person                
+                var actuals = await personService.GetAllPersonCredentials4Async( It.IsAny<int>(), It.IsAny<int>(), null, It.IsAny<bool>() );
+            }
+
+            [TestMethod]
+            public async Task GetPersonCredential4ByGuidAsync()
+            {
+                var actuals = await personService.GetPersonCredential4ByGuidAsync( personGuid );
+                // Assert
+                Assert.IsNotNull( actuals );
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetPersonCredential4ByGuidAsync_Null_Id_ArgumentNullException()
+            {
+                var actuals = await personService.GetPersonCredential4ByGuidAsync( string.Empty );
+            }
+
+            [TestMethod]
+            public async Task GetPersonCredential4ByGuidAsync_ArgumentNullException()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.NotFound;
+                personRepoMock.Setup( repo => repo.GetPersonCredentialByGuidNonCachedAsync( personGuid ) ).ThrowsAsync( new ArgumentNullException() );
+
+                try
+                {
+                    var actuals = await personService.GetPersonCredential4ByGuidAsync( personGuid );
+                }
+                catch( IntegrationApiException e )
+                {
+                    statusCode = e.HttpStatusCode;
+                }
+                Assert.AreEqual( HttpStatusCode.NotFound, statusCode );
+            }
+
+            [TestMethod]
+            public async Task GetPersonCredential4ByGuidAsync_PersonEntity_Null_IntegrationApiException()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.NotFound;
+
+                personRepoMock.Setup( repo => repo.GetPersonCredentialByGuidNonCachedAsync( personGuid ) ).ReturnsAsync( null );
+                try
+                {
+                    var actuals = await personService.GetPersonCredential4ByGuidAsync( personGuid );
+                }
+                catch( IntegrationApiException e )
+                {
+                    statusCode = e.HttpStatusCode;
+                }
+                Assert.AreEqual( HttpStatusCode.NotFound, statusCode );
             }
         }
 
@@ -3259,6 +3577,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         #endregion
+
         #region GetPersonProxyDetails Tests
 
         [TestClass]
@@ -3413,7 +3732,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             #endregion
 
-            #region UpdateProfileTests
+        #region UpdateProfileTests
 
             [TestClass]
         public class UpdateProfile : CurrentUserSetup
@@ -5818,6 +6137,20 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 personRepositoryMock.Setup(i => i.Create2Async(It.IsAny<PersonIntegration>(), addresses, phones, It.IsAny<int>())).ReturnsAsync(personIntegrationReturned);
 
+                // Mock LANGUAGES valcode 
+                var languages = new Ellucian.Data.Colleague.DataContracts.ApplValcodes()
+                {
+
+                    ValsEntityAssociation = new List<Ellucian.Data.Colleague.DataContracts.ApplValcodesVals>()
+                    {
+                        new ApplValcodesVals() { ValInternalCodeAssocMember = "E", ValExternalRepresentationAssocMember = "English", ValActionCode3AssocMember = "ENG" },
+                        new ApplValcodesVals() { ValInternalCodeAssocMember = "SP", ValExternalRepresentationAssocMember = "Spanish", ValActionCode3AssocMember = "SPA" },
+                        new ApplValcodesVals() { ValInternalCodeAssocMember = "TA", ValExternalRepresentationAssocMember = "Tagalog", ValActionCode3AssocMember = "TGL" }
+                    }
+                };
+                personBaseRepositoryMock.Setup(repo => repo.GetLanguagesAsync()).ReturnsAsync(languages);
+
+
                 personService = new PersonService(adapterRegistryMock.Object, personRepositoryMock.Object, personBaseRepositoryMock.Object, referenceDataRepositoryMock.Object, profileRepositoryMock.Object,
                                                   configurationRepositoryMock.Object, relationshipRepositoryMock.Object, proxyRepositoryMock.Object, currentUserFactory,
                                                   roleRepositoryMock.Object, loggerMock.Object);
@@ -5895,6 +6228,229 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Assert.AreEqual(historyexpectedName.FullName, historyActualName.FullName);
             }
 
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreatePerson5_PermissionException()
+            {
+                try
+                {
+                    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { });
+                    await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("Access.Denied", ex.Errors.First().Code);
+                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, ex.Errors.First().StatusCode);
+                    throw;
+                }
+            }
+
+            #region Birth Date
+
+            [TestMethod]
+            public async Task CreatePerson5_CreatePerson5Async_BirthDate_Detail()
+            {
+                //setup role
+                createPersonRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Base.BasePermissionCodes.CreatePerson));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPersonRole });
+
+                personDto.BirthDate = new DateTime(1930, 1, 1);
+
+                var actual = await personService.CreatePerson5Async(personDto);
+                Assert.IsNotNull(actual.BirthDate);
+                Assert.AreEqual("1/1/1930", actual.BirthDate.Value.ToShortDateString());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreatePerson5_CreatePerson5Async_BirthDate_GT_Today()
+            {
+                //setup role
+                createPersonRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Base.BasePermissionCodes.CreatePerson));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPersonRole });
+
+                personDto.BirthDate = DateTime.Today.AddDays(1);
+
+                try
+                {
+                    var actual = await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.dateOfBirth", ex.Errors.First().Code);
+                    Assert.AreEqual("Date of birth cannot be after the current date.", ex.Errors.First().Message);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreatePerson5_CreatePerson5Async_BirthDate_GT_DeceasedDate()
+            {
+                //setup role
+                createPersonRole.AddPermission(
+                    new Ellucian.Colleague.Domain.Entities.Permission(
+                        Ellucian.Colleague.Domain.Base.BasePermissionCodes.CreatePerson));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPersonRole });
+                
+                personDto.BirthDate = new DateTime(1930, 1, 1);
+                personDto.DeceasedDate = new DateTime(1920, 1, 1);
+
+                try
+                {
+                    await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.dateDeceased", ex.Errors.First().Code);
+                    Assert.AreEqual("Date of birth cannot be after deceased date.", ex.Errors.First().Message);
+                    throw;
+                }
+            }
+
+            #endregion
+
+            #region Gender Identity
+
+            [TestMethod]
+            public async Task CreatePerson5_CreatePerson5Async_GenderIdentity_Detail()
+            {
+                //setup role
+                createPersonRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Base.BasePermissionCodes.CreatePerson));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPersonRole });
+
+                personDto.GenderIdentity = new GuidObject2("9c3004ab-0f25-4d1d-84d6-65ea69ce1124");
+
+                var actual = await personService.CreatePerson5Async(personDto);
+                Assert.IsNotNull(actual.GenderIdentity);
+                Assert.AreEqual("9c3004ab-0f25-4d1d-84d6-65ea69ce1124", actual.GenderIdentity.Id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreatePerson5_CreatePerson5Async_GenderIdentity_Null_Guid()
+            {
+                //setup role
+                createPersonRole.AddPermission(
+                    new Ellucian.Colleague.Domain.Entities.Permission(
+                        Ellucian.Colleague.Domain.Base.BasePermissionCodes.CreatePerson));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPersonRole });
+
+                personDto.GenderIdentity = new GuidObject2("");
+
+                try
+                {
+                    await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.genderIdentity.id", ex.Errors.First().Code);
+                    Assert.AreEqual("Gender Identity id is a required field when Gender Identity is in the message body.", ex.Errors.First().Message);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreatePerson5_CreatePerson5Async_GenderIdentity_Invalid_Guid()
+            {
+                //setup role
+                createPersonRole.AddPermission(
+                    new Ellucian.Colleague.Domain.Entities.Permission(
+                        Ellucian.Colleague.Domain.Base.BasePermissionCodes.CreatePerson));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPersonRole });
+
+                var guid = Guid.NewGuid().ToString();
+                personDto.GenderIdentity = new GuidObject2(guid);
+
+                try
+                {
+                    await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.genderIdentity.id", ex.Errors.First().Code);
+                    Assert.AreEqual(string.Concat("Gender Identity ID '", guid, "' was not found."), ex.Errors.First().Message);
+                    throw;
+                }
+            }
+
+            #endregion
+
+            #region Personal Pronoun
+
+            [TestMethod]
+            public async Task CreatePerson5_CreatePerson5Async_PersonalPronoun_Detail()
+            {
+                //setup role
+                createPersonRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Base.BasePermissionCodes.CreatePerson));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPersonRole });
+
+                personDto.PersonalPronoun = new GuidObject2("ae7a3392-fa07-4f53-b6d5-317d77cb62ec");
+
+                var actual = await personService.CreatePerson5Async(personDto);
+                Assert.IsNotNull(actual.PersonalPronoun);
+                Assert.AreEqual("ae7a3392-fa07-4f53-b6d5-317d77cb62ec", actual.PersonalPronoun.Id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreatePerson5_CreatePerson5Async_PersonalPronoun_Null_Guid()
+            {
+                //setup role
+                createPersonRole.AddPermission(
+                    new Ellucian.Colleague.Domain.Entities.Permission(
+                        Ellucian.Colleague.Domain.Base.BasePermissionCodes.CreatePerson));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPersonRole });
+
+                personDto.PersonalPronoun = new GuidObject2("");
+
+                try
+                {
+                    await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.personalPronoun.id", ex.Errors.First().Code);
+                    Assert.AreEqual("Personal Pronoun id is a required field when Personal Pronoun is in the message body.", ex.Errors.First().Message);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreatePerson5_CreatePerson5Async_PersonalPronoun_Invalid_Guid()
+            {
+                //setup role
+                createPersonRole.AddPermission(
+                    new Ellucian.Colleague.Domain.Entities.Permission(
+                        Ellucian.Colleague.Domain.Base.BasePermissionCodes.CreatePerson));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPersonRole });
+
+                var guid = Guid.NewGuid().ToString();
+                personDto.PersonalPronoun = new GuidObject2(guid);
+
+                try
+                {
+                    await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.personalPronoun.id", ex.Errors.First().Code);
+                    Assert.AreEqual(string.Concat("Personal Pronoun ID '", guid, "' was not found."), ex.Errors.First().Message);
+                    throw;
+                }
+            }
+
+            #endregion
+
             #region Privacy Status
 
             [TestMethod]
@@ -5935,7 +6491,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreatePerson5_CreatePerson5Async_PrivacyStatus_Mismatch()
             {
                 //setup role
@@ -5950,11 +6506,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     PrivacyCategory = Dtos.PrivacyStatusType.Restricted
                 };
                 personDto.PrivacyStatus = privacyStatus;
-                await personService.CreatePerson5Async(personDto);
+                try
+                {
+                    await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.privacyStatus.detail.id", ex.Errors.First().Code);
+                    Assert.AreEqual("Provided privacy status type Restricted does not match the privacy status type by id d3d86052-9d55-4751-acda-5c07a064a82a", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreatePerson5_CreatePerson5Async_PrivacyStatus_EmptyDetail()
             {
                 //setup role
@@ -5969,11 +6535,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     PrivacyCategory = Dtos.PrivacyStatusType.Restricted
                 };
                 personDto.PrivacyStatus = privacyStatus;
-                await personService.CreatePerson5Async(personDto);
+                try
+                {
+                    await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.privacyStatus.detail.id", ex.Errors.First().Code);
+                    Assert.AreEqual("Must provide an id for privacyStatus detail.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreatePerson5_CreatePerson5Async_PrivacyStatus_InvalidDetail()
             {
                 //setup role
@@ -5988,11 +6564,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     PrivacyCategory = Dtos.PrivacyStatusType.Restricted
                 };
                 personDto.PrivacyStatus = privacyStatus;
-                await personService.CreatePerson5Async(personDto);
+                try
+                {
+                    await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.privacyStatus.detail.id", ex.Errors.First().Code);
+                    Assert.AreEqual("Privacy status associated to guid 'A448C44F-C5D5-492C-A7ED-83F3DD1B5042' not found in repository.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreatePerson5_CreatePerson5Async_PrivacyStatus_EmptyCategory()
             {
                 //setup role
@@ -6001,15 +6587,22 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                         Ellucian.Colleague.Domain.Base.BasePermissionCodes.CreatePerson));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPersonRole });
 
-                referenceDataRepositoryMock.Setup(repo => repo.GetPrivacyStatusesAsync(It.IsAny<bool>())).ReturnsAsync(allPrivacyStatuses.Where(m => m.Guid == demographicGuid));
-
                 var privacyStatus = new PersonPrivacyDtoProperty
                 {
-                    Detail = new GuidObject2(demographicGuid),
-
+                    Detail = new GuidObject2(demographicGuid)
                 };
                 personDto.PrivacyStatus = privacyStatus;
-                await personService.CreatePerson5Async(personDto);
+                try
+                {
+                    await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.privacyStatus.privacyCategory", ex.Errors.First().Code);
+                    Assert.AreEqual("Must provide privacyCategory for privacyStatus.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             #endregion
@@ -6055,7 +6648,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreatePerson5_CreatePerson5Async_MaritalStatus_Mismatch()
             {
                 //setup role
@@ -6072,11 +6665,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 personDto.MaritalStatus = maritalStatus;
 
-                await personService.CreatePerson5Async(personDto);
+                try
+                {
+                    await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.maritalStatus", ex.Errors.First().Code);
+                    Assert.AreEqual("Could not find marital status with id: 00000000-0000-0000-0000-000000000000", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreatePerson5_CreatePerson5Async_MaritalStatus_EmptyDetail()
             {
                 //setup role
@@ -6091,11 +6694,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     MaritalCategory = PersonMaritalStatusCategory.Married
                 };
                 personDto.MaritalStatus = maritalStatus;
-                await personService.CreatePerson5Async(personDto);
+                try
+                {
+                    await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.maritalStatus", ex.Errors.First().Code);
+                    Assert.AreEqual("Must provide an id for marital status detail.\r\nParameter name: maritalStatus.detail.id", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreatePerson5_CreatePerson5Async_MaritalStatus_EmptyCategory()
             {
                 //setup role
@@ -6111,7 +6724,17 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 };
                 personDto.MaritalStatus = maritalStatus;
 
-                await personService.CreatePerson5Async(personDto);
+                try
+                {
+                    await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.maritalStatus", ex.Errors.First().Code);
+                    Assert.AreEqual("Must provide a valid category for marital status.\r\nParameter name: maritalStatus.maritalCategory", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             #endregion
@@ -6170,7 +6793,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreatePerson5_CreatePerson5Async_Religion_Invalid()
             {
                 //setup role
@@ -6187,11 +6810,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 personDto.Religion = new GuidObject2(new Guid().ToString());
 
-                await personService.CreatePerson5Async(personDto);
+                try
+                {
+                    await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.religion", ex.Errors.First().Code);
+                    Assert.AreEqual("Religion ID associated to guid '00000000-0000-0000-0000-000000000000' not found in repository", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreatePerson5_CreatePerson5Async_Religion_Null()
             {
                 //setup role
@@ -6204,13 +6837,22 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     new TestReligionRepository().GetDenominations().ToList();
                 referenceDataRepositoryMock.Setup(repo => repo.GetDenominationsAsync(It.IsAny<bool>()))
                     .ReturnsAsync(allDenominations);
-                //referenceDataRepositoryMock.Setup(repo => repo.DenominationsAsync()).ReturnsAsync(allDenominations);
 
                 var religion = allDenominations.FirstOrDefault();
 
                 personDto.Religion = new GuidObject2();
 
-                await personService.CreatePerson5Async(personDto);
+                try
+                {
+                    await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.religion", ex.Errors.First().Code);
+                    Assert.AreEqual("Must provide an id for religion.\r\nParameter name: personDto.religion.id", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             #endregion
@@ -6218,7 +6860,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             #region Language
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
             public async Task CreatePerson5_CreatePerson5Async_Language()
             {
                 //setup role
@@ -6247,7 +6888,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreatePerson5_CreatePerson5Async_Language_EmptyCode()
             {
                 //setup role
@@ -6266,11 +6907,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 personDto.Languages = personLanguages;
 
-                await personService.CreatePerson5Async(personDto);
+                try
+                {
+                    await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.languages", ex.Errors.First().Code);
+                    Assert.AreEqual("language code must be specified\r\nParameter name: code", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreatePerson5_CreatePerson5Async_Language_MultiplePreferred()
             {
                 //setup role
@@ -6297,7 +6948,17 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 personDto.Languages = personLanguages;
 
-                await personService.CreatePerson5Async(personDto);
+                try
+                {
+                    await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.languages", ex.Errors.First().Code);
+                    Assert.AreEqual("The person may not have more than one language with a preference of 'primary'.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             #endregion
@@ -6333,7 +6994,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreatePerson5_CreatePerson5Async_CountryOfBirth_Invalid()
             {
                 //setup role
@@ -6344,11 +7005,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 personDto.CountryOfBirth = "XXX";
 
-                await personService.CreatePerson5Async(personDto);
+                try
+                {
+                    await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.countryOfBirth", ex.Errors.First().Code);
+                    Assert.AreEqual("Country not found with Iso3 code: 'XXX'", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreatePerson5_CreatePerson5Async_CitizenshipCountry_Invalid()
             {
                 //setup role
@@ -6359,31 +7030,84 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 personDto.CitizenshipCountry = "XXX";
 
-                await personService.CreatePerson5Async(personDto);
+                try
+                {
+                    await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.citizenshipCountry", ex.Errors.First().Code);
+                    Assert.AreEqual("Country not found with Iso3 code: 'XXX'", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
+
+            #endregion
+
+            #region Veteran Status
+
+            [TestMethod]
+            public async Task CreatePerson5_CreatePerson5Async_VeteranStatus()
+            {
+                //setup role
+                createPersonRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Base.BasePermissionCodes.CreatePerson));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPersonRole });
+
+                var actual = await personService.CreatePerson5Async(personDto);
+                var militaryStatus = actual.VeteranStatus;
+                var statusCategory = militaryStatus != null ? militaryStatus.VeteranStatusCategory : null;
+                var statusDetail = militaryStatus != null && militaryStatus.Detail != null ? militaryStatus.Detail.Id : null;
+
+                Assert.IsNotNull(militaryStatus);
+                Assert.IsNotNull(statusCategory);
+                Assert.IsNotNull(statusDetail);
+                Assert.AreEqual(statusCategory, VeteranStatusesCategory.Protectedveteran);
+                Assert.AreEqual(statusDetail, "ae7a3392-fa07-4f53-b6d5-317d88cb62ec");
+            }
 
             #endregion
 
             #region Exceptions
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreatePerson5_CreatePerson5Async_PersonDTO_Null_ArgumentNullException()
             {
-                var actual = await personService.CreatePerson5Async(null);
+                try
+                {
+                    var actual = await personService.CreatePerson5Async(null);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons", ex.Errors.First().Code);
+                    Assert.AreEqual("Must provide a person object for creation", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreatePerson5_CreatePerson5Async_PersonDTO_IdNull_ArgumentNullException()
             {
                 personDto.Id = string.Empty;
-                var actual = await personService.CreatePerson5Async(personDto);
+                try
+                {
+                    var actual = await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons", ex.Errors.First().Code);
+                    Assert.AreEqual("Must provide a guid for person creation", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreatePerson5_PrimaryNames_Null_ArgumentNullException()
             {
                 //setup role
@@ -6392,15 +7116,25 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 personDto.PersonNames.FirstOrDefault().LastName = string.Empty;
 
-                var actual = await personService.CreatePerson5Async(personDto);
+                try
+                {
+                    var actual = await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.names.lastName", ex.Errors.First().Code);
+                    Assert.AreEqual("Last name is required for a legal name.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_Username_Exception()
             {
                 //setup role
-                createPersonRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Base.BasePermissionCodes.CreatePerson));
+                updatePersonRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Base.BasePermissionCodes.UpdatePerson));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { updatePersonRole });
 
                 //personId 0000011
@@ -6424,7 +7158,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             #endregion
 
-            #region Setup V12
+            #region Setup V12.1.0
 
             private void SetupData()
             {
@@ -6547,6 +7281,11 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                         Value = "1234"
                     }
                 };
+                personDto.VeteranStatus = new PersonVeteranStatusDtoProperty()
+                {
+                    VeteranStatusCategory = VeteranStatusesCategory.Protectedveteran,
+                    Detail = new GuidObject2("AE7A3392-FA07-4F53-B6D5-317D88CB62EC")
+                };
 
                 //Entity
                 personIntegrationEntity = new PersonIntegration(It.IsAny<string>(), legalPrimaryName.LastName)
@@ -6572,6 +7311,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personIntegrationReturned.GovernmentId = "111-11-1111";
                 personIntegrationReturned.Religion = "CA";
                 personIntegrationReturned.MaritalStatusCode = "M";
+                personIntegrationReturned.AddPersonLanguage(new PersonLanguage(personId, "eng", LanguagePreference.Primary));
                 personIntegrationReturned.EthnicCodes = new List<string> { "H", "N" };
                 personIntegrationReturned.Gender = "M";
                 personIntegrationReturned.RaceCodes = new List<string> { "AS" };
@@ -6600,6 +7340,11 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personIntegrationReturned.PersonalPronounCode = "HE";
                 personIntegrationReturned.AddPersonAlt(new PersonAlt("2222", "ELEV2"));
                 personIntegrationReturned.AddPersonAlt(new PersonAlt("3333", "GOVID2"));
+                personIntegrationReturned.MilitaryStatus = "VET";
+
+                // Mock the person languages
+                personIntegrationReturned.PrimaryLanguage = "E";
+                personIntegrationReturned.SecondaryLanguages = new List<String> { "SP", "TA" };
 
                 // Mock the address hierarchy responses
                 var addresses = new List<Domain.Base.Entities.Address>();
@@ -6808,6 +7553,11 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 {
                     new PersonalPronounType("AE7A3392-FA07-4F53-B6D5-317D77CB62EC","HE","He, Him, His"),
                     new PersonalPronounType("9567AFB5-5F3C-40DC-B4F9-FC1658ACEE15", "HER","She, Her, Hers")
+                });
+                referenceDataRepositoryMock.Setup(repo => repo.GetMilStatusesAsync(It.IsAny<bool>())).ReturnsAsync(new List<MilStatuses>()
+                {
+                    new MilStatuses("AE7A3392-FA07-4F53-B6D5-317D88CB62EC", "VET", "Veteran") { Category = VeteranStatusCategory.Protectedveteran },
+                    new MilStatuses("9567AFB5-5F3C-40DC-B4F9-FC1699ACEE15", "RET", "Retired") { Category = VeteranStatusCategory.Activeduty }
                 });
             }
 
@@ -11561,22 +12311,61 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             #region Exceptions
+            
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdatePerson5_PermissionException()
+            {
+                try
+                {
+                    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { });
+                    await personService.CreatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("Access.Denied", ex.Errors.First().Code);
+                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, ex.Errors.First().StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_Dto_Null_ArgumentNullException()
             {
-                var result = await personService.UpdatePerson5Async(null);
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(null);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons", ex.Errors.First().Code);
+                    Assert.AreEqual("Must provide a person object for update", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_Id_Null_ArgumentNullException()
             {
-                var result = await personService.UpdatePerson5Async(new Dtos.Person5() { Id = "" });
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(new Dtos.Person5() { Id = "" });
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons", ex.Errors.First().Code);
+                    Assert.AreEqual("Must provide a guid for person update", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_PersonNames_Null_ArgumentNullException()
             {
                 //setup role
@@ -11585,11 +12374,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 //personId 0000011
                 personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(personId);
-                var result = await personService.UpdatePerson5Async(new Dtos.Person5() { Id = personId });
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(new Dtos.Person5() { Id = personId });
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.names", ex.Errors.First().Code);
+                    Assert.AreEqual("Must provide person name", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_PrimaryNames_Null_ArgumentNullException()
             {
                 //setup role
@@ -11599,11 +12398,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 //personId 0000011
                 personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(personId);
                 personDto.PersonNames.FirstOrDefault().NameType.Detail.Id = string.Empty;
-                var result = await personService.UpdatePerson5Async(personDto);
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.names.type.detail.id", ex.Errors.First().Code);
+                    Assert.AreEqual("Name type category with detail Id of '' is not valid.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_PrimaryNames_GT_1_ArgumentNullException()
             {
                 //setup role
@@ -11637,11 +12446,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 };
                 personNames.Add(personPrimaryName1);
                 personDto.PersonNames = personNames;
-                var result = await personService.UpdatePerson5Async(personDto);
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.names.type.category", ex.Errors.First().Code);
+                    Assert.AreEqual("A legal name is required in the names array.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_PrimaryNames_LastName_Null_ArgumentNullException()
             {
                 //setup role
@@ -11652,11 +12471,46 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(personId);
                 personDto.PersonNames.FirstOrDefault().LastName = string.Empty;
 
-                var result = await personService.UpdatePerson5Async(personDto);
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.names.lastName", ex.Errors.First().Code);
+                    Assert.AreEqual("Last name is required for a legal name.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdatePerson5_PrimaryNames_FullName_Null_ArgumentNullException()
+            {
+                //setup role
+                updatePersonRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Base.BasePermissionCodes.UpdatePerson));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { updatePersonRole });
+
+                //personId 0000011
+                personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(personId);
+                personDto.PersonNames.FirstOrDefault().FullName = string.Empty;
+
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.names.fullName", ex.Errors.First().Code);
+                    Assert.AreEqual("Full name is required for a legal name.", ex.Errors.First().Message);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_LEGAL_NameTypes_Null_ArgumentNullException()
             {
                 var legalType = personNameTypes.FirstOrDefault(x => x.Code == "LEGAL");
@@ -11669,11 +12523,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 //personId 0000011
                 personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(personId);
 
-                var result = await personService.UpdatePerson5Async(personDto);
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.names.type.detail.id", ex.Errors.First().Code);
+                    Assert.AreEqual("Name type category with detail Id of '806af5a5-8a9a-424f-8c9f-c1e9d084ee71' is not valid.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_BIRTH_NameTypes_Null_ArgumentNullException()
             {
                 var birthType = personNameTypes.FirstOrDefault(x => x.Code == "BIRTH");
@@ -11686,11 +12550,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 //personId 0000011
                 personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(personId);
 
-                var result = await personService.UpdatePerson5Async(personDto);
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.names.type.detail.id", ex.Errors.First().Code);
+                    Assert.AreEqual("Name type category with detail Id of '7dfa950c-8ae4-4dca-92f0-c083604285b6' is not valid.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_NICKNAME_NameTypes_Null_ArgumentNullException()
             {
                 var nickNameType = personNameTypes.FirstOrDefault(x => x.Code == "NICKNAME");
@@ -11703,12 +12577,22 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 //personId 0000011
                 personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(personId);
 
-                var result = await personService.UpdatePerson5Async(personDto);
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.names.type.detail.id", ex.Errors.First().Code);
+                    Assert.AreEqual("Name type category with detail Id of '7b55610f-7d00-4260-bbcf-0e47fdbae647' is not valid.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task UpdatePerson5_NICKNAME_GT_1_ArgumentNullException()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdatePerson5_Birthname_GT_1_ArgumentNullException()
             {
                 //setup role
                 updatePersonRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Base.BasePermissionCodes.UpdatePerson));
@@ -11720,7 +12604,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var personNames = new List<Dtos.DtoProperties.PersonName2DtoProperty>();
                 var legalPrimaryName = new Dtos.DtoProperties.PersonName2DtoProperty()
                 {
-                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Personal, Detail = new Dtos.GuidObject2() { Id = "806af5a5-8a9a-424f-8c9f-c1e9d084ee71" } },
+                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Legal, Detail = new Dtos.GuidObject2() { Id = "806af5a5-8a9a-424f-8c9f-c1e9d084ee71" } },
                     Title = "MR",
                     FirstName = "Ricky",
                     MiddleName = "Lee",
@@ -11756,11 +12640,22 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 };
                 personNames.Add(birthPrimaryName2);
                 personDto.PersonNames = personNames;
-                var result = await personService.UpdatePerson5Async(personDto);
+
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.names.type.category", ex.Errors.First().Code);
+                    Assert.AreEqual("Colleague does not support more than one birth name for a person.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_Legal_FirstLastMiddle_Null_ArgumentNullException()
             {
                 //setup role
@@ -11773,7 +12668,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var personNames = new List<Dtos.DtoProperties.PersonName2DtoProperty>();
                 var legalPrimaryName = new Dtos.DtoProperties.PersonName2DtoProperty()
                 {
-                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Personal, Detail = new Dtos.GuidObject2() { Id = "806af5a5-8a9a-424f-8c9f-c1e9d084ee71" } },
+                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Legal, Detail = new Dtos.GuidObject2() { Id = "806af5a5-8a9a-424f-8c9f-c1e9d084ee71" } },
                     Title = "MR",
                     FirstName = "",
                     MiddleName = "",
@@ -11783,37 +12678,23 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     FullName = "FullName"
                 };
                 personNames.Add(legalPrimaryName);
-                var birthPrimaryName = new Dtos.DtoProperties.PersonName2DtoProperty()
-                {
-                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Birth, Detail = new Dtos.GuidObject2() { Id = "7b55610f-7d00-4260-bbcf-0e47fdbae647" } },
-                    Title = "MR",
-                    FirstName = "Ricky",
-                    MiddleName = "Lee",
-                    LastName = "Brown",
-                    Pedigree = "JR",
-                    LastNamePrefix = "Ignore",
-                    FullName = "FullName"
-                };
-                personNames.Add(birthPrimaryName);
-
-                var birthPrimaryName2 = new Dtos.DtoProperties.PersonName2DtoProperty()
-                {
-                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Birth, Detail = new Dtos.GuidObject2() { Id = "7b55610f-7d00-4260-bbcf-0e47fdbae647" } },
-                    Title = "MR",
-                    FirstName = "Ricky",
-                    MiddleName = "Lee",
-                    LastName = "Brown",
-                    Pedigree = "JR",
-                    LastNamePrefix = "Ignore",
-                    FullName = "FullName"
-                };
-                personNames.Add(birthPrimaryName2);
                 personDto.PersonNames = personNames;
-                var result = await personService.UpdatePerson5Async(personDto);
+
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.names.lastName", ex.Errors.First().Code);
+                    Assert.AreEqual("Last name is required for a legal name.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_Birth_FirstLastMiddle_Null_ArgumentNullException()
             {
                 //setup role
@@ -11826,7 +12707,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var personNames = new List<Dtos.DtoProperties.PersonName2DtoProperty>();
                 var legalPrimaryName = new Dtos.DtoProperties.PersonName2DtoProperty()
                 {
-                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Personal, Detail = new Dtos.GuidObject2() { Id = "806af5a5-8a9a-424f-8c9f-c1e9d084ee71" } },
+                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Legal, Detail = new Dtos.GuidObject2() { Id = "806af5a5-8a9a-424f-8c9f-c1e9d084ee71" } },
                     Title = "MR",
                     FirstName = "LegalFirst",
                     MiddleName = "LegalMiddle",
@@ -11849,11 +12730,22 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 };
                 personNames.Add(birthPrimaryName);
                 personDto.PersonNames = personNames;
-                var result = await personService.UpdatePerson5Async(personDto);
+
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.names.lastName", ex.Errors.First().Code);
+                    Assert.AreEqual("Either the firstName, middleName, or lastName is needed for a birth name.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_Birth_FullName_Null_ArgumentNullException()
             {
                 //setup role
@@ -11866,7 +12758,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var personNames = new List<Dtos.DtoProperties.PersonName2DtoProperty>();
                 var legalPrimaryName = new Dtos.DtoProperties.PersonName2DtoProperty()
                 {
-                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Personal, Detail = new Dtos.GuidObject2() { Id = "806af5a5-8a9a-424f-8c9f-c1e9d084ee71" } },
+                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Legal, Detail = new Dtos.GuidObject2() { Id = "806af5a5-8a9a-424f-8c9f-c1e9d084ee71" } },
                     Title = "MR",
                     FirstName = "LegalFirst",
                     MiddleName = "LegalMiddle",
@@ -11889,11 +12781,22 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 };
                 personNames.Add(birthPrimaryName);
                 personDto.PersonNames = personNames;
-                var result = await personService.UpdatePerson5Async(personDto);
+
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.names.fullName", ex.Errors.First().Code);
+                    Assert.AreEqual("Full Name is needed for a birth name.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_NickName_FullName_Null_ArgumentNullException()
             {
                 //setup role
@@ -11906,7 +12809,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var personNames = new List<Dtos.DtoProperties.PersonName2DtoProperty>();
                 var legalPrimaryName = new Dtos.DtoProperties.PersonName2DtoProperty()
                 {
-                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Personal, Detail = new Dtos.GuidObject2() { Id = "806af5a5-8a9a-424f-8c9f-c1e9d084ee71" } },
+                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Legal, Detail = new Dtos.GuidObject2() { Id = "806af5a5-8a9a-424f-8c9f-c1e9d084ee71" } },
                     Title = "MR",
                     FirstName = "LegalFirst",
                     MiddleName = "LegalMiddle",
@@ -11918,7 +12821,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personNames.Add(legalPrimaryName);
                 var birthPrimaryName = new Dtos.DtoProperties.PersonName2DtoProperty()
                 {
-                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Birth, Detail = new Dtos.GuidObject2() { Id = "7b55610f-7d00-4260-bbcf-0e47fdbae647" } },
+                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Personal, Detail = new Dtos.GuidObject2() { Id = "7b55610f-7d00-4260-bbcf-0e47fdbae647" } },
                     Title = "MR",
                     FirstName = "First",
                     MiddleName = "Middle",
@@ -11929,11 +12832,22 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 };
                 personNames.Add(birthPrimaryName);
                 personDto.PersonNames = personNames;
-                var result = await personService.UpdatePerson5Async(personDto);
+
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.names.fullName", ex.Errors.First().Code);
+                    Assert.AreEqual("Full Name is required for a nickname.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_History_FullName_Null_ArgumentNullException()
             {
                 //setup role
@@ -11946,7 +12860,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var personNames = new List<Dtos.DtoProperties.PersonName2DtoProperty>();
                 var legalPrimaryName = new Dtos.DtoProperties.PersonName2DtoProperty()
                 {
-                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Personal, Detail = new Dtos.GuidObject2() { Id = "806af5a5-8a9a-424f-8c9f-c1e9d084ee71" } },
+                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Legal, Detail = new Dtos.GuidObject2() { Id = "806af5a5-8a9a-424f-8c9f-c1e9d084ee71" } },
                     Title = "MR",
                     FirstName = "LegalFirst",
                     MiddleName = "LegalMiddle",
@@ -11956,9 +12870,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     FullName = "FullName"
                 };
                 personNames.Add(legalPrimaryName);
-                var birthPrimaryName = new Dtos.DtoProperties.PersonName2DtoProperty()
+                var formerPrimaryName = new Dtos.DtoProperties.PersonName2DtoProperty()
                 {
-                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Birth, Detail = new Dtos.GuidObject2() { Id = "d42cc964-35cb-4560-bc46-4b881e7705ea" } },
+                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Personal, Detail = new Dtos.GuidObject2() { Id = "d42cc964-35cb-4560-bc46-4b881e7705ea" } },
                     Title = "MR",
                     FirstName = "First",
                     MiddleName = "Middle",
@@ -11967,53 +12881,24 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     LastNamePrefix = "Ignore",
                     FullName = ""
                 };
-                personNames.Add(birthPrimaryName);
+                personNames.Add(formerPrimaryName);
                 personDto.PersonNames = personNames;
-                var result = await personService.UpdatePerson5Async(personDto);
+
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.names.fullName", ex.Errors.First().Code);
+                    Assert.AreEqual("Full Name is required for a former name.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task UpdatePerson5_Prefered_FullName_Null_ArgumentNullException()
-            {
-                //setup role
-                updatePersonRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Base.BasePermissionCodes.UpdatePerson));
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { updatePersonRole });
-
-                //personId 0000011
-                personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(personId);
-                personDto.PersonNames = null;
-                var personNames = new List<Dtos.DtoProperties.PersonName2DtoProperty>();
-                var legalPrimaryName = new Dtos.DtoProperties.PersonName2DtoProperty()
-                {
-                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Personal, Detail = new Dtos.GuidObject2() { Id = "806af5a5-8a9a-424f-8c9f-c1e9d084ee71" } },
-                    Title = "MR",
-                    FirstName = "LegalFirst",
-                    MiddleName = "LegalMiddle",
-                    LastName = "LegalLast",
-                    Pedigree = "JR",
-                    LastNamePrefix = "Ignore",
-                    FullName = "FullName"
-                };
-                personNames.Add(legalPrimaryName);
-                var birthPrimaryName = new Dtos.DtoProperties.PersonName2DtoProperty()
-                {
-                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Birth, Detail = new Dtos.GuidObject2() { Id = "8224f18e-69c5-480b-a9b4-52f596aa4a52" } },
-                    Title = "MR",
-                    FirstName = "First",
-                    MiddleName = "Middle",
-                    LastName = "Last",
-                    Pedigree = "JR",
-                    LastNamePrefix = "Ignore",
-                    FullName = ""
-                };
-                personNames.Add(birthPrimaryName);
-                personDto.PersonNames = personNames;
-                var result = await personService.UpdatePerson5Async(personDto);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_HISTORY_NameTypes_Null_ArgumentNullException()
             {
                 var historyNameType = personNameTypes.FirstOrDefault(x => x.Code == "HISTORY");
@@ -12026,11 +12911,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 //personId 0000011
                 personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(personId);
 
-                var result = await personService.UpdatePerson5Async(personDto);
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.names.type.detail.id", ex.Errors.First().Code);
+                    Assert.AreEqual("Name type category with detail Id of 'd42cc964-35cb-4560-bc46-4b881e7705ea' is not valid.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_HISTORY_LastName_Null_ArgumentNullException()
             {
                 //setup role
@@ -12042,13 +12937,23 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 //personId 0000011
                 personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(personId);
 
-                var result = await personService.UpdatePerson5Async(personDto);
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.names.lastName", ex.Errors.First().Code);
+                    Assert.AreEqual("Last Name is required for a former name.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
 
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_PREFERRED_GT_1_ArgumentNullException()
             {
                 //setup role
@@ -12061,14 +12966,15 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var personNames = new List<Dtos.DtoProperties.PersonName2DtoProperty>();
                 var legalPrimaryName = new Dtos.DtoProperties.PersonName2DtoProperty()
                 {
-                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Personal, Detail = new Dtos.GuidObject2() { Id = "806af5a5-8a9a-424f-8c9f-c1e9d084ee71" } },
+                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Legal, Detail = new Dtos.GuidObject2() { Id = "806af5a5-8a9a-424f-8c9f-c1e9d084ee71" } },
                     Title = "MR",
                     FirstName = "Ricky",
                     MiddleName = "Lee",
                     LastName = "Brown",
                     Pedigree = "JR",
                     LastNamePrefix = "Ignore",
-                    FullName = "FullName"
+                    FullName = "FullName",
+                    Preference = PersonNamePreference.Preferred
                 };
                 personNames.Add(legalPrimaryName);
                 var birthPrimaryName = new Dtos.DtoProperties.PersonName2DtoProperty()
@@ -12080,28 +12986,27 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     LastName = "Brown",
                     Pedigree = "JR",
                     LastNamePrefix = "Ignore",
-                    FullName = "FullName"
+                    FullName = "FullName",
+                    Preference = PersonNamePreference.Preferred
                 };
                 personNames.Add(birthPrimaryName);
-
-                var birthPrimaryName2 = new Dtos.DtoProperties.PersonName2DtoProperty()
-                {
-                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Birth, Detail = new Dtos.GuidObject2() { Id = "8224f18e-69c5-480b-a9b4-52f596aa4a52" } },
-                    Title = "MR",
-                    FirstName = "Ricky",
-                    MiddleName = "Lee",
-                    LastName = "Brown",
-                    Pedigree = "JR",
-                    LastNamePrefix = "Ignore",
-                    FullName = "FullName"
-                };
-                personNames.Add(birthPrimaryName2);
                 personDto.PersonNames = personNames;
-                var result = await personService.UpdatePerson5Async(personDto);
+
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.names.preference", ex.Errors.First().Code);
+                    Assert.AreEqual("Only one name type can be identified as preferred.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_BIRTHNames_GT_1_ArgumentNullException()
             {
                 //setup role
@@ -12114,7 +13019,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var personNames = new List<Dtos.DtoProperties.PersonName2DtoProperty>();
                 var legalPrimaryName = new Dtos.DtoProperties.PersonName2DtoProperty()
                 {
-                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Personal, Detail = new Dtos.GuidObject2() { Id = "806af5a5-8a9a-424f-8c9f-c1e9d084ee71" } },
+                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Legal, Detail = new Dtos.GuidObject2() { Id = "806af5a5-8a9a-424f-8c9f-c1e9d084ee71" } },
                     Title = "MR",
                     FirstName = "Ricky",
                     MiddleName = "Lee",
@@ -12150,11 +13055,22 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 };
                 personNames.Add(birthPrimaryName2);
                 personDto.PersonNames = personNames;
-                var result = await personService.UpdatePerson5Async(personDto);
+
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.names.type.category", ex.Errors.First().Code);
+                    Assert.AreEqual("Colleague does not support more than one birth name for a person.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_BirthNames_Empty_ArgumentNullException()
             {
                 //setup role
@@ -12168,13 +13084,14 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 var personPrimaryName = new Dtos.DtoProperties.PersonName2DtoProperty()
                 {
-                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Personal, Detail = new Dtos.GuidObject2() { Id = "806af5a5-8a9a-424f-8c9f-c1e9d084ee71" } },
+                    NameType = new Dtos.DtoProperties.PersonNameTypeDtoProperty() { Category = Dtos.EnumProperties.PersonNameType2.Legal, Detail = new Dtos.GuidObject2() { Id = "806af5a5-8a9a-424f-8c9f-c1e9d084ee71" } },
                     Title = "MR",
                     FirstName = "Ricky",
                     MiddleName = "Lee",
                     LastName = "Brown",
                     Pedigree = "JR",
-                    LastNamePrefix = "Ignore"
+                    LastNamePrefix = "Ignore",
+                    FullName = "FullName"
                 };
                 personNames.Add(personPrimaryName);
 
@@ -12190,7 +13107,18 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 };
                 personNames.Add(personPrimaryName1);
                 personDto.PersonNames = personNames;
-                var result = await personService.UpdatePerson5Async(personDto);
+
+                try
+                {
+                    var result = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.names.lastName", ex.Errors.First().Code);
+                    Assert.AreEqual("Either the firstName, middleName, or lastName is needed for a birth name.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             #endregion
@@ -12800,7 +13728,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     Assert.AreEqual(expected.Number, actual.Number);
                     Assert.AreEqual(expected.CountryCallingCode, actual.CountryCallingCode);
                     Assert.AreEqual(expected.Extension, actual.Extension);
-                    Assert.AreEqual(expected.Preference, actual.Preference);
                     Assert.AreEqual(expected.Type.PhoneType, actual.Type.PhoneType);
                 }
 
@@ -12816,46 +13743,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task UpdatePerson5_UpdatePerson5Async_PlaceNull_Exception()
-            {
-                addressesCollection = new List<Dtos.DtoProperties.PersonAddressDtoProperty>();
-                allAddresses = new TestAddressRepository().GetAddressDataWithNullId().ToList().Where(i => string.IsNullOrEmpty(i.Guid));
-
-                foreach (var source in allAddresses)
-                {
-                    var address = new Ellucian.Colleague.Dtos.DtoProperties.PersonAddressDtoProperty
-                    {
-                        address = new PersonAddress()
-                        {
-                            Id = source.Guid,
-                            AddressLines = source.AddressLines,
-                            Latitude = source.Latitude,
-                            Longitude = source.Longitude
-                        },
-                        AddressEffectiveStart = new DateTime(2015, 09, 01),
-                        AddressEffectiveEnd = new DateTime(2015, 12, 20),
-                        Preference = Dtos.EnumProperties.PersonPreference.Primary,
-                        Type = new PersonAddressTypeDtoProperty()
-                        {
-                            AddressType = string.IsNullOrEmpty(source.Type) ? null : (Dtos.EnumProperties.AddressType?)Enum.Parse(typeof(Dtos.EnumProperties.AddressType), source.Type, true)
-                        }
-                    };
-                    addressesCollection.Add(address);
-                }
-                personDto.Addresses = addressesCollection;
-                //setup role
-                updatePersonRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Base.BasePermissionCodes.UpdatePerson));
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { updatePersonRole });
-
-                //personId 0000011
-                personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(personId);
-
-                var actual = await personService.UpdatePerson5Async(personDto);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_UpdatePerson5Async_AddressLineNull_Exception()
             {
                 addressesCollection = new List<Dtos.DtoProperties.PersonAddressDtoProperty>();
@@ -12891,11 +13779,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 //personId 0000011
                 personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(personId);
 
-                var actual = await personService.UpdatePerson5Async(personDto);
+                try
+                {
+                    var actual = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.addresses", ex.Errors.First().Code);
+                    Assert.AreEqual("Street address lines are required.\r\nParameter name: personDto", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_UpdatePerson5Async_PlaceCountryNull_Exception()
             {
                 addressesCollection = new List<Dtos.DtoProperties.PersonAddressDtoProperty>();
@@ -12932,52 +13830,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 //personId 0000011
                 personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(personId);
 
-                var actual = await personService.UpdatePerson5Async(personDto);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task UpdatePerson5_UpdatePerson5Async_PlaceCountryLocalityNull_Exception()
-            {
-                addressesCollection = new List<Dtos.DtoProperties.PersonAddressDtoProperty>();
-                allAddresses = new TestAddressRepository().GetAddressDataWithNullId().ToList().Where(i => string.IsNullOrEmpty(i.Guid));
-
-                foreach (var source in allAddresses)
+                try
                 {
-                    var address = new Ellucian.Colleague.Dtos.DtoProperties.PersonAddressDtoProperty
-                    {
-                        address = new PersonAddress()
-                        {
-                            Id = source.Guid,
-                            AddressLines = source.AddressLines,
-                            Latitude = source.Latitude,
-                            Longitude = source.Longitude
-                        },
-                        AddressEffectiveStart = new DateTime(2015, 09, 01),
-                        AddressEffectiveEnd = new DateTime(2015, 12, 20),
-                        Preference = Dtos.EnumProperties.PersonPreference.Primary,
-                        Type = new PersonAddressTypeDtoProperty()
-                        {
-                            AddressType = string.IsNullOrEmpty(source.Type) ? null : (Dtos.EnumProperties.AddressType?)Enum.Parse(typeof(Dtos.EnumProperties.AddressType), source.Type, true)
-                        }
-                    };
-                    addressesCollection.Add(address);
+                    var actual = await personService.UpdatePerson5Async(personDto);
                 }
-                personDto.Addresses = addressesCollection;
-                personDto.Addresses.First().address.Place = new AddressPlace() { Country = new AddressCountry() { Locality = string.Empty } };
-                personDto.Addresses.First().address.AddressLines = new List<string>() { "Something" };
-                //setup role
-                updatePersonRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Base.BasePermissionCodes.UpdatePerson));
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { updatePersonRole });
-
-                //personId 0000011
-                personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(personId);
-
-                var actual = await personService.UpdatePerson5Async(personDto);
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.addresses", ex.Errors.First().Code);
+                    Assert.AreEqual("A country code is required for an address with a place defined.\r\nParameter name: addressDto.place.country.code", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_UpdatePerson5Async_SocialMediaTypeNull_Exception()
             {
                 //setup role
@@ -12991,11 +13858,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 personDto.SocialMedia.First().Type = null;
 
-                var actual = await personService.UpdatePerson5Async(personDto);
+                try
+                {
+                    var actual = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.socialMedia", ex.Errors.First().Code);
+                    Assert.AreEqual("Social media type is required to create a new social media\r\nParameter name: personDto", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_UpdatePerson5Async_SocialMediaAddressNull_Exception()
             {
                 //setup role
@@ -13009,11 +13886,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 personDto.SocialMedia.First().Address = null;
 
-                var actual = await personService.UpdatePerson5Async(personDto);
+                try
+                {
+                    var actual = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.socialMedia", ex.Errors.First().Code);
+                    Assert.AreEqual("Social media handle is required to create a new social media\r\nParameter name: personDto", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_UpdatePerson5Async_SocialMediaTypNotFound_Exception()
             {
                 //setup role
@@ -13027,11 +13914,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 personDto.SocialMedia.First().Type = new PersonSocialMediaType() { Category = Ellucian.Colleague.Dtos.SocialMediaTypeCategory.blog };
 
-                var actual = await personService.UpdatePerson5Async(personDto);
+                try
+                {
+                    var actual = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.socialMedia", ex.Errors.First().Code);
+                    Assert.AreEqual("Could not find the social media type for handle 'http://www.facebook.com/jDoe'. \r\nParameter name: socialMediaDto.Type", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_NullAddress_Exception()
             {
                 //setup role
@@ -13048,11 +13945,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     new PersonAddressDtoProperty(){address = null}
                 };
 
-                var actual = await personService.UpdatePerson5Async(personDto);
+                try
+                {
+                    var actual = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.addresses", ex.Errors.First().Code);
+                    Assert.AreEqual("Address property is required\r\nParameter name: personDto", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_NullType_Exception()
             {
                 //setup role
@@ -13069,11 +13976,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     new PersonAddressDtoProperty(){address = new PersonAddress(), Type = null}
                 };
 
-                var actual = await personService.UpdatePerson5Async(personDto);
+                try
+                {
+                    var actual = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.addresses", ex.Errors.First().Code);
+                    Assert.AreEqual("Address type is required\r\nParameter name: personDto", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_NullPhoneType_Exception()
             {
                 //setup role
@@ -13085,20 +14002,30 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 personRepositoryMock.Setup(i => i.Create2Async(It.IsAny<PersonIntegration>(), It.IsAny<IEnumerable<Domain.Base.Entities.Address>>(), phones, It.IsAny<int>())).ReturnsAsync(personIntegrationReturned);
 
-                personDto.Phones = new List<PersonPhoneDtoProperty>()
+                personDto.Phones = new List<PersonPhone2DtoProperty>()
                 {
-                    new PersonPhoneDtoProperty()
+                    new PersonPhone2DtoProperty()
                     {
                          CountryCallingCode = "1",
                          Number = "111-111-1111"
                     }
                 };
 
-                var actual = await personService.UpdatePerson5Async(personDto);
+                try
+                {
+                    var actual = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.phones", ex.Errors.First().Code);
+                    Assert.AreEqual("A valid Phone type is required for phone number '111-111-1111' \r\nParameter name: personDto.Phone.Type", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_NullPhoneNumber_Exception()
             {
                 //setup role
@@ -13110,9 +14037,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 personRepositoryMock.Setup(i => i.Create2Async(It.IsAny<PersonIntegration>(), It.IsAny<IEnumerable<Domain.Base.Entities.Address>>(), phones, It.IsAny<int>())).ReturnsAsync(personIntegrationReturned);
 
-                personDto.Phones = new List<PersonPhoneDtoProperty>()
+                personDto.Phones = new List<PersonPhone2DtoProperty>()
                 {
-                    new PersonPhoneDtoProperty()
+                    new PersonPhone2DtoProperty()
                     {
                          CountryCallingCode = "1",
                          Number = "" ,
@@ -13120,11 +14047,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     }
                 };
 
-                var actual = await personService.UpdatePerson5Async(personDto);
+                try
+                {
+                    var actual = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.phones", ex.Errors.First().Code);
+                    Assert.AreEqual("Phone number is required to create a new phone\r\nParameter name: personDto.Phone.Number", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_InvalidPhoneType_Exception()
             {
                 //setup role
@@ -13136,9 +14073,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 personRepositoryMock.Setup(i => i.Create2Async(It.IsAny<PersonIntegration>(), It.IsAny<IEnumerable<Domain.Base.Entities.Address>>(), phones, It.IsAny<int>())).ReturnsAsync(personIntegrationReturned);
 
-                personDto.Phones = new List<PersonPhoneDtoProperty>()
+                personDto.Phones = new List<PersonPhone2DtoProperty>()
                 {
-                    new PersonPhoneDtoProperty()
+                    new PersonPhone2DtoProperty()
                     {
                          CountryCallingCode = "1",
                          Number = "1234" ,
@@ -13146,11 +14083,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     }
                 };
 
-                var actual = await personService.UpdatePerson5Async(personDto);
+                try
+                {
+                    var actual = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.phones", ex.Errors.First().Code);
+                    Assert.AreEqual("Could not find the phone type detail id '12345' for phone number '1234'. \r\nParameter name: phoneDto.Type.Detail.Id", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_NullPhoneTypeId_Exception()
             {
                 //setup role
@@ -13162,9 +14109,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 personRepositoryMock.Setup(i => i.Create2Async(It.IsAny<PersonIntegration>(), It.IsAny<IEnumerable<Domain.Base.Entities.Address>>(), phones, It.IsAny<int>())).ReturnsAsync(personIntegrationReturned);
 
-                personDto.Phones = new List<PersonPhoneDtoProperty>()
+                personDto.Phones = new List<PersonPhone2DtoProperty>()
                 {
-                    new PersonPhoneDtoProperty()
+                    new PersonPhone2DtoProperty()
                     {
                          CountryCallingCode = "1",
                          Number = "1234" ,
@@ -13172,11 +14119,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     }
                 };
 
-                var actual = await personService.UpdatePerson5Async(personDto);
+                try
+                {
+                    var actual = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.phones", ex.Errors.First().Code);
+                    Assert.AreEqual("The Detail Id is required when Detail has been defined.\r\nParameter name: personDto.Phone.Type.Detail.Id", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdatePerson5_Username_Exception()
             {
                 //setup role
@@ -13194,13 +14151,23 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                         Value = "testUsername"
                     }
                 };
-                // Mock the response for getting a Person Pin 
-                var personPin = new PersonPin("0000011", "WrongUsername");
-                var personPins = new List<PersonPin>();
-                personPins.Add(personPin);
-                personRepositoryMock.Setup(repo => repo.GetPersonPinsAsync(It.IsAny<string[]>())).ReturnsAsync(personPins);
+                // Mock the response for getting a Person User Name 
+                var personUserName = new PersonUserName("0000011", "WrongUsername");
+                var personUserNames = new List<PersonUserName>();
+                personUserNames.Add(personUserName);
+                personRepositoryMock.Setup(repo => repo.GetPersonUserNamesAsync(It.IsAny<string[]>())).ReturnsAsync(personUserNames);
 
-                var actual = await personService.UpdatePerson5Async(personDto);
+                try
+                {
+                    var actual = await personService.UpdatePerson5Async(personDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.credentials", ex.Errors.First().Code);
+                    Assert.AreEqual("You cannot add/edit Colleague usernames. You must maintain them in Colleague.", ex.Errors.First().Message);
+                    throw;
+                }
             }
 
             private void SetupData()
@@ -13369,50 +14336,50 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 }
                 personDto.Addresses = addressesCollection;
 
-                var phoneList = new List<PersonPhoneDtoProperty>()
+                var phoneList = new List<PersonPhone2DtoProperty>()
                 {
-                    new PersonPhoneDtoProperty()
+                    new PersonPhone2DtoProperty()
                     {
                         CountryCallingCode = "01",
                          Extension = "1",
                          Number = "111-111-1111",
-                         Preference = PersonPreference.Primary,
+                         //Preference = PersonPreference.Primary,
                          Type = new PersonPhoneTypeDtoProperty()
                          {
                              Detail = new GuidObject2("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1"),
                              PhoneType = PersonPhoneTypeCategory.Home
                          }
                     },
-                    new PersonPhoneDtoProperty()
+                    new PersonPhone2DtoProperty()
                     {
                         CountryCallingCode = "02",
                          Extension = "2",
                          Number = "222-222-2222",
-                         Preference = PersonPreference.Primary,
+                         //Preference = PersonPreference.Primary,
                          Type = new PersonPhoneTypeDtoProperty()
                          {
                              Detail = new GuidObject2("b6def2cc-cc95-4d0e-a32c-940fbbc2d689"),
                              PhoneType = PersonPhoneTypeCategory.Mobile
                          }
                     },
-                    new PersonPhoneDtoProperty()
+                    new PersonPhone2DtoProperty()
                     {
                         CountryCallingCode = "03",
                          Extension = "3",
                          Number = "333-333-3333",
-                         Preference = PersonPreference.Primary,
+                         //Preference = PersonPreference.Primary,
                          Type = new PersonPhoneTypeDtoProperty()
                          {
                              Detail = new GuidObject2("f60e7b27-a3e3-4c92-9d36-f3cae27b724b"),
                              PhoneType = PersonPhoneTypeCategory.Vacation
                          }
                     },
-                    new PersonPhoneDtoProperty()
+                    new PersonPhone2DtoProperty()
                     {
                         CountryCallingCode = "04",
                          Extension = "4444",
                          Number = "444-444-4444",
-                         Preference = PersonPreference.Primary,
+                         //Preference = PersonPreference.Primary,
                          Type = new PersonPhoneTypeDtoProperty()
                          {
                              Detail = new GuidObject2("30e231cf-a199-4c9a-af01-be2e69b607c9"),
@@ -13840,6 +14807,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var personPins = new List<PersonPin>();
                 personPins.Add(personPin);
                 personRepoMock.Setup(repo => repo.GetPersonPinsAsync(It.IsAny<string[]>())).ReturnsAsync(personPins);
+                var personUserName = new PersonUserName("0000011", "testUsername");
+                var personUserNames = new List<PersonUserName>();
+                personUserNames.Add(personUserName);
+                personRepoMock.Setup(repo => repo.GetPersonUserNamesAsync(It.IsAny<string[]>())).ReturnsAsync(personUserNames);
 
                 refRepoMock.Setup(repo => repo.GetPrivacyStatusesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(
@@ -14136,6 +15107,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personIntegration.MaritalStatusCode = "M";
                 personIntegration.EthnicCodes = new List<string> { "H", "N" };
                 personIntegration.RaceCodes = new List<string> { "AS" };
+                personIntegration.PrimaryLanguage = "E";
+                personIntegration.SecondaryLanguages = new List<string> { "TA", "SP" };
                 personIntegration.AddRole(new PersonRole(PersonRoleType.Alumni, new DateTime(15, 01, 22), new DateTime(15, 05, 25)));
                 // Mock the email address data response
                 instEmail = new Domain.Base.Entities.EmailAddress("inst@inst.com", "COL") { IsPreferred = true };
@@ -14386,6 +15359,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 permissionViewAnyPerson = new Ellucian.Colleague.Domain.Entities.Permission(BasePermissionCodes.ViewAnyPerson);
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { personRole });
+
+                // Mock LANGUAGES valcode 
+                var languages = new Ellucian.Data.Colleague.DataContracts.ApplValcodes()
+                {
+
+                    ValsEntityAssociation = new List<Ellucian.Data.Colleague.DataContracts.ApplValcodesVals>()
+                    {
+                        new ApplValcodesVals() { ValInternalCodeAssocMember = "E", ValExternalRepresentationAssocMember = "English", ValActionCode3AssocMember = "ENG" },
+                        new ApplValcodesVals() { ValInternalCodeAssocMember = "SP", ValExternalRepresentationAssocMember = "Spanish", ValActionCode3AssocMember = "SPA" },
+                        new ApplValcodesVals() { ValInternalCodeAssocMember = "TA", ValExternalRepresentationAssocMember = "Tagalog", ValActionCode3AssocMember = "TGL" }
+                    }
+                };
+                personBaseRepoMock.Setup(repo => repo.GetLanguagesAsync()).ReturnsAsync(languages);
+
+
 
                 personService = new PersonService(adapterRegistry, personRepo, personBaseRepo, refRepo, null, null, null, null, currentUserFactory, roleRepo, logger);
             }
@@ -14701,7 +15689,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 var filteredPersonGuidTuple = new Tuple<IEnumerable<string>, int>(new List<string>() { personGuid }, 1);
                 personRepoMock.Setup(repo => repo.GetFilteredPerson2GuidsAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<PersonFilterCriteria>(), It.IsAny<string>())).ReturnsAsync(filteredPersonGuidTuple);
-
+               
                 personIntegration = new PersonIntegration(personId, "Brown");
                 personIntegration.Guid = personGuid;
                 personIntegration.GovernmentId = personGuid;
@@ -14719,6 +15707,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personIntegration.RaceCodes = new List<string> { "AS" };
                 personIntegration.GenderIdentityCode = "FTM";
                 personIntegration.PersonalPronounCode = "HE";
+                personIntegration.AddPersonLanguage(new PersonLanguage(personId, "eng", LanguagePreference.Primary));
+                personIntegration.AddPersonLanguage(new PersonLanguage(personId, "fre", LanguagePreference.Secondary));
                 personIntegration.AddPersonAlt(new PersonAlt("2222", "ELEV2"));
                 personIntegration.AddPersonAlt(new PersonAlt("3333", "GOVID2"));
                 personIntegration.AddRole(new PersonRole(PersonRoleType.Alumni, new DateTime(15, 01, 22), new DateTime(15, 05, 25)));
@@ -14786,6 +15776,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personIntegration.AddSocialMedia(personSocialMedia);
 
                 personIntegration.AddPersonAlt(new PersonAlt("1", "ELEV") { });
+                personIntegration.MilitaryStatus = "VET";
 
                 personRepoMock.Setup(repo => repo.GetPersonIntegrationByGuidNonCachedAsync(personGuid)).ReturnsAsync(personIntegration);
                 personRepoMock.Setup(repo => repo.GetPersonIntegrationByGuidAsync(personGuid, It.IsAny<bool>())).ReturnsAsync(personIntegration);
@@ -14794,7 +15785,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var personList = new List<PersonIntegration>() { personIntegration };
                 personRepoMock.Setup(repo => repo.GetPersonIntegrationByGuidNonCachedAsync(personGuidList)).ReturnsAsync(personList);
                 personRepoMock.Setup(repo => repo.GetFilteredPerson2GuidsAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<PersonFilterCriteria>(), It.IsAny<string>())).ReturnsAsync(new Tuple<IEnumerable<string>, int>(personGuidList, 1));
-
+               
                 person2 = new Domain.Base.Entities.Person(personId2, "Green");
                 person2.Guid = personGuid2;
                 person2.Prefix = "Ms.";
@@ -14961,6 +15952,20 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     new Suffix("JR","Jr","Jr."),
                     new Suffix("SR","Sr","Sr.")
                 });
+                
+                // Mock LANGUAGES valcode 
+                var languages = new Ellucian.Data.Colleague.DataContracts.ApplValcodes()
+                {
+
+                    ValsEntityAssociation = new List<Ellucian.Data.Colleague.DataContracts.ApplValcodesVals>()
+                    {
+                        new ApplValcodesVals() { ValInternalCodeAssocMember = "E", ValExternalRepresentationAssocMember = "English", ValActionCode3AssocMember = "ENG" },
+                        new ApplValcodesVals() { ValInternalCodeAssocMember = "SP", ValExternalRepresentationAssocMember = "Spanish", ValActionCode3AssocMember = "SPA" },
+                        new ApplValcodesVals() { ValInternalCodeAssocMember = "TA", ValExternalRepresentationAssocMember = "Tagalog", ValActionCode3AssocMember = "TGL" },
+                        new ApplValcodesVals() { ValInternalCodeAssocMember = "XXX", ValExternalRepresentationAssocMember = "Invalid" }
+                    }
+                };
+                personBaseRepoMock.Setup(repo => repo.GetLanguagesAsync()).ReturnsAsync(languages);
 
                 // Mock the reference repository for Alternate ID Types
                 refRepoMock.Setup(repo => repo.GetAlternateIdTypesAsync(It.IsAny<bool>())).ReturnsAsync(new List<AltIdTypes>()
@@ -14982,11 +15987,18 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     new PersonalPronounType("AE7A3392-FA07-4F53-B6D5-317D77CB62EC","HE","He, Him, His"),
                     new PersonalPronounType("9567AFB5-5F3C-40DC-B4F9-FC1658ACEE15", "HER","She, Her, Hers")
                 });
+                refRepoMock.Setup(repo => repo.GetMilStatusesAsync(It.IsAny<bool>())).ReturnsAsync(new List<MilStatuses>()
+                {
+                    new MilStatuses("AE7A3392-FA07-4F53-B6D5-317D88CB62EC", "VET", "Veteran") { Category = VeteranStatusCategory.Protectedveteran },
+                    new MilStatuses("9567AFB5-5F3C-40DC-B4F9-FC1699ACEE15", "RET", "Retired") { Category = VeteranStatusCategory.Activeduty },
+                    new MilStatuses("BCD23124-2FAA-411C-A990-24BA3FA8A93D", "ZZZ", "Invalid Category")
+                });
 
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.PersonUserFactory();
 
                 personRepoMock.Setup(repo => repo.GetPersonIntegration2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(personIntegration);
+                personRepoMock.Setup(repo => repo.GetPersonIntegration3ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(personIntegration);
 
                 // Mock permissions
                 permissionViewAnyPerson = new Ellucian.Colleague.Domain.Entities.Permission(BasePermissionCodes.ViewAnyPerson);
@@ -15023,23 +16035,32 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task GetPerson5ByGuid_PersonNotFound()
             {
-                personRepoMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                personRepoMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
                 await personService.GetPerson5ByGuidAsync(guid, true);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetPerson5ByGuid_PermissionException()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { });
-                await personService.GetPerson5ByGuidAsync(guid, true);
+                try
+                {
+                    await personService.GetPerson5ByGuidAsync(guid, true);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, ex.Errors[0].StatusCode);
+                    throw;
+                }
             }
 
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task GetPerson5ByGuid_KeyNotFoundException_PersonNotFound()
             {
-                personRepoMock.Setup(p => p.GetPersonIntegration2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                personRepoMock.Setup(p => p.GetPersonIntegration3ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
                 await personService.GetPerson5ByGuidAsync(guid, true);
             }
 
@@ -15048,7 +16069,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             public async Task GetPerson5ByGuid_KeyNotFoundException_InvalidPersonId()
             {
                 var person = new PersonIntegration(guid, "lastName") { PersonCorpIndicator = "Y" };
-                personRepoMock.Setup(p => p.GetPersonIntegration2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(person);
+                personRepoMock.Setup(p => p.GetPersonIntegration3ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(person);
                 await personService.GetPerson5ByGuidAsync(guid, true);
             }
 
@@ -15056,7 +16077,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [ExpectedException(typeof(RepositoryException))]
             public async Task GetPerson5ByGuid_RepositoryException()
             {
-                personRepoMock.Setup(p => p.GetPersonIntegration2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new RepositoryException());
+                personRepoMock.Setup(p => p.GetPersonIntegration3ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new RepositoryException());
                 await personService.GetPerson5ByGuidAsync(guid, true);
             }
 
@@ -15071,6 +16092,163 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task GetPerson5ByGuid_InvalidGenderIdentity()
+            {
+                personIntegration.GenderIdentityCode = "XXX";
+
+                personRepoMock.Setup(p => p.GetPersonIntegration2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(personIntegration);
+
+                try
+                {
+                    await personService.GetPerson5ByGuidAsync(guid, true);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.genderIdentity", ex.Errors.First().Code);
+                    Assert.AreEqual("Gender Identity code of 'XXX' is not valid.", ex.Errors.First().Message);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task GetPerson5ByGuid_InvalidPersonalPronoun()
+            {
+                personIntegration.PersonalPronounCode = "XXX";
+
+                personRepoMock.Setup(p => p.GetPersonIntegration2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(personIntegration);
+
+                try
+                {
+                    await personService.GetPerson5ByGuidAsync(guid, true);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.personalPronoun", ex.Errors.First().Code);
+                    Assert.AreEqual("Personal Pronoun code of 'XXX' is not valid.", ex.Errors.First().Message);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task GetPerson5ByGuid_InvalidLanguageCode()
+            {
+                personIntegration.PrimaryLanguage = "XXX";
+
+                personRepoMock.Setup(p => p.GetPersonIntegration2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(personIntegration);
+
+                try
+                {
+                    await personService.GetPerson5ByGuidAsync(guid, true);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("Invalid.Language", ex.Errors.First().Code);
+                    Assert.AreEqual("The language 'XXX' is not mapped to a language ISO code.", ex.Errors.First().Message);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task GetPerson5ByGuid_PassportIssuingCountryNull()
+            {
+                personIntegration.Passport = new PersonPassport(personIntegration.Id, "abc123") { IssuingCountry = "" };
+
+                personRepoMock.Setup(p => p.GetPersonIntegration2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(personIntegration);
+
+                try
+                {
+                    await personService.GetPerson5ByGuidAsync(guid, true);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.identityDocuments", ex.Errors.First().Code);
+                    Assert.AreEqual("Passport number 'abc123' does not have a valid issuing country set.", ex.Errors.First().Message);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task GetPerson5ByGuid_InvalidAddressType()
+            {
+                var addresses = new List<Domain.Base.Entities.Address>();
+                homeAddr = new Domain.Base.Entities.Address()
+                {
+                    TypeCode = "XXX",
+                    Type = Dtos.EnumProperties.AddressType.Home.ToString(),
+                    Guid = Guid.NewGuid().ToString(),
+                    Status = "Current",
+                    IsPreferredAddress = true
+                };
+                addresses.Add(homeAddr);
+                personIntegration.Addresses = addresses;
+
+                personRepoMock.Setup(p => p.GetPersonIntegration2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(personIntegration);
+
+                try
+                {
+                    await personService.GetPerson5ByGuidAsync(guid, true);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.addresses", ex.Errors.First().Code);
+                    Assert.AreEqual("Address type 'XXX' for address record ID '' is not valid.", ex.Errors.First().Message);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task GetPerson5ByGuid_MilitaryStatusInvalidCode()
+            {
+                personIntegration.MilitaryStatus = "XXX";
+
+                personRepoMock.Setup(p => p.GetPersonIntegration2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(personIntegration);
+
+                try
+                {
+                    await personService.GetPerson5ByGuidAsync(guid, true);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.veteranStatus", ex.Errors.First().Code);
+                    Assert.AreEqual("Veteran status code 'XXX' cannot be found.", ex.Errors.First().Message);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task GetPerson5ByGuid_MilitaryStatusInvalidCategory()
+            {
+                personIntegration.MilitaryStatus = "ZZZ";
+
+                personRepoMock.Setup(p => p.GetPersonIntegration2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(personIntegration);
+
+                try
+                {
+                    await personService.GetPerson5ByGuidAsync(guid, true);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("persons.veteranStatus", ex.Errors.First().Code);
+                    Assert.AreEqual("Veteran Status categories must be mapped on CDHP for code 'ZZZ'.", ex.Errors.First().Message);
+                    throw;
+                }
+            }
+
+            [TestMethod]
             public async Task GetPerson5ByGuid_ValidScenario()
             {
                 var result = await personService.GetPerson5ByGuidAsync(guid, true);
@@ -15078,18 +16256,27 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetPerson5NonCached_PermissionException()
             {
-                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { });
-                await personService.GetPerson5NonCachedAsync(0, 10, true, null, "");
+                try
+                {
+                    roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { });
+                    await personService.GetPerson5NonCachedAsync(0, 10, true, null, "");
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual(ex.Errors[0].StatusCode, System.Net.HttpStatusCode.Forbidden);
+                    throw;
+                }
             }
 
             [TestMethod]
             [ExpectedException(typeof(RepositoryException))]
             public async Task GetPerson5NonCached_RepositoryException()
             {
-                personRepoMock.Setup(r => r.GetFilteredPerson2GuidsAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<PersonFilterCriteria>(), It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+                personRepoMock.Setup(r => r.GetFilteredPerson3GuidsAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<PersonFilterCriteria>(), It.IsAny<string>())).ThrowsAsync(new RepositoryException());
                 await personService.GetPerson5NonCachedAsync(0, 10, true, null, "");
             }
 
@@ -15097,7 +16284,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [ExpectedException(typeof(Exception))]
             public async Task GetPerson5NonCached_Exception()
             {
-                personRepoMock.Setup(r => r.GetFilteredPerson2GuidsAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<PersonFilterCriteria>(), It.IsAny<string>())).ThrowsAsync(new Exception());
+                personRepoMock.Setup(r => r.GetFilteredPerson3GuidsAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<PersonFilterCriteria>(), It.IsAny<string>())).ThrowsAsync(new Exception());
                 await personService.GetPerson5NonCachedAsync(0, 10, true, null, "");
             }
 
@@ -15109,6 +16296,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     Credentials = new List<Credential3DtoProperty>()
                     {
                         new Credential3DtoProperty() { Type = Credential3Type.ColleaguePersonId, Value = "00009999"}
+                    },
+                    AlternativeCredentials = new List<AlternativeCredentials>()
+                    {
+                        new AlternativeCredentials() { Type = new GuidObject2("AE44FE48-2534-480B-8618-5480617CE74A"), Value = "0000123"}
                     },
                     EmailAddresses = new List<PersonEmailDtoProperty>()
                     {
@@ -15132,11 +16323,11 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 };
 
                 var filteredPersonGuidTuple = new Tuple<IEnumerable<string>, int>(new List<string>() { personGuid }, 1);
-                personRepoMock.Setup(r => r.GetFilteredPerson2GuidsAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<PersonFilterCriteria>(), It.IsAny<string>())).
+                personRepoMock.Setup(r => r.GetFilteredPerson3GuidsAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<PersonFilterCriteria>(), It.IsAny<string>())).
                     ReturnsAsync(filteredPersonGuidTuple);
 
                 var personEntities = new List<PersonIntegration>() { personIntegration };
-                personRepoMock.Setup(r => r.GetPersonIntegration2ByGuidNonCachedAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(personEntities);
+                personRepoMock.Setup(r => r.GetPersonIntegration3ByGuidNonCachedAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(personEntities);
 
                 var result = await personService.GetPerson5NonCachedAsync(0, 1, true, person, "");
 
@@ -15144,7 +16335,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task QueryPerson5ByPostAsync_NullDto()
             {
                 var result = await personService.QueryPerson5ByPostAsync(null, false);
@@ -15208,7 +16399,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     }
                 };
 
-                personRepoMock.Setup(r => r.GetMatchingPersonsAsync(It.IsAny<Colleague.Domain.Base.Entities.Person>())).ReturnsAsync(new List<string>() { guid });
+                personRepoMock.Setup(r => r.GetMatchingPersons2Async(It.IsAny<Colleague.Domain.Base.Entities.Person>())).ReturnsAsync(new List<string>() { guid });
 
                 var personEntities = new List<PersonIntegration>() { personIntegration };
                 personRepoMock.Setup(r => r.GetPersonIntegration2ByGuidNonCachedAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(personEntities);

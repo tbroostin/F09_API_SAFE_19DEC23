@@ -18,6 +18,7 @@ using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -43,20 +44,49 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 			_referenceDataRepository = referenceDataRepository;
 		}
 
-		/// <summary>
-		/// Gets all admission-application-supporting-items
-		/// </summary>
-		/// <param name="offset">Offset for paging results</param>
-		/// <param name="limit">Limit for paging results</param>
-		/// <param name="bypassCache">Flag to bypass cache</param>
-		/// <returns>Collection of <see cref="AdmissionApplicationSupportingItems">admissionApplicationSupportingItems</see> objects</returns> 
-		public async Task<Tuple<IEnumerable<AdmissionApplicationSupportingItems>, int>> GetAdmissionApplicationSupportingItemsAsync(int offset, int limit, bool bypassCache = false)
+        IEnumerable<Domain.Base.Entities.CommunicationCode>  _allSupportingItemTypes = null;
+        private async Task<IEnumerable<Domain.Base.Entities.CommunicationCode>> GetAllSupportingItemTypesAsync(bool ignoreCache)
+        {
+            if (_allSupportingItemTypes == null)
+            {
+                _allSupportingItemTypes = await _referenceDataRepository.GetAdmissionApplicationSupportingItemTypesAsync(ignoreCache);
+            }
+            return _allSupportingItemTypes;
+        }
+
+        IEnumerable<Domain.Base.Entities.CorrStatus> _allCorrStatuses = null;
+        private async Task<IEnumerable<Domain.Base.Entities.CorrStatus>> GetAllCorrStatusesAsync(bool ignoreCache)
+        {
+            if (_allCorrStatuses == null)
+            {
+                _allCorrStatuses = await _referenceDataRepository.GetCorrStatusesAsync(ignoreCache);
+            }
+            return _allCorrStatuses;
+        }
+
+        /// <summary>
+        /// Gets all admission-application-supporting-items
+        /// </summary>
+        /// <param name="offset">Offset for paging results</param>
+        /// <param name="limit">Limit for paging results</param>
+        /// <param name="bypassCache">Flag to bypass cache</param>
+        /// <returns>Collection of <see cref="AdmissionApplicationSupportingItems">admissionApplicationSupportingItems</see> objects</returns> 
+        public async Task<Tuple<IEnumerable<AdmissionApplicationSupportingItems>, int>> GetAdmissionApplicationSupportingItemsAsync(int offset, int limit, bool bypassCache = false)
 		{
 			CheckViewPermissions();
 
 			var admissionApplicationSupportingItemsCollection = new List<AdmissionApplicationSupportingItems>();
 
-			var supportingItemsTuple = await _supportingItemsRepository.GetAdmissionApplicationSupportingItemsAsync(offset, limit, bypassCache);
+			Tuple<IEnumerable<Domain.Student.Entities.AdmissionApplicationSupportingItem>, int> supportingItemsTuple = null;
+			try
+			{
+				supportingItemsTuple = await _supportingItemsRepository.GetAdmissionApplicationSupportingItemsAsync(offset, limit, bypassCache);
+			}
+			catch (RepositoryException ex)
+			{
+				IntegrationApiExceptionAddError(ex);
+				throw IntegrationApiException;
+			}
 			var totalItems = supportingItemsTuple.Item2;
 			var admissionApplicationSupportingItemsEntities = supportingItemsTuple.Item1;
 
@@ -66,6 +96,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 				{
 					admissionApplicationSupportingItemsCollection.Add(await ConvertAdmissionApplicationSupportingItemsEntityToDtoAsync(admissionApplicationSupportingItems, bypassCache));
 				}
+			}
+			if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+			{
+				throw IntegrationApiException;
 			}
 			return new Tuple<IEnumerable<AdmissionApplicationSupportingItems>, int>(admissionApplicationSupportingItemsCollection, totalItems);
 		}
@@ -79,9 +113,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 		{
 			CheckViewPermissions();
 
+			AdmissionApplicationSupportingItems supportingItemDto = new AdmissionApplicationSupportingItems();
+			AdmissionApplicationSupportingItem supportingItemEntity = null;
 			try
 			{
-				return await ConvertAdmissionApplicationSupportingItemsEntityToDtoAsync((await _supportingItemsRepository.GetAdmissionApplicationSupportingItemsByGuidAsync(guid)), bypassCache);
+				supportingItemEntity = await _supportingItemsRepository.GetAdmissionApplicationSupportingItemsByGuidAsync(guid);
 			}
 			catch (KeyNotFoundException ex)
 			{
@@ -91,6 +127,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 			{
 				throw new KeyNotFoundException("admission-application-supporting-items not found for GUID " + guid, ex);
 			}
+			catch (RepositoryException ex)
+			{
+				IntegrationApiExceptionAddError(ex);
+				throw IntegrationApiException;
+			}
+
+			if (supportingItemEntity != null)
+			{
+				supportingItemDto = await ConvertAdmissionApplicationSupportingItemsEntityToDtoAsync(supportingItemEntity, bypassCache);
+			}
+			if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+			{
+				throw IntegrationApiException;
+			}
+			return supportingItemDto;
 		}
 
 		/// <summary>
@@ -108,48 +159,74 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 			// get the ID associated with the incoming guid
 			var primaryKey = string.Empty;
 			var secondaryKey = string.Empty;
-			var admissionApplicationSupportingItemsEntityId = await _supportingItemsRepository.GetAdmissionApplicationSupportingItemsIdFromGuidAsync(admissionApplicationSupportingItems.Id);
-			if (admissionApplicationSupportingItemsEntityId.Value != null)
-			{
-				primaryKey = admissionApplicationSupportingItemsEntityId.Value.PrimaryKey;
-				secondaryKey = admissionApplicationSupportingItemsEntityId.Value.SecondaryKey;
-			}
+            try
+            {
+                var admissionApplicationSupportingItemsEntityId = await _supportingItemsRepository.GetAdmissionApplicationSupportingItemsIdFromGuidAsync(admissionApplicationSupportingItems.Id);
+                if (admissionApplicationSupportingItemsEntityId.Value != null)
+                {
+                    primaryKey = admissionApplicationSupportingItemsEntityId.Value.PrimaryKey;
+                    secondaryKey = admissionApplicationSupportingItemsEntityId.Value.SecondaryKey;
+                }
+            }
+            catch
+            {
+                // Primary and Secondary keys are null.  Continue as a CREATE instead of an update.
+            }
+
 			if (!string.IsNullOrEmpty(primaryKey) && !string.IsNullOrEmpty(secondaryKey))
 			{
 				// verify the user has the permission to update a admissionApplicationSupportingItems
 				CheckUpdatePermissions();
 
-				_supportingItemsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+                _supportingItemsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
+                // map the DTO to entities
+                var admissionApplicationSupportingItemsEntity
+                = await ConvertAdmissionApplicationSupportingItemsDtoToEntityAsync(primaryKey, secondaryKey, admissionApplicationSupportingItems);
+                if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+                {
+                    throw IntegrationApiException;
+                }
+
+				AdmissionApplicationSupportingItem updatedAdmissionApplicationSupportingItemsEntity;
 				try
-				{
-					// map the DTO to entities
-					var admissionApplicationSupportingItemsEntity
-					= await ConvertAdmissionApplicationSupportingItemsDtoToEntityAsync(primaryKey, secondaryKey, admissionApplicationSupportingItems);
+                {
+                    // update the entity in the database
+                    updatedAdmissionApplicationSupportingItemsEntity =
+                        await _supportingItemsRepository.UpdateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItemsEntity);
 
-					// update the entity in the database
-					var updatedAdmissionApplicationSupportingItemsEntity =
-						await _supportingItemsRepository.UpdateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItemsEntity);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex);
+                    throw IntegrationApiException;
+                }
+                catch (KeyNotFoundException ex)
+                {
+                    throw new KeyNotFoundException("admission-application-supporting-items not found for GUID " + admissionApplicationSupportingItems.Id, ex);
+                }
+                catch (ArgumentException ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message);
+                    throw IntegrationApiException;
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message);
+                    throw IntegrationApiException;
+                }
 
-					return await ConvertAdmissionApplicationSupportingItemsEntityToDtoAsync(updatedAdmissionApplicationSupportingItemsEntity, true);
-				}
-				catch (RepositoryException ex)
-				{
-					throw ex;
-				}
-				catch (KeyNotFoundException ex)
-				{
-					throw ex;
-				}
-				catch (ArgumentException ex)
-				{
-					throw ex;
-				}
-				catch (Exception ex)
-				{
-					throw new Exception(ex.Message, ex.InnerException);
-				}
-			}
+                AdmissionApplicationSupportingItems supportingItemDto = new AdmissionApplicationSupportingItems();
+                if (updatedAdmissionApplicationSupportingItemsEntity != null)
+                {
+                    supportingItemDto = await ConvertAdmissionApplicationSupportingItemsEntityToDtoAsync(updatedAdmissionApplicationSupportingItemsEntity, true);
+                    if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+                    {
+                        throw IntegrationApiException;
+                    }
+                }
+                return supportingItemDto;
+            }
 			// perform a create instead
 			return await CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
 		}
@@ -171,35 +248,56 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
 			_supportingItemsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
+            var primaryKey = string.Empty;
+            var secondaryKey = string.Empty;
+
+            if (admissionApplicationSupportingItems.AssignedOn == null || admissionApplicationSupportingItems.AssignedOn.Equals(default(DateTime)))
+            {
+                admissionApplicationSupportingItems.AssignedOn = DateTime.Today;
+            }
+
+            var admissionApplicationSupportingItemsEntity
+                     = await ConvertAdmissionApplicationSupportingItemsDtoToEntityAsync(primaryKey, secondaryKey, admissionApplicationSupportingItems);
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+
+			AdmissionApplicationSupportingItem createdAdmissionApplicationSupportingItems;
 			try
-			{
-				var primaryKey = string.Empty;
-				var secondaryKey = string.Empty;
+            {
+                // create a admissionApplicationSupportingItems entity in the database
+                createdAdmissionApplicationSupportingItems =
+                    await _supportingItemsRepository.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItemsEntity);
 
-				if (admissionApplicationSupportingItems.AssignedOn == null || admissionApplicationSupportingItems.AssignedOn.Equals(default(DateTime)))
-				{
-					admissionApplicationSupportingItems.AssignedOn = DateTime.Today;
-				}
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+            catch (KeyNotFoundException ex)
+            {
+                throw new KeyNotFoundException("admission-application-supporting-items not found for GUID " + admissionApplicationSupportingItems.Id, ex);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message);
+                throw IntegrationApiException;
+            }
+            // return the newly created admissionApplicationSupportingItems
 
-				var admissionApplicationSupportingItemsEntity
-						 = await ConvertAdmissionApplicationSupportingItemsDtoToEntityAsync(primaryKey, secondaryKey, admissionApplicationSupportingItems);
-
-				// create a admissionApplicationSupportingItems entity in the database
-				var createdAdmissionApplicationSupportingItems =
-					await _supportingItemsRepository.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItemsEntity);
-				// return the newly created admissionApplicationSupportingItems
-				return await ConvertAdmissionApplicationSupportingItemsEntityToDtoAsync(createdAdmissionApplicationSupportingItems, true);
-
-			}
-			catch (RepositoryException ex)
-			{
-				throw ex;
-			}
-			catch (Exception ex)
-			{
-				throw new Exception(ex.Message, ex.InnerException);
-			}
-		}
+            AdmissionApplicationSupportingItems supportingItemDto = new AdmissionApplicationSupportingItems();
+            if (createdAdmissionApplicationSupportingItems != null)
+            {
+                supportingItemDto = await ConvertAdmissionApplicationSupportingItemsEntityToDtoAsync(createdAdmissionApplicationSupportingItems, true);
+                if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+                {
+                    throw IntegrationApiException;
+                }
+            }
+            return supportingItemDto;
+        }
 
 		private async Task<Domain.Student.Entities.AdmissionApplicationSupportingItem> ConvertAdmissionApplicationSupportingItemsDtoToEntityAsync(string primaryKey, string secondaryKey, AdmissionApplicationSupportingItems source, bool bypassCache = false)
 		{
@@ -223,52 +321,106 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 			}
 			if (source.Application == null || string.IsNullOrEmpty(source.Application.Id))
 			{
-				throw new ArgumentNullException("The Application Id is required for a PUT or POST request. ", "admissionApplicationSupportingItem.Application.Id");
+				IntegrationApiExceptionAddError("The Application Id is required for a PUT or POST request.",
+					"Validation.Exception", guid, secondaryKey);
 			}
 			if (source.Type == null || string.IsNullOrEmpty(source.Type.Id))
 			{
-				throw new ArgumentNullException("The Type Id is required for a PUT or POST request. ", "admissionApplicationSupportingItem.Type.Id");
+				IntegrationApiExceptionAddError("The Type Id is required for a PUT or POST request.",
+					"Validation.Exception", guid, secondaryKey);
 			}
 			if (source.Status == null || 
 				(source.Status.Type == AdmissionApplicationSupportingItemsType.NotSet &&
 				(source.Status.Detail == null || string.IsNullOrEmpty(source.Status.Detail.Id))))
 			{
-				throw new ArgumentNullException("The Status Type or Status Detail ID is required for a PUT or POST request. ", "admissionApplicationSupportingItem.Status");
+				IntegrationApiExceptionAddError("The Status Type or Status Detail ID is required for a PUT or POST request.",
+					"Validation.Exception", guid, secondaryKey);
 			}
 			if (string.IsNullOrEmpty(applicationId) && source.Application != null && !string.IsNullOrEmpty(source.Application.Id))
 			{
-				applicationId = await _supportingItemsRepository.GetApplicationIdFromGuidAsync(source.Application.Id);
-				if (string.IsNullOrEmpty(applicationId))
+				try
 				{
-					throw new ArgumentException(string.Format("No application was found for guid '{0}' ", source.Application.Id), "admissionApplicationSupportingItem.Application.Id");
+					applicationId = await _supportingItemsRepository.GetApplicationIdFromGuidAsync(source.Application.Id);
+					if (string.IsNullOrEmpty(applicationId))
+					{
+						IntegrationApiExceptionAddError(string.Format("No application was found for guid '{0}'.", source.Application.Id),
+							"Validation.Exception", guid, secondaryKey);
+					}
+				}
+				catch (Exception)
+				{
+					IntegrationApiExceptionAddError(string.Format("No application was found for guid '{0}'.", source.Application.Id),
+						"Validation.Exception", guid, secondaryKey);
 				}
 			}
 			else if (!string.IsNullOrWhiteSpace(applicationId) && source.Application != null && !string.IsNullOrEmpty(source.Application.Id))
 			{
-				var applId = await _supportingItemsRepository.GetApplicationIdFromGuidAsync(source.Application.Id);
-				if(!string.IsNullOrEmpty(applId) && !applId.Equals(applicationId, StringComparison.OrdinalIgnoreCase))
+				try
 				{
-					throw new ArgumentException(string.Format("No application was found for guid '{0}' ", source.Application.Id), "admissionApplicationSupportingItem.Application.Id");
+					var applId = await _supportingItemsRepository.GetApplicationIdFromGuidAsync(source.Application.Id);
+					if (!string.IsNullOrEmpty(applId) && !applId.Equals(applicationId, StringComparison.OrdinalIgnoreCase))
+					{
+						IntegrationApiExceptionAddError(string.Format("The supporting items record '{0}' points to a different application.id of '{1}'.", guid, applicationId),
+							"Validation.Exception", guid, secondaryKey);
+					}
+				}
+				catch (Exception)
+				{
+					IntegrationApiExceptionAddError(string.Format("No application was found for guid '{0}'.", source.Application.Id),
+						"Validation.Exception", guid, secondaryKey);
 				}
 			}
 
 			if (source.Type != null && !string.IsNullOrEmpty(source.Type.Id))
 			{
-				receivedCode = await _supportingItemsRepository.GetIdFromGuidAsync(source.Type.Id);
-				if (string.IsNullOrEmpty(receivedCode))
+				try
 				{
-					throw new ArgumentException(string.Format("No type was found for guid '{0}' ", source.Type.Id), "admissionApplicationSupportingItem.Type.Id");
+					receivedCode = await _supportingItemsRepository.GetIdFromGuidAsync(source.Type.Id, "CC.CODES");
+					if (string.IsNullOrEmpty(receivedCode))
+					{
+						IntegrationApiExceptionAddError(string.Format("No type was found for guid '{0}'.", source.Type.Id),
+							"Validation.Exception", guid, secondaryKey);
+					}
+				}
+				catch (Exception)
+				{
+					IntegrationApiExceptionAddError(string.Format("No type was found for guid '{0}'.", source.Type.Id),
+							"Validation.Exception", guid, secondaryKey);
 				}
 			}
 			if (source.Status != null && source.Status.Detail != null && !string.IsNullOrEmpty(source.Status.Detail.Id))
 			{
-				var statusEntity = (await _referenceDataRepository.GetCorrStatusesAsync(bypassCache)).FirstOrDefault(cs => cs.Guid == source.Status.Detail.Id);
-				if (statusEntity == null)
+				// Only extract status ID for incomplete, waived, or received.  Otherwise, the status property
+				// will be unset when it gets to the actual updating of the MAILING record in Colleague.
+				if (source.Status.Type != AdmissionApplicationSupportingItemsType.Notreceived)
 				{
-					throw new KeyNotFoundException(string.Format("Status type not found for id {0}.", source.Status.Detail.Id));
+					try
+					{
+						var statusEntity = (await _referenceDataRepository.GetCorrStatusesAsync(bypassCache)).FirstOrDefault(cs => cs.Guid == source.Status.Detail.Id);
+						if (statusEntity == null)
+						{
+							IntegrationApiExceptionAddError(string.Format("Status type not found for id {0}.", source.Status.Detail.Id),
+								"Validation.Exception", guid, secondaryKey);
+						}
+						status = statusEntity.Code;
+						statusAction = statusEntity.Action;
+						if (source.Status != null && source.Status.Type != AdmissionApplicationSupportingItemsType.NotSet)
+						{
+							if ((statusAction != "1" && statusAction != "0" && source.Status.Type != AdmissionApplicationSupportingItemsType.Incomplete)
+								|| (statusAction == "1" && source.Status.Type != AdmissionApplicationSupportingItemsType.Received)
+								|| (statusAction == "0" && source.Status.Type != AdmissionApplicationSupportingItemsType.Waived))
+							{
+								IntegrationApiExceptionAddError(string.Format("status.type of '{0}' doesn't match the type for status.detail.id of '{1}'.", source.Status.Type.ToString(), source.Status.Detail.Id),
+								"Validation.Exception", guid, secondaryKey);
+							}
+						}
+					}
+					catch (Exception)
+					{
+						IntegrationApiExceptionAddError(string.Format("Status type not found for id {0}.", source.Status.Detail.Id),
+								"Validation.Exception", guid, secondaryKey);
+					}
 				}
-				status = statusEntity.Code;
-				statusAction = statusEntity.Action;
 			}
 			else
 			{
@@ -284,6 +436,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 								{
 									status = statusEntity.Code;
 									statusAction = statusEntity.Action;
+								}
+								break;
+							}
+						case AdmissionApplicationSupportingItemsType.Notreceived:
+							{
+								var statusEntity = statusEntities.FirstOrDefault(cs => cs.Action != "1" && cs.Action != "0");
+								if (statusEntity != null)
+								{
+									status = string.Empty;
+									statusAction = string.Empty;
 								}
 								break;
 							}
@@ -315,18 +477,38 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 				}
 			}
 			if (string.IsNullOrEmpty(personId))
+			{
 				personId = await _supportingItemsRepository.GetPersonIdFromApplicationIdAsync(applicationId);
+			}
+			// Check for assignedOn date
+			if (source.AssignedOn == null || !source.AssignedOn.HasValue)
+			{
+				IntegrationApiExceptionAddError("The assignedOn date is a required property.",
+							"Validation.Exception", guid, secondaryKey);
+			}
 
-			var admissionApplicationSupportingItems = new Domain.Student.Entities.AdmissionApplicationSupportingItem(
-				source.Id, personId, applicationId, receivedCode, instance, source.AssignedOn, status);
-
-			if (source.RequiredByDate != null && !source.RequiredByDate.Equals(DateTime.MinValue))
-				admissionApplicationSupportingItems.ActionDate = source.RequiredByDate;
-			if (source.ReceivedOn != null && !source.ReceivedOn.Equals(DateTime.MinValue))
-				admissionApplicationSupportingItems.ReceivedDate = source.ReceivedOn.HasValue? source.ReceivedOn.Value.Date.Date : default(DateTime?);
-			admissionApplicationSupportingItems.StatusAction = statusAction;
-			admissionApplicationSupportingItems.Comment = source.ExternalReference;
-			admissionApplicationSupportingItems.Required = source.Required == AdmissionApplicationSupportingItemsRequired.Mandatory ? true : false;
+			AdmissionApplicationSupportingItem admissionApplicationSupportingItems = null;
+			try
+			{
+				admissionApplicationSupportingItems = new AdmissionApplicationSupportingItem(
+					source.Id, personId, applicationId, receivedCode, instance, source.AssignedOn, status);
+			
+				if (source.RequiredByDate != null && !source.RequiredByDate.Equals(DateTime.MinValue))
+					admissionApplicationSupportingItems.ActionDate = source.RequiredByDate;
+				if (source.ReceivedOn != null && !source.ReceivedOn.Equals(DateTime.MinValue))
+					admissionApplicationSupportingItems.ReceivedDate = source.ReceivedOn.HasValue? source.ReceivedOn.Value.Date.Date : default(DateTime?);
+				admissionApplicationSupportingItems.StatusAction = statusAction;
+				admissionApplicationSupportingItems.Comment = source.ExternalReference;
+				admissionApplicationSupportingItems.Required = source.Required == AdmissionApplicationSupportingItemsRequired.Mandatory ? true : false;
+			}
+			catch (Exception ex)
+			{
+				// If we haven't already reported an issue with required data, then include the error here.
+				if (IntegrationApiException == null || IntegrationApiException.Errors == null || !IntegrationApiException.Errors.Any())
+				{
+					IntegrationApiExceptionAddError(ex.Message, "Validation.Exception", guid, secondaryKey);
+				}
+			}
 
 			return admissionApplicationSupportingItems;
 		}
@@ -342,21 +524,41 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 			var admissionApplicationSupportingItems = new AdmissionApplicationSupportingItems();
 
 			admissionApplicationSupportingItems.Id = source.Guid;
-			var applGuid = await _supportingItemsRepository.GetGuidFromIdAsync("APPLICATIONS", source.ApplicationId);
-			if (!string.IsNullOrEmpty(applGuid))
-				admissionApplicationSupportingItems.Application = new GuidObject2(applGuid);
+
+            if (!string.IsNullOrEmpty(source.ApplicationId))
+				admissionApplicationSupportingItems.Application = new GuidObject2(source.ApplicationId);
+
 			if (source.AssignedDate.HasValue)
 				admissionApplicationSupportingItems.AssignedOn = source.AssignedDate.Value;
+
 			if (!string.IsNullOrEmpty(source.ReceivedCode))
 			{
-				var ccGuid = await _supportingItemsRepository.GetGuidFromIdAsync("CC.CODES", source.ReceivedCode);
-				if (!string.IsNullOrEmpty(ccGuid))
-					admissionApplicationSupportingItems.Type = new GuidObject2(ccGuid);
+				try
+				{
+					var suppItemType = (await GetAllSupportingItemTypesAsync(bypassCache)).FirstOrDefault(sit => sit.Code == source.ReceivedCode);
+					if (suppItemType != null)
+					{
+						admissionApplicationSupportingItems.Type = new GuidObject2(suppItemType.Guid);
+					}
+					else
+					{
+						IntegrationApiExceptionAddError(string.Format("Could not find a GUID for CC.CODES '{0}'", source.ReceivedCode),
+						"GUID.Not.Found", source.Guid, source.MailingId);
+					}
+				}
+				catch (Exception)
+				{
+					IntegrationApiExceptionAddError(string.Format("Could not find a GUID for CC.CODES '{0}'", source.ReceivedCode),
+						"GUID.Not.Found", source.Guid, source.MailingId);
+				}
 			}
+
 			if (source.ReceivedDate.HasValue)
 				admissionApplicationSupportingItems.ReceivedOn = source.ReceivedDate.Value;
+
 			if (source.AssignedDate.HasValue)
 				admissionApplicationSupportingItems.AssignedOn = source.AssignedDate.Value;
+
 			if (source.ActionDate.HasValue)
 				admissionApplicationSupportingItems.RequiredByDate = source.ActionDate.Value;
 
@@ -367,40 +569,46 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 			}
 			else
 			{
-				var statusGuid = await _supportingItemsRepository.GetGuidFromIdAsync("VALCODES", "CORR.STATUSES", "VAL.INTERNAL.CODE", source.Status);
-				if (string.IsNullOrEmpty(statusGuid))
+				try
 				{
-					statusGuid = await _supportingItemsRepository.GetGuidFromIdAsync("CORE.VALCODES", "CORR.STATUSES", "VAL.INTERNAL.CODE", source.Status);
-				}
-				if (!string.IsNullOrEmpty(statusGuid))
-				{
-					admissionApplicationSupportingItems.Status.Detail = new GuidObject2(statusGuid);
-				}
-				switch (source.StatusAction)
-				{
-					case "1":
-						{
-							admissionApplicationSupportingItems.Status.Type = AdmissionApplicationSupportingItemsType.Received;
+					var corrStatus = (await GetAllCorrStatusesAsync(bypassCache)).FirstOrDefault(cs => cs.Code == source.Status);
+					if (corrStatus != null)
+					{
+						admissionApplicationSupportingItems.Status.Detail = new GuidObject2(corrStatus.Guid);
+					}
+					switch (source.StatusAction)
+					{
+						case "1":
+							{
+								admissionApplicationSupportingItems.Status.Type = AdmissionApplicationSupportingItemsType.Received;
+								break;
+							}
+						case "0":
+							{
+								admissionApplicationSupportingItems.Status.Type = AdmissionApplicationSupportingItemsType.Waived;
+								break;
+							}
+						default:
+							if (string.IsNullOrEmpty(source.StatusAction))
+							{
+								admissionApplicationSupportingItems.Status.Type = AdmissionApplicationSupportingItemsType.Incomplete;
+							}
+							else
+							{
+								admissionApplicationSupportingItems.Status.Type = AdmissionApplicationSupportingItemsType.Notreceived;
+							}
 							break;
-						}
-					case "0":
-						{
-							admissionApplicationSupportingItems.Status.Type = AdmissionApplicationSupportingItemsType.Waived;
-							break;
-						}
-					default:
-						if (string.IsNullOrEmpty(source.StatusAction))
-						{
-							admissionApplicationSupportingItems.Status.Type = AdmissionApplicationSupportingItemsType.Incomplete;
-						}
-						else
-						{
-							admissionApplicationSupportingItems.Status.Type = AdmissionApplicationSupportingItemsType.Notreceived;
-						}
-						break;
+					}
+				}
+				catch (Exception)
+				{
+					IntegrationApiExceptionAddError(string.Format("Could not find a GUID for valcode CORR.STATUSES '{0}'", source.Status),
+						"GUID.Not.Found", source.Guid, source.MailingId);
 				}
 			}
+
 			admissionApplicationSupportingItems.ExternalReference = source.Comment;
+
 			if (source.Required)
 				admissionApplicationSupportingItems.Required = AdmissionApplicationSupportingItemsRequired.Mandatory;
 
@@ -414,7 +622,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 		private void CheckViewPermissions()
 		{
 			// access is ok if the current user has the view housing request
-			if (!HasPermission(StudentPermissionCodes.ViewApplicationSupportingItems))
+			if (!HasPermission(StudentPermissionCodes.ViewApplicationSupportingItems) && !HasPermission(StudentPermissionCodes.UpdateApplicationSupportingItems))
 			{
 				logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view admission-application-supporting-items.");
 				throw new PermissionsException("User is not authorized to view admission-application-supporting-items.");

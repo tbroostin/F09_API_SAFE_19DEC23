@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -18,6 +18,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PdfSharp.Pdf;
 using slf4net;
+using Microsoft.Reporting.WebForms;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -28,7 +29,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         private StudentTaxFormPdfService service = null;
         private TestStudentTaxFormPdfDataRepository TestPdfDataRepository;
         private Mock<IStudentTaxFormPdfDataRepository> mockTaxFormPdfDataRepository;
-        private Mock<IPdfSharpRepository> mockPdfSharpRepository;
         private Mock<IPersonRepository> mockPersonRepository;
         private ICurrentUserFactory currentUserFactory;
         private string personId = "000001";
@@ -42,18 +42,18 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             this.TestPdfDataRepository = new TestStudentTaxFormPdfDataRepository();
 
             mockTaxFormPdfDataRepository = new Mock<IStudentTaxFormPdfDataRepository>();
-            mockTaxFormPdfDataRepository.Setup<Task<Form1098PdfData>>(rep => rep.Get1098PdfAsync(It.IsAny<string>(), It.IsAny<string>())).Returns<string, string>((personId, recordId) =>
+            mockTaxFormPdfDataRepository.Setup<Task<Form1098PdfData>>(rep => rep.Get1098PdfAsync(It.IsAny<string>(), It.IsAny<string>(), false)).Returns<string, string, bool>((personId, recordId, suppressNotification) =>
             {
                 return Task.FromResult(TestPdfDataRepository.Get1098PdfAsync(personId, recordId));
             });
 
-            mockTaxFormPdfDataRepository.Setup<Task<Form1098PdfData>>(rep => rep.Get1098PdfAsync("000002", "2015")).Returns<string, string>((personId, recordId) =>
+            mockTaxFormPdfDataRepository.Setup<Task<Form1098PdfData>>(rep => rep.Get1098PdfAsync("000002", "2015", false)).Returns<string, string, bool>((personId, recordId, suppressNotification) =>
             {
                 return Task.FromResult(new Form1098PdfData("2015", "98-7654321") { StudentId = "0000003" });
             });
 
             // Mock to throw exception
-            mockTaxFormPdfDataRepository.Setup<Task<Form1098PdfData>>(rep => rep.Get1098PdfAsync(It.IsAny<string>(), exceptionString)).Returns<string, string>((personId, recordId) =>
+            mockTaxFormPdfDataRepository.Setup<Task<Form1098PdfData>>(rep => rep.Get1098PdfAsync(It.IsAny<string>(), exceptionString, false)).Returns<string, string, bool>((personId, recordId, suppressNotification) =>
             {
                 throw new Exception("An exception occurred.");
             });
@@ -73,37 +73,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             mockTaxFormPdfDataRepository.Setup<Task<FormT2202aPdfData>>(rep => rep.GetT2202aPdfAsync(It.IsAny<string>(), exceptionString)).Returns<string, string>((personId, recordId) =>
             {
                 throw new Exception("An exception occurred.");
-            });
-
-            mockPdfSharpRepository = new Mock<IPdfSharpRepository>();
-
-            // Mock for a populated path
-            mockPdfSharpRepository.Setup<PdfDocument>(pdfu => pdfu.OpenDocument(fakePdfPath)).Returns(() =>
-            {
-                return new PdfDocument();
-            });
-
-            // Mock for a null path
-            mockPdfSharpRepository.Setup<PdfDocument>(pdfu => pdfu.OpenDocument(null)).Returns(() =>
-            {
-                throw new ApplicationException("Path cannot be null.");
-            });
-
-            // Mock for an empty path
-            mockPdfSharpRepository.Setup<PdfDocument>(pdfu => pdfu.OpenDocument("")).Returns(() =>
-            {
-                throw new ApplicationException("Path cannot be empty.");
-            });
-
-            // Mock for a thrown exception from OpenDocument
-            mockPdfSharpRepository.Setup<PdfDocument>(pdfu => pdfu.OpenDocument(exceptionString)).Returns(() =>
-            {
-                throw new ApplicationException("Path cannot be empty.");
-            });
-
-            mockPdfSharpRepository.Setup<MemoryStream>(pdfu => pdfu.FinalizePdfDocument(It.IsAny<PdfDocument>())).Returns(() =>
-            {
-                return new MemoryStream();
             });
 
             institutionAddressLines = new List<string>();
@@ -127,7 +96,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             service = null;
             TestPdfDataRepository = null;
             mockTaxFormPdfDataRepository = null;
-            mockPdfSharpRepository = null;
         }
         #endregion
 
@@ -247,50 +215,34 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
         #region Populate1098Pdf Tests
         [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
         public void Populate1098Pdf_Null_PdfData()
         {
-            var pdfBytes = service.Populate1098Pdf(null, fakePdfPath);
-            Assert.IsTrue(pdfBytes is byte[]);
+            var pdfBytes = service.Populate1098Report(null, fakePdfPath);
         }
 
         [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
         public void Populate1098Pdf_Null_Path()
         {
             var pdfData = TestPdfDataRepository.Form1098PdfDataObjects.Where(x => x.TaxYear == "2015").FirstOrDefault();
-            var pdfBytes = service.Populate1098Pdf(pdfData, null);
-            Assert.IsTrue(pdfBytes is byte[]);
+            var pdfBytes = service.Populate1098Report(pdfData, null);
         }
 
         [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
         public void Populate1098Pdf_Empty_Path()
         {
             var pdfData = TestPdfDataRepository.Form1098PdfDataObjects.Where(x => x.TaxYear == "2015").FirstOrDefault();
-            var pdfBytes = service.Populate1098Pdf(pdfData, "");
-            Assert.IsTrue(pdfBytes is byte[]);
+            var pdfBytes = service.Populate1098Report(pdfData, "");
         }
 
         [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
         public void Populate1098Pdf_Null_PdfData_and_Path()
         {
             var pdfData = TestPdfDataRepository.Form1098PdfDataObjects.Where(x => x.TaxYear == "2015").FirstOrDefault();
-            var pdfBytes = service.Populate1098Pdf(null, null);
-            Assert.IsTrue(pdfBytes is byte[]);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ApplicationException))]
-        public void Populate1098Pdf_OpenDocumentThrowsApplicationException()
-        {
-            var pdfData = TestPdfDataRepository.Form1098PdfDataObjects.Where(x => x.TaxYear == "2015").FirstOrDefault();
-            var pdfBytes = service.Populate1098Pdf(pdfData, exceptionString);
-        }
-
-        [TestMethod]
-        public void Populate1098Pdf_Success()
-        {
-            var pdfData = TestPdfDataRepository.Form1098PdfDataObjects.Where(x => x.TaxYear == "2015").FirstOrDefault();
-            var pdfBytes = service.Populate1098Pdf(pdfData, fakePdfPath);
-            Assert.IsTrue(pdfBytes is byte[]);
+            var pdfBytes = service.Populate1098Report(null, null);
         }
 
         [TestMethod]
@@ -299,6 +251,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         {
             var pdfBytes = service.Populate1098Report(null, fakePdfPath);
             Assert.IsTrue(pdfBytes is byte[]);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(LocalProcessingException))]
+        public void Populate1098Report_Success()
+        {
+            // There is no way to mock the local report used by rdlc. This test is here for reference.
+            var pdfData = TestPdfDataRepository.Form1098PdfDataObjects.Where(x => x.TaxYear == "2015").FirstOrDefault();
+            var pdfBytes = service.Populate1098Report(pdfData, fakePdfPath);
         }
 
         [TestMethod]
@@ -465,7 +426,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             // Set up the current user with a subset of tax form statements and set up the service.
             service = new StudentTaxFormPdfService(this.mockTaxFormPdfDataRepository.Object,
-                this.mockPdfSharpRepository.Object,
                 this.mockPersonRepository.Object,
                 adapterRegistry.Object,
                 currentUserFactory,

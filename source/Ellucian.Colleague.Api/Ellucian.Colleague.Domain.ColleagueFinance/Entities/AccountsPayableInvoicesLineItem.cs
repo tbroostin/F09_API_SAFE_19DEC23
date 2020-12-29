@@ -48,7 +48,16 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// Used in determining extended price for   discount lost accounting method
         /// </summary>
         public Decimal? CashDiscountAmount { get; set; }
+
+        /// <summary>
+        /// purchase order reference document id
+        /// </summary>
         public string PurchaseOrderId { get; set; }
+
+        /// <summary>
+        /// blanket purchase order reference document id
+        /// </summary>
+        public string BlanketPurchaseOrderId { get; set; }
 
         /// <summary>
         /// "An indicator specifying if the encumbrance for the line item should be liquidated in full (final payment).

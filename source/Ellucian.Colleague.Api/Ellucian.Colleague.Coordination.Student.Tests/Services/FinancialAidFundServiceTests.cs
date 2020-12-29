@@ -5,6 +5,7 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -43,6 +44,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private ICollection<Domain.Student.Entities.FinancialAidFundClassification> financialAidClassificationCollection = new List<Domain.Student.Entities.FinancialAidFundClassification>();
             private ICollection<Domain.Student.Entities.FinancialAidFundsFinancialProperty> financialAidFundFinancialCollection = new List<Domain.Student.Entities.FinancialAidFundsFinancialProperty>();
             Tuple<IEnumerable<Domain.Student.Entities.FinancialAidFund>, int> financialAidFundsEntityTuple;
+            private Dtos.Filters.FinancialAidFundsFilter criteriaFilter = new Dtos.Filters.FinancialAidFundsFilter();
 
             private IConfigurationRepository baseConfigurationRepository;
             private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
@@ -88,8 +90,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 financialAidFundsEntityTuple = new Tuple<IEnumerable<Domain.Student.Entities.FinancialAidFund>, int>(financialAidFundCollection, financialAidFundCollection.Count());
                 fundRepositoryMock.Setup(repo => repo.GetFinancialAidFundsAsync(true)).ReturnsAsync(financialAidFundCollection);
                 fundRepositoryMock.Setup(repo => repo.GetFinancialAidFundsAsync(false)).ReturnsAsync(financialAidFundCollection);
-                fundRepositoryMock.Setup(repo => repo.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), true)).ReturnsAsync(financialAidFundsEntityTuple);
-                fundRepositoryMock.Setup(repo => repo.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ReturnsAsync(financialAidFundsEntityTuple);
+                fundRepositoryMock.Setup(repo => repo.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), true)).ReturnsAsync(financialAidFundsEntityTuple);
+                fundRepositoryMock.Setup(repo => repo.GetFinancialAidFundsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), false)).ReturnsAsync(financialAidFundsEntityTuple);
                 fundRepositoryMock.Setup(i => i.GetFinancialAidFundByIdAsync(It.IsAny<string>())).ReturnsAsync(financialAidFundCollection.ToList()[2]);
                 referenceRepositoryMock.Setup(repo => repo.GetFinancialAidYearsAsync(It.IsAny<bool>())).ReturnsAsync(financialAidYearCollection);
                 officeRepositoryMock.Setup(repo => repo.GetFinancialAidOfficesAsync(It.IsAny<bool>())).ReturnsAsync(financialAidOfficeCollection);
@@ -114,7 +116,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task FinancialAidFundService__FinancialAidFunds()
             {
-                var results = await financialAidFundService.GetFinancialAidFundsAsync(0,10);
+                var results = await financialAidFundService.GetFinancialAidFundsAsync(0,10, criteriaFilter);
                 Assert.IsTrue(results is Tuple<IEnumerable<Dtos.FinancialAidFunds>, int>);
                 Assert.IsNotNull(results);
             }
@@ -122,14 +124,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task FinancialAidFundService_FinancialAidFunds_Count()
             {
-                var results = await financialAidFundService.GetFinancialAidFundsAsync(0, 10);
+                var results = await financialAidFundService.GetFinancialAidFundsAsync(0, 10, criteriaFilter);
                 Assert.AreEqual(3, results.Item2);
             }
 
             [TestMethod]
             public async Task FinancialAidFundService_FinancialAidFunds_Properties()
             {
-                var results = await financialAidFundService.GetFinancialAidFundsAsync(0, 10);
+                var results = await financialAidFundService.GetFinancialAidFundsAsync(0, 10, criteriaFilter);
                 var financialAidFund = results.Item1.Where(x => x.Code == "CODE1").FirstOrDefault();
                 Assert.IsNotNull(financialAidFund.Id);
                 Assert.IsNotNull(financialAidFund.Code);
@@ -139,7 +141,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task FinancialAidFundService_FinancialAidFunds_Expected()
             {
                 var expectedResults = financialAidFundCollection.Where(c => c.Code == "CODE2").FirstOrDefault();
-                var results = await financialAidFundService.GetFinancialAidFundsAsync(0, 10);
+                var results = await financialAidFundService.GetFinancialAidFundsAsync(0, 10, criteriaFilter);
                 var financialAidFund = results.Item1.Where(s => s.Code == "CODE2").FirstOrDefault();
                 Assert.AreEqual(expectedResults.Guid, financialAidFund.Id);
                 Assert.AreEqual(expectedResults.Code, financialAidFund.Code);
@@ -147,21 +149,41 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task FinancialAidFundService_GetFinancialAidFundByGuid_Empty()
             {
                 fundRepositoryMock.Setup(i => i.GetFinancialAidFundByIdAsync(It.IsAny<string>())).Throws<KeyNotFoundException>();
 
-                await financialAidFundService.GetFinancialAidFundsByGuidAsync("");
+                try
+                {
+                    await financialAidFundService.GetFinancialAidFundsByGuidAsync("");
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.AreEqual("Integration API exception", ex.Message);
+                    Assert.IsTrue(ex.Errors.Count > 0);
+                    Assert.AreEqual("financial-aid-funds not found for GUID ''", ex.Errors[0].Message);
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task FinancialAidFundService_GetFinancialAidFundByGuid_Null()
             {
                 fundRepositoryMock.Setup(i => i.GetFinancialAidFundByIdAsync(It.IsAny<string>())).Throws<KeyNotFoundException>();
 
-                await financialAidFundService.GetFinancialAidFundsByGuidAsync(null);
+                try
+                {
+                    await financialAidFundService.GetFinancialAidFundsByGuidAsync(null);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.AreEqual("Integration API exception", ex.Message);
+                    Assert.IsTrue(ex.Errors.Count > 0);
+                    Assert.AreEqual("financial-aid-funds not found for GUID ''", ex.Errors[0].Message);
+                    throw ex;
+                }
             }
 
             [TestMethod]

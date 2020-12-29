@@ -1,4 +1,5 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Api.Client.Core;
 using Ellucian.Colleague.Api.Client.Exceptions;
 using Ellucian.Colleague.Dtos.Base;
@@ -53,11 +54,16 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _getPaymentsDueByTermForStudentPath = "account-due/term/admin";
         private static readonly string _advisorsPath = "advisors";
         private static readonly string _admittedStatusesPath = "admitted-statuses";
+        private static readonly string _agreementPeriodsPath = "agreement-periods";
         private static readonly string _applicantPath = "applicants";
         private static readonly string _applicationStatusesPath = "application-statuses";
         private static readonly string _applicationStatusCategoriesPath = "application-status-categories";
         private static readonly string _applicationInfluencesPath = "application-influences";
         private static readonly string _advisorTypesPath = "advisor-types";
+        private static readonly string _attachmentsPath = "attachments";
+        private static readonly string _attachmentsCollectionPath = "attachment-collections";
+        private static readonly string _attachmentNotificationPath = "attachment-notification";
+        private static readonly string _attachmentsCollectionEffectivePermissionsPath = "effective-permissions";
         private static readonly string _awardCategoriesPath = "award-categories";
         private static readonly string _awardPackageChangeRequestsPath = "award-package-change-requests";
         private static readonly string _awardPeriodsPath = "award-periods";
@@ -67,25 +73,50 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _awardYearsPath = "award-years";
         private static readonly string _approvalsPath = "approvals";
         private static readonly string _averageAwardPackgePath = "average-award-packages";
+        private static readonly string _authenticationSchemePath = "authentication-scheme";
         private static readonly string _awardLettersPath = "award-letters";
         private static readonly string _bankingInformationConfigurationPath = "banking-information-configuration";
         private static readonly string _banksPath = "banks";
         private static readonly string _bankAccountsPath = "bank-accounts";
+        private static readonly string _benefitsEnrollmentBenefitsPath = "benefits-enrollment-period-benefits";
+        private static readonly string _benefitsEnrollmentInfoPath = "benefits-enrollment-info";
+        private static readonly string _submitOrReOpenBenefitElectionsPath = "employees/benefit-elections";
+        private static readonly string _beneficiaryCategoriesPath = "beneficiary-category";
+        private static readonly string _benefitsEnrollmentConfigurationPath = "configuration/benefits-enrollment-configuration";
         private static readonly string _awardLetterConfigurationsPath = "award-letter-configurations";
         private static readonly string _bookPath = "books";
         private static readonly string _bookOptionsPath = "book-options";
         private static readonly string _buildingsPath = "buildings";
         private static readonly string _campusCalendarsPath = "campus-calendars";
+        private static readonly string _campusOrganization2Path = "campus-organization";
         private static readonly string _capSizesPath = "cap-sizes";
         private static readonly string _careerGoalsPath = "career-goals";
+        private static readonly string _caseTypesPath = "case-types";
+        private static readonly string _caseCategoriesPath = "case-categories";
+        private static readonly string _casePrioritiesPath = "case-priorities";
+        private static readonly string _caseClosureReasonsPath = "case-closure-reasons";
+        private static readonly string _retentionAlertCasePath = "retention-alert-case";
+        private static readonly string _retentionAlertCasesPath = "retention-alert-cases";
+        private static readonly string _retentionAlertContributionsPath = "retention-alert-contributions";
+        private static readonly string _retentionAlertCaseDetailPath = "retention-alert-case";
+        private static readonly string _retentionAlertPath = "retention-alert";
+        private static readonly string _retentionAlertCaseOwnerSummary = "case-owner-summary";
+        private static readonly string _retentionAlertCaseCategoryOrgRoles = "retention-alert-case-category-org-roles";
+        private static readonly string _retentionAlertCaseWorker = "retention-alert-case-worker";
+        private static readonly string _emailPreference = "email-preference";
+        private static readonly string _openCases = "open-cases";
+        private static readonly string _closedCasesByReason = "closed-cases-by-reason";
+        private static readonly string _permissionsPath = "permissions";
         private static readonly string _ccdsPath = "ccds";
         private static readonly string _citizenTypesPath = "citizen-types";
         private static readonly string _commencementSitesPath = "commencement-sites";
         private static readonly string _communicationCodesPath = "communication-codes";
         private static readonly string _compTimeAccrualPath = "comp-time-accrual";
         private static readonly string _configurationPath = "configuration";
+        private static readonly string _contentKeysPath = "content-keys";
         private static readonly string _contractsPath = "contracts";
         private static readonly string _convenienceFeesPath = "convenience-fees";
+        private static readonly string _countiesPath = "counties";
         private static readonly string _countriesPath = "countries";
         private static readonly string _courseLevelsPath = "course-levels";
         private static readonly string _courseTypesPath = "course-types";
@@ -112,15 +143,30 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _ecommercePath = "ecommerce";
         private static readonly string _educationHistoryPath = "education-history";
         private static readonly string _employeesPath = "employees";
+        private static readonly string _employeeBenefitsEnrollmentEligibilityPath = "benefits-enrollment-eligibility";
+        private static readonly string _employeeBenefitsEnrollmentPackagePath = "benefits-enrollment-package";
+        private static readonly string _employeeBenefitsEnrollmentAcknowledgementPath = "benefits-enrollment-acknowledgement";
+        private static readonly string _employeeBenefitsEnrollmentPoolPath = "benefits-enrollment-pool";
+        private static readonly string _employeeBenefitsEnrollmentInfoPath = "benefits-enrollment-info";
         private static readonly string _employeeLeavePlansPath = "employee-leave-plans";
+        private static readonly string _employeeCompensationPath = "employee-compensation";
+        private static readonly string _employeeLeaveRequestPath = "leave-requests";
+        private static readonly string _employeeLeaveRequestsForTimeEntry = "leave-requests-timeentry";
+        private static readonly string _employeeLeaveRequestStatusesPath = "leave-request-statuses";
+        private static readonly string _employeeLeaveRequestCommentsPath = "leave-request-comments";
+        private static readonly string _employeeSummaryPath = "employee-summary";
+        private static readonly string _employeeTimeSummaryPath = "employee-time-summary";
         private static readonly string _leaveConfigurationPath = "leave-plans-configuration";
+        private static readonly string _employeeCurrentBenefitsPath = "employee-current-benefits";
         private static readonly string _emergencyInformationPath = "emergency-information";
         private static readonly string _disabilityTypesPath = "disability-types";
         private static readonly string _externalTranscriptStatusesPath = "external-transcript-statuses";
         private static readonly string _ethnicitiesPath = "ethnicities";
         private static readonly string _facultyPath = "faculty";
+        private static readonly string _officeHoursPath = "office-hours";
         private static readonly string _facultyGradingPath = "faculty-grading";
         private static readonly string _facultyIdsPath = "query-faculty-ids";
+        private static readonly string _studentProfilePath = "student-profile";
         private static readonly string _fafsaPath = "fafsa";
         private static readonly string _fafsasPath = "fafsas";
         private static readonly string _faLinkBookSpendingPath = "book-spending";
@@ -133,10 +179,13 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _financialAidExplanationsPath = "financial-aid-explanations";
         private static readonly string _financialAidOfficesPath = "financial-aid-offices";
         private static readonly string _financialAidPersonsPath = "financial-aid-persons";
+        private static readonly string _fixedAssetTransferFlagsPath = "fixed-asset-transfer-flags";
         private static readonly string _frequencyCodesPath = "frequency-codes";
         private static readonly string _genderIdentityTypesPath = "gender-identity-types";
         private static readonly string _gownSizesPath = "gown-sizes";
         private static readonly string _gradesPath = "grades";
+        private static readonly string _gradeSchemesPath = "grade-schemes";
+        private static readonly string _gradeSubschemesPath = "grade-subschemes";
         private static readonly string _graduationApplicationPath = "graduation-application";
         private static readonly string _graduationApplicationsPath = "graduation-applications";
         private static readonly string _graduationApplicationFeesPath = "graduation-application-fees";
@@ -146,14 +195,16 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _humanResourceDemographicsPath = "human-resources";
         private static readonly string _iCalPath = "section-events-ical";
         private static readonly string _importantNumbersPath = "important-numbers";
+        private static readonly string _instantEnrollmentPath = "instant-enrollment";
         private static readonly string _institutionsPath = "institutions";
         private static readonly string _institutionTypesPath = "institution-types";
         private static readonly string _instructionalMethodsPath = "instructional-methods";
         private static readonly string _studentEnrollmentKeysPath = "invalid-student-enrollments";
         private static readonly string _ipedsInstitutionsPath = "ipeds-institutions";
         private static readonly string _localCourseClassificationsPath = "local-course-classifications";
+        private static readonly string _initiatorPath = "initiator";
         private static readonly string _interestsPath = "interests";
-        private static readonly string _languagesPath = "languages";      
+        private static readonly string _languagesPath = "languages";
         private static readonly string _linksPath = "financial-aid-links";
         private static readonly string _loadPeriodsPath = "load-periods";
         private static readonly string _loanLimitsPath = "loan-limits";
@@ -171,6 +222,13 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _overtimePath = "overtime";
         private static readonly string _overtimeCompTimeThresholdAllocationpath = "overtime-comp-time-threshold-allocation";
         private static readonly string _overtimeCalculationDefinitionsPath = "overtime-calculation-definitions";
+        private static readonly string _passwordResetTokenRequestPath = "password-reset-token-request";
+        private static readonly string _proposedRegistrationPath = "proposed-registration";
+        private static readonly string _zeroCostRegistrationPath = "zero-cost-registration";
+        private static readonly string _echeckRegistrationPath = "echeck-registration";
+        private static readonly string _startPaymentGatewayRegistrationPath = "start-payment-gateway-transaction";
+        private static readonly string _paymentAcknowledgementParagraphTextPath = "payment-acknowledgement-paragraph-text";
+        private static readonly string _cashReceiptAcknowledgementPath = "cash-receipt-acknowledgement";
         private static readonly string _confirmStudentPaymentPath = "payment/confirm";
         private static readonly string _electronicCheckPaymentPath = "payment/echeck";
         private static readonly string _electronicCheckPayerPath = "payment/echeck/payer";
@@ -184,18 +242,24 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _payStatementConfigurationPath = "pay-statement-configuration";
         private static readonly string _personalPronounTypesPath = "personal-pronoun-types";
         private static readonly string _personPhotoPath = "photos/people";
+        private static readonly string _personAgreementsPath = "person-agreements";
         private static readonly string _personPositionsPath = "person-positions";
         private static readonly string _personPositionWagesPath = "person-position-wages";
+        private static readonly string _personStipendPath = "person-stipend";
         private static readonly string _personEmploymentStatusesPath = "person-employment-statuses";
         private static readonly string _phoneNumberPath = "phone-numbers";
         private static readonly string _positionsPath = "positions";
         private static readonly string _prefixesPath = "prefixes";
+        private static readonly string _positionSupervisorsPath = "position-supervisors";
+        private static readonly string _leaveApprovalSuperviseesPath = "leave-approval-supervisees";
         private static readonly string _profileApplicationsPath = "profile-applications";
         private static readonly string _programsPath = "programs";
         private static readonly string _prospectSourcesPath = "prospect-sources";
+        private static readonly string _quickRegistrationSectionsPath = "quick-registration-sections";
         private static readonly string _racesPath = "races";
         private static readonly string _receivablesPath = "receivables";
         private static readonly string _receivableInvoicesPath = "receivable-invoices";
+        private static readonly string _recoverUserIdPath = "recover-user-id";
         private static readonly string _recruiterApplicationStatusesPath = "recruiter-application-statuses";
         private static readonly string _recruiterApplicationsPath = "recruiter-applications";
         private static readonly string _recruiterCommunicationHistoryPath = "recruiter-communication-history";
@@ -204,10 +268,13 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _recruiterTestScoresPath = "recruiter-test-scores";
         private static readonly string _recruiterTranscriptCoursesPath = "recruiter-transcript-courses";
         private static readonly string _registrationPath = "registration";
+        private static readonly string _registrationReasonsPath = "registration-reasons";
+        private static readonly string _registrationMarketingSourcesPath = "registration-marketing-sources";
         private static readonly string _relatedPersonsPath = "related-persons";
         private static readonly string _relationshipsPath = "relationships";
         private static readonly string _relationshipTypesPath = "relationship-types";
         private static readonly string _requirementsPath = "requirements";
+        private static readonly string _resetPasswordPath = "reset-password";
         private static readonly string _restrictionTypesPath = "restriction-types";
         private static readonly string _restrictionConfigurationPath = "restriction";
         private static readonly string _rolesPath = "roles";
@@ -222,12 +289,17 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _sectionAttendancesPath = "section-attendances";
         private static readonly string _sectionsPath = "sections";
         private static readonly string _sectionMeetingInstancesPath = "section-meeting-instances";
+        private static readonly string _sectionsSearchPath = "sections/search";
         private static readonly string _sectionTextbooksPath = "section-textbooks";
         private static readonly string _sectionTransferStatusesPath = "section-transfer-statuses";
         private static readonly string _selfServicePath = "self-service";
         private static readonly string _selfServicePreferencesPath = "self-service-preferences";
         private static readonly string _sessionPath = "session";
         private static readonly string _sessionCyclesPath = "session-cycles";
+        private static readonly string _shipToCodesPath = "ship-to-codes";
+        private static readonly string _shipViaCodesPath = "ship-via-codes";
+        private static readonly string _commodityCodesPath = "commodity-codes";
+        private static readonly string _commodityUnitTypesPath = "commodity-unit-types";
         private static readonly string _specializationsPath = "specializations";
         private static readonly string _studentAwardYearsPath = "award-years";
         private static readonly string _studentDefaultAwardPeriodsPath = "default-award-periods";
@@ -259,6 +331,7 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _studentTermsGpaPath = "student-terms-gpa";
         private static readonly string _studentTypesPath = "student-types";
         private static readonly string _studentWaiverReasonsPath = "student-waiver-reasons";
+        private static readonly string _studentTransferWorkPath = "transfer-work";
         private static readonly string _subjectsPath = "subjects";
         private static readonly string _suffixesPath = "suffixes";
         private static readonly string _termsPath = "terms";
@@ -270,6 +343,7 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _timecardStatusesPath = "timecard-statuses";
         private static readonly string _timeEntryCommentsPath = "time-entry-comments";
         private static readonly string _timeHistoryCommentsPath = "time-history-comments";
+        private static readonly string _timecardsWithLeaveRequestsPath = "timecards-with-leaverequests";
         private static readonly string _timeManagementConfigurationPath = "time-management-configuration";
         private static readonly string _transcriptCategoriesPath = "transcript-categories";
         private static readonly string _transcriptGroupingsPath = "transcript-groupings";
@@ -285,9 +359,15 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _accountsPayableTaxCodesPath = "accounts-payable-taxes";
         private static readonly string _accountsPayableTypeCodesPath = "accounts-payable-types";
         private static readonly string _vouchersPath = "vouchers";
+        private static readonly string _reimbursePersonAddressPath = "reimburse-person-address";
+        private static readonly string _vouchersVoidPath = "vouchers-void";
         private static readonly string _purchaseOrdersPath = "purchase-orders";
+        private static readonly string _purchaseOrdersSummaryPath = "purchase-orders-summary";
         private static readonly string _blanketPurchaseOrdersPath = "blanket-purchase-orders";
         private static readonly string _requisitionsPath = "requisitions";
+        private static readonly string _requisitionsDeletePath = "requisitions-delete";
+        private static readonly string _purchaseOrderPath = "purchaseOrders";
+        private static readonly string _purchaseOrderVoidPath = "purchase-orders-void";
         private static readonly string _journalEntriesPath = "journal-entries";
         private static readonly string _recurringVouchersPath = "recurring-vouchers";
         private static readonly string _personsPath = "persons";
@@ -319,6 +399,7 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _draftBudgetAdjustmentsPath = "draft-budget-adjustments";
         private static readonly string _budgetAdjustmentsSummaryPath = "budget-adjustments-summary";
         private static readonly string _nextApproversPath = "next-approvers";
+        private static readonly string _searchNextApproversPath = "next-approvers-search"; 
         private static readonly string _budgetAdjustmentsPendingApprovalPath = "budget-adjustments-pending-approval-summary";
         private static readonly string _workTasksPath = "work-tasks";
         private static readonly string _messagePath = "message";
@@ -333,11 +414,35 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _backupApiConfigurationPath = "backup-api-config";
         private static readonly string _restoreApiConfigurationPath = "restore-api-config";
         private static readonly string _dropReasonsPath = "drop-reasons";
+        private static readonly string _educationGoalsPath = "education-goals";
         private static readonly string _taxForm1099MiPdfPath = "form1099Miscs";
-
+        private static readonly string _taxForm1099NecPdfPath = "form1099Nec";
+        private static readonly string _taxFormCodesPath = "tax-form-codes";
+        private static readonly string _financeQueryPath = "finance-query";
+        private static readonly string _glFiscalYearConfigurationPath = "configuration/gl-fiscal-year-configuration";
+        private static readonly string _budgetDevelopmentConfigurationPath = "configuration/budget-development";
+        private static readonly string _budgetDevelopmentWorkingBudgetPath = "budget-development/working-budget";
+        private static readonly string _waitlistInfoPath = "waitlist-info";
+        private static readonly string _waitlistStatusesPath = "waitlist-statuses";
+        private static readonly string _workingBudgetPath = "working-budget";
+        private static readonly string _budgetOfficersPath = "budget-officers";
+        private static readonly string _budgetReportingUnitsPath = "budget-reporting-units";
+        private static readonly string _requisitionsSummaryPath = "requisitions-summary";
+        private static readonly string _cfWebConfigurationsPath = "cf-web-configurations";
+        private static readonly string _vendorsPath = "vendors";
+        private static readonly string _vendorsForVoucherPath = "vendors-voucher";
+        private static readonly string _requisitionModifyPath = "requisitions-modify";        
+        private static readonly string _taxFormBoxCodesPath = "tax-form-boxcodes";
+        private static readonly string _receiveProcurementsPath = "receive-procurements";
+        private static readonly string _returnReasonCodesPath = "procurement-return-reasons";
+        private static readonly string _documentApprovalPath = "document-approval";
+        private static readonly string _voucherSummariesPath = "voucher-summaries";
+        private static readonly string _vendorCommoditiesPath = "vendor-commodities";
         private static readonly string _privacyStatusesPath = "privacy-statuses";
         private static readonly string _privacyMessagesPath = "privacy-messages";
         private static readonly string _privacyPath = "privacy";
+        private static readonly string _healthPath = "health";
+
         private static readonly string _mediaTypeHeaderVersion1 = "application/vnd.ellucian.v1+json";
         private static readonly string _mediaTypeHeaderVersion2 = "application/vnd.ellucian.v2+json";
         private static readonly string _mediaTypeHeaderVersion3 = "application/vnd.ellucian.v3+json";
@@ -345,6 +450,7 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _mediaTypeHeaderVersion5 = "application/vnd.ellucian.v5+json";
         private static readonly string _mediaTypeHeaderVersion6 = "application/vnd.ellucian.v6+json";
         private static readonly string _mediaTypeHeaderPdfVerion1 = "application/vnd.ellucian.v1+pdf";
+        private static readonly string _mediaTypeHeaderPdfVersion2 = "application/vnd.ellucian.v2+pdf";
         private static readonly string _mediaTypeHeaderPlanningVersion1 = "application/vnd.ellucian-planning-student.v1+json";
         private static readonly string _mediaTypeHeaderPersonProfileVersion1 = "application/vnd.ellucian-person-profile.v1+json";
         private static readonly string _mediaTypeHeaderPersonProfileVersion2 = "application/vnd.ellucian-person-profile.v2+json";
@@ -360,8 +466,22 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _mediaTypeStepUpAuthenticationVersion1 = "application/vnd.ellucian-step-up-authentication.v1+json";
         private static readonly string _mediaTypeHeaderStudentFinanceDisbursementsVersion1 = "application/vnd.ellucian-student-finance-disbursements.v1+json";
         private static readonly string _mediaTypeHeaderFALinkBookSpendingVersion1 = "application/vnd.ellucian-falink-book-spending.v1+json";
-
         private static readonly string _mediaTypeEllucianConfigurationVersion1 = "application/vnd.ellucian-configuration.v1+json";
+        private static readonly string _mediaTypeEllucianInvalidKeysFormatVersion1 = "application/vnd.ellucian-with-invalid-keys.v1+json";
+        private static readonly string _mediaTypeEllucianPersonSearchExactMatchFormat = "application/vnd.ellucian-person-search-exact-match.v1+json";
+        private static readonly string _mediaTypeEllucianInstantEnrollmentFormatVersion1 = "application/vnd.ellucian-instant-enrollment.v1+json";
+
+        private static readonly string _mediaTypeEllucianRetentionAlertCaseNoteVersion1 = "application/vnd.ellucian-retention-alert-case-note.v1+json";
+        private static readonly string _mediaTypeEllucianRetentionAlertCaseFollowUpVersion1 = "application/vnd.ellucian-retention-alert-case-followup.v1+json";
+        private static readonly string _mediaTypeEllucianRetentionAlertCaseCommCodeVersion1 = "application/vnd.ellucian-retention-alert-case-comm-code.v1+json";
+        private static readonly string _mediaTypeEllucianRetentionAlertCaseTypeVersion1 = "application/vnd.ellucian-retention-alert-case-type.v1+json";
+        private static readonly string _mediaTypeEllucianRetentionAlertCasePriorityVersion1 = "application/vnd.ellucian-retention-alert-case-priority.v1+json";
+        private static readonly string _mediaTypeEllucianRetentionAlertCaseCloseVersion1 = "application/vnd.ellucian-retention-alert-case-close.v1+json";
+        private static readonly string _mediaTypeEllucianRetentionAlertCaseSendMailVersion1 = "application/vnd.ellucian-retention-alert-case-send-mail.v1+json";
+        private static readonly string _mediaTypeEllucianRetentionAlertCaseReassignVersion1 = "application/vnd.ellucian-retention-alert-case-reassign.v1+json";
+        private static readonly string _mediaTypeEllucianRetentionAlertCaseSetReminderVersion1 = "application/vnd.ellucian-retention-alert-case-set-reminder.v1+json";
+        private static readonly string _mediaTypeEllucianRetentionAlertCaseManageRemindersVersion1 = "application/vnd.ellucian-retention-alert-manage-reminders.v1+json";
+        private static readonly string _caseHistoryPath = "case-history";
 
         /// <summary>
         /// Creates a new ColleagueApiClient.
@@ -374,7 +494,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Creates a new ColleagueApiClient specifying the maximum number of connections 
+        /// Creates a new ColleagueApiClient specifying the maximum number of connections
         /// that can be made to the Colleague Web API.
         /// </summary>
         /// <param name="baseUrl">Colleague Web API base URL (ending in /ColleagueApi)</param>
@@ -519,7 +639,7 @@ namespace Ellucian.Colleague.Api.Client
             }
 
             // do not log the request body
-            AddLoggingRestictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
 
             try
             {
@@ -576,7 +696,7 @@ namespace Ellucian.Colleague.Api.Client
             }
 
             // do not log the request body
-            AddLoggingRestictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
 
             try
             {
@@ -621,8 +741,8 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="productName">optional name of product using the client</param>
         /// <param name="productVersion">optional version of the product using the client</param>
         /// <returns>a JSON Web Token string or one of the following exceptions:
-        /// LoginException : invalid credentials specified; 
-        /// PasswordExpiredException : user's password has expired and needs to be reset; 
+        /// LoginException : invalid credentials specified;
+        /// PasswordExpiredException : user's password has expired and needs to be reset;
         /// ListenerNotFoundException: listener is nonresponsive, system is unavailable
         /// </returns>
         public async Task<string> Login2Async(string userId, string password, string productName = null, string productVersion = null)
@@ -636,7 +756,7 @@ namespace Ellucian.Colleague.Api.Client
             }
 
             // do not log the request body
-            AddLoggingRestictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
 
             try
             {
@@ -707,7 +827,7 @@ namespace Ellucian.Colleague.Api.Client
             }
 
             // do not log the request body
-            AddLoggingRestictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
 
             try
             {
@@ -769,7 +889,7 @@ namespace Ellucian.Colleague.Api.Client
             }
 
             // do not log the request body
-            AddLoggingRestictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
 
             try
             {
@@ -817,8 +937,8 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="productName">optional name of product using the client</param>
         /// <param name="productVersion">optional version of the product using the client</param>
         /// <returns>a JSON Web Token string  or one of the following exceptions:
-        /// LoginException : invalid credentials specified; 
-        /// PasswordExpiredException : user's password has expired and needs to be reset; 
+        /// LoginException : invalid credentials specified;
+        /// PasswordExpiredException : user's password has expired and needs to be reset;
         /// ListenerNotFoundException: listener is nonresponsive, system is unavailable
         /// </returns>
         public async Task<string> ProxyLogin2Async(string proxyId, string proxyPassword, string userId, string productName = null, string productVersion = null)
@@ -834,7 +954,7 @@ namespace Ellucian.Colleague.Api.Client
             }
 
             // do not log the request body
-            AddLoggingRestictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
 
             try
             {
@@ -883,7 +1003,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// POSTs a logout request with the specified JSON Web Token. 
+        /// POSTs a logout request with the specified JSON Web Token.
         /// </summary>
         /// <param name="token">JSON web token string</param>
         public void Logout(string token)
@@ -910,7 +1030,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// POSTs a logout request with the specified JSON Web Token asynchronously. 
+        /// POSTs a logout request with the specified JSON Web Token asynchronously.
         /// </summary>
         /// <param name="token">JSON web token string</param>
         public async Task LogoutAsync(string token)
@@ -1015,7 +1135,7 @@ namespace Ellucian.Colleague.Api.Client
             var headers = new NameValueCollection();
             headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
 
-            AddLoggingRestictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
 
             try
             {
@@ -1042,7 +1162,7 @@ namespace Ellucian.Colleague.Api.Client
             var headers = new NameValueCollection();
             headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
 
-            AddLoggingRestictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
 
             try
             {
@@ -1053,7 +1173,6 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
-
 
         /// <summary>
         /// Get all roles.
@@ -1224,7 +1343,7 @@ namespace Ellucian.Colleague.Api.Client
         /// JSON Web Token that includes proxy subject's claims (roles + permissions). This will also
         /// update the Colleague web session token for the proxy user.
         /// </summary>
-        /// <param name="proxySubject">The proxy subject. Only the ID is required. If this ID is empty, 
+        /// <param name="proxySubject">The proxy subject. Only the ID is required. If this ID is empty,
         /// then any previously assigned proxy subjects claims will be removed.</param>
         /// <returns>A new JSON Web Token that includes proxy subject's claims (roles + permissions)</returns>
         public async Task<string> PutSessionProxySubjectsAsync(ProxySubject proxySubject)
@@ -1301,6 +1420,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_usersPath, candidate.ProxySubject, _proxyCandidatesPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync<Dtos.Base.ProxyCandidate>(candidate, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<Dtos.Base.ProxyCandidate>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -1324,6 +1444,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_usersPath, grantorId, _proxyCandidatesPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var proxyCandidates = JsonConvert.DeserializeObject<IEnumerable<ProxyCandidate>>(await response.Content.ReadAsStringAsync());
                 return proxyCandidates;
@@ -1347,6 +1468,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_usersPath, _proxyUsersPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync<Dtos.Base.PersonProxyUser>(user, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<Dtos.Base.PersonProxyUser>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -1446,7 +1568,7 @@ namespace Ellucian.Colleague.Api.Client
 
             try
             {
-                var response = await ExecuteGetRequestWithResponseAsync(urlPath,  headers: headers);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var backupData = JsonConvert.DeserializeObject<BackupConfiguration>(await response.Content.ReadAsStringAsync());
                 return backupData;
             }
@@ -1471,7 +1593,7 @@ namespace Ellucian.Colleague.Api.Client
             }
             else
             {
-                if ( (backupDataQuery.ConfigurationIds == null || backupDataQuery.ConfigurationIds.Count() == 0) 
+                if ((backupDataQuery.ConfigurationIds == null || backupDataQuery.ConfigurationIds.Count() == 0)
                         && string.IsNullOrWhiteSpace(backupDataQuery.Namespace))
                 {
                     throw new ArgumentException("ConfigurationIds and Namespace can't both be null.");
@@ -1494,6 +1616,10 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+
+        /*************************** PRIVATE METHODS ****************************/
+
+
         /// <summary>
         /// Executes an HTTP GET request and returns the resulting response.
         /// </summary>
@@ -1506,6 +1632,7 @@ namespace Ellucian.Colleague.Api.Client
         {
             return serviceClient.ExecuteGetRequestWithResponse(urlPath, this.userContext, urlArguments, headers, useCache);
         }
+
         /// <summary>
         /// Executes an HTTP GET request asynchronously and returns the resulting response.
         /// </summary>
@@ -1533,6 +1660,7 @@ namespace Ellucian.Colleague.Api.Client
         {
             return serviceClient.ExecutePostRequestWithResponse<T>(objectToSend, urlPath, this.userContext, urlArguments, headers, useCache);
         }
+
         /// <summary>
         /// Executes an HTTP POST request asynchronously and returns the resulting response.
         /// </summary>
@@ -1547,6 +1675,21 @@ namespace Ellucian.Colleague.Api.Client
         {
             return serviceClient.ExecutePostRequestWithResponseAsync<T>(objectToSend, urlPath, this.userContext, urlArguments, headers, useCache);
         }
+
+        /// <summary>
+        /// Executes an HTTP POST request asynchronously and returns the resulting response.
+        /// </summary>
+        /// <param name="httpContent">The http content to be sent.</param>
+        /// <param name="urlPath">Relative request path.</param>
+        /// <param name="urlArguments">Optional URL arguments to be added as query parameters.</param>
+        /// <param name="headers">Optional HTTP request headers to add to the request.</param>
+        /// <param name="useCache">Specifies whether or not this request can be serviced via an HTTP cache or must be retrieved from the fresh from the API</param>
+        /// <returns>The result as an <see cref="HttpResponseMessage"/></returns>
+        private Task<HttpResponseMessage> ExecutePostHttpContentRequestWithResponseAsync(HttpContent httpContent, string urlPath, string urlArguments = null, NameValueCollection headers = null, bool useCache = true)
+        {
+            return serviceClient.ExecutePostHttpContentRequestWithResponseAsync(httpContent, urlPath, this.userContext, urlArguments, headers, useCache);
+        }
+
         /// <summary>
         /// Executes an HTTP PUT request and returns the resulting response.
         /// </summary>
@@ -1560,6 +1703,7 @@ namespace Ellucian.Colleague.Api.Client
         {
             return serviceClient.ExecutePutRequestWithResponse<T>(objectToSend, urlPath, this.userContext, urlArguments, headers);
         }
+
         /// <summary>
         /// Executes an HTTP PUT request asynchronously and returns the resulting response.
         /// </summary>
@@ -1585,6 +1729,7 @@ namespace Ellucian.Colleague.Api.Client
         {
             return serviceClient.ExecuteDeleteRequestWithResponse(urlPath, this.userContext, urlArguments, headers);
         }
+
         /// <summary>
         /// Executes an HTTP DELETE request asynchronously and returns the resulting response.
         /// </summary>
@@ -1602,12 +1747,12 @@ namespace Ellucian.Colleague.Api.Client
         /// You may apply more than one <see cref="LoggingRestrictions"/> by using bitwise or (|) operator.
         /// </summary>
         /// <param name="headers"><see cref="NameValueCollection"/> request headers as a reference</param>
-        /// <param name="restrcitions"><see cref="LoggingRestrictions"/>flags to apply.</param>
-        private void AddLoggingRestictions(ref NameValueCollection headers, LoggingRestrictions restrcitions)
+        /// <param name="restrictions"><see cref="LoggingRestrictions"/>flags to apply.</param>
+        private void AddLoggingRestrictions(ref NameValueCollection headers, LoggingRestrictions restrictions)
         {
-            if (logger.IsDebugEnabled && headers != null)
+            if (logger != null && logger.IsDebugEnabled && headers != null)
             {
-                headers.Add(ColleagueServiceClient.LoggingRestrictionsHeaderKey, restrcitions.ToString("X"));
+                headers.Add(ColleagueServiceClient.LoggingRestrictionsHeaderKey, restrictions.ToString("X"));
             }
         }
     }

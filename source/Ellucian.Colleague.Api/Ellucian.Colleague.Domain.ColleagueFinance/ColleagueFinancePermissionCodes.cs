@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base;
 using System;
@@ -8,6 +8,9 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance
     [Serializable]
     public static class ColleagueFinancePermissionCodes
     {
+
+        #region Permissions created by the ETHOS team
+
         // Update any Account Payable Invoice
         public const string UpdateApInvoices = "UPDATE.AP.INVOICES";
 
@@ -26,11 +29,23 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance
         // View any vendor information
         public const string ViewVendors = "VIEW.VENDORS";
 
+        // View any vendor contacts information
+        public const string ViewVendorContacts = "VIEW.VENDOR.CONTACT";
+
+        // Create / Update any vendor contacts information
+        public const string ProcessVendorContact = "PROCESS.VENDOR.CONTACT";
+
         // Update any Purchase Order
         public const string UpdatePurchaseOrders = "UPDATE.PURCHASE.ORDERS";
 
         // View any PurchaseOrder
         public const string ViewPurchaseOrders = "VIEW.PURCHASE.ORDERS";
+
+        // View any BlanketPurchaseOrder
+        public const string ViewBlanketPurchaseOrders = "VIEW.BLANKET.PURCHASE.ORDERS";
+
+        // Update any BlanketPurchaseOrder
+        public const string UpdateBlanketPurchaseOrders = "UPDATE.BLANKET.PURCHASE.ORDERS";
 
         // View any Requisitions
         public const string ViewRequisitions = "VIEW.REQUISITIONS";
@@ -43,15 +58,10 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance
 
         // Delete any Requisitions
         public const string DeleteRequisitions = "DELETE.REQUISITIONS";
-   
+
         // View any Payment Transaction
         public const string ViewPaymentTransactionsIntg = "VIEW.PAYMENT.TRANSACTIONS";
 
-        // View any BudgetCode
-        public const string ViewBudgetCode = "VIEW.BUDGET.CODES";
-
-        // View any BudgetPhase
-        public const string ViewBudgetPhase = "VIEW.BUDGET.PHASES";
 
         // Create GL Postings
         public const string CreateGLPostings = "CREATE.GL.POSTINGS";
@@ -65,8 +75,6 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance
         //Create Encumbrance Entries
         public const string CreateEncumbranceEntries = "CREATE.ENCUMBRANCE.ENTRIES";
 
-        //View any BudgetPhaseLineItems
-        public const string ViewBudgetPhaseLineItems = "VIEW.BUDGET.PHASE.LINE.ITEMS";
 
         //View any Procurement Receipts
         public const string ViewProcurementReceipts = "VIEW.PROCUREMENT.RECEIPTS";
@@ -89,17 +97,19 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance
         //Allows this partner system to create purchase orders directly in an "outstanding" status even if Colleague approvals are turned on.
         public const string ByPassPurchaseOrderApproval = "BYPASS.COLL.PO.APPROVALS";
 
+        //Allows this partner system to create purchase orders directly in an "outstanding" status even if Colleague approvals are turned on.
+        public const string ByPassRequisitionApproval = "BYPASS.COLL.REQ.APPROVALS";
+
+        //Allows this partner system to create blanket purchase orders directly in an "outstanding" status even if Colleague approvals are turned on.
+        public const string ByPassBlanketPurchaseOrderApproval = "BYPASS.COLL.BPO.APPROVALS";
+
+        #endregion
+
 
         // The following section contains permissions created by the Colleague Financials
         // team, which are kept separated from the permissions created by the Ethos team.
 
         #region Permissions created by the CF team
-
-        // Enable user to view their own T4A information
-        public const string ViewT4A = BasePermissionCodes.ViewT4A;
-
-        // Enable user to view another user's T4A information (ie: Tax Information Admin)
-        public const string ViewRecipientT4A = BasePermissionCodes.ViewRecipientT4A;
 
         // Create and update Draft Budget Adjustments and Budget Adjustments
         public const string CreateUpdateBudgetAdjustments = "CREATE.UPDATE.BUDGET.ADJUSTMENT";
@@ -128,11 +138,44 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance
         // View any requisition
         public const string ViewRequisition = "VIEW.REQUISITION";
 
+        // Create or Update any requisition
+        public const string CreateUpdateRequisition = "CREATE.UPDATE.REQUISITION";
+
+        // Delete any requisition
+        public const string DeleteRequisition = "DELETE.REQUISITION";
+
+        // Create or Update any purchase order
+        public const string CreateUpdatePurchaseOrder = "CREATE.UPDATE.PURCHASE.ORDER";
+
         // View any voucher
         public const string ViewVoucher = "VIEW.VOUCHER";
 
-        // Enable user to view their own 1099MI information
+        // View any vendor information/s
+        public const string ViewVendor = "VIEW.VENDOR";
+
+        // View or Update procurement items
+        public const string ViewUpdateProcurementReceiving = "UPDATE.RECEIVING";
+
+        // View your document approval
+        public const string ViewDocumentApproval = "VIEW.DOCUMENT.APPROVAL";
+        // Create or Update Voucher
+        public const string CreateUpdateVoucher = "CREATE.UPDATE.VOUCHER";
+
+        #region Tax Information
+
+        // Enable user to view their own 1099-MISC information
         public const string View1099MISC = BasePermissionCodes.View1099MISC;
+
+        // Enable user to view their own 1099-NEC information
+        public const string View1099NEC = BasePermissionCodes.View1099NEC;
+
+        // Enable user to view their own T4A information
+        public const string ViewT4A = BasePermissionCodes.ViewT4A;
+
+        // Enable user to view another user's T4A information (ie: Tax Information Admin)
+        public const string ViewRecipientT4A = BasePermissionCodes.ViewRecipientT4A;
+
+        #endregion
 
         #endregion
     }

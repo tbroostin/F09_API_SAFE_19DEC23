@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Ellucian.Colleague.Dtos.FinancialAid</RootNamespace>
     <AssemblyName>Ellucian.Colleague.Dtos.FinancialAid</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -46,12 +46,10 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Ellucian.Web.Adapters, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Web.Adapters.1.0.0.177\lib\net451\Ellucian.Web.Adapters.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Ellucian.Web.Adapters.1.0.0.180\lib\net451\Ellucian.Web.Adapters.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Web.Dependency, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Web.Dependency.1.0.0.187\lib\net451\Ellucian.Web.Dependency.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Ellucian.Web.Dependency.1.0.0.190\lib\net451\Ellucian.Web.Dependency.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Practices.ServiceLocation, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\CommonServiceLocator.1.0\lib\NET35\Microsoft.Practices.ServiceLocation.dll</HintPath>
@@ -116,16 +114,19 @@
     <Compile Include="AwardLetterConfiguration.cs" />
     <Compile Include="AwardLetterGroup.cs" />
     <Compile Include="AwardLetterAwardPeriod.cs" />
+    <Compile Include="AwardLetterHistoryCost.cs" />
     <Compile Include="AwardLetterReport.cs" />
     <Compile Include="AwardPackageChangeRequest.cs" />
     <Compile Include="AwardPackageChangeRequestStatus.cs" />
     <Compile Include="AwardPeriod.cs" />
     <Compile Include="AwardPeriodChangeRequest.cs" />
+    <Compile Include="AwardPeriodTotal.cs" />
     <Compile Include="AwardStatus.cs" />
     <Compile Include="AwardStatusCategory.cs" />
     <Compile Include="AwardType.cs" />
     <Compile Include="AwardYear.cs" />
     <Compile Include="BudgetComponent.cs" />
+    <Compile Include="BudgetComponentCostType.cs" />
     <Compile Include="ChecklistItemControlStatus.cs" />
     <Compile Include="ChecklistItem.cs" />
     <Compile Include="ChecklistItemType.cs" />
@@ -145,18 +146,24 @@
     <Compile Include="FinancialAidPersonQueryCriteria.cs" />
     <Compile Include="GroupType.cs" />
     <Compile Include="HousingCode.cs" />
+    <Compile Include="InformedBorrowerItem.cs" />
     <Compile Include="IpedsInstitution.cs" />
     <Compile Include="Link.cs" />
     <Compile Include="LinkTypes.cs" />
     <Compile Include="LoanRequest.cs" />
     <Compile Include="LoanRequestPeriod.cs" />
     <Compile Include="LoanRequestStatus.cs" />
+    <Compile Include="OfferLetterHousingEnrollmentItem.cs" />
     <Compile Include="OutsideAward.cs" />
     <Compile Include="ProfileApplication.cs" />
+    <Compile Include="ShoppingSheet2.cs" />
     <Compile Include="ShoppingSheet.cs" />
+    <Compile Include="ShoppingSheetAwardItem2.cs" />
     <Compile Include="ShoppingSheetAwardItem.cs" />
+    <Compile Include="ShoppingSheetBudgetGroup2.cs" />
     <Compile Include="ShoppingSheetBudgetGroup.cs" />
     <Compile Include="ShoppingSheetConfiguration.cs" />
+    <Compile Include="ShoppingSheetCostItem2.cs" />
     <Compile Include="ShoppingSheetCostItem.cs" />
     <Compile Include="ShoppingSheetEfcOption.cs" />
     <Compile Include="ShoppingSheetOfficeType.cs" />

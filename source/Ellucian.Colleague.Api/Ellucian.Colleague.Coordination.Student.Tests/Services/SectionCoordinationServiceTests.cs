@@ -1,7 +1,6 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base;
-using Ellucian.Colleague.Coordination.Base.Adapters;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -492,6 +491,329 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
         }
 
+        [TestClass]
+        public class GetSectionWaitlistAsync : CurrentUserSetup
+        {
+            private SectionCoordinationService sectionCoordinationService;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<ISectionRepository> sectionRepoMock;
+            private ISectionRepository sectionRepo;
+            private Mock<IStudentRepository> studentRepoMock;
+            private IStudentRepository studentRepo;
+            private Mock<IStudentReferenceDataRepository> stuRefDataRepoMock;
+            private IStudentReferenceDataRepository studentReferenceDataRepo;
+            private Mock<IReferenceDataRepository> referenceDataRepoMock;
+            private IReferenceDataRepository referenceDataRepo;
+            private Mock<ICourseRepository> courseRepoMock;
+            private ICourseRepository courseRepo;
+            private Mock<ITermRepository> termRepoMock;
+            private ITermRepository termRepo;
+            private Mock<IStudentConfigurationRepository> studentConfigRepoMock;
+            private IStudentConfigurationRepository studentConfigRepo;
+            private Mock<IConfigurationRepository> configRepoMock;
+            private IConfigurationRepository configRepo;
+            private Mock<IPersonRepository> personRepoMock;
+            private IPersonRepository personRepo;
+            private Mock<IRoomRepository> roomRepoMock;
+            private IRoomRepository roomRepo;
+            private Mock<IEventRepository> eventRepoMock;
+            private IEventRepository eventRepo;
+            private Mock<IBookRepository> bookRepoMock;
+            private IBookRepository bookRepo;
+
+
+            private Mock<IRoleRepository> roleRepoMock;
+            private IRoleRepository roleRepo;
+            private ILogger logger;
+            private ICurrentUserFactory currentUserFactory;
+
+            private Domain.Student.Entities.Section section1;
+            private Domain.Student.Entities.Section section2;
+            private Domain.Student.Entities.Section section3;
+
+            private Domain.Student.Entities.SectionWaitlist sectionWaitlist1;
+            private Domain.Student.Entities.SectionWaitlist sectionWaitlist2;
+            private Domain.Student.Entities.SectionWaitlist sectionWaitlist3;
+
+            private List<OfferingDepartment> dpts = new List<OfferingDepartment>() { new OfferingDepartment("ART", 100m) };
+            private List<string> levels = new List<string>() { "Whatever" };
+            private List<SectionStatusItem> statuses = new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddDays(-60)) };
+            private List<SectionStatusItem> statuses2 = new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Inactive, "I", DateTime.Today.AddDays(-60)) };
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                sectionRepoMock = new Mock<ISectionRepository>();
+                sectionRepo = sectionRepoMock.Object;
+                studentRepoMock = new Mock<IStudentRepository>();
+                studentRepo = studentRepoMock.Object;
+                personRepoMock = new Mock<IPersonRepository>();
+                personRepo = personRepoMock.Object;
+                roomRepoMock = new Mock<IRoomRepository>();
+                roomRepo = roomRepoMock.Object;
+                stuRefDataRepoMock = new Mock<IStudentReferenceDataRepository>();
+                studentReferenceDataRepo = stuRefDataRepoMock.Object;
+                referenceDataRepoMock = new Mock<IReferenceDataRepository>();
+                referenceDataRepo = referenceDataRepoMock.Object;
+                courseRepoMock = new Mock<ICourseRepository>();
+                courseRepo = courseRepoMock.Object;
+                termRepoMock = new Mock<ITermRepository>();
+                termRepo = termRepoMock.Object;
+                studentConfigRepoMock = new Mock<IStudentConfigurationRepository>();
+                studentConfigRepo = studentConfigRepoMock.Object;
+                configRepoMock = new Mock<IConfigurationRepository>();
+                configRepo = configRepoMock.Object;
+                eventRepoMock = new Mock<IEventRepository>();
+                eventRepo = eventRepoMock.Object;
+                bookRepoMock = new Mock<IBookRepository>();
+                bookRepo = bookRepoMock.Object;
+
+
+                roleRepoMock = new Mock<IRoleRepository>();
+                roleRepo = roleRepoMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+
+                // "STU1" is the current user
+                currentUserFactory = new CurrentUserSetup.StudentUserFactory();
+
+                logger = new Mock<ILogger>().Object;
+
+                // Mock the section repo response
+                sectionWaitlist1 = new Ellucian.Colleague.Domain.Student.Entities.SectionWaitlist("SEC1");
+                sectionWaitlist1.AddStudentId("0001234");
+
+                sectionWaitlist2 = new Ellucian.Colleague.Domain.Student.Entities.SectionWaitlist("SEC2");
+                sectionWaitlist2.AddStudentId(currentUserFactory.CurrentUser.PersonId);
+
+                sectionWaitlist3 = new Ellucian.Colleague.Domain.Student.Entities.SectionWaitlist("SEC3");
+                sectionWaitlist3.AddStudentId("0001234");
+
+                sectionRepoMock.Setup(repo => repo.GetSectionWaitlistAsync(sectionWaitlist1.SectionId)).ReturnsAsync(sectionWaitlist1);
+                sectionRepoMock.Setup(repo => repo.GetSectionWaitlistAsync(sectionWaitlist2.SectionId)).ReturnsAsync(sectionWaitlist2);
+                sectionRepoMock.Setup(repo => repo.GetSectionWaitlistAsync(sectionWaitlist3.SectionId)).ReturnsAsync(sectionWaitlist3);
+
+                section1 = new Section("SEC1", "1119", "01", new DateTime(2012, 09, 01), 3.0m, 0, "Introduction to Art", "IN", dpts, levels, "UG", statuses, true);
+                section2 = new Section("SEC2", "1119", "02", new DateTime(2012, 09, 01), 3.0m, null, "Introduction to Art", "IN", dpts, levels, "UG", statuses2, true);
+                section2.AddFaculty("STU1");
+
+                section3 = null;
+
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1")).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC2")).ReturnsAsync(section2);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC3")).ReturnsAsync(section3);
+
+                var sectionWaitlistAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionWaitlist, Ellucian.Colleague.Dtos.Student.SectionWaitlist>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionWaitlist, Ellucian.Colleague.Dtos.Student.SectionWaitlist>()).Returns(sectionWaitlistAdapter);
+
+                // Mock the section service
+                sectionCoordinationService = new SectionCoordinationService(adapterRegistry, sectionRepo, courseRepo, studentRepo, studentReferenceDataRepo,
+                    referenceDataRepo, termRepo, studentConfigRepo, configRepo, personRepo, roomRepo, eventRepo, bookRepo, currentUserFactory, roleRepo, logger);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                sectionRepo = null;
+                studentRepo = null;
+                roleRepo = null;
+                adapterRegistry = null;
+                sectionCoordinationService = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SectionCoordinationService_GetSectionWaitlistAsync_Null_SectionId()
+            {
+                var r = await sectionCoordinationService.GetSectionWaitlistAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task SectionCoordinationService_GetSectionWaitlistAsync_User_not_in_Section()
+            {
+                var r = await sectionCoordinationService.GetSectionWaitlistAsync(sectionWaitlist1.SectionId);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task SectionCoordinationService_GetSectionWaitlistAsync_Null_Section()
+            {
+                var r = await sectionCoordinationService.GetSectionWaitlistAsync(sectionWaitlist3.SectionId);
+            }
+
+            [TestMethod]
+            public async Task SectionCoordinationService_GetSectionWaitlistAsync_User_is_Student_in_Section()
+            {
+                var r = await sectionCoordinationService.GetSectionWaitlistAsync(sectionWaitlist2.SectionId);
+                Assert.IsNotNull(r);
+                Assert.AreEqual(sectionWaitlist2.SectionId, r.SectionId);
+                Assert.AreEqual(sectionWaitlist2.StudentIds.Count, r.StudentIds.Count());
+            }
+        }
+
+        [TestClass]
+        public class GetSectionWaitlist2Async : CurrentUserSetup
+        {
+            private SectionCoordinationService sectionCoordinationService;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<ISectionRepository> sectionRepoMock;
+            private ISectionRepository sectionRepo;
+            private Mock<IStudentRepository> studentRepoMock;
+            private IStudentRepository studentRepo;
+            private Mock<IStudentReferenceDataRepository> stuRefDataRepoMock;
+            private IStudentReferenceDataRepository studentReferenceDataRepo;
+            private Mock<IReferenceDataRepository> referenceDataRepoMock;
+            private IReferenceDataRepository referenceDataRepo;
+            private Mock<ICourseRepository> courseRepoMock;
+            private ICourseRepository courseRepo;
+            private Mock<ITermRepository> termRepoMock;
+            private ITermRepository termRepo;
+            private Mock<IStudentConfigurationRepository> studentConfigRepoMock;
+            private IStudentConfigurationRepository studentConfigRepo;
+            private Mock<IConfigurationRepository> configRepoMock;
+            private IConfigurationRepository configRepo;
+            private Mock<IPersonRepository> personRepoMock;
+            private IPersonRepository personRepo;
+            private Mock<IRoomRepository> roomRepoMock;
+            private IRoomRepository roomRepo;
+            private Mock<IEventRepository> eventRepoMock;
+            private IEventRepository eventRepo;
+            private Mock<IBookRepository> bookRepoMock;
+            private IBookRepository bookRepo;
+
+
+            private Mock<IRoleRepository> roleRepoMock;
+            private IRoleRepository roleRepo;
+            private ILogger logger;
+            private ICurrentUserFactory currentUserFactory;
+
+            private Domain.Student.Entities.Section section1;
+            private Domain.Student.Entities.Section section2;
+            private Domain.Student.Entities.Section section3;
+
+            private List<Domain.Student.Entities.SectionWaitlistStudent> sectionWaitlist1 = new List<Domain.Student.Entities.SectionWaitlistStudent>();
+            private List<Domain.Student.Entities.SectionWaitlistStudent> sectionWaitlist2 = new List<Domain.Student.Entities.SectionWaitlistStudent>();
+            private List<Domain.Student.Entities.SectionWaitlistStudent> sectionWaitlist3 = new List<Domain.Student.Entities.SectionWaitlistStudent>();
+
+            private List<OfferingDepartment> dpts = new List<OfferingDepartment>() { new OfferingDepartment("ART", 100m) };
+            private List<string> levels = new List<string>() { "Whatever" };
+            private List<SectionStatusItem> statuses = new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddDays(-60)) };
+            private List<SectionStatusItem> statuses2 = new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Inactive, "I", DateTime.Today.AddDays(-60)) };
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                sectionRepoMock = new Mock<ISectionRepository>();
+                sectionRepo = sectionRepoMock.Object;
+                studentRepoMock = new Mock<IStudentRepository>();
+                studentRepo = studentRepoMock.Object;
+                personRepoMock = new Mock<IPersonRepository>();
+                personRepo = personRepoMock.Object;
+                roomRepoMock = new Mock<IRoomRepository>();
+                roomRepo = roomRepoMock.Object;
+                stuRefDataRepoMock = new Mock<IStudentReferenceDataRepository>();
+                studentReferenceDataRepo = stuRefDataRepoMock.Object;
+                referenceDataRepoMock = new Mock<IReferenceDataRepository>();
+                referenceDataRepo = referenceDataRepoMock.Object;
+                courseRepoMock = new Mock<ICourseRepository>();
+                courseRepo = courseRepoMock.Object;
+                termRepoMock = new Mock<ITermRepository>();
+                termRepo = termRepoMock.Object;
+                studentConfigRepoMock = new Mock<IStudentConfigurationRepository>();
+                studentConfigRepo = studentConfigRepoMock.Object;
+                configRepoMock = new Mock<IConfigurationRepository>();
+                configRepo = configRepoMock.Object;
+                eventRepoMock = new Mock<IEventRepository>();
+                eventRepo = eventRepoMock.Object;
+                bookRepoMock = new Mock<IBookRepository>();
+                bookRepo = bookRepoMock.Object;
+
+
+                roleRepoMock = new Mock<IRoleRepository>();
+                roleRepo = roleRepoMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+
+                // "STU1" is the current user
+                currentUserFactory = new CurrentUserSetup.StudentUserFactory();
+
+                logger = new Mock<ILogger>().Object;
+
+                // Mock the section repo response
+                sectionWaitlist1.Add(new Ellucian.Colleague.Domain.Student.Entities.SectionWaitlistStudent("SEC1", "0001234",1,3,"1",new DateTime(),new DateTime()));
+           
+                sectionWaitlist2.Add(new Ellucian.Colleague.Domain.Student.Entities.SectionWaitlistStudent("SEC2", currentUserFactory.CurrentUser.PersonId,2,2, "1", new DateTime(),new DateTime()));
+
+                sectionWaitlist3.Add(new Ellucian.Colleague.Domain.Student.Entities.SectionWaitlistStudent("SEC3", "0001234", 3,1,"1", new DateTime(), new DateTime()));
+            
+                sectionRepoMock.Setup(repo => repo.GetSectionWaitlist2Async(sectionWaitlist1[0].SectionId)).ReturnsAsync(sectionWaitlist1);
+                sectionRepoMock.Setup(repo => repo.GetSectionWaitlist2Async(sectionWaitlist2[0].SectionId)).ReturnsAsync(sectionWaitlist2);
+                sectionRepoMock.Setup(repo => repo.GetSectionWaitlist2Async(sectionWaitlist3[0].SectionId)).ReturnsAsync(sectionWaitlist3);
+
+                section1 = new Section("SEC1", "1119", "01", new DateTime(2012, 09, 01), 3.0m, 0, "Introduction to Art", "IN", dpts, levels, "UG", statuses, true);
+                section2 = new Section("SEC2", "1119", "02", new DateTime(2012, 09, 01), 3.0m, null, "Introduction to Art", "IN", dpts, levels, "UG", statuses2, true);
+                section2.AddFaculty("STU1");
+
+                section3 = null;
+
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1")).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC2")).ReturnsAsync(section2);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC3")).ReturnsAsync(section3);
+
+                var sectionWaitlistAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionWaitlistStudent, Ellucian.Colleague.Dtos.Student.SectionWaitlistStudent>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionWaitlistStudent, Ellucian.Colleague.Dtos.Student.SectionWaitlistStudent>()).Returns(sectionWaitlistAdapter);
+
+                // Mock the section service
+                sectionCoordinationService = new SectionCoordinationService(adapterRegistry, sectionRepo, courseRepo, studentRepo, studentReferenceDataRepo,
+                    referenceDataRepo, termRepo, studentConfigRepo, configRepo, personRepo, roomRepo, eventRepo, bookRepo, currentUserFactory, roleRepo, logger);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                sectionRepo = null;
+                studentRepo = null;
+                roleRepo = null;
+                adapterRegistry = null;
+                sectionCoordinationService = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SectionCoordinationService_GetSectionWaitlist2Async_Null_SectionId()
+            {
+                var r = await sectionCoordinationService.GetSectionWaitlist2Async(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task SectionCoordinationService_GetSectionWaitlist2Async_User_not_in_Section()
+            {
+                var r = await sectionCoordinationService.GetSectionWaitlist2Async(sectionWaitlist1[0].SectionId);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task SectionCoordinationService_GetSectionWaitlist2Async_Null_Section()
+            {
+                var r = await sectionCoordinationService.GetSectionWaitlist2Async(sectionWaitlist3[0].SectionId);
+            }
+
+            [TestMethod]
+            public async Task SectionCoordinationService_GetSectionWaitlistAsync_User_is_Student_in_Section()
+            {
+                var r = await sectionCoordinationService.GetSectionWaitlist2Async(sectionWaitlist2[0].SectionId);
+                Assert.IsNotNull(r);
+                Assert.AreEqual(sectionWaitlist2[0].SectionId, r.ElementAt(0).SectionId);
+                Assert.AreEqual(sectionWaitlist2[0].StudentId, r.ElementAt(0).StudentId);
+                Assert.AreEqual(sectionWaitlist2[0].Rating, r.ElementAt(0).Rating);
+                Assert.AreEqual(sectionWaitlist2[0].StatusDate, r.ElementAt(0).StatusDate);
+                Assert.AreEqual(sectionWaitlist2.Count(), r.Count());
+            }
+        }
 
         [TestClass]
         public class UserCanUpdateGrades : CurrentUserSetup
@@ -1066,10 +1388,32 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(sec4List, false)).Returns(Task.FromResult<IEnumerable<Domain.Student.Entities.Section>>(new List<Domain.Student.Entities.Section>()));
 
                 sectionRepoMock.Setup(repo => repo.GetSectionMeetingByGuidAsync(meeting1.Guid)).ReturnsAsync(meeting1);
+                sectionRepoMock.Setup(repo => repo.GetSectionGuidFromIdAsync(meeting1.SectionId)).ReturnsAsync(meeting1.Guid); 
+                
                 stuRefDataRepoMock.Setup(repo => repo.GetInstructionalMethodsAsync(It.IsAny<bool>())).ReturnsAsync(instructionalMethods);
                 roomRepoMock.Setup(repo => repo.RoomsAsync()).ReturnsAsync(rooms);
                 referenceDataRepoMock.Setup(repo => repo.ScheduleRepeats).Returns(scheduleRepeats);
 
+                foreach(var i in instructionalMethods)
+                {
+                    stuRefDataRepoMock.Setup(repo => repo.GetInstructionalMethodGuidAsync(i.Code)).ReturnsAsync(i.Guid);
+
+                }
+                foreach (var r in rooms)
+                {
+                    roomRepoMock.Setup(repo => repo.GetRoomsGuidAsync(r.Id)).ReturnsAsync(r.Guid);
+                }
+
+                Dictionary<string, string> sectDict = new Dictionary<string, string>();
+                sectDict.Add(meeting1.SectionId, Guid.NewGuid().ToString());
+                sectionRepoMock.Setup(sr => sr.GetSectionGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(sectDict);
+                sectionRepoMock.Setup(sr => sr.GetSectionGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(sectDict);
+
+
+                //foreach (var acadPeriodsEntity in acadPeriodsEntities)
+                //{
+                //    termRepoMock.Setup(repo => repo.GetAcademicPeriodsCodeFromGuidAsync(acadPeriodsEntity.Guid)).ReturnsAsync(acadPeriodsEntity.Code);
+                //}
                 // Mock the section service
                 sectionCoordinationService = new SectionCoordinationService(adapterRegistry, sectionRepo, courseRepo, studentRepo, studentReferenceDataRepo,
                     referenceDataRepo, termRepo, studentConfigRepo, configRepo, personRepo, roomRepo, eventRepo, bookRepo, currentUserFactory, roleRepo, logger);
@@ -1100,15 +1444,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionService_GetInstructionalEvent4Async_ArgumentNullException()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionService_GetInstructionalEvent4Async_EmptyArgument()
             {
                 var r = await sectionCoordinationService.GetInstructionalEvent4Async(string.Empty);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task SectionService_GetInstructionalEvent4Async_KeyNotFoundException()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionService_GetInstructionalEvent4Async_InvalidGuid()
             {
                 sectionRepoMock.Setup(repo => repo.GetSectionMeetingByGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
                 var r = await sectionCoordinationService.GetInstructionalEvent4Async("9999999");
@@ -1131,7 +1475,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 sectionRepoMock.Setup(repo => repo.GetUnidataFormattedDate(It.IsAny<string>())).ReturnsAsync(startDate.ToString());
                 sectionRepoMock.Setup(repo => repo.GetUnidataFormattedDate(It.IsAny<string>())).ReturnsAsync(endDate.ToString());
-                sectionRepoMock.Setup(repo => repo.GetSectionMeetingAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>()))
+                sectionRepoMock.Setup(repo => repo.GetSectionMeeting2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>()))
                     .ReturnsAsync(new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(meetings, 1));
 
                 var result = await sectionCoordinationService.GetInstructionalEvent4Async(0, 1, It.IsAny<string>(), startDate.ToString(), endDate.ToString(), It.IsAny<string>());
@@ -1891,11 +2235,34 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 stuRefDataRepoMock.Setup(repo => repo.GetInstructionalMethodsAsync(It.IsAny<bool>())).ReturnsAsync(instructionalMethods);
                 roomRepoMock.Setup(repo => repo.RoomsAsync()).ReturnsAsync(rooms);
                 referenceDataRepoMock.Setup(repo => repo.ScheduleRepeats).Returns(scheduleRepeats);
+                sectionRepoMock.Setup(repo => repo.GetSectionGuidFromIdAsync(meeting1.SectionId)).ReturnsAsync(meeting1.Guid);
+                sectionRepoMock.Setup(repo => repo.GetSectionGuidFromIdAsync(meeting2.SectionId)).ReturnsAsync(meeting2.Guid);
+                sectionRepoMock.Setup(repo => repo.GetSectionGuidFromIdAsync(meeting3.SectionId)).ReturnsAsync(meeting3.Guid);
+                sectionRepoMock.Setup(repo => repo.GetSectionGuidFromIdAsync(meeting4.SectionId)).ReturnsAsync(meeting4.Guid);
+
 
                 // Configuration defaults and campus calendar information.
                 configRepoMock.Setup(repo => repo.GetDefaultsConfiguration()).Returns(new DefaultsConfiguration() { CampusCalendarId = "MAIN" });
                 studentConfigRepoMock.Setup(repo => repo.GetCurriculumConfigurationAsync()).ReturnsAsync(new CurriculumConfiguration() { SectionActiveStatusCode = "A", SectionInactiveStatusCode = "I", DefaultInstructionalMethodCode = "INT" });
                 eventRepoMock.Setup(repo => repo.GetCalendar("MAIN")).Returns(new CampusCalendar("MAIN", "Default Calendar", new TimeSpan(), new TimeSpan()));
+                foreach (var i in instructionalMethods)
+                {
+                    stuRefDataRepoMock.Setup(repo => repo.GetInstructionalMethodGuidAsync(i.Code)).ReturnsAsync(i.Guid);
+
+                }
+                foreach (var r in rooms)
+                {
+                    roomRepoMock.Setup(repo => repo.GetRoomsGuidAsync(r.Id)).ReturnsAsync(r.Guid);
+                }
+                //foreach (var acadPeriodsEntity in acadPeriodsEntities)
+                //{
+                //    termRepoMock.Setup(repo => repo.GetAcademicPeriodsCodeFromGuidAsync(acadPeriodsEntity.Guid)).ReturnsAsync(acadPeriodsEntity.Code);
+                //}
+                Dictionary<string, string> sectDict = new Dictionary<string, string>();
+                sectDict.Add(meeting1.SectionId, Guid.NewGuid().ToString());
+                sectionRepoMock.Setup(sr => sr.GetSectionGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(sectDict);
+                sectionRepoMock.Setup(sr => sr.GetSectionGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(sectDict);
+
 
                 // Mock the section service
                 sectionCoordinationService = new SectionCoordinationService(adapterRegistry, sectionRepo, courseRepo, studentRepo, studentReferenceDataRepo,
@@ -1947,8 +2314,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionService_CreateInstructionalEvent4Async_ArgumentNullException()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionService_CreateInstructionalEvent4Async_EmptyArgument()
             {
                 var r = await sectionCoordinationService.CreateInstructionalEvent4Async(null);
             }
@@ -1982,8 +2349,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionService_UpdateInstructionalEvent4Async_ArgumentNullException()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionService_UpdateInstructionalEvent4Async_EmptyArgumentException()
             {
                 var r = await sectionCoordinationService.UpdateInstructionalEvent4Async(null);
             }
@@ -1993,7 +2360,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task SectionService_UpdateInstructionalEvent4Async_IntegrationException()
             {
                 sectionRepoMock.Setup(repo => repo.PutSectionMeeting2Async(It.IsAny<Domain.Student.Entities.Section>(), It.IsAny<string>())).ReturnsAsync(meeting1);
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
                 var r = await sectionCoordinationService.UpdateInstructionalEvent4Async(new Dtos.InstructionalEvent4()
                 {
                     Id = meeting1Guid,
@@ -2030,7 +2397,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_SectionKeyNotFound_V11()
             {
                 sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section1.Guid)).Throws(new KeyNotFoundException());
@@ -2561,9 +2928,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 scheduleRepeat = new Domain.Base.Entities.ScheduleRepeat("Y", "Yearly", "365", FrequencyType.Yearly);
                 scheduleRepeats.Add(scheduleRepeat);
 
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section1.Guid)).ReturnsAsync(section1);
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section2.Guid)).ReturnsAsync(section2);
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section3.Guid)).ReturnsAsync(section3);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section1.Guid, It.IsAny<bool>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section2.Guid, It.IsAny<bool>())).ReturnsAsync(section2);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section3.Guid, It.IsAny<bool>())).ReturnsAsync(section3);
 
                 sectionRepoMock.Setup(repo => repo.GetSectionMeetingByGuidAsync(meeting1.Guid)).ReturnsAsync(meeting1);
                 stuRefDataRepoMock.Setup(repo => repo.GetInstructionalMethodsAsync(It.IsAny<bool>())).ReturnsAsync(instructionalMethods);
@@ -2735,8 +3102,21 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 sectionRepoMock.Setup(repo => repo.GetSectionIdFromGuidAsync(sectionGuid)).ReturnsAsync("SEC1");
                 sectionRepoMock.Setup(repo => repo.GetSectionGuidFromIdAsync("SEC1")).ReturnsAsync(sectionGuid);
                 stuRefDataRepoMock.Setup(repo => repo.GetInstructionalMethodsAsync(It.IsAny<bool>())).ReturnsAsync(instructionalMethods);
+
+                foreach (var i in instructionalMethods)
+                {
+                    stuRefDataRepoMock.Setup(repo => repo.GetInstructionalMethodGuidAsync(i.Code)).ReturnsAsync(i.Guid);
+
+                }
+
                 roomRepoMock.Setup(repo => repo.RoomsAsync()).ReturnsAsync(rooms);
                 roomRepoMock.Setup(repo => repo.GetRoomsAsync(false)).ReturnsAsync(rooms);
+
+                foreach (var r in rooms) 
+                {
+                    roomRepoMock.Setup(repo => repo.GetRoomsGuidAsync(r.Id)).ReturnsAsync(r.Guid);
+                }
+
                 referenceDataRepoMock.Setup(repo => repo.ScheduleRepeats).Returns(scheduleRepeats);
                 personRepoMock.Setup(repo => repo.GetPersonGuidFromIdAsync("0000678")).ReturnsAsync(instructorGuid);
                 sectionRepoMock.Setup(repo => repo.GetSectionMeetingAsync(It.IsAny<string>())).ReturnsAsync(meeting1);
@@ -2749,6 +3129,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         "edcfd1ee-4adf-46bc-8b87-8853ae49dbeb", null)
                 };
                 termRepoMock.Setup(repo => repo.GetAcademicPeriods(It.IsAny<IEnumerable<Term>>())).Returns(acadPeriodsEntities);
+
+                foreach (var acadPeriodsEntity in acadPeriodsEntities)
+                {
+                    termRepoMock.Setup(repo => repo.GetAcademicPeriodsCodeFromGuidAsync(acadPeriodsEntity.Guid)).ReturnsAsync(acadPeriodsEntity.Code);
+
+                }
 
                 // Mock the section service
                 sectionCoordinationService = new SectionCoordinationService(adapterRegistry, sectionRepo, courseRepo, studentRepo, studentReferenceDataRepo,
@@ -2971,10 +3357,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_Null_Arguments_V11()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionMeetingAsync(It.IsAny<int>(), It.IsAny<int>(), "", "", "", "", "", new List<string>(), new List<string>(), new List<string>(), "")).Throws(new ArgumentException());
+                sectionRepoMock.Setup(repo => repo.GetSectionMeeting2Async(It.IsAny<int>(), It.IsAny<int>(), "", "", "", "", "", new List<string>(), new List<string>(), new List<string>(), "")).Throws(new ArgumentException());
                 await sectionCoordinationService.GetInstructionalEvent4Async(It.IsAny<int>(), It.IsAny<int>(), "", "", "", "");
             }
 
@@ -2983,8 +3369,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
                 sectionMeetings.Add(meeting1);
+                Dictionary<string, string> sectDict = new Dictionary<string, string>();
+                sectDict.Add(meeting1.SectionId, sectionGuid);
+                sectionRepoMock.Setup(sr => sr.GetSectionGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(sectDict);
+                
                 var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
-                sectionRepoMock.Setup(repo => repo.GetSectionMeetingAsync(0, 1, "SEC1", "", "", "", "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
+                sectionRepoMock.Setup(repo => repo.GetSectionMeeting2Async(0, 1, "SEC1", "", "", "", "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
                 var r = await sectionCoordinationService.GetInstructionalEvent4Async(0, 1, sectionGuid, "", "", "");
                 var instrEvent = r.Item1.FirstOrDefault();
                 Assert.AreEqual(instrEvent.Section.Id, sectionGuid);
@@ -2996,7 +3386,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
                 sectionMeetings.Add(meeting1);
                 var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
-                sectionRepoMock.Setup(repo => repo.GetSectionMeetingAsync(0, 1, "", new DateTime(2012, 01, 01, 0, 0, 0, DateTimeKind.Local).ToShortDateString(), "", "", "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
+                Dictionary<string, string> sectDict = new Dictionary<string, string>();
+                sectDict.Add(meeting1.SectionId, sectionGuid);
+                sectionRepoMock.Setup(sr => sr.GetSectionGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(sectDict);
+                
+                
+                sectionRepoMock.Setup(repo => repo.GetSectionMeeting2Async(0, 1, "", new DateTime(2012, 01, 01, 0, 0, 0, DateTimeKind.Local).ToShortDateString(), "", "", "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
                 sectionRepoMock.Setup(repo => repo.GetUnidataFormattedDate(new DateTime(2012, 01, 01, 0, 0, 0, DateTimeKind.Local).ToShortDateString())).ReturnsAsync(new DateTime(2012, 01, 01).ToShortDateString());
                 var r = await sectionCoordinationService.GetInstructionalEvent4Async(0, 1, "", new DateTime(2012, 01, 01, 0, 0, 0, DateTimeKind.Local).ToShortDateString(), "", "");
                 var instrEvent = r.Item1.FirstOrDefault();
@@ -3008,8 +3403,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
                 sectionMeetings.Add(meeting1);
+
+                Dictionary<string, string> sectDict = new Dictionary<string, string>();
+                sectDict.Add(meeting1.SectionId, Guid.NewGuid().ToString());
+                sectionRepoMock.Setup(sr => sr.GetSectionGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(sectDict);
+                
+                
                 var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
-                sectionRepoMock.Setup(repo => repo.GetSectionMeetingAsync(0, 1, "", "", new DateTime(2012, 12, 21, 0, 0, 0, DateTimeKind.Local).ToShortDateString(), "", "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
+                sectionRepoMock.Setup(repo => repo.GetSectionMeeting2Async(0, 1, "", "", new DateTime(2012, 12, 21, 0, 0, 0, DateTimeKind.Local).ToShortDateString(), "", "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
                 sectionRepoMock.Setup(repo => repo.GetUnidataFormattedDate(new DateTime(2012, 12, 21, 0, 0, 0, DateTimeKind.Local).ToShortDateString())).ReturnsAsync(new DateTime(2012, 12, 21, 0, 0, 0, DateTimeKind.Local).ToShortDateString());
                 var r = await sectionCoordinationService.GetInstructionalEvent4Async(0, 1, "", "", new DateTime(2012, 12, 21, 0, 0, 0, DateTimeKind.Local).ToShortDateString(), "");
                 var instrEvent = r.Item1.FirstOrDefault();
@@ -3021,8 +3422,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
                 sectionMeetings.Add(meeting1);
+                Dictionary<string, string> sectDict = new Dictionary<string, string>();
+                sectDict.Add(meeting1.SectionId, Guid.NewGuid().ToString());
+                sectionRepoMock.Setup(sr => sr.GetSectionGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(sectDict);
+                
+                
                 var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
-                sectionRepoMock.Setup(repo => repo.GetSectionMeetingAsync(0, 1, "", new DateTime(2012, 01, 01, 0, 0, 0, DateTimeKind.Local).ToShortDateString(), "", new DateTime(2012, 01, 01, 08, 30, 0, DateTimeKind.Local).ToLocalTime().TimeOfDay.ToString(), "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
+                sectionRepoMock.Setup(repo => repo.GetSectionMeeting2Async(0, 1, "", new DateTime(2012, 01, 01, 0, 0, 0, DateTimeKind.Local).ToShortDateString(), "", new DateTime(2012, 01, 01, 08, 30, 0, DateTimeKind.Local).ToLocalTime().TimeOfDay.ToString(), "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
                 sectionRepoMock.Setup(repo => repo.GetUnidataFormattedDate(new DateTime(2012, 01, 01, 08, 30, 0, DateTimeKind.Local).ToString("yyyy-MM-ddThh:mm:ss"))).ReturnsAsync(new DateTime(2012, 01, 01, 08, 30, 0, DateTimeKind.Local).ToShortDateString());
                 var r = await sectionCoordinationService.GetInstructionalEvent4Async(0, 1, "", new DateTime(2012, 01, 01, 08, 30, 0, DateTimeKind.Local).ToString("yyyy-MM-ddThh:mm:ss"), "", "");
                 var instrEvent = r.Item1.FirstOrDefault();
@@ -3034,8 +3440,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
                 sectionMeetings.Add(meeting1);
+                Dictionary<string, string> sectDict = new Dictionary<string, string>();
+                sectDict.Add(meeting1.SectionId, Guid.NewGuid().ToString());
+                sectionRepoMock.Setup(sr => sr.GetSectionGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(sectDict);
+                
+                
                 var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
-                sectionRepoMock.Setup(repo => repo.GetSectionMeetingAsync(0, 1, "", "", new DateTime(2012, 12, 21, 0, 0, 0, DateTimeKind.Local).ToShortDateString(), "", new DateTime(2012, 12, 21, 09, 30, 0, DateTimeKind.Local).ToLocalTime().TimeOfDay.ToString(), new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
+                sectionRepoMock.Setup(repo => repo.GetSectionMeeting2Async(0, 1, "", "", new DateTime(2012, 12, 21, 0, 0, 0, DateTimeKind.Local).ToShortDateString(), "", new DateTime(2012, 12, 21, 09, 30, 0, DateTimeKind.Local).ToLocalTime().TimeOfDay.ToString(), new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
                 sectionRepoMock.Setup(repo => repo.GetUnidataFormattedDate(new DateTime(2012, 12, 21, 09, 30, 0, DateTimeKind.Local).ToString("yyyy-MM-ddThh:mm:ss"))).ReturnsAsync(new DateTime(2012, 12, 21, 0, 0, 0, DateTimeKind.Local).ToShortDateString());
                 var r = await sectionCoordinationService.GetInstructionalEvent4Async(0, 1, "", "", new DateTime(2012, 12, 21, 09, 30, 0, DateTimeKind.Local).ToString("yyyy-MM-ddThh:mm:ss"), "");
                 var instrEvent = r.Item1.FirstOrDefault();
@@ -3047,8 +3458,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
                 sectionMeetings.Add(meeting1);
+
+                Dictionary<string, string> sectDict = new Dictionary<string, string>();
+                sectDict.Add(meeting1.SectionId, Guid.NewGuid().ToString());
+                sectionRepoMock.Setup(sr => sr.GetSectionGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(sectDict);
+
+
                 var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
-                sectionRepoMock.Setup(repo => repo.GetSectionMeetingAsync(0, 1, "", "", "", "", "", new List<string>(), new List<string>(), new List<string>(), "2012/FA")).ReturnsAsync(tuple);
+                sectionRepoMock.Setup(repo => repo.GetSectionMeeting2Async(0, 1, "", "", "", "", "", new List<string>(), new List<string>(), new List<string>(), "2012/FA")).ReturnsAsync(tuple);
                 var r = await sectionCoordinationService.GetInstructionalEvent4Async(0, 1, "", "", "", acadPeriodsEntities.FirstOrDefault().Guid);
                 var instrEvent = r.Item1.FirstOrDefault();
                 Assert.AreEqual(instrEvent.Id, meeting1.Guid);
@@ -3573,7 +3990,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task SectionCoordinationServiceTests_V6_GetSectionMaximumByGuid2Async_WithNullEntity_KeyNotFoundException()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
 
                 var result = await sectionCoordinationService.GetSectionMaximumByGuid2Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
             }
@@ -3824,7 +4241,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private List<SectionStatusItem> statuses4 = new List<SectionStatusItem>() { new SectionStatusItem(new SectionStatus(), "N/A", DateTime.Today.AddDays(-60)) };
             private List<CreditCategory> creditCategories = new List<CreditCategory>() { new CreditCategory(Guid.NewGuid().ToString(), "IN", "Regular Credit", CreditType.Institutional) };
             private List<Domain.Student.Entities.AcademicLevel> academicLevels = new List<Domain.Student.Entities.AcademicLevel>() { new Domain.Student.Entities.AcademicLevel(Guid.NewGuid().ToString(), "UG", "Undergraduate") };
-            private List<GradeScheme> gradeSchemes = new List<GradeScheme>() { new GradeScheme(Guid.NewGuid().ToString(), "Pass/Fail", "Pass/Fail grade") };
+            private List<Domain.Student.Entities.GradeScheme> gradeSchemes = new List<Domain.Student.Entities.GradeScheme>() { new Domain.Student.Entities.GradeScheme(Guid.NewGuid().ToString(), "Pass/Fail", "Pass/Fail grade") };
             private List<Domain.Student.Entities.CourseLevel> courseLevels = new List<Domain.Student.Entities.CourseLevel>() { new Domain.Student.Entities.CourseLevel(Guid.NewGuid().ToString(), "100", "Introduction to terms, concepts, and techniques.") };
             private List<Department> departments = new List<Department>() { new Department(Guid.NewGuid().ToString(), "PHYS", "Physics", true) };
             private List<Location> locations = new List<Location>() { new Location(Guid.NewGuid().ToString(), "MD", "Maryland") };
@@ -4119,7 +4536,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private List<CreditCategory> creditCategories = new List<CreditCategory>() { new CreditCategory(Guid.NewGuid().ToString(), "RC", "Regular Credit", CreditType.Institutional),
                 new CreditCategory(Guid.NewGuid().ToString(), "RC", "Regular Credit", CreditType.Transfer), new CreditCategory(Guid.NewGuid().ToString(), "RC", "Regular Credit", CreditType.ContinuingEducation ) };
             private List<Domain.Student.Entities.AcademicLevel> academicLevels = new List<Domain.Student.Entities.AcademicLevel>() { new Domain.Student.Entities.AcademicLevel(Guid.NewGuid().ToString(), "UG", "Undergraduate") };
-            private List<GradeScheme> gradeSchemes = new List<GradeScheme>() { new GradeScheme(Guid.NewGuid().ToString(), "Pass/Fail", "Pass/Fail grade") };
+            private List<Domain.Student.Entities.GradeScheme> gradeSchemes = new List<Domain.Student.Entities.GradeScheme>() { new Domain.Student.Entities.GradeScheme(Guid.NewGuid().ToString(), "Pass/Fail", "Pass/Fail grade") };
             private List<Domain.Student.Entities.CourseLevel> courseLevels = new List<Domain.Student.Entities.CourseLevel>() { new Domain.Student.Entities.CourseLevel(Guid.NewGuid().ToString(), "100", "Introduction to terms, concepts, and techniques.") };
             private List<Department> departments = new List<Department>() { new Department(Guid.NewGuid().ToString(), "PHYS", "Physics", true) };
             private List<Location> locations = new List<Location>() { new Location(Guid.NewGuid().ToString(), "MD", "Maryland") };
@@ -4211,9 +4628,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 meeting4 = new Domain.Student.Entities.SectionMeeting("789", "SEC1", "LEC", new DateTime(2012, 01, 01), new DateTime(2012, 12, 21), "Y");
                 meeting4.Guid = meeting1Guid;
 
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section1.Guid)).ReturnsAsync(section1);
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section2.Guid)).ReturnsAsync(section2);
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section3.Guid)).ReturnsAsync(section3);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section1.Guid, It.IsAny<bool>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section2.Guid, It.IsAny<bool>())).ReturnsAsync(section2);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section3.Guid, It.IsAny<bool>())).ReturnsAsync(section3);
                 sectionRepoMock.Setup(repo => repo.PostSectionMeetingAsync(It.IsAny<Domain.Student.Entities.Section>(), meeting1.Guid)).ReturnsAsync(meeting1);
                 sectionRepoMock.Setup(repo => repo.PostSectionMeetingAsync(It.IsAny<Domain.Student.Entities.Section>(), meeting2.Guid)).ReturnsAsync(meeting2);
                 sectionRepoMock.Setup(repo => repo.PostSectionMeetingAsync(It.IsAny<Domain.Student.Entities.Section>(), meeting3.Guid)).ReturnsAsync(meeting3);
@@ -4278,7 +4695,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(PermissionsException))]
             public async Task SectionService_SectionKeyNotFound_V6()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section1.Guid)).Throws(new KeyNotFoundException());
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section1.Guid, It.IsAny<bool>())).Throws(new KeyNotFoundException());
                 var r = await sectionCoordinationService.PostSection3Async(new Dtos.Section3()
                 {
                     Id = meeting1.Guid
@@ -4400,7 +4817,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullCreditDetailAndCreditType_V6()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() {CreditCategory = new Dtos.DtoProperties.CreditIdAndTypeProperty2() { 
@@ -4443,7 +4860,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullCreditType_V6()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() {CreditCategory = new Dtos.DtoProperties.CreditIdAndTypeProperty2(), 
@@ -4467,7 +4884,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullInstructionalPlaforms_V6()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 referenceDataRepoMock.Setup(repo => repo.GetInstructionalPlatformsAsync(It.IsAny<bool>())).ReturnsAsync(null);
@@ -4496,7 +4913,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullCreditCategoryOfCredit_V6()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() { Measure = Dtos.CreditMeasure2.CEU, 
@@ -4544,7 +4961,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullGradeSchemes_V6()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section3);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section3);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section3);
                 stuRefDataRepoMock.Setup(repo => repo.GetGradeSchemesAsync()).ReturnsAsync(null);
@@ -4569,7 +4986,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullAcademicLevels_V6()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 stuRefDataRepoMock.Setup(repo => repo.GetAcademicLevelsAsync()).ReturnsAsync(null);
@@ -4594,7 +5011,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullLocations_V6()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section2);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section2);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section2);
                 referenceDataRepoMock.Setup(repo => repo.Locations).Returns<Location>(null);
@@ -4715,7 +5132,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private List<CreditCategory> creditCategories = new List<CreditCategory>() { new CreditCategory(Guid.NewGuid().ToString(), "RC", "Regular Credit", CreditType.Institutional),
                 new CreditCategory(Guid.NewGuid().ToString(), "RC", "Regular Credit", CreditType.Transfer), new CreditCategory(Guid.NewGuid().ToString(), "RC", "Regular Credit", CreditType.ContinuingEducation ) };
             private List<Domain.Student.Entities.AcademicLevel> academicLevels = new List<Domain.Student.Entities.AcademicLevel>() { new Domain.Student.Entities.AcademicLevel(Guid.NewGuid().ToString(), "UG", "Undergraduate") };
-            private List<GradeScheme> gradeSchemes = new List<GradeScheme>() { new GradeScheme(Guid.NewGuid().ToString(), "Pass/Fail", "Pass/Fail grade") };
+            private List<Domain.Student.Entities.GradeScheme> gradeSchemes = new List<Domain.Student.Entities.GradeScheme>() { new Domain.Student.Entities.GradeScheme(Guid.NewGuid().ToString(), "Pass/Fail", "Pass/Fail grade") };
             private List<Domain.Student.Entities.CourseLevel> courseLevels = new List<Domain.Student.Entities.CourseLevel>() { new Domain.Student.Entities.CourseLevel(Guid.NewGuid().ToString(), "100", "Introduction to terms, concepts, and techniques.") };
             private List<Department> departments = new List<Department>() { new Department(Guid.NewGuid().ToString(), "PHYS", "Physics", true) };
             private List<Location> locations = new List<Location>() { new Location(Guid.NewGuid().ToString(), "MD", "Maryland") };
@@ -4807,9 +5224,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 meeting4 = new Domain.Student.Entities.SectionMeeting("789", "SEC1", "LEC", new DateTime(2012, 01, 01), new DateTime(2012, 12, 21), "Y");
                 meeting4.Guid = meeting1Guid;
 
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section1.Guid)).ReturnsAsync(section1);
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section2.Guid)).ReturnsAsync(section2);
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section3.Guid)).ReturnsAsync(section3);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section1.Guid, It.IsAny<bool>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section2.Guid, It.IsAny<bool>())).ReturnsAsync(section2);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section3.Guid, It.IsAny<bool>())).ReturnsAsync(section3);
                 sectionRepoMock.Setup(repo => repo.PutSectionMeetingAsync(It.IsAny<Domain.Student.Entities.Section>(), meeting1.Guid)).ReturnsAsync(meeting1);
                 sectionRepoMock.Setup(repo => repo.PutSectionMeetingAsync(It.IsAny<Domain.Student.Entities.Section>(), meeting2.Guid)).ReturnsAsync(meeting2);
                 sectionRepoMock.Setup(repo => repo.PutSectionMeetingAsync(It.IsAny<Domain.Student.Entities.Section>(), meeting3.Guid)).ReturnsAsync(meeting3);
@@ -4874,7 +5291,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(PermissionsException))]
             public async Task SectionService_SectionKeyNotFound_V6()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section1.Guid)).Throws(new KeyNotFoundException());
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section1.Guid, It.IsAny<bool>())).Throws(new KeyNotFoundException());
                 var r = await sectionCoordinationService.PutSection3Async(new Dtos.Section3()
                 {
                     Id = meeting1.Guid
@@ -4996,7 +5413,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullCreditDetailAndCreditType_V6()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() {CreditCategory = new Dtos.DtoProperties.CreditIdAndTypeProperty2() { 
@@ -5039,7 +5456,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullCreditType_V6()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() {CreditCategory = new Dtos.DtoProperties.CreditIdAndTypeProperty2(), 
@@ -5063,7 +5480,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullInstructionalPlaforms_V6()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 referenceDataRepoMock.Setup(repo => repo.GetInstructionalPlatformsAsync(It.IsAny<bool>())).ReturnsAsync(null);
@@ -5092,7 +5509,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullCreditCategoryOfCredit_V6()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() { Measure = Dtos.CreditMeasure2.CEU, 
@@ -5140,7 +5557,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullGradeSchemes_V6()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section3);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section3);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section3);
                 stuRefDataRepoMock.Setup(repo => repo.GetGradeSchemesAsync()).ReturnsAsync(null);
@@ -5165,7 +5582,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullAcademicLevels_V6()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 stuRefDataRepoMock.Setup(repo => repo.GetAcademicLevelsAsync()).ReturnsAsync(null);
@@ -5190,7 +5607,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullLocations_V6()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section2);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section2);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section2);
                 referenceDataRepoMock.Setup(repo => repo.Locations).Returns<Location>(null);
@@ -5311,7 +5728,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private List<SectionStatusItem> statuses4 = new List<SectionStatusItem>() { new SectionStatusItem(new SectionStatus(), "N/A", DateTime.Today.AddDays(-60)) };
             private List<CreditCategory> creditCategories = new List<CreditCategory>() { new CreditCategory(Guid.NewGuid().ToString(), "IN", "Regular Credit", CreditType.Institutional) };
             private List<Domain.Student.Entities.AcademicLevel> academicLevels = new List<Domain.Student.Entities.AcademicLevel>() { new Domain.Student.Entities.AcademicLevel(Guid.NewGuid().ToString(), "UG", "Undergraduate") };
-            private List<GradeScheme> gradeSchemes = new List<GradeScheme>() { new GradeScheme(Guid.NewGuid().ToString(), "Pass/Fail", "Pass/Fail grade") };
+            private List<Domain.Student.Entities.GradeScheme> gradeSchemes = new List<Domain.Student.Entities.GradeScheme>() { new Domain.Student.Entities.GradeScheme(Guid.NewGuid().ToString(), "Pass/Fail", "Pass/Fail grade") };
             private List<Domain.Student.Entities.CourseLevel> courseLevels = new List<Domain.Student.Entities.CourseLevel>() { new Domain.Student.Entities.CourseLevel(Guid.NewGuid().ToString(), "100", "Introduction to terms, concepts, and techniques.") };
             private List<Department> departments = new List<Department>() { new Department(Guid.NewGuid().ToString(), "PHYS", "Physics", true) };
             private List<Location> locations = new List<Location>() { new Location(Guid.NewGuid().ToString(), "MD", "Maryland") };
@@ -5712,11 +6129,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private List<SectionStatusItem> statuses3 = new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Cancelled, "C", DateTime.Today.AddDays(-60)) };
             private List<SectionStatusItem> statuses4 = new List<SectionStatusItem>() { new SectionStatusItem(new SectionStatus(), "N/A", DateTime.Today.AddDays(-60)) };
             private List<CreditCategory> creditCategories = new List<CreditCategory>() { new CreditCategory(Guid.NewGuid().ToString(), "IN", "Regular Credit", CreditType.Institutional) };
-            private List<Domain.Student.Entities.AcademicLevel> academicLevels = new List<Domain.Student.Entities.AcademicLevel>() { new Domain.Student.Entities.AcademicLevel(Guid.NewGuid().ToString(), "UG", "Undergraduate") };
-            private List<GradeScheme> gradeSchemes = new List<GradeScheme>() { new GradeScheme(Guid.NewGuid().ToString(), "Pass/Fail", "Pass/Fail grade") };
-            private List<Domain.Student.Entities.CourseLevel> courseLevels = new List<Domain.Student.Entities.CourseLevel>() { new Domain.Student.Entities.CourseLevel(Guid.NewGuid().ToString(), "100", "Introduction to terms, concepts, and techniques.") };
-            private List<Department> departments = new List<Department>() { new Department(Guid.NewGuid().ToString(), "PHYS", "Physics", true) };
-            private List<Location> locations = new List<Location>() { new Location(Guid.NewGuid().ToString(), "MD", "Maryland") };
+            string guid = "9C3B805D-CFE6-483B-86C3-4C20562F8C15";
+            private List<Domain.Student.Entities.AcademicLevel> academicLevels = new List<Domain.Student.Entities.AcademicLevel>() { new Domain.Student.Entities.AcademicLevel("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "UG", "Undergraduate") };
+            private List<Domain.Student.Entities.GradeScheme> gradeSchemes = new List<Domain.Student.Entities.GradeScheme>() { new Domain.Student.Entities.GradeScheme("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "Pass/Fail", "Pass/Fail grade") };
+            private List<Domain.Student.Entities.CourseLevel> courseLevels = new List<Domain.Student.Entities.CourseLevel>() { new Domain.Student.Entities.CourseLevel("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "100", "Introduction to terms, concepts, and techniques.") };
+            private List<Department> departments = new List<Department>() { new Department("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "PHYS", "Physics", true) };
+            private List<Location> locations = new List<Location>() { new Location("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "MD", "Maryland") };
             private List<AcademicPeriod> academicPeriods = new List<AcademicPeriod>()
                 {
                     new AcademicPeriod(Guid.NewGuid().ToString(), "2012/FA", "Fall 2012", DateTime.Today.AddDays(-60), DateTime.Today, 2012, 4, "Fall", Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), null),
@@ -5798,6 +6216,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 section1.BillingMethod = "BM1";
                 section1.WaitListNumberOfDays = 10;
                 section1.Comments = "comments from section1";
+                section1.GradeSchemeCode = "GRADE_SCHEME";
 
                 section2 = new Ellucian.Colleague.Domain.Student.Entities.Section("SEC2", "1119", "02", new DateTime(2012, 09, 01), 3.0m, 0, "Introduction to Art", "IN", dpts, levels, "UG", statuses2, true);
                 section2.Guid = Guid.NewGuid().ToString();
@@ -5890,16 +6309,17 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 termRepoMock.Setup(repo => repo.Get()).Returns(allTerms);
                 termRepoMock.Setup(repo => repo.GetAsync()).ReturnsAsync(allTerms);
 
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section1.Guid)).ReturnsAsync(section1);
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section2.Guid)).ReturnsAsync(section2);
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section3.Guid)).ReturnsAsync(section3);
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section4.Guid)).ReturnsAsync(section4);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section1.Guid, It.IsAny<bool>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section2.Guid, It.IsAny<bool>())).ReturnsAsync(section2);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section3.Guid, It.IsAny<bool>())).ReturnsAsync(section3);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section4.Guid, It.IsAny<bool>())).ReturnsAsync(section4);
                 courseRepoMock.Setup(repo => repo.GetCourseGuidFromIdAsync(section1.CourseId)).ReturnsAsync(section1.Title);
                 courseRepoMock.Setup(repo => repo.GetCourseGuidFromIdAsync(section2.CourseId)).ReturnsAsync(section2.Title);
                 courseRepoMock.Setup(repo => repo.GetCourseGuidFromIdAsync(section3.CourseId)).ReturnsAsync(section3.Title);
                 courseRepoMock.Setup(repo => repo.GetCourseGuidFromIdAsync(section4.CourseId)).ReturnsAsync(section4.Title);
                 stuRefDataRepoMock.Setup(repo => repo.GetCreditCategoriesAsync()).ReturnsAsync(creditCategories);
                 stuRefDataRepoMock.Setup(repo => repo.GetAcademicLevelsAsync()).ReturnsAsync(academicLevels);
+
                 stuRefDataRepoMock.Setup(repo => repo.GetGradeSchemesAsync()).ReturnsAsync(gradeSchemes);
                 stuRefDataRepoMock.Setup(repo => repo.GetCourseLevelsAsync()).ReturnsAsync(courseLevels);
                 referenceDataRepoMock.Setup(repo => repo.DepartmentsAsync()).ReturnsAsync(departments);
@@ -5913,10 +6333,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                     It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(),
                     It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new Tuple<IEnumerable<Domain.Student.Entities.Section>, int>(sections, sections.Count()));
-                sectionRepoMock.Setup(repo => repo.GetSectionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                sectionRepoMock.Setup(repo => repo.GetSections2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                     It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                     It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(),
-                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(new Tuple<IEnumerable<Domain.Student.Entities.Section>, int>(sections, sections.Count()));
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new Tuple<IEnumerable<Domain.Student.Entities.Section>, int>(sections, sections.Count()));
 
                 var sectionTitleTypes = new List<Domain.Student.Entities.SectionTitleType>()
                 {
@@ -5924,12 +6344,16 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     new Domain.Student.Entities.SectionTitleType("8C3B805D-CFE6-483B-86C3-4C20562F8C15", "long", "Descr")
                 };
                 stuRefDataRepoMock.Setup(repo => repo.GetSectionTitleTypesAsync(It.IsAny<bool>())).ReturnsAsync(sectionTitleTypes);
+                stuRefDataRepoMock.Setup(repo => repo.GetSectionTitleTypesGuidAsync(It.IsAny<string>())).ReturnsAsync("9C3B805D-CFE6-483B-86C3-4C20562F8C15");
+
 
                 var sectionDescTypes = new List<Domain.Student.Entities.SectionDescriptionType>()
                 {
                     new Domain.Student.Entities.SectionDescriptionType("8D3B807D-CFE6-483B-86C3-4C20562F8C15", "printed", "Descr")
                 };
                 stuRefDataRepoMock.Setup(repo => repo.GetSectionDescriptionTypesAsync(It.IsAny<bool>())).ReturnsAsync(sectionDescTypes);
+                stuRefDataRepoMock.Setup(repo => repo.GetSectionDescriptionTypesGuidAsync(It.IsAny<string>())).ReturnsAsync("8D3B807D-CFE6-483B-86C3-4C20562F8C15");
+
                 sectionRepoMock.Setup(repo => repo.GetStatusCodesWithGuidsAsync()).ReturnsAsync(new List<SectionStatusCodeGuid>() { new SectionStatusCodeGuid(Guid.NewGuid().ToString(), "A", "Active") });
 
                 var _allDepartments = new List<Domain.Base.Entities.Department>()
@@ -6073,88 +6497,96 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var r = await sectionCoordinationService.GetSections6Async(It.IsAny<int>(), It.IsAny<int>(), "", "", "", "", "", "", "", "", null, "", "", "", new List<string>() { "badId" });
                 Assert.AreEqual(false, r.Item1.Any());
                 Assert.AreEqual(0, r.Item2);
-            }
+            }            
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
-            public async Task SectionService_GetSections6Async_ArgumentException()
-            {
-                stuRefDataRepoMock.Setup(repo => repo.GetSectionTitleTypesAsync(It.IsAny<bool>())).ReturnsAsync(new List<Domain.Student.Entities.SectionTitleType>() { });
-                var results = await sectionCoordinationService.GetSections6Async(It.IsAny<int>(), It.IsAny<int>());
-            }
-
-            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_GetSections6Async()
             {
                 var results = await sectionCoordinationService.GetSections6Async(It.IsAny<int>(), It.IsAny<int>());
-                Assert.IsNotNull(results);
-                Assert.AreEqual(results.Item1.Count(), results.Item2);
-                Assert.AreEqual(sections.Count(), results.Item1.Count());
-                var records = results.Item1;
-                Assert.IsInstanceOfType(records, typeof(IEnumerable<Dtos.Section6>));
-                var index = 0;
-                foreach (var sectionDto in records)
-                {
-                    var sectionEntity = sections.ElementAt(index);
-                    Assert.AreEqual(sectionDto.AcademicLevels.ElementAt(0).Id, academicLevels.ElementAt(0).Guid);
-                    Assert.AreEqual(sectionDto.AcademicPeriod.Id, academicPeriods.FirstOrDefault(ap => sectionEntity.TermId == ap.Code).Guid);
-                    Assert.AreEqual(sectionDto.AlternateIds.ElementAt(0).Value, sectionEntity.Id);
-                    Assert.AreEqual(sectionDto.Billing, sectionEntity.BillingCred);
-                    if (sectionDto.ChargeAssessmentMethod != null && !string.IsNullOrEmpty(sectionDto.ChargeAssessmentMethod.Id))
-                        Assert.AreEqual(sectionDto.ChargeAssessmentMethod.Id, chargeAssessmentMethods.FirstOrDefault(ca => sectionEntity.BillingMethod == ca.Code).Guid);
-                    Assert.AreEqual(sectionDto.Code, sectionEntity.Name);
-                    Assert.AreEqual(sectionDto.Course.Id, sectionEntity.Title);
-                    var creditsObject = sectionDto.Credits.ElementAt(0);
-                    Assert.AreEqual(creditsObject.Minimum, creditsObject.Measure == Dtos.CreditMeasure2.CEU ? sectionEntity.Ceus : sectionEntity.MinimumCredits);
-                    if (creditsObject.Maximum != null)
-                        Assert.AreEqual(creditsObject.Maximum, creditsObject.Measure == Dtos.CreditMeasure2.CEU ?  0 : sectionEntity.MaximumCredits);
-                    Assert.AreEqual(sectionDto.Credits.ElementAt(0).Increment, sectionEntity.VariableCreditIncrement);
-                    Assert.AreEqual(sectionDto.Descriptions.ElementAt(0).Value, sectionEntity.Comments);
-                    Assert.AreEqual(sectionDto.EndOn, sectionEntity.EndDate);
-                    if (sectionDto.Hours != null)
-                    {
-                        Assert.AreEqual(sectionDto.Hours.ElementAt(0).AdministrativeInstructionalMethod.Id, administrativeInstructionalMethods.FirstOrDefault(im => sectionEntity.InstructionalMethods.ElementAt(0) == im.Code).Guid);
-                        Assert.AreEqual(sectionDto.Hours.ElementAt(0).Minimum, sectionEntity.InstructionalContacts.ElementAt(0).ContactHours);
-                    }
-                    Assert.AreEqual(sectionDto.Id, sectionEntity.Guid);
-                    if (sectionDto.InstructionalMethods != null && sectionDto.InstructionalMethods.Any())
-                        Assert.AreEqual(sectionDto.InstructionalMethods.ElementAt(0).Id, instrMethodEntities.FirstOrDefault(im => sectionEntity.InstructionalMethods.ElementAt(0) == im.Code).Guid);
-                    if (sectionDto.InstructionalPlatform != null && !string.IsNullOrEmpty(sectionDto.InstructionalPlatform.Id))
-                        Assert.AreEqual(sectionDto.InstructionalPlatform.Id, instructionalPlatforms.FirstOrDefault(ip => sectionEntity.LearningProvider == ip.Code).Guid);
-                    Assert.AreEqual(sectionDto.MaximumEnrollment, sectionEntity.SectionCapacity);
-                    Assert.AreEqual(sectionDto.Number, sectionEntity.Number);
-                    Assert.AreEqual(sectionDto.StartOn, sectionEntity.StartDate);
-                    Assert.AreEqual(sectionDto.Titles.ElementAt(0).Value, sectionEntity.Title);
-                    if (sectionDto.Waitlist != null)
-                    {
-                        Assert.AreEqual(sectionDto.Waitlist.Eligible.ToString().ToLower(), sectionEntity.AllowWaitlist == true ? "eligible" : "noteligible");
-                        if (sectionDto.Waitlist.RegistrationInterval != null)
-                            Assert.AreEqual(sectionDto.Waitlist.RegistrationInterval.Value, sectionEntity.WaitListNumberOfDays);
-                        Assert.AreEqual(sectionDto.Waitlist.WaitlistMaximum, sectionEntity.WaitlistMaximum);
-                    }
-                    index++;
-                }
             }
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionService_GetSection6ByGuidAsync_ArgumentNullException()
+            public async Task SectionService_GetSections6Async_ArgumentNullException()
             {
-                await sectionCoordinationService.GetSection6ByGuidAsync("");
+                sectionRepoMock.Setup(repo => repo.GetSections2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new ArgumentNullException());
+                var results = await sectionCoordinationService.GetSections6Async(It.IsAny<int>(), It.IsAny<int>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
+            public async Task SectionService_GetSections6Async_Exception()
+            {
+                sectionRepoMock.Setup(repo => repo.GetSections2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
+                var results = await sectionCoordinationService.GetSections6Async(It.IsAny<int>(), It.IsAny<int>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionService_GetSections6Async_ArgumentException()
+            {
+                stuRefDataRepoMock.Setup(repo => repo.GetSectionTitleTypesGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+                var results = await sectionCoordinationService.GetSections6Async(It.IsAny<int>(), It.IsAny<int>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionService_GetSections6Async_All_IntegrationApiExceptions()
+            {
+                section1.Statuses.FirstOrDefault().IntegrationStatus = SectionStatusIntegration.NotSet;
+                stuRefDataRepoMock.Setup(repo => repo.GetSectionDescriptionTypesGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+                stuRefDataRepoMock.Setup(repo => repo.GetAcademicLevelsGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+                stuRefDataRepoMock.Setup(repo => repo.GetGradeSchemeGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+                stuRefDataRepoMock.Setup(repo => repo.GetCourseLevelGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+                stuRefDataRepoMock.Setup(repo => repo.GetCourseTypeGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException()); 
+                stuRefDataRepoMock.Setup(repo => repo.GetAdministrativeInstructionalMethodGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+                stuRefDataRepoMock.Setup(repo => repo.GetInstructionalMethodGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+                termRepoMock.Setup(repo => repo.GetAcademicPeriodsGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+                referenceDataRepoMock.Setup(repo => repo.GetInstructionalPlatformsGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+                referenceDataRepoMock.Setup(repo => repo.GetLocationsGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+                referenceDataRepoMock.Setup(repo => repo.GetDepartments2GuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+                termRepoMock.Setup(repo => repo.GetAsync()).ThrowsAsync(new Exception());
+                sectionRepoMock.Setup(repo => repo.GetStatusCodesWithGuidsAsync()).ThrowsAsync(new ArgumentNullException());                
+                courseRepoMock.Setup(repo => repo.GetCourseGuidFromIdAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentException());
+
+                var results = await sectionCoordinationService.GetSections6Async(It.IsAny<int>(), It.IsAny<int>());
             }
 
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task SectionService_GetSection6ByGuidAsync_KeyNotFoundException()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                var result = await sectionCoordinationService.GetSection6ByGuidAsync(section1.Guid);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SectionService_GetSection6ByGuidAsync_ArgumentNullException()
+            {
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                var result = await sectionCoordinationService.GetSection6ByGuidAsync("");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionService_GetSection6ByGuidAsync_IntegrationApiException()
+            {
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new IntegrationApiException());
                 var result = await sectionCoordinationService.GetSection6ByGuidAsync(section1.Guid);
             }
 
             [TestMethod]
             public async Task SectionService_GetSection6ByGuidAsync()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 var result = await sectionCoordinationService.GetSection6ByGuidAsync(section1.Guid);
                 Assert.IsNotNull(result);
             }
@@ -6215,7 +6647,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private List<CreditCategory> creditCategories = new List<CreditCategory>() { new CreditCategory(Guid.NewGuid().ToString(), "RC", "Regular Credit", CreditType.Institutional),
                 new CreditCategory(Guid.NewGuid().ToString(), "RC", "Regular Credit", CreditType.Transfer), new CreditCategory(Guid.NewGuid().ToString(), "RC", "Regular Credit", CreditType.ContinuingEducation ) };
             private List<Domain.Student.Entities.AcademicLevel> academicLevels = new List<Domain.Student.Entities.AcademicLevel>() { new Domain.Student.Entities.AcademicLevel(Guid.NewGuid().ToString(), "UG", "Undergraduate") };
-            private List<GradeScheme> gradeSchemes = new List<GradeScheme>() { new GradeScheme(Guid.NewGuid().ToString(), "Pass/Fail", "Pass/Fail grade") };
+            private List<Domain.Student.Entities.GradeScheme> gradeSchemes = new List<Domain.Student.Entities.GradeScheme>() { new Domain.Student.Entities.GradeScheme(Guid.NewGuid().ToString(), "Pass/Fail", "Pass/Fail grade") };
             private List<Domain.Student.Entities.CourseLevel> courseLevels = new List<Domain.Student.Entities.CourseLevel>() { new Domain.Student.Entities.CourseLevel(Guid.NewGuid().ToString(), "100", "Introduction to terms, concepts, and techniques.") };
             private List<Department> departments = new List<Department>() { new Department(Guid.NewGuid().ToString(), "PHYS", "Physics", true) };
             private List<Location> locations = new List<Location>() { new Location(Guid.NewGuid().ToString(), "MD", "Maryland") };
@@ -6320,9 +6752,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 termRepoMock.Setup(repo => repo.Get()).Returns(allTerms);
                 termRepoMock.Setup(repo => repo.GetAsync()).ReturnsAsync(allTerms);
 
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section1.Guid)).ReturnsAsync(section1);
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section2.Guid)).ReturnsAsync(section2);
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section3.Guid)).ReturnsAsync(section3);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section1.Guid, It.IsAny<bool>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section2.Guid, It.IsAny<bool>())).ReturnsAsync(section2);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section3.Guid, It.IsAny<bool>())).ReturnsAsync(section3);
                 sectionRepoMock.Setup(repo => repo.PostSectionMeetingAsync(It.IsAny<Domain.Student.Entities.Section>(), meeting1.Guid)).ReturnsAsync(meeting1);
                 sectionRepoMock.Setup(repo => repo.PostSectionMeetingAsync(It.IsAny<Domain.Student.Entities.Section>(), meeting2.Guid)).ReturnsAsync(meeting2);
                 sectionRepoMock.Setup(repo => repo.PostSectionMeetingAsync(It.IsAny<Domain.Student.Entities.Section>(), meeting3.Guid)).ReturnsAsync(meeting3);
@@ -6387,7 +6819,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(PermissionsException))]
             public async Task SectionService_SectionKeyNotFound_V8()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section1.Guid)).Throws(new KeyNotFoundException());
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section1.Guid, It.IsAny<bool>())).Throws(new KeyNotFoundException());
                 var r = await sectionCoordinationService.PostSection4Async(new Dtos.Section4()
                 {
                     Id = meeting1.Guid
@@ -6509,7 +6941,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullCreditDetailAndCreditType_V8()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() {CreditCategory = new Dtos.DtoProperties.CreditIdAndTypeProperty2() {
@@ -6552,7 +6984,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullCreditType_V8()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() {CreditCategory = new Dtos.DtoProperties.CreditIdAndTypeProperty2(),
@@ -6576,7 +7008,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullInstructionalPlaforms_V8()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 referenceDataRepoMock.Setup(repo => repo.GetInstructionalPlatformsAsync(It.IsAny<bool>())).ReturnsAsync(null);
@@ -6605,7 +7037,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullCreditCategoryOfCredit_V8()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() { Measure = Dtos.CreditMeasure2.CEU,
@@ -6653,7 +7085,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullGradeSchemes_V8()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section3);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section3);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section3);
                 stuRefDataRepoMock.Setup(repo => repo.GetGradeSchemesAsync()).ReturnsAsync(null);
@@ -6678,7 +7110,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullAcademicLevels_V8()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 stuRefDataRepoMock.Setup(repo => repo.GetAcademicLevelsAsync()).ReturnsAsync(null);
@@ -6703,7 +7135,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullLocations_V8()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section2);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section2);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section2);
                 referenceDataRepoMock.Setup(repo => repo.Locations).Returns<Location>(null);
@@ -6824,7 +7256,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private List<CreditCategory> creditCategories = new List<CreditCategory>() { new CreditCategory(Guid.NewGuid().ToString(), "RC", "Regular Credit", CreditType.Institutional),
                 new CreditCategory(Guid.NewGuid().ToString(), "RC", "Regular Credit", CreditType.Transfer), new CreditCategory(Guid.NewGuid().ToString(), "RC", "Regular Credit", CreditType.ContinuingEducation ) };
             private List<Domain.Student.Entities.AcademicLevel> academicLevels = new List<Domain.Student.Entities.AcademicLevel>() { new Domain.Student.Entities.AcademicLevel(Guid.NewGuid().ToString(), "UG", "Undergraduate") };
-            private List<GradeScheme> gradeSchemes = new List<GradeScheme>() { new GradeScheme(Guid.NewGuid().ToString(), "Pass/Fail", "Pass/Fail grade") };
+            private List<Domain.Student.Entities.GradeScheme> gradeSchemes = new List<Domain.Student.Entities.GradeScheme>() { new Domain.Student.Entities.GradeScheme(Guid.NewGuid().ToString(), "Pass/Fail", "Pass/Fail grade") };
             private List<Domain.Student.Entities.CourseLevel> courseLevels = new List<Domain.Student.Entities.CourseLevel>() { new Domain.Student.Entities.CourseLevel(Guid.NewGuid().ToString(), "100", "Introduction to terms, concepts, and techniques.") };
             private List<Department> departments = new List<Department>() { new Department(Guid.NewGuid().ToString(), "PHYS", "Physics", true) };
             private List<Location> locations = new List<Location>() { new Location(Guid.NewGuid().ToString(), "MD", "Maryland") };
@@ -6929,9 +7361,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 termRepoMock.Setup(repo => repo.Get()).Returns(allTerms);
                 termRepoMock.Setup(repo => repo.GetAsync()).ReturnsAsync(allTerms);
 
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section1.Guid)).ReturnsAsync(section1);
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section2.Guid)).ReturnsAsync(section2);
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section3.Guid)).ReturnsAsync(section3);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section1.Guid, It.IsAny<bool>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section2.Guid, It.IsAny<bool>())).ReturnsAsync(section2);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section3.Guid, It.IsAny<bool>())).ReturnsAsync(section3);
                 sectionRepoMock.Setup(repo => repo.PutSectionMeetingAsync(It.IsAny<Domain.Student.Entities.Section>(), meeting1.Guid)).ReturnsAsync(meeting1);
                 sectionRepoMock.Setup(repo => repo.PutSectionMeetingAsync(It.IsAny<Domain.Student.Entities.Section>(), meeting2.Guid)).ReturnsAsync(meeting2);
                 sectionRepoMock.Setup(repo => repo.PutSectionMeetingAsync(It.IsAny<Domain.Student.Entities.Section>(), meeting3.Guid)).ReturnsAsync(meeting3);
@@ -6996,7 +7428,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(PermissionsException))]
             public async Task SectionService_SectionKeyNotFound_V8()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section1.Guid)).Throws(new KeyNotFoundException());
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section1.Guid, It.IsAny<bool>())).Throws(new KeyNotFoundException());
                 var r = await sectionCoordinationService.PutSection4Async(new Dtos.Section4()
                 {
                     Id = meeting1.Guid
@@ -7118,7 +7550,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullCreditDetailAndCreditType_V8()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() {CreditCategory = new Dtos.DtoProperties.CreditIdAndTypeProperty2() {
@@ -7161,7 +7593,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullCreditType_V8()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() {CreditCategory = new Dtos.DtoProperties.CreditIdAndTypeProperty2(),
@@ -7185,7 +7617,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullInstructionalPlaforms_V8()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 referenceDataRepoMock.Setup(repo => repo.GetInstructionalPlatformsAsync(It.IsAny<bool>())).ReturnsAsync(null);
@@ -7214,7 +7646,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullCreditCategoryOfCredit_V8()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() { Measure = Dtos.CreditMeasure2.CEU,
@@ -7262,7 +7694,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullGradeSchemes_V8()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section3);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section3);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section3);
                 stuRefDataRepoMock.Setup(repo => repo.GetGradeSchemesAsync()).ReturnsAsync(null);
@@ -7287,7 +7719,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullAcademicLevels_V8()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 stuRefDataRepoMock.Setup(repo => repo.GetAcademicLevelsAsync()).ReturnsAsync(null);
@@ -7312,7 +7744,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task SectionService_NullLocations_V8()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section2);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section2);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section2);
                 referenceDataRepoMock.Setup(repo => repo.Locations).Returns<Location>(null);
@@ -7430,12 +7862,17 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private List<SectionStatusItem> statuses3 = new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Cancelled, "C", DateTime.Today.AddDays(-60)) };
             private IEnumerable<Domain.Student.Entities.Course> allCourses = new TestCourseRepository().GetAsync().Result;
 
-            private List<CreditCategory> creditCategories = new List<CreditCategory>() { new CreditCategory(Guid.NewGuid().ToString(), "RC", "Regular Credit", CreditType.Institutional),
-                new CreditCategory(Guid.NewGuid().ToString(), "RC", "Regular Credit", CreditType.Transfer), new CreditCategory(Guid.NewGuid().ToString(), "RC", "Regular Credit", CreditType.ContinuingEducation ) };
+            string credCatguid = "16fcac65-ceec-4f15-8a23-a3f3f70e3c92";
+            private List<CreditCategory> creditCategories = new List<CreditCategory>() 
+            { 
+                new CreditCategory("16fcac65-ceec-4f15-8a23-a3f3f70e3c92", "RC", "Regular Credit", CreditType.Institutional),
+                new CreditCategory(Guid.NewGuid().ToString(), "RC", "Regular Credit", CreditType.Transfer), 
+                new CreditCategory(Guid.NewGuid().ToString(), "RC", "Regular Credit", CreditType.ContinuingEducation ) 
+            };
             private List<Domain.Student.Entities.AcademicLevel> academicLevels = new List<Domain.Student.Entities.AcademicLevel>() { new Domain.Student.Entities.AcademicLevel(Guid.NewGuid().ToString(), "UG", "Undergraduate") };
-            private List<GradeScheme> gradeSchemes = new List<GradeScheme>() { new GradeScheme(Guid.NewGuid().ToString(), "Pass/Fail", "Pass/Fail grade") };
+            private List<Domain.Student.Entities.GradeScheme> gradeSchemes = new List<Domain.Student.Entities.GradeScheme>() { new Domain.Student.Entities.GradeScheme(Guid.NewGuid().ToString(), "Pass/Fail", "Pass/Fail grade") };
             private List<Domain.Student.Entities.CourseLevel> courseLevels = new List<Domain.Student.Entities.CourseLevel>() { new Domain.Student.Entities.CourseLevel(Guid.NewGuid().ToString(), "100", "Introduction to terms, concepts, and techniques.") };
-            private List<Department> departments = new List<Department>() { new Department(Guid.NewGuid().ToString(), "PHYS", "Physics", true) };
+            private List<Department> departments = new List<Department>() { new Department("16fcac65-ceec-4f15-8a23-a3f3f70e3c92", "PHYS", "Physics", true) };
             private List<Location> locations = new List<Location>() { new Location(Guid.NewGuid().ToString(), "MD", "Maryland") };
 
             private string meeting1Guid = Guid.NewGuid().ToString();
@@ -7470,7 +7907,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 eventRepo = eventRepoMock.Object;
                 bookRepoMock = new Mock<IBookRepository>();
                 bookRepo = bookRepoMock.Object;
-
 
                 roleRepoMock = new Mock<IRoleRepository>();
                 roleRepo = roleRepoMock.Object;
@@ -7538,9 +7974,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 termRepoMock.Setup(repo => repo.Get()).Returns(allTerms);
                 termRepoMock.Setup(repo => repo.GetAsync()).ReturnsAsync(allTerms);
 
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section1.Guid)).ReturnsAsync(section1);
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section2.Guid)).ReturnsAsync(section2);
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section3.Guid)).ReturnsAsync(section3);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section1.Guid, It.IsAny<bool>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section2.Guid, It.IsAny<bool>())).ReturnsAsync(section2);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section3.Guid, It.IsAny<bool>())).ReturnsAsync(section3);
                 sectionRepoMock.Setup(repo => repo.PostSectionMeetingAsync(It.IsAny<Domain.Student.Entities.Section>(), meeting1.Guid)).ReturnsAsync(meeting1);
                 sectionRepoMock.Setup(repo => repo.PostSectionMeetingAsync(It.IsAny<Domain.Student.Entities.Section>(), meeting2.Guid)).ReturnsAsync(meeting2);
                 sectionRepoMock.Setup(repo => repo.PostSectionMeetingAsync(It.IsAny<Domain.Student.Entities.Section>(), meeting3.Guid)).ReturnsAsync(meeting3);
@@ -7575,7 +8011,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     new Domain.Student.Entities.SectionTitleType("8C3B805D-CFE6-483B-86C3-4C20562F8C15", "long", "Descr")
                 };
                 stuRefDataRepoMock.Setup(repo => repo.GetSectionTitleTypesAsync(It.IsAny<bool>())).ReturnsAsync(sectionTitleTypes);
-                
+                stuRefDataRepoMock.Setup(repo => repo.GetSectionTitleTypesGuidAsync(It.IsAny<string>())).ReturnsAsync("9C3B805D-CFE6-483B-86C3-4C20562F8C15");
+
                 // Mock the section service
                 sectionCoordinationService = new SectionCoordinationService(adapterRegistry, sectionRepo, courseRepo, studentRepo, studentReferenceDataRepo,
                     referenceDataRepo, termRepo, studentConfigRepo, configRepo, personRepo, roomRepo, eventRepo, bookRepo, currentUserFactory, roleRepo, logger);
@@ -7592,7 +8029,50 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(KeyNotFoundException))]
+            public async Task SectionService_NewEntity_Null()
+            {
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
+                sectionRepoMock.Setup(repo => repo.PostSection2Async(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetStatusCodesWithGuidsAsync()).ReturnsAsync(new List<SectionStatusCodeGuid>() { new SectionStatusCodeGuid("asda", "A", "asda") });
+                stuRefDataRepoMock.Setup(repo => repo.GetSectionStatusesAsync(It.IsAny<bool>())).ReturnsAsync(new List<SectionStatuses>() { new SectionStatuses("asda", "A", "asda") });
+                stuRefDataRepoMock.Setup(repo => repo.GetInstructionalMethodsAsync(It.IsAny<bool>()))
+                    .ReturnsAsync(new List<Domain.Student.Entities.InstructionalMethod>()
+                        {
+                            new Domain.Student.Entities.InstructionalMethod(instructionalMethodGuid, "LEC", "Lecture", false)
+                        }
+                    );
+
+                var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() {CreditCategory = new Dtos.DtoProperties.CreditIdAndTypeProperty2() {
+                    Detail = new Dtos.GuidObject2(creditCategories[0].Guid), CreditType = Dtos.EnumProperties.CreditCategoryType3.Institutional },
+                    Measure = Dtos.CreditMeasure2.Credit, Minimum = 1.0m, Maximum = 4.0m, Increment = 1.0m}};
+                var section2 = new Dtos.Section6()
+                {
+                    Id = section1.Guid,
+                    Number = "01",
+                    StartOn = new DateTime(2011, 09, 01),
+                    Titles = new List<Dtos.DtoProperties.CoursesTitlesDtoProperty>()
+                    {
+                        new Dtos.DtoProperties.CoursesTitlesDtoProperty()
+                        {
+                            Value = "Modern Algebra"
+                        }
+                    },
+                    Course = new Dtos.GuidObject2("342"),
+                    Credits = credit,
+                    Status = new Dtos.DtoProperties.SectionStatusDtoProperty()
+                    {
+                        Category = Dtos.SectionStatus2.Open,
+                        Detail = new Dtos.GuidObject2("asda")
+                    },
+                    InstructionalMethods = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2(instructionalMethodGuid) }
+                }; 
+                sectionRepoMock.Setup(repo => repo.PostSection2Async(It.IsAny<Section>())).ReturnsAsync(null);
+                var res = await sectionCoordinationService.PostSection6Async(section2);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_Null_Object_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
@@ -7600,7 +8080,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_Null_Guid_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
@@ -7608,10 +8088,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_SectionKeyNotFound_V16()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section1.Guid)).Throws(new KeyNotFoundException());
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section1.Guid, It.IsAny<bool>())).Throws(new KeyNotFoundException());
                 var r = await sectionCoordinationService.PostSection6Async(new Dtos.Section6()
                 {
                     Id = meeting1.Guid
@@ -7619,7 +8099,22 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
+            [ExpectedException(typeof(Exception))]
+            public async Task SectionService_SectionStatus_Null_V16()
+            {
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
+                var r = await sectionCoordinationService.PostSection6Async(new Dtos.Section6()
+                {
+                    Id = meeting1.Guid,
+                    Status = new Dtos.DtoProperties.SectionStatusDtoProperty() 
+                    {
+                        Category = new Dtos.SectionStatus2()
+                    }
+                });
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NoPermission_V16()
             {
                 var section = new Dtos.Section6() { Id = "999999999999999" };
@@ -7627,12 +8122,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullCourse_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
-                //var credit = new List<Dtos.Credit2>() { new Dtos.Credit2() {CreditCategory = new Dtos.CreditIdAndTypeProperty() { 
-                //    Detail = new Dtos.GuidObject2(creditCategories[0].Guid) }, Measure = Dtos.CreditMeasure2.CEU, Minimum = 1.0m, Maximum = 4.0m, Increment = 1.0m}};
                 var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() {CreditCategory = new Dtos.DtoProperties.CreditIdAndTypeProperty2() {
                     Detail = new Dtos.GuidObject2(creditCategories[0].Guid) }, Measure = Dtos.CreditMeasure2.CEU, Minimum = 1.0m, Maximum = 4.0m, Increment = 1.0m}};
                 var section2 = new Dtos.Section6()
@@ -7655,7 +8148,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_EmptyTitle_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
@@ -7680,7 +8173,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullStartOn_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
@@ -7705,7 +8198,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_StartOnGreaterThanEndOn_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
@@ -7731,7 +8224,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullCreditMeasure_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
@@ -7756,10 +8249,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullCreditDetailAndCreditType_V16()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() {CreditCategory = new Dtos.DtoProperties.CreditIdAndTypeProperty2() {
@@ -7783,7 +8276,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullCreditMinimum_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
@@ -7809,10 +8302,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullCreditType_V16()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() {CreditCategory = new Dtos.DtoProperties.CreditIdAndTypeProperty2(),
@@ -7838,10 +8331,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullInstructionalPlaforms_V16()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 referenceDataRepoMock.Setup(repo => repo.GetInstructionalPlatformsAsync(It.IsAny<bool>())).ReturnsAsync(null);
@@ -7868,10 +8361,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullCreditCategoryOfCredit_V16()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() { Measure = Dtos.CreditMeasure2.CEU,
@@ -7898,7 +8391,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullCreditCategories_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
@@ -7928,10 +8421,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullGradeSchemes_V16()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section3);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section3);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section3);
                 stuRefDataRepoMock.Setup(repo => repo.GetGradeSchemesAsync()).ReturnsAsync(null);
@@ -7959,10 +8452,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullAcademicLevels_V16()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 stuRefDataRepoMock.Setup(repo => repo.GetAcademicLevelsAsync()).ReturnsAsync(null);
@@ -7990,10 +8483,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullLocations_V16()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section2);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section2);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PostSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section2);
                 referenceDataRepoMock.Setup(repo => repo.Locations).Returns<Location>(null);
@@ -8021,7 +8514,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullCourseLevels_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
@@ -8049,7 +8542,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullInstructionalMethod_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
@@ -8181,7 +8674,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private List<CreditCategory> creditCategories = new List<CreditCategory>() { new CreditCategory(Guid.NewGuid().ToString(), "RC", "Regular Credit", CreditType.Institutional),
                 new CreditCategory(Guid.NewGuid().ToString(), "RC", "Regular Credit", CreditType.Transfer), new CreditCategory(Guid.NewGuid().ToString(), "RC", "Regular Credit", CreditType.ContinuingEducation ) };
             private List<Domain.Student.Entities.AcademicLevel> academicLevels = new List<Domain.Student.Entities.AcademicLevel>() { new Domain.Student.Entities.AcademicLevel(Guid.NewGuid().ToString(), "UG", "Undergraduate") };
-            private List<GradeScheme> gradeSchemes = new List<GradeScheme>() { new GradeScheme(Guid.NewGuid().ToString(), "Pass/Fail", "Pass/Fail grade") };
+            private List<Domain.Student.Entities.GradeScheme> gradeSchemes = new List<Domain.Student.Entities.GradeScheme>() { new Domain.Student.Entities.GradeScheme(Guid.NewGuid().ToString(), "Pass/Fail", "Pass/Fail grade") };
             private List<Domain.Student.Entities.CourseLevel> courseLevels = new List<Domain.Student.Entities.CourseLevel>() { new Domain.Student.Entities.CourseLevel(Guid.NewGuid().ToString(), "100", "Introduction to terms, concepts, and techniques.") };
             private List<Department> departments = new List<Department>() { new Department(Guid.NewGuid().ToString(), "PHYS", "Physics", true) };
             private List<Location> locations = new List<Location>() { new Location(Guid.NewGuid().ToString(), "MD", "Maryland") };
@@ -8282,9 +8775,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 termRepoMock.Setup(repo => repo.Get()).Returns(allTerms);
                 termRepoMock.Setup(repo => repo.GetAsync()).ReturnsAsync(allTerms);
 
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section1.Guid)).ReturnsAsync(section1);
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section2.Guid)).ReturnsAsync(section2);
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section3.Guid)).ReturnsAsync(section3);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section1.Guid, It.IsAny<bool>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section2.Guid, It.IsAny<bool>())).ReturnsAsync(section2);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section3.Guid, It.IsAny<bool>())).ReturnsAsync(section3);
                 sectionRepoMock.Setup(repo => repo.PutSectionMeetingAsync(It.IsAny<Domain.Student.Entities.Section>(), meeting1.Guid)).ReturnsAsync(meeting1);
                 sectionRepoMock.Setup(repo => repo.PutSectionMeetingAsync(It.IsAny<Domain.Student.Entities.Section>(), meeting2.Guid)).ReturnsAsync(meeting2);
                 sectionRepoMock.Setup(repo => repo.PutSectionMeetingAsync(It.IsAny<Domain.Student.Entities.Section>(), meeting3.Guid)).ReturnsAsync(meeting3);
@@ -8318,6 +8811,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     new Domain.Student.Entities.SectionTitleType("8C3B805D-CFE6-483B-86C3-4C20562F8C15", "long", "Descr")
                 };
                 stuRefDataRepoMock.Setup(repo => repo.GetSectionTitleTypesAsync(It.IsAny<bool>())).ReturnsAsync(sectionTitleTypes);
+                stuRefDataRepoMock.Setup(repo => repo.GetSectionTitleTypesGuidAsync(It.IsAny<string>())).ReturnsAsync("9C3B805D-CFE6-483B-86C3-4C20562F8C15");
 
                 // Mock the section service
                 sectionCoordinationService = new SectionCoordinationService(adapterRegistry, sectionRepo, courseRepo, studentRepo, studentReferenceDataRepo,
@@ -8335,7 +8829,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_Null_Object_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
@@ -8343,7 +8837,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_Null_Guid_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
@@ -8351,10 +8845,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_SectionKeyNotFound_V16()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section1.Guid)).Throws(new KeyNotFoundException());
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(section1.Guid, It.IsAny<bool>())).Throws(new KeyNotFoundException());
                 var r = await sectionCoordinationService.PutSection6Async(new Dtos.Section6()
                 {
                     Id = meeting1.Guid
@@ -8362,7 +8856,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NoPermission_V16()
             {
                 var section = new Dtos.Section6() { Id = "999999999999999" };
@@ -8370,7 +8864,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullCourse_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
@@ -8397,7 +8891,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_EmptyTitle_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
@@ -8422,7 +8916,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullStartOn_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
@@ -8447,7 +8941,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_StartOnGreaterThanEndOn_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
@@ -8473,7 +8967,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullCreditMeasure_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
@@ -8498,10 +8992,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullCreditDetailAndCreditType_V16()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() {CreditCategory = new Dtos.DtoProperties.CreditIdAndTypeProperty2() {
@@ -8525,7 +9019,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullCreditMinimum_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
@@ -8551,10 +9045,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullCreditType_V16()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() {CreditCategory = new Dtos.DtoProperties.CreditIdAndTypeProperty2(),
@@ -8581,10 +9075,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullInstructionalPlaforms_V16()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 referenceDataRepoMock.Setup(repo => repo.GetInstructionalPlatformsAsync(It.IsAny<bool>())).ReturnsAsync(null);
@@ -8616,10 +9110,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullCreditCategoryOfCredit_V16()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() { Measure = Dtos.CreditMeasure2.CEU,
@@ -8646,7 +9140,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullCreditCategories_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
@@ -8676,10 +9170,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullGradeSchemes_V16()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section3);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section3);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section3);
                 stuRefDataRepoMock.Setup(repo => repo.GetGradeSchemesAsync()).ReturnsAsync(null);
@@ -8706,10 +9200,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullAcademicLevels_V16()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section1);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 stuRefDataRepoMock.Setup(repo => repo.GetAcademicLevelsAsync()).ReturnsAsync(null);
@@ -8737,10 +9231,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullLocations_V16()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<String>())).ReturnsAsync(section2);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<String>(), It.IsAny<bool>())).ReturnsAsync(section2);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSectionAsync(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section2);
                 referenceDataRepoMock.Setup(repo => repo.Locations).Returns<Location>(null);
@@ -8768,7 +9262,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullCourseLevels_V16()
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
@@ -8799,13 +9293,18 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_NullInstructionalMethod_V16()
             {
+                List<Division> division = new List<Division>() 
+                {
+                    new Division("8c8c1a04-984a-4000-a719-ab2df5105c58", "div1", "Descr1")
+                };
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { thirdPartyRole });
                 sectionRepoMock.Setup(repo => repo.PutSection2Async(It.IsAny<Domain.Student.Entities.Section>())).ReturnsAsync(section1);
                 sectionRepoMock.Setup(repo => repo.GetStatusCodesWithGuidsAsync()).ReturnsAsync(new List<SectionStatusCodeGuid>() { new SectionStatusCodeGuid("asda", "A", "asda") });
                 stuRefDataRepoMock.Setup(repo => repo.GetSectionStatusesAsync(It.IsAny<bool>())).ReturnsAsync(new List<SectionStatuses>() { new SectionStatuses("asda", "A", "asda") } );
+                referenceDataRepoMock.Setup(repo => repo.GetDivisionsAsync(It.IsAny<bool>())).ReturnsAsync(division);
 
                 var credit = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() { new Dtos.DtoProperties.SectionCreditDtoProperty() {CreditCategory = new Dtos.DtoProperties.CreditIdAndTypeProperty2() {
                     Detail = new Dtos.GuidObject2(creditCategories[0].Guid), CreditType = Dtos.EnumProperties.CreditCategoryType3.Institutional },
@@ -8813,22 +9312,67 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var section2 = new Dtos.Section6()
                 {
                     Id = section1.Guid,
+                    Billing = -1,
                     Number = "01",
-                    StartOn = new DateTime(2011, 09, 01),
-                    Titles = new List<Dtos.DtoProperties.CoursesTitlesDtoProperty>()
+                    StartOn = default(DateTime?),
+                    EndOn = default(DateTime?),
+                    Titles = null,
+                    Course = new Dtos.GuidObject2("342"),
+                    Credits = new List<Dtos.DtoProperties.SectionCreditDtoProperty>() 
                     {
-                        new Dtos.DtoProperties.CoursesTitlesDtoProperty()
+                        new Dtos.DtoProperties.SectionCreditDtoProperty()
                         {
-                            Value = "Modern Algebra"
+                            CreditCategory = new Dtos.DtoProperties.CreditIdAndTypeProperty2()
+                            {
+                                Detail = new Dtos.GuidObject2()
+                            },
+                            Increment = 1,
+                            Measure = Dtos.CreditMeasure2.CEU
+                        },
+                        new Dtos.DtoProperties.SectionCreditDtoProperty()
+                        {
+                            CreditCategory = new Dtos.DtoProperties.CreditIdAndTypeProperty2()
+                            {
+                                CreditType = CreditCategoryType3.Exam
+                            }
                         }
                     },
-                    Course = new Dtos.GuidObject2("342"),
-                    Credits = credit,
-                   
+                    CourseLevels = new List<Dtos.GuidObject2>()
+                    {
+                        new Dtos.GuidObject2()
+                    },
+                    InstructionalPlatform = new Dtos.GuidObject2(),
+                    AcademicLevels = new List<Dtos.GuidObject2>()
+                    {
+                        new Dtos.GuidObject2()
+                    },
+                    GradeSchemes = new List<Dtos.GuidObject2>()
+                    {
+                        new Dtos.GuidObject2()
+                    },
+                    OwningInstitutionUnits = new List<Dtos.OwningInstitutionUnit>()
+                    {
+                        new Dtos.OwningInstitutionUnit(){ InstitutionUnit = new Dtos.GuidObject2(), OwnershipPercentage = 0 },
+                        new Dtos.OwningInstitutionUnit(){ InstitutionUnit = new Dtos.GuidObject2("8c8c1a04-984a-4000-a719-ab2df5105c58")}
+                    },
+                    Duration = new Dtos.SectionDuration2()
+                    {
+                        Unit = Dtos.DurationUnit2.Months,
+                        Length = -1
+                    },
+                    ReservedSeatsMaximum = 1,
                     Status = new Dtos.DtoProperties.SectionStatusDtoProperty()
                     {
                         Category = Dtos.SectionStatus2.Open,
                         Detail = new Dtos.GuidObject2("asda")
+                    },
+                    Waitlist = new Dtos.DtoProperties.SectionWaitlistDtoProperty()
+                    {
+                        RegistrationInterval = new Dtos.DtoProperties.SectionRegistrationIntervalDtoProperty()
+                        {
+                            Unit = SectionWaitlistRegistrationIntervalUnit.Hour,
+                            Value = null
+                        }
                     }
                 };
                 var res = await sectionCoordinationService.PutSection6Async(section2);
@@ -9507,7 +10051,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task SectionCoordinationServiceTests_V8_GetSectionMaximumByGuid3Async_WithNullEntity_KeyNotFoundException()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
 
                 var result = await sectionCoordinationService.GetSectionMaximumByGuid3Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
             }
@@ -9733,6 +10277,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             Tuple<IEnumerable<Domain.Student.Entities.Section>, int> sectionMaxEntitiesTuple;
             IEnumerable<Domain.Student.Entities.Section> sectionEntities;
 
+            IEnumerable<string> courseEntityIds;
             IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Course> courseEntities;
             IEnumerable<CourseTitleType> courseTitleTypeEntities;
             IEnumerable<SectionStatusCodeGuid> sectionStatusCodeGuidEntities;
@@ -9747,6 +10292,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             IEnumerable<Domain.Base.Entities.Department> departmentEntities;
             IEnumerable<Domain.Student.Entities.InstructionalMethod> instrMethodEntities;
             IEnumerable<Domain.Base.Entities.Room> roomEntities;
+            IEnumerable<string> personEntityIds;
+            Dictionary<string, string> personGuidCollection;
 
             Domain.Base.Entities.PersonIntegration person;
             private Domain.Student.Entities.SectionMeeting meeting1;
@@ -9830,10 +10377,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_CE()
             {
+                string courseId = "180";
+                var offeringDepartment = new Collection<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("MATH") };
+                var courseLevelCodes = new Collection<string>() { "100", "200" };
                 sectionEntities = new List<Domain.Student.Entities.Section>()
                 {
-                    new Domain.Student.Entities.Section("1", "180", "111", new DateTime(2016, 01, 01), 3, 3, "Title 1", "C", new Collection<Domain.Student.Entities.OfferingDepartment>(){ new Domain.Student.Entities.OfferingDepartment("MATH") },
-                        new Collection<string>(){ "100", "200"}, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
+                    new Domain.Student.Entities.Section("1", courseId, "111", new DateTime(2016, 01, 01), 3, 3, "Title 1", "C", offeringDepartment,
+                        courseLevelCodes, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
                         {
                             Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c",
                             LearningProvider = "CE",
@@ -9844,8 +10394,18 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                             GradeSchemeCode = "UG"
                         }
                 };
+                string[] facultyIds = new string[] { };
+                courseEntityIds = new List<string>() { courseId };
+                var courseEntity = new Domain.Student.Entities.Course(courseId, "shortTitle", "longTitle", offeringDepartment, "MATH", "111", "UG",
+                    courseLevelCodes, 0, 0, new Collection<CourseApproval>())
+                {
+                    Guid = "b0897320-2e9b-4f6f-6816-12ac834a80ac"
+                };
+                courseEntities = new List<Domain.Student.Entities.Course>() { courseEntity };
                 sectionMaxEntitiesTuple = new Tuple<IEnumerable<Section>, int>(sectionEntities, sectionEntities.Count());
                 sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+                personRepoMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(new List<string>())).ReturnsAsync(new Dictionary<string, string>());
+                courseRepoMock.Setup(repo => repo.GetCoursesByIdAsync(courseEntityIds)).ReturnsAsync(courseEntities);
 
                 var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
 
@@ -9855,10 +10415,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_Transfer()
             {
+                string courseId = "180";
+                var offeringDepartment = new Collection<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("MATH") };
+                var courseLevelCodes = new Collection<string>() { "100", "200" };
                 sectionEntities = new List<Domain.Student.Entities.Section>()
                 {
-                    new Domain.Student.Entities.Section("1", "180", "111", new DateTime(2016, 01, 01), 3, 3, "Title 1", "T", new Collection<Domain.Student.Entities.OfferingDepartment>(){ new Domain.Student.Entities.OfferingDepartment("MATH") },
-                        new Collection<string>(){ "100", "200"}, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
+                    new Domain.Student.Entities.Section("1", courseId, "111", new DateTime(2016, 01, 01), 3, 3, "Title 1", "T", offeringDepartment,
+                        courseLevelCodes, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
                         {
                             Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c",
                             LearningProvider = "CE",
@@ -9869,8 +10432,18 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                             GradeSchemeCode = "UG"
                         }
                 };
+                string[] facultyIds = new string[] { };
+                courseEntityIds = new List<string>() { courseId };
+                var courseEntity = new Domain.Student.Entities.Course(courseId, "shortTitle", "longTitle", offeringDepartment, "MATH", "111", "UG",
+                    courseLevelCodes, 0, 0, new Collection<CourseApproval>())
+                {
+                    Guid = "b0897320-2e9b-4f6f-6816-12ac834a80ac"
+                };
+                courseEntities = new List<Domain.Student.Entities.Course>() { courseEntity };
                 sectionMaxEntitiesTuple = new Tuple<IEnumerable<Section>, int>(sectionEntities, sectionEntities.Count());
                 sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+                personRepoMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(new List<string>())).ReturnsAsync(new Dictionary<string, string>());
+                courseRepoMock.Setup(repo => repo.GetCoursesByIdAsync(courseEntityIds)).ReturnsAsync(courseEntities);
 
                 var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
 
@@ -9880,10 +10453,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_Exchange()
             {
+                string courseId = "180";
+                var offeringDepartment = new Collection<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("MATH") };
+                var courseLevelCodes = new Collection<string>() { "100", "200" };
                 sectionEntities = new List<Domain.Student.Entities.Section>()
                 {
-                    new Domain.Student.Entities.Section("1", "180", "111", new DateTime(2016, 01, 01), 3, 3, "Title 1", "E", new Collection<Domain.Student.Entities.OfferingDepartment>(){ new Domain.Student.Entities.OfferingDepartment("MATH") },
-                        new Collection<string>(){ "100", "200"}, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
+                    new Domain.Student.Entities.Section("1", courseId, "111", new DateTime(2016, 01, 01), 3, 3, "Title 1", "E", offeringDepartment,
+                        courseLevelCodes, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
                         {
                             Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c",
                             LearningProvider = "CE",
@@ -9894,8 +10470,18 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                             GradeSchemeCode = "UG"
                         }
                 };
+                string[] facultyIds = new string[] { };
+                courseEntityIds = new List<string>() { courseId };
+                var courseEntity = new Domain.Student.Entities.Course(courseId, "shortTitle", "longTitle", offeringDepartment, "MATH", "111", "UG",
+                    courseLevelCodes, 0, 0, new Collection<CourseApproval>())
+                {
+                    Guid = "b0897320-2e9b-4f6f-6816-12ac834a80ac"
+                };
+                courseEntities = new List<Domain.Student.Entities.Course>() { courseEntity };
                 sectionMaxEntitiesTuple = new Tuple<IEnumerable<Section>, int>(sectionEntities, sectionEntities.Count());
                 sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+                personRepoMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(new List<string>())).ReturnsAsync(new Dictionary<string, string>());
+                courseRepoMock.Setup(repo => repo.GetCoursesByIdAsync(courseEntityIds)).ReturnsAsync(courseEntities);
 
                 var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
 
@@ -9905,10 +10491,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_Other()
             {
+                string courseId = "180";
+                var offeringDepartment = new Collection<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("MATH") };
+                var courseLevelCodes = new Collection<string>() { "100", "200" };
                 sectionEntities = new List<Domain.Student.Entities.Section>()
                 {
-                    new Domain.Student.Entities.Section("1", "180", "111", new DateTime(2016, 01, 01), 3, 3, "Title 1", "O", new Collection<Domain.Student.Entities.OfferingDepartment>(){ new Domain.Student.Entities.OfferingDepartment("MATH") },
-                        new Collection<string>(){ "100", "200"}, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
+                    new Domain.Student.Entities.Section("1", courseId, "111", new DateTime(2016, 01, 01), 3, 3, "Title 1", "O", offeringDepartment,
+                        courseLevelCodes, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
                         {
                             Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c",
                             LearningProvider = "CE",
@@ -9919,8 +10508,18 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                             GradeSchemeCode = "UG"
                         }
                 };
+                string[] facultyIds = new string[] { };
+                courseEntityIds = new List<string>() { courseId };
+                var courseEntity = new Domain.Student.Entities.Course(courseId, "shortTitle", "longTitle", offeringDepartment, "MATH", "111", "UG",
+                    courseLevelCodes, 0, 0, new Collection<CourseApproval>())
+                {
+                    Guid = "b0897320-2e9b-4f6f-6816-12ac834a80ac"
+                };
+                courseEntities = new List<Domain.Student.Entities.Course>() { courseEntity };
                 sectionMaxEntitiesTuple = new Tuple<IEnumerable<Section>, int>(sectionEntities, sectionEntities.Count());
                 sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+                personRepoMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(new List<string>())).ReturnsAsync(new Dictionary<string, string>());
+                courseRepoMock.Setup(repo => repo.GetCoursesByIdAsync(courseEntityIds)).ReturnsAsync(courseEntities);
 
                 var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
 
@@ -9930,10 +10529,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_NoCredit()
             {
+                string courseId = "180";
+                var offeringDepartment = new Collection<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("MATH") };
+                var courseLevelCodes = new Collection<string>() { "100", "200" };
                 sectionEntities = new List<Domain.Student.Entities.Section>()
                 {
-                    new Domain.Student.Entities.Section("1", "180", "111", new DateTime(2016, 01, 01), 3, 3, "Title 1", "N", new Collection<Domain.Student.Entities.OfferingDepartment>(){ new Domain.Student.Entities.OfferingDepartment("MATH") },
-                        new Collection<string>(){ "100", "200"}, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
+                    new Domain.Student.Entities.Section("1", courseId, "111", new DateTime(2016, 01, 01), 3, 3, "Title 1", "N", offeringDepartment,
+                        courseLevelCodes, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
                         {
                             Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c",
                             LearningProvider = "CE",
@@ -9944,8 +10546,18 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                             GradeSchemeCode = "UG"
                         }
                 };
+                string[] facultyIds = new string[] { };
+                courseEntityIds = new List<string>() { courseId };
+                var courseEntity = new Domain.Student.Entities.Course(courseId, "shortTitle", "longTitle", offeringDepartment, "MATH", "111", "UG",
+                    courseLevelCodes, 0, 0, new Collection<CourseApproval>())
+                {
+                    Guid = "b0897320-2e9b-4f6f-6816-12ac834a80ac"
+                };
+                courseEntities = new List<Domain.Student.Entities.Course>() { courseEntity };
                 sectionMaxEntitiesTuple = new Tuple<IEnumerable<Section>, int>(sectionEntities, sectionEntities.Count());
                 sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+                personRepoMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(new List<string>())).ReturnsAsync(new Dictionary<string, string>());
+                courseRepoMock.Setup(repo => repo.GetCoursesByIdAsync(courseEntityIds)).ReturnsAsync(courseEntities);
 
                 var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
 
@@ -9955,10 +10567,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_WithId_CreditTypeCode_Blank()
             {
+                string courseId = "180";
+                var offeringDepartment = new Collection<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("MATH") };
+                var courseLevelCodes = new Collection<string>() { "100", "200" };
                 sectionEntities = new List<Domain.Student.Entities.Section>()
                 {
-                    new Domain.Student.Entities.Section("1", "180", "111", new DateTime(2016, 01, 01), 3, 3, "Title 1", " ", new Collection<Domain.Student.Entities.OfferingDepartment>(){ new Domain.Student.Entities.OfferingDepartment("MATH") },
-                        new Collection<string>(){ "100", "200"}, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
+                    new Domain.Student.Entities.Section("1", courseId, "111", new DateTime(2016, 01, 01), 3, 3, "Title 1", " ", offeringDepartment,
+                        courseLevelCodes, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
                         {
                             Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c",
                             LearningProvider = "CE",
@@ -9969,8 +10584,18 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                             GradeSchemeCode = "UG"
                         }
                 };
+                string[] facultyIds = new string[] { };
+                courseEntityIds = new List<string>() { courseId };
+                var courseEntity = new Domain.Student.Entities.Course(courseId, "shortTitle", "longTitle", offeringDepartment, "MATH", "111", "UG",
+                    courseLevelCodes, 0, 0, new Collection<CourseApproval>())
+                {
+                    Guid = "b0897320-2e9b-4f6f-6816-12ac834a80ac"
+                };
+                courseEntities = new List<Domain.Student.Entities.Course>() { courseEntity };
                 sectionMaxEntitiesTuple = new Tuple<IEnumerable<Section>, int>(sectionEntities, sectionEntities.Count());
                 sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+                personRepoMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(new List<string>())).ReturnsAsync(new Dictionary<string, string>());
+                courseRepoMock.Setup(repo => repo.GetCoursesByIdAsync(courseEntityIds)).ReturnsAsync(courseEntities);
 
                 var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
 
@@ -9980,10 +10605,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_WithId_No_CEUS()
             {
+                string courseId = "180";
+                var offeringDepartment = new Collection<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("MATH") };
+                var courseLevelCodes = new Collection<string>() { "100", "200" };
                 sectionEntities = new List<Domain.Student.Entities.Section>()
                 {
-                    new Domain.Student.Entities.Section("1", "180", "111", new DateTime(2016, 01, 01), 3, null, "Title 1", "I", new Collection<Domain.Student.Entities.OfferingDepartment>(){ new Domain.Student.Entities.OfferingDepartment("MATH") },
-                        new Collection<string>(){ "100", "200"}, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
+                    new Domain.Student.Entities.Section("1", courseId, "111", new DateTime(2016, 01, 01), 3, null, "Title 1", "I", offeringDepartment,
+                        courseLevelCodes, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
                         {
                             Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c",
                             LearningProvider = "CE",
@@ -9994,8 +10622,18 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                             GradeSchemeCode = "UG"
                         }
                 };
+                string[] facultyIds = new string[] { };
+                courseEntityIds = new List<string>() { courseId };
+                var courseEntity = new Domain.Student.Entities.Course(courseId, "shortTitle", "longTitle", offeringDepartment, "MATH", "111", "UG",
+                    courseLevelCodes, 0, 0, new Collection<CourseApproval>())
+                {
+                    Guid = "b0897320-2e9b-4f6f-6816-12ac834a80ac"
+                };
+                courseEntities = new List<Domain.Student.Entities.Course>() { courseEntity };
                 sectionMaxEntitiesTuple = new Tuple<IEnumerable<Section>, int>(sectionEntities, sectionEntities.Count());
                 sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+                personRepoMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(new List<string>())).ReturnsAsync(new Dictionary<string, string>());
+                courseRepoMock.Setup(repo => repo.GetCoursesByIdAsync(courseEntityIds)).ReturnsAsync(courseEntities);
 
                 var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
 
@@ -10005,21 +10643,58 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_WithId_Freq_Daily()
             {
-                var sectionFaculty = new Domain.Student.Entities.SectionFaculty("1234", "SEC1", "0000678", "LG", new DateTime(2012, 09, 01), new DateTime(2011, 12, 21), 100.0m);
-
-                meeting1 = new Domain.Student.Entities.SectionMeeting("123", "SEC1", "LG", new DateTime(2012, 01, 01), new DateTime(2012, 12, 21), "D");
-                meeting1.Guid = "1f1485cb-2705-4b59-9f51-7aa85c79b377";
-                meeting1.AddFacultyId("0000678");
+                string courseId = "180";
+                var offeringDepartment = new Collection<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("MATH") };
+                var courseLevelCodes = new Collection<string>() { "100", "200" };
+                var sectionEntity = new Domain.Student.Entities.Section("1", courseId, "111", new DateTime(2016, 01, 01), 3, null, "Title 1", "I", offeringDepartment,
+                        courseLevelCodes, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
+                {
+                    Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c",
+                    LearningProvider = "CE",
+                    TermId = "2012/FA",
+                    Location = "MAIN",
+                    NumberOfWeeks = 2,
+                    NumberOnWaitlist = 10,
+                    GradeSchemeCode = "UG"
+                };
+                var courseEntity = new Domain.Student.Entities.Course(courseId, "shortTitle", "longTitle", offeringDepartment, "MATH", "111", "UG",
+                    courseLevelCodes, 0, 0, new Collection<CourseApproval>())
+                {
+                    Guid = "b0897320-2e9b-4f6f-6816-12ac834a80ac"
+                };
+                courseEntities = new List<Domain.Student.Entities.Course>() { courseEntity };
+                string facultyId = "0000678";
+                string facultyGuid = "fcfdf6ad-90ac-46e9-9051-a378cc85cf3b";
+                var sectionFaculty = new Domain.Student.Entities.SectionFaculty("1234", courseId, facultyId, "LG", new DateTime(2012, 09, 01), new DateTime(2011, 12, 21), 100.0m);
+                courseEntityIds = new List<string>() { courseId };
+                personEntityIds = new List<string>() { facultyId };
+                personGuidCollection = new Dictionary<string, string>() { };
+                personGuidCollection.Add(facultyId, facultyGuid);
+                var facultyPersonEntity = new Domain.Base.Entities.PersonIntegration(facultyId, "Doe")
+                {
+                    Guid = facultyGuid,
+                    FirstName = "John"
+                };
+                var facultyPersonEntities = new List<Domain.Base.Entities.PersonIntegration>() { facultyPersonEntity };
+                meeting1 = new Domain.Student.Entities.SectionMeeting("123", courseId, "LG", new DateTime(2012, 01, 01), new DateTime(2012, 12, 21), "D")
+                {
+                    Guid = "1f1485cb-2705-4b59-9f51-7aa85c79b377",
+                    StartTime = new DateTimeOffset(2012, 01, 01, 08, 30, 00, new TimeSpan()),
+                    EndTime = new DateTimeOffset(2012, 12, 21, 09, 30, 00, new TimeSpan()),
+                    Room = "COE*Room 1"
+                };
+                meeting1.AddFacultyId(facultyId);
                 meeting1.AddSectionFaculty(sectionFaculty);
-                meeting1.StartTime = new DateTimeOffset(2012, 01, 01, 08, 30, 00, new TimeSpan());
-                meeting1.EndTime = new DateTimeOffset(2012, 12, 21, 09, 30, 00, new TimeSpan());
-                meeting1.Room = "COE*Room 1";
-                var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
-                sectionMeetings.Add(meeting1);
-                var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
-                sectionRepoMock.Setup(repo => repo.GetSectionMeetingAsync(0, 0, "1", "", "", "", "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
+                sectionEntity.AddSectionMeeting(meeting1);
+                sectionEntity.AddSectionFaculty(sectionFaculty);
 
+                sectionEntities = new List<Section>() { sectionEntity };
+                sectionMaxEntitiesTuple = new Tuple<IEnumerable<Section>, int>(sectionEntities, sectionEntities.Count());
                 sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+
+                personRepoMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(personGuidCollection);
+                courseRepoMock.Setup(repo => repo.GetCoursesByIdAsync(It.IsAny<List<string>>())).ReturnsAsync(courseEntities);
+                personRepoMock.Setup(repo => repo.GetPersonNamesAndCredsByGuidAsync(It.IsAny<string[]>())).ReturnsAsync(facultyPersonEntities);
 
                 var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
 
@@ -10030,22 +10705,58 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_WithId_Freq_Monthly_WithDays()
             {
-                var sectionFaculty = new Domain.Student.Entities.SectionFaculty("1234", "SEC1", "0000678", "LG", new DateTime(2012, 09, 01), new DateTime(2011, 12, 21), 100.0m);
+                string courseId = "180";
+                var offeringDepartment = new Collection<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("MATH") };
+                var courseLevelCodes = new Collection<string>() { "100", "200" };
+                var sectionEntity = new Domain.Student.Entities.Section("1", courseId, "111", new DateTime(2016, 01, 01), 3, null, "Title 1", "I", offeringDepartment,
+                        courseLevelCodes, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
+                {
+                    Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c",
+                    LearningProvider = "CE",
+                    TermId = "2012/FA",
+                    Location = "MAIN",
+                    NumberOfWeeks = 2,
+                    NumberOnWaitlist = 10,
+                    GradeSchemeCode = "UG"
+                };
+                var courseEntity = new Domain.Student.Entities.Course(courseId, "shortTitle", "longTitle", offeringDepartment, "MATH", "111", "UG",
+                    courseLevelCodes, 0, 0, new Collection<CourseApproval>())
+                {
+                    Guid = "b0897320-2e9b-4f6f-6816-12ac834a80ac"
+                };
+                courseEntities = new List<Domain.Student.Entities.Course>() { courseEntity };
+                string facultyId = "0000678";
+                string facultyGuid = "fcfdf6ad-90ac-46e9-9051-a378cc85cf3b";
+                var sectionFaculty = new Domain.Student.Entities.SectionFaculty("1234", courseId, facultyId, "LG", new DateTime(2012, 09, 01), new DateTime(2011, 12, 21), 100.0m);
+                courseEntityIds = new List<string>() { courseId };
+                personEntityIds = new List<string>() { facultyId };
+                personGuidCollection = new Dictionary<string, string>() { };
+                personGuidCollection.Add(facultyId, facultyGuid);
+                var facultyPersonEntity = new Domain.Base.Entities.PersonIntegration(facultyId, "Doe")
+                {
+                    Guid = facultyGuid,
+                    FirstName = "John"
+                };
+                var facultyPersonEntities = new List<Domain.Base.Entities.PersonIntegration>() { facultyPersonEntity };
 
-                meeting1 = new Domain.Student.Entities.SectionMeeting("123", "SEC1", "LG", new DateTime(2012, 01, 01), new DateTime(2012, 12, 21), "M");
-                meeting1.Days = new List<DayOfWeek>() { DayOfWeek.Monday, DayOfWeek.Wednesday };
-                meeting1.Guid = "1f1485cb-2705-4b59-9f51-7aa85c79b377";
-                meeting1.AddFacultyId("0000678");
+                meeting1 = new Domain.Student.Entities.SectionMeeting("123", courseId, "LG", new DateTime(2012, 01, 01), new DateTime(2012, 12, 21), "M")
+                {
+                    Guid = "1f1485cb-2705-4b59-9f51-7aa85c79b377",
+                    Days = new List<DayOfWeek>() { DayOfWeek.Monday, DayOfWeek.Wednesday },
+                    StartTime = new DateTimeOffset(2012, 01, 01, 08, 30, 00, new TimeSpan()),
+                    EndTime = new DateTimeOffset(2012, 12, 21, 09, 30, 00, new TimeSpan()),
+                    Room = "COE*Room 1"
+                };
+                meeting1.AddFacultyId(facultyId);
                 meeting1.AddSectionFaculty(sectionFaculty);
-                meeting1.StartTime = new DateTimeOffset(2012, 01, 01, 08, 30, 00, new TimeSpan());
-                meeting1.EndTime = new DateTimeOffset(2012, 12, 21, 09, 30, 00, new TimeSpan());
-                meeting1.Room = "COE*Room 1";
-                var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
-                sectionMeetings.Add(meeting1);
-                var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
-                sectionRepoMock.Setup(repo => repo.GetSectionMeetingAsync(0, 0, "1", "", "", "", "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
-
+                sectionEntity.AddSectionMeeting(meeting1);
+                sectionEntity.AddSectionFaculty(sectionFaculty);
+                sectionEntities = new List<Section>() { sectionEntity };
+                sectionMaxEntitiesTuple = new Tuple<IEnumerable<Section>, int>(sectionEntities, sectionEntities.Count());
                 sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+                personRepoMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(personGuidCollection);
+                courseRepoMock.Setup(repo => repo.GetCoursesByIdAsync(It.IsAny<List<string>>())).ReturnsAsync(courseEntities);
+                personRepoMock.Setup(repo => repo.GetPersonNamesAndCredsByGuidAsync(It.IsAny<string[]>())).ReturnsAsync(facultyPersonEntities);
 
                 var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
 
@@ -10056,21 +10767,59 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_WithId_Freq_Monthly_WithoutDays()
             {
-                var sectionFaculty = new Domain.Student.Entities.SectionFaculty("1234", "SEC1", "0000678", "LG", new DateTime(2012, 09, 01), new DateTime(2011, 12, 21), 100.0m);
+                string courseId = "180";
+                var offeringDepartment = new Collection<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("MATH") };
+                var courseLevelCodes = new Collection<string>() { "100", "200" };
+                var sectionEntity = new Domain.Student.Entities.Section("1", courseId, "111", new DateTime(2016, 01, 01), 3, null, "Title 1", "I", offeringDepartment,
+                        courseLevelCodes, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
+                {
+                    Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c",
+                    LearningProvider = "CE",
+                    TermId = "2012/FA",
+                    Location = "MAIN",
+                    NumberOfWeeks = 2,
+                    NumberOnWaitlist = 10,
+                    GradeSchemeCode = "UG"
+                };
+                var courseEntity = new Domain.Student.Entities.Course(courseId, "shortTitle", "longTitle", offeringDepartment, "MATH", "111", "UG",
+                    courseLevelCodes, 0, 0, new Collection<CourseApproval>())
+                {
+                    Guid = "b0897320-2e9b-4f6f-6816-12ac834a80ac"
+                };
+                courseEntities = new List<Domain.Student.Entities.Course>() { courseEntity };
+                string facultyId = "0000678";
+                string facultyGuid = "fcfdf6ad-90ac-46e9-9051-a378cc85cf3b";
+                var sectionFaculty = new Domain.Student.Entities.SectionFaculty("1234", courseId, facultyId, "LG", new DateTime(2012, 09, 01), new DateTime(2011, 12, 21), 100.0m);
+                courseEntityIds = new List<string>() { courseId };
+                personEntityIds = new List<string>() { facultyId };
+                personGuidCollection = new Dictionary<string, string>() { };
+                personGuidCollection.Add(facultyId, facultyGuid);
+                var facultyPersonEntity = new Domain.Base.Entities.PersonIntegration(facultyId, "Doe")
+                {
+                    Guid = facultyGuid,
+                    FirstName = "John"
+                };
+                var facultyPersonEntities = new List<Domain.Base.Entities.PersonIntegration>() { facultyPersonEntity };
 
-                meeting1 = new Domain.Student.Entities.SectionMeeting("123", "SEC1", "LG", new DateTime(2012, 01, 01), new DateTime(2012, 12, 21), "M");
-                meeting1.Guid = "1f1485cb-2705-4b59-9f51-7aa85c79b377";
-                meeting1.AddFacultyId("0000678");
+
+                meeting1 = new Domain.Student.Entities.SectionMeeting("123", courseId, "LG", new DateTime(2012, 01, 01), new DateTime(2012, 12, 21), "M")
+                {
+                    Guid = "1f1485cb-2705-4b59-9f51-7aa85c79b377",
+                    StartTime = new DateTimeOffset(2012, 01, 01, 08, 30, 00, new TimeSpan()),
+                    EndTime = new DateTimeOffset(2012, 12, 21, 09, 30, 00, new TimeSpan()),
+                    Room = "COE*Room 1"
+                };
+                meeting1.AddFacultyId(facultyId);
                 meeting1.AddSectionFaculty(sectionFaculty);
-                meeting1.StartTime = new DateTimeOffset(2012, 01, 01, 08, 30, 00, new TimeSpan());
-                meeting1.EndTime = new DateTimeOffset(2012, 12, 21, 09, 30, 00, new TimeSpan());
-                meeting1.Room = "COE*Room 1";
-                var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
-                sectionMeetings.Add(meeting1);
-                var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
-                sectionRepoMock.Setup(repo => repo.GetSectionMeetingAsync(0, 0, "1", "", "", "", "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
-
+                sectionEntity.AddSectionMeeting(meeting1);
+                sectionEntity.AddSectionFaculty(sectionFaculty);
+                sectionEntities = new List<Section>() { sectionEntity };
+                sectionMaxEntitiesTuple = new Tuple<IEnumerable<Section>, int>(sectionEntities, sectionEntities.Count());
                 sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+
+                personRepoMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(personGuidCollection);
+                courseRepoMock.Setup(repo => repo.GetCoursesByIdAsync(It.IsAny<List<string>>())).ReturnsAsync(courseEntities);
+                personRepoMock.Setup(repo => repo.GetPersonNamesAndCredsByGuidAsync(It.IsAny<string[]>())).ReturnsAsync(facultyPersonEntities);
 
                 var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
 
@@ -10081,21 +10830,57 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_WithId_Freq_Yearly()
             {
-                var sectionFaculty = new Domain.Student.Entities.SectionFaculty("1234", "SEC1", "0000678", "LG", new DateTime(2012, 09, 01), new DateTime(2011, 12, 21), 100.0m);
-
-                meeting1 = new Domain.Student.Entities.SectionMeeting("123", "SEC1", "LG", new DateTime(2012, 01, 01), new DateTime(2012, 12, 21), "Y");
-                meeting1.Guid = "1f1485cb-2705-4b59-9f51-7aa85c79b377";
-                meeting1.AddFacultyId("0000678");
+                string courseId = "180";
+                var offeringDepartment = new Collection<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("MATH") };
+                var courseLevelCodes = new Collection<string>() { "100", "200" };
+                var sectionEntity = new Domain.Student.Entities.Section("1", courseId, "111", new DateTime(2016, 01, 01), 3, null, "Title 1", "I", offeringDepartment,
+                        courseLevelCodes, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
+                {
+                    Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c",
+                    LearningProvider = "CE",
+                    TermId = "2012/FA",
+                    Location = "MAIN",
+                    NumberOfWeeks = 2,
+                    NumberOnWaitlist = 10,
+                    GradeSchemeCode = "UG"
+                };
+                var courseEntity = new Domain.Student.Entities.Course(courseId, "shortTitle", "longTitle", offeringDepartment, "MATH", "111", "UG",
+                    courseLevelCodes, 0, 0, new Collection<CourseApproval>())
+                {
+                    Guid = "b0897320-2e9b-4f6f-6816-12ac834a80ac"
+                };
+                courseEntities = new List<Domain.Student.Entities.Course>() { courseEntity };
+                string facultyId = "0000678";
+                string facultyGuid = "fcfdf6ad-90ac-46e9-9051-a378cc85cf3b";
+                var sectionFaculty = new Domain.Student.Entities.SectionFaculty("1234", courseId, facultyId, "LG", new DateTime(2012, 09, 01), new DateTime(2011, 12, 21), 100.0m);
+                courseEntityIds = new List<string>() { courseId };
+                personEntityIds = new List<string>() { facultyId };
+                personGuidCollection = new Dictionary<string, string>() { };
+                personGuidCollection.Add(facultyId, facultyGuid);
+                var facultyPersonEntity = new Domain.Base.Entities.PersonIntegration(facultyId, "Doe")
+                {
+                    Guid = facultyGuid,
+                    FirstName = "John"
+                };
+                var facultyPersonEntities = new List<Domain.Base.Entities.PersonIntegration>() { facultyPersonEntity };
+                meeting1 = new Domain.Student.Entities.SectionMeeting("123", courseId, "LG", new DateTime(2012, 01, 01), new DateTime(2012, 12, 21), "Y")
+                {
+                    Guid = "1f1485cb-2705-4b59-9f51-7aa85c79b377",
+                    StartTime = new DateTimeOffset(2012, 01, 01, 08, 30, 00, new TimeSpan()),
+                    EndTime = new DateTimeOffset(2012, 12, 21, 09, 30, 00, new TimeSpan()),
+                    Room = "COE*Room 1"
+                };
+                meeting1.AddFacultyId(facultyId);
                 meeting1.AddSectionFaculty(sectionFaculty);
-                meeting1.StartTime = new DateTimeOffset(2012, 01, 01, 08, 30, 00, new TimeSpan());
-                meeting1.EndTime = new DateTimeOffset(2012, 12, 21, 09, 30, 00, new TimeSpan());
-                meeting1.Room = "COE*Room 1";
-                var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
-                sectionMeetings.Add(meeting1);
-                var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
-                sectionRepoMock.Setup(repo => repo.GetSectionMeetingAsync(0, 0, "1", "", "", "", "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
-
+                sectionEntity.AddSectionMeeting(meeting1);
+                sectionEntity.AddSectionFaculty(sectionFaculty);
+                sectionEntities = new List<Section>() { sectionEntity };
+                sectionMaxEntitiesTuple = new Tuple<IEnumerable<Section>, int>(sectionEntities, sectionEntities.Count());
                 sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+
+                personRepoMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(personGuidCollection);
+                courseRepoMock.Setup(repo => repo.GetCoursesByIdAsync(It.IsAny<List<string>>())).ReturnsAsync(courseEntities);
+                personRepoMock.Setup(repo => repo.GetPersonNamesAndCredsByGuidAsync(It.IsAny<string[]>())).ReturnsAsync(facultyPersonEntities);
 
                 var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
 
@@ -10106,7 +10891,45 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_WithId()
             {
+                string courseId = "180";
+                var offeringDepartment = new Collection<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("MATH") };
+                var courseLevelCodes = new Collection<string>() { "100", "200" };
+                var sectionEntity = new Domain.Student.Entities.Section("1", courseId, "111", new DateTime(2016, 01, 01), 3, null, "Title 1", "I", offeringDepartment,
+                        courseLevelCodes, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
+                {
+                    Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c",
+                    LearningProvider = "CE",
+                    TermId = "2012/FA",
+                    Location = "MAIN",
+                    NumberOfWeeks = 2,
+                    NumberOnWaitlist = 10,
+                    GradeSchemeCode = "UG"
+                };
+                var courseEntity = new Domain.Student.Entities.Course(courseId, "shortTitle", "longTitle", offeringDepartment, "MATH", "111", "UG",
+                    courseLevelCodes, 0, 0, new Collection<CourseApproval>())
+                {
+                    Guid = "b0897320-2e9b-4f6f-6816-12ac834a80ac"
+                };
+                courseEntities = new List<Domain.Student.Entities.Course>() { courseEntity };
+                courseEntityIds = new List<string>() { courseId };
+                personEntityIds = new List<string>() { };
+                personGuidCollection = new Dictionary<string, string>() { };
+                var facultyPersonEntities = new List<Domain.Base.Entities.PersonIntegration>() { };
+                meeting1 = new Domain.Student.Entities.SectionMeeting("123", courseId, "LG", new DateTime(2012, 01, 01), new DateTime(2012, 12, 21), "Y")
+                {
+                    Guid = "1f1485cb-2705-4b59-9f51-7aa85c79b377",
+                    StartTime = new DateTimeOffset(2012, 01, 01, 08, 30, 00, new TimeSpan()),
+                    EndTime = new DateTimeOffset(2012, 12, 21, 09, 30, 00, new TimeSpan()),
+                    Room = "COE*Room 1"
+                };
+                sectionEntity.AddSectionMeeting(meeting1);
+                sectionEntities = new List<Section>() { sectionEntity };
+                sectionMaxEntitiesTuple = new Tuple<IEnumerable<Section>, int>(sectionEntities, sectionEntities.Count());
                 sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+
+                personRepoMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(personGuidCollection);
+                courseRepoMock.Setup(repo => repo.GetCoursesByIdAsync(It.IsAny<List<string>>())).ReturnsAsync(courseEntities);
+                personRepoMock.Setup(repo => repo.GetPersonIntegration2ByGuidNonCachedAsync(It.IsAny<string[]>())).ReturnsAsync(facultyPersonEntities);
 
                 var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
 
@@ -10229,7 +11052,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             //[TestMethod]
             //public async Task SectionCoordinationServiceTests_V16_GetSectionMaximum5Async_ReturnsCorrectCourseTitle()
             //{
-            //    sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+            //    sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
 
             //    var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
             //    var expectedCourseGuid = await courseRepoMock.Object.GetCourseGuidFromIdAsync("180");
@@ -10335,7 +11158,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_WithNullEntity_KeyNotFoundException()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuid2Async(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
 
                 var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
             }
@@ -12412,5 +13235,465 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.AreEqual(eventTime, new DateTime(int.Parse(dateTimeString.Substring(0, 4)), int.Parse(dateTimeString.Substring(4, 2)), int.Parse(dateTimeString.Substring(6, 2)), int.Parse(dateTimeString.Substring(9, 2)), int.Parse(dateTimeString.Substring(11, 2)), int.Parse(dateTimeString.Substring(13, 2))));
             }
         }
+
+        [TestClass]
+        public class GetSectionMidtermGradingCompleteAsync : CurrentUserSetup
+        {
+            private SectionCoordinationService sectionCoordinationService;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<ISectionRepository> sectionRepoMock;
+            private ISectionRepository sectionRepo;
+            private Mock<IStudentRepository> studentRepoMock;
+            private IStudentRepository studentRepo;
+            private Mock<IStudentReferenceDataRepository> stuRefDataRepoMock;
+            private IStudentReferenceDataRepository studentReferenceDataRepo;
+            private Mock<IReferenceDataRepository> referenceDataRepoMock;
+            private IReferenceDataRepository referenceDataRepo;
+            private Mock<ICourseRepository> courseRepoMock;
+            private ICourseRepository courseRepo;
+            private Mock<ITermRepository> termRepoMock;
+            private ITermRepository termRepo;
+            private Mock<IStudentConfigurationRepository> studentConfigRepoMock;
+            private IStudentConfigurationRepository studentConfigRepo;
+            private Mock<IConfigurationRepository> configRepoMock;
+            private IConfigurationRepository configRepo;
+            private Mock<IPersonRepository> personRepoMock;
+            private IPersonRepository personRepo;
+            private Mock<IRoomRepository> roomRepoMock;
+            private IRoomRepository roomRepo;
+            private Mock<IEventRepository> eventRepoMock;
+            private IEventRepository eventRepo;
+            private Mock<IBookRepository> bookRepoMock;
+            private IBookRepository bookRepo;
+            private Mock<IRoleRepository> roleRepoMock;
+            private IRoleRepository roleRepo;
+            private ILogger logger;
+            private ICurrentUserFactory currentUserFactory;
+
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                sectionRepoMock = new Mock<ISectionRepository>();
+                sectionRepo = sectionRepoMock.Object;
+                studentRepoMock = new Mock<IStudentRepository>();
+                studentRepo = studentRepoMock.Object;
+                personRepoMock = new Mock<IPersonRepository>();
+                personRepo = personRepoMock.Object;
+                roomRepoMock = new Mock<IRoomRepository>();
+                roomRepo = roomRepoMock.Object;
+                stuRefDataRepoMock = new Mock<IStudentReferenceDataRepository>();
+                studentReferenceDataRepo = stuRefDataRepoMock.Object;
+                referenceDataRepoMock = new Mock<IReferenceDataRepository>();
+                referenceDataRepo = referenceDataRepoMock.Object;
+                courseRepoMock = new Mock<ICourseRepository>();
+                courseRepo = courseRepoMock.Object;
+                termRepoMock = new Mock<ITermRepository>();
+                termRepo = termRepoMock.Object;
+                studentConfigRepoMock = new Mock<IStudentConfigurationRepository>();
+                studentConfigRepo = studentConfigRepoMock.Object;
+                configRepoMock = new Mock<IConfigurationRepository>();
+                configRepo = configRepoMock.Object;
+                eventRepoMock = new Mock<IEventRepository>();
+                eventRepo = eventRepoMock.Object;
+                bookRepoMock = new Mock<IBookRepository>();
+                bookRepo = bookRepoMock.Object;
+
+                roleRepoMock = new Mock<IRoleRepository>();
+                roleRepo = roleRepoMock.Object;
+
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+
+                // Mock the adapter registry to return the midterm grading complete entity to dto adapter
+                var emptyAdapterRegistryMock = new Mock<IAdapterRegistry>();
+                var sectionGradingCompleteAdapter = new Student.Adapters.SectionMidtermGradingCompleteEntityToDtoAdapter(emptyAdapterRegistryMock.Object, logger);
+                adapterRegistryMock.Setup(x =>
+                    x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionMidtermGradingComplete,
+                        Ellucian.Colleague.Dtos.Student.SectionMidtermGradingComplete>()).Returns(sectionGradingCompleteAdapter);
+
+                currentUserFactory = new CurrentUserSetup.StudentUserFactory();
+
+                logger = new Mock<ILogger>().Object;
+
+                // Mock the section service
+                sectionCoordinationService = new SectionCoordinationService(adapterRegistry, sectionRepo, courseRepo, studentRepo, studentReferenceDataRepo,
+                    referenceDataRepo, termRepo, studentConfigRepo, configRepo, personRepo, roomRepo, eventRepo, bookRepo, currentUserFactory, roleRepo, logger);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetSectionMidtermGradingCompleteAsync_NullSectionId()
+            {
+                var dto = await sectionCoordinationService.GetSectionMidtermGradingCompleteAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(KeyNotFoundException))]
+            public async Task GetSectionMidtermGradingCompleteAsync_GetSectionFails()
+            {
+                // Test when the get section from the repository fails
+                string sectionId = "nullSection";
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(sectionId)).Returns(Task.FromResult<Section>(null));
+                var dto = await sectionCoordinationService.GetSectionMidtermGradingCompleteAsync(sectionId);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task GetSectionMidtermGradingCompleteAsync_PermissionFailure()
+            {
+                // Test when the the user does not have necessary permission
+                string sectionId = "NoFaculty";
+                // Section with no assigned faculty, so the current user will not be a faculty member
+                Section secEntity = new Section(sectionId, "crsId", "num", new DateTime(2010, 1, 1), 3, null, "title", "Inst",
+                        new List<OfferingDepartment> { new OfferingDepartment("DEPT1") }, new List<string> { "UG" }, "UG",
+                        new List<SectionStatusItem> { new SectionStatusItem(SectionStatus.Active, "A", new DateTime(2010, 1, 1)) });
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(sectionId)).Returns(Task.FromResult<Section>(secEntity));
+
+                // Current user is not a faculty member of the section
+                var dto = await sectionCoordinationService.GetSectionMidtermGradingCompleteAsync(sectionId);
+            }
+
+            [TestMethod]
+            public async Task GetSectionMidtermGradingCompleteAsync_SuccessfulGet()
+            {
+                // Test a successful get which will cover the conversion of the entity to the dto, as well as a succesful permission check
+                // when the current user is a faculty member.
+
+                // Assign the currrent user of the mocked current user factory as a faculty member of the section
+                string sectionId = "CurrentUser";
+                // Section with no assigned faculty, so the current user will not be a faculty member
+                Section secEntity = new Section(sectionId, "crsId", "num", new DateTime(2010, 1, 1), 3, null, "title", "Inst",
+                        new List<OfferingDepartment> { new OfferingDepartment("DEPT1") }, new List<string> { "UG" }, "UG",
+                        new List<SectionStatusItem> { new SectionStatusItem(SectionStatus.Active, "A", new DateTime(2010, 1, 1)) });
+                secEntity.AddFaculty("STU1");
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(sectionId)).Returns(Task.FromResult<Section>(secEntity));
+
+                // Mock a midterm grading complete entity that the repository will return
+                var entity = new Ellucian.Colleague.Domain.Student.Entities.SectionMidtermGradingComplete(sectionId);
+                entity.AddMidtermGrading1Complete("Oper1", new DateTimeOffset(2010, 1, 1, 1, 1, 1, new TimeSpan(-4,0,0)));
+                entity.AddMidtermGrading1Complete("Oper2", new DateTimeOffset(2010, 1, 2, 1, 1, 2, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading2Complete("Oper3", new DateTimeOffset(2010, 1, 3, 1, 1, 3, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading2Complete("Oper4", new DateTimeOffset(2010, 1, 4, 1, 1, 4, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading3Complete("Oper5", new DateTimeOffset(2010, 1, 5, 1, 1, 5, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading3Complete("Oper6", new DateTimeOffset(2010, 1, 6, 1, 1, 6, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading4Complete("Oper7", new DateTimeOffset(2010, 1, 7, 1, 1, 7, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading4Complete("Oper8", new DateTimeOffset(2010, 1, 8, 1, 1, 8, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading5Complete("Oper9", new DateTimeOffset(2010, 1, 9, 1, 1, 9, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading5Complete("Oper10", new DateTimeOffset(2010, 1, 10, 1, 1, 10, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading6Complete("Oper11", new DateTimeOffset(2010, 1, 11, 1, 1, 11, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading6Complete("Oper12", new DateTimeOffset(2010, 1, 12, 1, 1, 12, new TimeSpan(-4, 0, 0)));
+                sectionRepoMock.Setup(repo => repo.GetSectionMidtermGradingCompleteAsync(sectionId)).Returns
+                        (Task.FromResult<Ellucian.Colleague.Domain.Student.Entities.SectionMidtermGradingComplete>(entity));
+
+                var dto = await sectionCoordinationService.GetSectionMidtermGradingCompleteAsync(sectionId);
+
+                Assert.AreEqual(entity.SectionId, dto.SectionId);
+                Assert.AreEqual(entity.MidtermGrading1Complete.Count, dto.MidtermGrading1Complete.Count());
+                Assert.AreEqual(entity.MidtermGrading2Complete.Count, dto.MidtermGrading2Complete.Count());
+                Assert.AreEqual(entity.MidtermGrading3Complete.Count, dto.MidtermGrading3Complete.Count());
+                Assert.AreEqual(entity.MidtermGrading4Complete.Count, dto.MidtermGrading4Complete.Count());
+                Assert.AreEqual(entity.MidtermGrading5Complete.Count, dto.MidtermGrading5Complete.Count());
+                Assert.AreEqual(entity.MidtermGrading6Complete.Count, dto.MidtermGrading6Complete.Count());
+
+                Assert.AreEqual(entity.MidtermGrading1Complete[0].CompleteOperator, dto.MidtermGrading1Complete.ElementAt(0).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading1Complete[0].DateAndTime, dto.MidtermGrading1Complete.ElementAt(0).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading1Complete[1].CompleteOperator, dto.MidtermGrading1Complete.ElementAt(1).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading1Complete[1].DateAndTime, dto.MidtermGrading1Complete.ElementAt(1).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading2Complete[0].CompleteOperator, dto.MidtermGrading2Complete.ElementAt(0).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading2Complete[0].DateAndTime, dto.MidtermGrading2Complete.ElementAt(0).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading2Complete[1].CompleteOperator, dto.MidtermGrading2Complete.ElementAt(1).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading2Complete[1].DateAndTime, dto.MidtermGrading2Complete.ElementAt(1).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading3Complete[0].CompleteOperator, dto.MidtermGrading3Complete.ElementAt(0).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading3Complete[0].DateAndTime, dto.MidtermGrading3Complete.ElementAt(0).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading3Complete[1].CompleteOperator, dto.MidtermGrading3Complete.ElementAt(1).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading3Complete[1].DateAndTime, dto.MidtermGrading3Complete.ElementAt(1).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading4Complete[0].CompleteOperator, dto.MidtermGrading4Complete.ElementAt(0).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading4Complete[0].DateAndTime, dto.MidtermGrading4Complete.ElementAt(0).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading4Complete[1].CompleteOperator, dto.MidtermGrading4Complete.ElementAt(1).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading4Complete[1].DateAndTime, dto.MidtermGrading4Complete.ElementAt(1).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading5Complete[0].CompleteOperator, dto.MidtermGrading5Complete.ElementAt(0).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading5Complete[0].DateAndTime, dto.MidtermGrading5Complete.ElementAt(0).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading5Complete[1].CompleteOperator, dto.MidtermGrading5Complete.ElementAt(1).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading5Complete[1].DateAndTime, dto.MidtermGrading5Complete.ElementAt(1).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading6Complete[0].CompleteOperator, dto.MidtermGrading6Complete.ElementAt(0).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading6Complete[0].DateAndTime, dto.MidtermGrading6Complete.ElementAt(0).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading6Complete[1].CompleteOperator, dto.MidtermGrading6Complete.ElementAt(1).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading6Complete[1].DateAndTime, dto.MidtermGrading6Complete.ElementAt(1).DateAndTime);
+            }
+        }
+
+        [TestClass]
+        public class PostSectionMidtermGradingCompleteAsync : CurrentUserSetup
+        {
+            private SectionCoordinationService sectionCoordinationService;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<ISectionRepository> sectionRepoMock;
+            private ISectionRepository sectionRepo;
+            private Mock<IStudentRepository> studentRepoMock;
+            private IStudentRepository studentRepo;
+            private Mock<IStudentReferenceDataRepository> stuRefDataRepoMock;
+            private IStudentReferenceDataRepository studentReferenceDataRepo;
+            private Mock<IReferenceDataRepository> referenceDataRepoMock;
+            private IReferenceDataRepository referenceDataRepo;
+            private Mock<ICourseRepository> courseRepoMock;
+            private ICourseRepository courseRepo;
+            private Mock<ITermRepository> termRepoMock;
+            private ITermRepository termRepo;
+            private Mock<IStudentConfigurationRepository> studentConfigRepoMock;
+            private IStudentConfigurationRepository studentConfigRepo;
+            private Mock<IConfigurationRepository> configRepoMock;
+            private IConfigurationRepository configRepo;
+            private Mock<IPersonRepository> personRepoMock;
+            private IPersonRepository personRepo;
+            private Mock<IRoomRepository> roomRepoMock;
+            private IRoomRepository roomRepo;
+            private Mock<IEventRepository> eventRepoMock;
+            private IEventRepository eventRepo;
+            private Mock<IBookRepository> bookRepoMock;
+            private IBookRepository bookRepo;
+            private Mock<IRoleRepository> roleRepoMock;
+            private IRoleRepository roleRepo;
+            private ILogger logger;
+            private ICurrentUserFactory currentUserFactory;
+            private SectionMidtermGradingCompleteForPost postDto;
+
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                sectionRepoMock = new Mock<ISectionRepository>();
+                sectionRepo = sectionRepoMock.Object;
+                studentRepoMock = new Mock<IStudentRepository>();
+                studentRepo = studentRepoMock.Object;
+                personRepoMock = new Mock<IPersonRepository>();
+                personRepo = personRepoMock.Object;
+                roomRepoMock = new Mock<IRoomRepository>();
+                roomRepo = roomRepoMock.Object;
+                stuRefDataRepoMock = new Mock<IStudentReferenceDataRepository>();
+                studentReferenceDataRepo = stuRefDataRepoMock.Object;
+                referenceDataRepoMock = new Mock<IReferenceDataRepository>();
+                referenceDataRepo = referenceDataRepoMock.Object;
+                courseRepoMock = new Mock<ICourseRepository>();
+                courseRepo = courseRepoMock.Object;
+                termRepoMock = new Mock<ITermRepository>();
+                termRepo = termRepoMock.Object;
+                studentConfigRepoMock = new Mock<IStudentConfigurationRepository>();
+                studentConfigRepo = studentConfigRepoMock.Object;
+                configRepoMock = new Mock<IConfigurationRepository>();
+                configRepo = configRepoMock.Object;
+                eventRepoMock = new Mock<IEventRepository>();
+                eventRepo = eventRepoMock.Object;
+                bookRepoMock = new Mock<IBookRepository>();
+                bookRepo = bookRepoMock.Object;
+
+                roleRepoMock = new Mock<IRoleRepository>();
+                roleRepo = roleRepoMock.Object;
+
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+
+                // Mock the adapter registry to return the midterm grading complete entity to dto adapter
+                var emptyAdapterRegistryMock = new Mock<IAdapterRegistry>();
+                var sectionGradingCompleteAdapter = new Student.Adapters.SectionMidtermGradingCompleteEntityToDtoAdapter(emptyAdapterRegistryMock.Object, logger);
+                adapterRegistryMock.Setup(x =>
+                    x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionMidtermGradingComplete,
+                        Ellucian.Colleague.Dtos.Student.SectionMidtermGradingComplete>()).Returns(sectionGradingCompleteAdapter);
+
+                currentUserFactory = new CurrentUserSetup.StudentUserFactory();
+
+                logger = new Mock<ILogger>().Object;
+
+                postDto = new SectionMidtermGradingCompleteForPost()
+                {
+                    CompleteOperator = "0012345",
+                    DateAndTime = DateTimeOffset.Now,
+                    MidtermGradeNumber = 1
+                };
+
+                // Mock the section service
+                sectionCoordinationService = new SectionCoordinationService(adapterRegistry, sectionRepo, courseRepo, studentRepo, studentReferenceDataRepo,
+                    referenceDataRepo, termRepo, studentConfigRepo, configRepo, personRepo, roomRepo, eventRepo, bookRepo, currentUserFactory, roleRepo, logger);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task PostSectionMidtermGradingCompleteAsync_NullSectionId()
+            {
+                var dto = await sectionCoordinationService.PostSectionMidtermGradingCompleteAsync(null, postDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task PostSectionMidtermGradingCompleteAsync_Null_Dto()
+            {
+                var dto = await sectionCoordinationService.PostSectionMidtermGradingCompleteAsync("12345", null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task PostSectionMidtermGradingCompleteAsync_Null_Dto_MidtermGradeNumber()
+            {
+                postDto.MidtermGradeNumber = null;
+                var dto = await sectionCoordinationService.PostSectionMidtermGradingCompleteAsync("12345", postDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task PostSectionMidtermGradingCompleteAsync_Dto_MidtermGradeNumber_Too_Low()
+            {
+                postDto.MidtermGradeNumber = 0;
+                var dto = await sectionCoordinationService.PostSectionMidtermGradingCompleteAsync("12345", postDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task PostSectionMidtermGradingCompleteAsync_Dto_MidtermGradeNumber_Too_High()
+            {
+                postDto.MidtermGradeNumber = 7;
+                var dto = await sectionCoordinationService.PostSectionMidtermGradingCompleteAsync("12345", postDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task PostSectionMidtermGradingCompleteAsync_Null_Dto_CompleteOperator()
+            {
+                postDto.CompleteOperator = null;
+                var dto = await sectionCoordinationService.PostSectionMidtermGradingCompleteAsync("12345", postDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task PostSectionMidtermGradingCompleteAsync_Empty_Dto_CompleteOperator()
+            {
+                postDto.CompleteOperator = string.Empty;
+                var dto = await sectionCoordinationService.PostSectionMidtermGradingCompleteAsync("12345", postDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task PostSectionMidtermGradingCompleteAsync_Null_Dto_DateAndTime()
+            {
+                postDto.DateAndTime = null;
+                var dto = await sectionCoordinationService.PostSectionMidtermGradingCompleteAsync("12345", postDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task PostSectionMidtermGradingCompleteAsync_GetSection_returns_null()
+            {
+                // Test when the get section from the repository fails
+                string sectionId = "nullSection";
+                sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(new List<string>() { sectionId }, It.IsAny<bool>())).Returns(Task.FromResult<IEnumerable<Section>>(null));
+                var dto = await sectionCoordinationService.PostSectionMidtermGradingCompleteAsync(sectionId, postDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task PostSectionMidtermGradingCompleteAsync_GetSection_returns_empty_list()
+            {
+                // Test when the get section from the repository fails
+                string sectionId = "nullSection";
+                sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(new List<string>() { sectionId }, It.IsAny<bool>())).Returns(Task.FromResult<IEnumerable<Section>>(new List<Section>()));
+                var dto = await sectionCoordinationService.PostSectionMidtermGradingCompleteAsync(sectionId, postDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task PostSectionMidtermGradingCompleteAsync_GetSection_returns_list_with_null_section()
+            {
+                // Test when the get section from the repository fails
+                string sectionId = "nullSection";
+                sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(new List<string>() { sectionId }, It.IsAny<bool>())).Returns(Task.FromResult<IEnumerable<Section>>(new List<Section>() { null }));
+                var dto = await sectionCoordinationService.PostSectionMidtermGradingCompleteAsync(sectionId, postDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task PostSectionMidtermGradingCompleteAsync_PermissionFailure()
+            {
+                // Test when the the user does not have necessary permission
+                string sectionId = "NoFaculty";
+                // Section with no assigned faculty, so the current user will not be a faculty member
+                Section secEntity = new Section(sectionId, "crsId", "num", new DateTime(2010, 1, 1), 3, null, "title", "Inst",
+                        new List<OfferingDepartment> { new OfferingDepartment("DEPT1") }, new List<string> { "UG" }, "UG",
+                        new List<SectionStatusItem> { new SectionStatusItem(SectionStatus.Active, "A", new DateTime(2010, 1, 1)) });
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(sectionId)).Returns(Task.FromResult<Section>(secEntity));
+
+                // Current user is not a faculty member of the section
+                var dto = await sectionCoordinationService.PostSectionMidtermGradingCompleteAsync(sectionId, postDto);
+            }
+
+            [TestMethod]
+            public async Task PostSectionMidtermGradingCompleteAsync_SuccessfulPost()
+            {
+                // Test a successful post which will cover the conversion of the entity to the dto, as well as a succesful permission check
+                // when the current user is a faculty member.
+
+                // Assign the currrent user of the mocked current user factory as a faculty member of the section
+                string sectionId = "CurrentUser";
+                // Section with no assigned faculty, so the current user will not be a faculty member
+                Section secEntity = new Section(sectionId, "crsId", "num", new DateTime(2010, 1, 1), 3, null, "title", "Inst",
+                        new List<OfferingDepartment> { new OfferingDepartment("DEPT1") }, new List<string> { "UG" }, "UG",
+                        new List<SectionStatusItem> { new SectionStatusItem(SectionStatus.Active, "A", new DateTime(2010, 1, 1)) });
+                secEntity.AddFaculty("STU1");
+                sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(new List<string>() { sectionId }, It.IsAny<bool>())).Returns(Task.FromResult<IEnumerable<Section>>(new List<Section>() { secEntity }));
+
+                // Mock a midterm grading complete entity that the repository will return
+                var entity = new Ellucian.Colleague.Domain.Student.Entities.SectionMidtermGradingComplete(sectionId);
+                entity.AddMidtermGrading1Complete("Oper1", new DateTimeOffset(2010, 1, 1, 1, 1, 1, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading1Complete("Oper2", new DateTimeOffset(2010, 1, 2, 1, 1, 2, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading2Complete("Oper3", new DateTimeOffset(2010, 1, 3, 1, 1, 3, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading2Complete("Oper4", new DateTimeOffset(2010, 1, 4, 1, 1, 4, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading3Complete("Oper5", new DateTimeOffset(2010, 1, 5, 1, 1, 5, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading3Complete("Oper6", new DateTimeOffset(2010, 1, 6, 1, 1, 6, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading4Complete("Oper7", new DateTimeOffset(2010, 1, 7, 1, 1, 7, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading4Complete("Oper8", new DateTimeOffset(2010, 1, 8, 1, 1, 8, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading5Complete("Oper9", new DateTimeOffset(2010, 1, 9, 1, 1, 9, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading5Complete("Oper10", new DateTimeOffset(2010, 1, 10, 1, 1, 10, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading6Complete("Oper11", new DateTimeOffset(2010, 1, 11, 1, 1, 11, new TimeSpan(-4, 0, 0)));
+                entity.AddMidtermGrading6Complete("Oper12", new DateTimeOffset(2010, 1, 12, 1, 1, 12, new TimeSpan(-4, 0, 0)));
+                sectionRepoMock.Setup(repo => repo.PostSectionMidtermGradingCompleteAsync(sectionId, postDto.MidtermGradeNumber, postDto.CompleteOperator, postDto.DateAndTime)).Returns
+                        (Task.FromResult<Ellucian.Colleague.Domain.Student.Entities.SectionMidtermGradingComplete>(entity));
+
+                var dto = await sectionCoordinationService.PostSectionMidtermGradingCompleteAsync(sectionId, postDto);
+
+                Assert.AreEqual(entity.SectionId, dto.SectionId);
+                Assert.AreEqual(entity.MidtermGrading1Complete.Count, dto.MidtermGrading1Complete.Count());
+                Assert.AreEqual(entity.MidtermGrading2Complete.Count, dto.MidtermGrading2Complete.Count());
+                Assert.AreEqual(entity.MidtermGrading3Complete.Count, dto.MidtermGrading3Complete.Count());
+                Assert.AreEqual(entity.MidtermGrading4Complete.Count, dto.MidtermGrading4Complete.Count());
+                Assert.AreEqual(entity.MidtermGrading5Complete.Count, dto.MidtermGrading5Complete.Count());
+                Assert.AreEqual(entity.MidtermGrading6Complete.Count, dto.MidtermGrading6Complete.Count());
+
+                Assert.AreEqual(entity.MidtermGrading1Complete[0].CompleteOperator, dto.MidtermGrading1Complete.ElementAt(0).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading1Complete[0].DateAndTime, dto.MidtermGrading1Complete.ElementAt(0).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading1Complete[1].CompleteOperator, dto.MidtermGrading1Complete.ElementAt(1).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading1Complete[1].DateAndTime, dto.MidtermGrading1Complete.ElementAt(1).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading2Complete[0].CompleteOperator, dto.MidtermGrading2Complete.ElementAt(0).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading2Complete[0].DateAndTime, dto.MidtermGrading2Complete.ElementAt(0).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading2Complete[1].CompleteOperator, dto.MidtermGrading2Complete.ElementAt(1).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading2Complete[1].DateAndTime, dto.MidtermGrading2Complete.ElementAt(1).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading3Complete[0].CompleteOperator, dto.MidtermGrading3Complete.ElementAt(0).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading3Complete[0].DateAndTime, dto.MidtermGrading3Complete.ElementAt(0).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading3Complete[1].CompleteOperator, dto.MidtermGrading3Complete.ElementAt(1).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading3Complete[1].DateAndTime, dto.MidtermGrading3Complete.ElementAt(1).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading4Complete[0].CompleteOperator, dto.MidtermGrading4Complete.ElementAt(0).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading4Complete[0].DateAndTime, dto.MidtermGrading4Complete.ElementAt(0).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading4Complete[1].CompleteOperator, dto.MidtermGrading4Complete.ElementAt(1).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading4Complete[1].DateAndTime, dto.MidtermGrading4Complete.ElementAt(1).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading5Complete[0].CompleteOperator, dto.MidtermGrading5Complete.ElementAt(0).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading5Complete[0].DateAndTime, dto.MidtermGrading5Complete.ElementAt(0).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading5Complete[1].CompleteOperator, dto.MidtermGrading5Complete.ElementAt(1).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading5Complete[1].DateAndTime, dto.MidtermGrading5Complete.ElementAt(1).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading6Complete[0].CompleteOperator, dto.MidtermGrading6Complete.ElementAt(0).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading6Complete[0].DateAndTime, dto.MidtermGrading6Complete.ElementAt(0).DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading6Complete[1].CompleteOperator, dto.MidtermGrading6Complete.ElementAt(1).CompleteOperator);
+                Assert.AreEqual(entity.MidtermGrading6Complete[1].DateAndTime, dto.MidtermGrading6Complete.ElementAt(1).DateAndTime);
+            }
+        }
+
     }
 }

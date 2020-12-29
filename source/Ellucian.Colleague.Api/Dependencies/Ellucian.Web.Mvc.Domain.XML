@@ -441,6 +441,15 @@
             The hidden state
             </value>
         </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Page.Disabled">
+            <summary>
+            Indicates if this page is disabled for all users. Differs from Hidden in that page cannot be 
+            accessed directly via URL as well as being hidden from navigation and breadcrumbs.
+            </summary>
+            <value>
+            The disabled state
+            </value>
+        </member>
         <member name="P:Ellucian.Web.Mvc.Domain.Entities.Page.Subpages">
             <summary>
             The subpages that appear on this page.
@@ -640,6 +649,14 @@
             The application title.
             </value>
         </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.GlobalMessage">
+            <summary>
+            Gets or sets the global message to be displayed one every page.
+            </summary>
+            <value>
+            The global message.
+            </value>
+        </member>
         <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.UniqueCookieId">
             <summary>
             Gets or sets the unique cookie identifier.
@@ -738,6 +755,100 @@
             <value>
             The Guest Password
             </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.SelfServiceFormAuthentication">
+            <summary>
+            Whether or not to use the Self Service Form Authentication option
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.UseCloudThemeEditor">
+            <summary>
+            Whether or not to use the cloud theme editor
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.CloudThemeEditorBaseUrl">
+            <summary>
+            The base url of the ellucian cloud theme editor
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.ClientApiId">
+            <summary>
+            The client's cloud theme editor Api Id
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.ClientThemeName">
+            <summary>
+            The client's cloud theme editor theme name
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.ClientThemeTemplateName">
+            <summary>
+            The client's cloud theme editor template name
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.UseRecaptcha">
+            <summary>
+            Whether or not to use recaptcha
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.RecaptchaSiteKey">
+            <summary>
+            Recaptcha Site Key
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.RecaptchaSecretKey">
+            <summary>
+            Recaptcha Secret Key
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.SecuritySystemLoginUsername">
+            <summary>
+            Gets or sets the username used by security operations (e.g. password reset) in Self Service.
+            </summary>
+            <value>
+            The Security System Login Username
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.SpecialIconPath">
+            <summary>
+            Special Icon Path
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.OverridePlanningRegistrationWithBaselineRegistration">
+            <summary>
+            Use Baseline Registration instead of Planning (if licensed)
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.SecuritySystemLoginPassword">
+            <summary>
+            Gets or sets the password used by security operations (e.g. password reset) in Self Service.
+            </summary>
+            <value>
+            The Security System Login Username
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.UseMalwareScanner">
+            <summary>
+            Whether or not to use a malware scanner while uploading attachments
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.MalwareScannerType">
+            <summary>
+            Gets or sets the selected malware scanner type
+            </summary>
+            <value>
+            The selected scanner type
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.MalwareScannerExePath">
+            <summary>
+            Full directory path to the malware scanner executable
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.MalwareScannerArgTemplate">
+            <summary>
+            Additional arguments to be passed to the malware scanner
+            </summary>
         </member>
         <member name="T:Ellucian.Web.Mvc.Domain.Entities.Site">
             <summary>

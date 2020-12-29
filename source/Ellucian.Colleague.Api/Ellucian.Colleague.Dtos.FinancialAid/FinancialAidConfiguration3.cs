@@ -1,4 +1,4 @@
-﻿/*Copyright 2016-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2016-2019 Ellucian Company L.P. and its affiliates.*/
 using System.Collections.Generic;
 
 namespace Ellucian.Colleague.Dtos.FinancialAid
@@ -181,6 +181,17 @@ namespace Ellucian.Colleague.Dtos.FinancialAid
         /// Flag indicating whether to suppress disbursement info display
         /// </summary>
         public bool SuppressDisbursementInfoDisplay { get; set; }
+
+        /// <summary>
+        /// Flag to indicate whether to display budget breakdown on student award letter
+        /// </summary>
+        public bool ShowBudgetDetailsOnAwardLetter { get; set; }
+
+        /// <summary>
+        /// Budget details description string to display in the budget breakdown view on 
+        /// award letter
+        /// </summary>
+        public string StudentAwardLetterBudgetDetailsDescription { get; set; }
 
     }
 }

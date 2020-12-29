@@ -1,22 +1,17 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Runtime.Caching;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
-using Ellucian.Colleague.Domain.Student.Entities.Requirements;
-using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Data.Colleague;
-using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Web.Cache;
-using Ellucian.Web.Http.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using System.Threading.Tasks;
-using System.Threading;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
@@ -24,6 +19,7 @@ using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Data.Base.DataContracts;
+using Ellucian.Colleague.Domain.Base.Transactions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -38,15 +34,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         Mock<BaseColleagueRepository> _baseColleagueRepo;
        // Mock<IColleagueDataReader> dataReader;
         Mock<StudentPaymentRepository> _IStudentPaymentRepository;
-        Mock<StudentPaymentRepository> StudentpaymentRepository;
 
         Collection<ArPayItemsIntg> studentPaymentsDataContracts;
         ArPayItemsIntg studentPaymentDataContract;
         string[] studentPaymentsIds = new[] { "234", "567" };
         string[] cashRcptsIds = new[] { "21" };
-        string[] arInvoiceItemsIds = new[] { "223" };
-        ArInvoiceItems arInvoiceItemDataContract;
-        ArInvoices arInvoiceDataContract;
         CashRcpts cashRcptDataContract;
         Base.DataContracts.LdmDefaults ldmDefaultsDataContract;
         StudentPayment studentPayment;
@@ -81,7 +73,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 ArpIntgPaymentDate = new DateTime(2017, 01, 13),
                 ArpIntgAmt = 10m,
                 ArpIntgAmtCurrency = "USD",
-                ArpIntgDistrMthd = "EVEL",
+                ArpIntgDistrMthd = "ELEV",
                 ArpIntgComments = "This is a comment"
             };
 
@@ -100,8 +92,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 ArpIntgPaymentDate = new DateTime(2017, 01, 15),
                 ArpIntgAmt = 15m,
                 ArpIntgAmtCurrency = "CAD",
-                ArpIntgDistrMthd = "EVEL",
-                ArpIntgComments = "This is a comment12345"
+                ArpIntgDistrMthd = "ELEV",
+                ArpIntgComments = "This is a comment12345",
+                ArpIntgOriginatedOn = new DateTime(2017, 01, 15),
+                ArpIntgOverrideDesc = "Override Description",
+                ArpIntgUsage = "taxReportingOnly"
             };
 
             studentPaymentsDataContracts.Add(studentPaymentDataContract);
@@ -117,7 +112,10 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 PaymentID = studentPaymentDataContract.ArpIntgArPaymentsIds.Any() ? studentPaymentDataContract.ArpIntgArPaymentsIds.ElementAt(0) : string.Empty,
                 Term = studentPaymentDataContract.ArpIntgTerm,
                 ChargeFromElevate = false,
-                DistributionCode = "EVEL"
+                DistributionCode = "ELEV",
+                OriginatedOn = new DateTime(2017, 01, 15),
+                OverrideDescription = "Override Description",
+                Usage = "taxReportingOnly"
             };
 
             updateResponse = new PostStudentPaymentsResponse()
@@ -129,38 +127,52 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             cashRcptDataContract = new CashRcpts()
             {
                 Recordkey = "1",
-                RcptTenderGlDistrCode = "EVEL"
-            };
-
-            arInvoiceItemDataContract = new ArInvoiceItems()
-            {
-                Recordkey = "2",
-                InviInvoice = "3"
-            };
-
-            arInvoiceDataContract = new ArInvoices()
-            {
-                Recordkey = "3"
+                RcptTenderGlDistrCode = "ELEV"
             };
 
             ldmDefaultsDataContract = new Base.DataContracts.LdmDefaults()
             {
                 Recordkey = "LDM.DEFAULTS",
-                LdmdPaymentMethod = "EVEL",
+                LdmdPaymentMethod = "ELEV",
                 LdmdDefaultArType = "01"
+            };
+
+            var arPaymentsDictionary = new Dictionary<string, string>()
+            {
+                { "33333", cashRcptsIds[0] }
             };
 
             _studentPaymentRepository = BuildValidPersonVisaRepository();
 
             dataReaderMock.Setup(m => m.SelectAsync("CASH.RCPTS", It.IsAny<string>())).ReturnsAsync(cashRcptsIds);
             dataReaderMock.Setup(i => i.ReadRecordAsync<CashRcpts>(cashRcptsIds[0], It.IsAny<bool>())).ReturnsAsync(cashRcptDataContract);
-
-            dataReaderMock.Setup(m => m.SelectAsync("AR.INVOICES.ITEMS", It.IsAny<string>())).ReturnsAsync(arInvoiceItemsIds);
-            dataReaderMock.Setup(i => i.ReadRecordAsync<ArInvoiceItems>("2", It.IsAny<bool>())).ReturnsAsync(arInvoiceItemDataContract);
-            dataReaderMock.Setup(i => i.ReadRecordAsync<ArInvoices>("3", It.IsAny<bool>())).ReturnsAsync(arInvoiceDataContract);
-
+            dataReaderMock.Setup(i => i.ReadRecordColumnsAsync("AR.PAYMENTS", It.IsAny<string>(), It.IsAny<string[]>())).ReturnsAsync(arPaymentsDictionary);
             dataReaderMock.Setup(i => i.ReadRecord<LdmDefaults>("CORE.PARMS", "LDM.DEFAULTS",It.IsAny<bool>())).Returns(ldmDefaultsDataContract);
-            
+
+            var recordKeys = studentPaymentsDataContracts.Select(x => x.Recordkey).ToList();
+
+            var resp = new GetCacheApiKeysResponse()
+            {
+                Offset = 0,
+                Limit = 2,
+                CacheName = "AllStudentPayments",
+                Entity = "AR.PAY.ITEMS.INTG",
+                Sublist = recordKeys,
+                TotalCount = 7,
+                KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    }
+                }
+
+            };
+            iColleagueTransactionInvokerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                .ReturnsAsync(resp);
 
         }
 
@@ -348,6 +360,31 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             dataReaderMock.Setup(i => i.BulkReadRecordAsync<ArPayItemsIntg>("AR.PAY.ITEMS.INTG",
                 It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(studentPaymentsDataContracts);
 
+            var recordKeys = studentPaymentsDataContracts.Select(x => x.Recordkey).ToList();
+
+            var resp = new GetCacheApiKeysResponse()
+            {
+                Offset = 0,
+                Limit = 2,
+                CacheName = "AllStudentPayments",
+                Entity = "AR.PAY.ITEMS.INTG",
+                Sublist = recordKeys, 
+                TotalCount = 7,
+                KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    }
+                }
+
+            };
+            iColleagueTransactionInvokerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                .ReturnsAsync(resp);
+
             var actuals = await _studentPaymentRepository.GetAsync2(0, 100, true);
 
             Assert.IsNotNull(actuals.Item1);
@@ -428,14 +465,28 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
 
         [TestMethod]
-        public async Task StudentPaymentRepoTest_GetAsync2_AllFilters()
+        public async Task StudentPaymentRepoTest_GetAsync2_FilterUsage()
         {
 
-            dataReaderMock.Setup(x => x.SelectAsync("AR.PAY.ITEMS.INTG", "WITH ARP.INTG.PERSON.ID = '123' AND WITH ARP.INTG.TERM = '2016/FA' AND WITH ARP.INTG.DISTR.MTHD = 'WEBA' AND WITH ARP.INTG.PAYMENT.TYPE = 'sponsor' AND WITH ARP.INTG.AR.TYPE = 'AP'")).ReturnsAsync(studentPaymentsIds);
+            dataReaderMock.Setup(x => x.SelectAsync("AR.PAY.ITEMS.INTG", "WITH ARP.INTG.USAGE = 'taxReportingOnly'")).ReturnsAsync(studentPaymentsIds);
             dataReaderMock.Setup(i => i.BulkReadRecordAsync<ArPayItemsIntg>("AR.PAY.ITEMS.INTG",
                 It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(studentPaymentsDataContracts);
 
-            var actuals = await _studentPaymentRepository.GetAsync2(0, 100, true, "123", "2016/FA", "WEBA", "sponsor", "AP");
+            var actuals = await _studentPaymentRepository.GetAsync2(0, 100, true, "", "", "", "", "", "taxReportingOnly");
+
+            Assert.IsNotNull(actuals.Item1);
+            Assert.AreEqual(studentPaymentsDataContracts.Count(), actuals.Item1.Count());
+        }
+
+        [TestMethod]
+        public async Task StudentPaymentRepoTest_GetAsync2_AllFilters()
+        {
+
+            dataReaderMock.Setup(x => x.SelectAsync("AR.PAY.ITEMS.INTG", "WITH ARP.INTG.PERSON.ID = '123' AND WITH ARP.INTG.TERM = '2016/FA' AND WITH ARP.INTG.DISTR.MTHD = 'WEBA' AND WITH ARP.INTG.PAYMENT.TYPE = 'sponsor' AND WITH ARP.INTG.AR.TYPE = 'AP' AND WITH ARP.INTG.USAGE = 'taxReportingOnly'")).ReturnsAsync(studentPaymentsIds);
+            dataReaderMock.Setup(i => i.BulkReadRecordAsync<ArPayItemsIntg>("AR.PAY.ITEMS.INTG",
+                It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(studentPaymentsDataContracts);
+
+            var actuals = await _studentPaymentRepository.GetAsync2(0, 100, true, "123", "2016/FA", "WEBA", "sponsor", "AP", "taxReportingOnly");
 
             Assert.IsNotNull(actuals.Item1);
             Assert.AreEqual(studentPaymentsDataContracts.Count(), actuals.Item1.Count());
@@ -576,7 +627,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             var actual = await _studentPaymentRepository.CreateAsync(studentPayment);
         }
 
-
         [TestMethod]
         [ExpectedException(typeof(InvalidOperationException))]
         public async Task StudentPaymentRepoTest_CreateAsync2_RecordExistsError()
@@ -605,7 +655,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             var actual = await _studentPaymentRepository.CreateAsync2(studentPayment);
         }
-
 
         public IStudentPaymentRepository BuildValidPersonVisaRepository()
         {

@@ -1,4 +1,5 @@
-﻿// Copyright 2014-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -6,8 +7,6 @@ using System.Linq;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
-using Ellucian.Colleague.Domain.Student;
-using Ellucian.Colleague.Domain.Student.Tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System.Threading.Tasks;
@@ -34,8 +33,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         Dictionary<string, RecordKeyLookupResult> recordLookupDict;
         UpdateAdmApplStatusesResponse response;
         Mock<IColleagueTransactionInvoker> _transManagerMock;
-
-
 
         //used throughout
         private string applicationGuid;
@@ -67,14 +64,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         [TestMethod]
         public async Task ApplicationStatusRepository_GetApplicationStatusesAsync()
         {
-            var actualResult = await _applicationStatusRepository.GetApplicationStatusesAsync(offset, limit, applicationGuid, It.IsAny<bool>());
+            var actualResult = await _applicationStatusRepository.GetApplicationStatusesAsync(offset, limit, applicationGuid, It.IsAny<string[]>(), It.IsAny<DateTimeOffset>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>());
             Assert.IsNotNull(actualResult);
         }
 
         [TestMethod]
         public async Task ApplicationStatusRepository_GetApplicationStatusesAsync_No_ApplicationId()
         {
-            var actualResult = await _applicationStatusRepository.GetApplicationStatusesAsync(offset, limit, "", It.IsAny<bool>());
+            var actualResult = await _applicationStatusRepository.GetApplicationStatusesAsync(offset, limit, "", It.IsAny<string[]>(), It.IsAny<DateTimeOffset>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>());
             Assert.IsNotNull(actualResult);
         }
 
@@ -84,7 +81,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             applIds = new string[] { };
             dataReaderMock.Setup(repo => repo.SelectAsync("APPLICATIONS", It.IsAny<string>(), It.IsAny<string[]>(), "?", It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(applIds);
 
-            var actualResult = await _applicationStatusRepository.GetApplicationStatusesAsync(offset, limit, "", It.IsAny<bool>());
+            var actualResult = await _applicationStatusRepository.GetApplicationStatusesAsync(offset, limit, "", It.IsAny<string[]>(), It.IsAny<DateTimeOffset>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>());
             Assert.IsNotNull(actualResult);
         }
 

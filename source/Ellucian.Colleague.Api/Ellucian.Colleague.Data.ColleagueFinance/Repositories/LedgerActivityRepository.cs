@@ -1,8 +1,12 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Data.Colleague.Repositories;
@@ -13,19 +17,25 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
     /// <summary>
-    /// This class implements the IRequisitionRepository interface
+    /// This class implements the ILedgerActivityRepository interface
     /// </summary>
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class LedgerActivityRepository : BaseColleagueRepository, ILedgerActivityRepository
-    {       
+    {
+        private const string AllLedgerActivitiesCache = "AllLedgerActivities";
+        private const int AllLedgerActivitiesCacheTimeout = 20; // Clear from cache every 20 minutes
+        private string institutionName = string.Empty;
+        private ApplValcodes sourceCodes = null;
+        private string hostCountry = null;
+        private Ellucian.Data.Colleague.DataContracts.IntlParams _internationalParameters = null;
+
         /// <summary>
-        /// The constructor to instantiate a requisition repository object
+        /// The constructor to instantiate a LedgerActivity repository object
         /// </summary>
         /// <param name="cacheProvider">Pass in an ICacheProvider object</param>
         /// <param name="transactionFactory">Pass in an IColleagueTransactionFactory object</param>
@@ -33,8 +43,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         public LedgerActivityRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
         {
-            
         }
+
+        #region public methods
 
         /// <summary>
         /// Gets general ledger activities.
@@ -55,55 +66,72 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             string glaFyrFileName = string.Format("GLA.{0}", fiscalYear);
             string glpFyrFileName = string.Format("GLP.{0}", fiscalYear);
-            string[] glaFyrIds = null;
+
             Collection<GlaFyr> glaDataContracts = null;
             Collection<GlpFyr> glpDataContracts = null;
+            int totalCount = 0;
+
+            string glCriteria = string.Empty;
 
             List<GlaFyr> glaFyrFiltered = null;
 
-            if(!string.IsNullOrEmpty(reportingSegment))
+            if (!string.IsNullOrEmpty(reportingSegment))
             {
                 var repSegment = await BuildReportingSegment();
-                if(!repSegment.Equals(reportingSegment, StringComparison.OrdinalIgnoreCase))
+                if (!repSegment.Equals(reportingSegment, StringComparison.OrdinalIgnoreCase))
                 {
-                    throw new KeyNotFoundException(string.Format("Reporting segment not found for {0}.", reportingSegment));
+                    // throw new KeyNotFoundException(string.Format("Reporting segment not found for {0}.", reportingSegment));
+                    return new Tuple<IEnumerable<GeneralLedgerActivity>, int>(new List<GeneralLedgerActivity>(), 0);
                 }
             }
 
-            string glaFyrKeysCacheKey = string.Concat("AllLedgerActivityGlaFyrKeys", fiscalYear, fiscalPeriod, fiscalPeriodYear, transactionDate, reportingSegment);
+            string ledgerActivitiesCacheKey = CacheSupport.BuildCacheKey(AllLedgerActivitiesCache, fiscalYear, fiscalPeriod, fiscalPeriodYear, transactionDate, reportingSegment);
 
-            if (offset == 0 && ContainsKey(BuildFullCacheKey(glaFyrKeysCacheKey)))
+            var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+                  this,
+                  ContainsKey,
+                  GetOrAddToCacheAsync,
+                  AddOrUpdateCacheAsync,
+                  transactionInvoker,
+                  ledgerActivitiesCacheKey,
+                  glaFyrFileName,
+                  offset,
+                  limit,
+                  AllLedgerActivitiesCacheTimeout,
+
+                  async () =>
+                  {
+                      if (string.IsNullOrEmpty(fiscalPeriod) && string.IsNullOrEmpty(transactionDate))
+                          glCriteria = string.Empty;
+                      else if (!string.IsNullOrEmpty(fiscalPeriod) && string.IsNullOrEmpty(transactionDate))
+                      {
+                          var daysInMonth = DateTime.DaysInMonth(Convert.ToInt32(fiscalYear), Convert.ToInt32(fiscalPeriod));
+
+                          var startOn = await GetUnidataFormattedDate(new DateTime(Convert.ToInt32(fiscalPeriodYear), Convert.ToInt32(fiscalPeriod), 1).ToString());
+                          var endOn = await GetUnidataFormattedDate(new DateTime(Convert.ToInt32(fiscalPeriodYear), Convert.ToInt32(fiscalPeriod), daysInMonth).ToString());
+
+                          glCriteria = string.Format("WITH GLA.TR.DATE GE '{0}' AND WITH GLA.TR.DATE LE '{1}'", startOn, endOn);
+                      }
+                      else if (!string.IsNullOrEmpty(transactionDate))
+                          glCriteria = (string.Format("WITH GLA.TR.DATE EQ '{0}'", transactionDate));
+
+                      return new CacheSupport.KeyCacheRequirements()
+                      {
+                          criteria = glCriteria,
+                      };
+                  }    
+            );
+
+            if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
             {
-                ClearCache(new List<string> { glaFyrKeysCacheKey });
+                return new Tuple<IEnumerable<GeneralLedgerActivity>, int>(new List<GeneralLedgerActivity>(), 0);
             }
-            glaFyrIds =  await GetOrAddToCacheAsync<string []>(glaFyrKeysCacheKey,
-                async () =>
-                {
-                    if (string.IsNullOrEmpty(fiscalPeriod) && string.IsNullOrEmpty(transactionDate))
-                    {
-                        glaFyrIds = await DataReader.SelectAsync(glaFyrFileName, string.Empty);
-                    }
-                    else if (!string.IsNullOrEmpty(fiscalPeriod) && string.IsNullOrEmpty(transactionDate))
-                    {
-                        var daysInMonth = DateTime.DaysInMonth(Convert.ToInt32(fiscalYear), Convert.ToInt32(fiscalPeriod));
 
-                        var startOn = await GetUnidataFormattedDate(new DateTime(Convert.ToInt32(fiscalPeriodYear), Convert.ToInt32(fiscalPeriod), 1).ToString());
-                        var endOn = await GetUnidataFormattedDate(new DateTime(Convert.ToInt32(fiscalPeriodYear), Convert.ToInt32(fiscalPeriod), daysInMonth).ToString());
+            var subListIds = keyCache.Sublist.ToArray();
+            totalCount = keyCache.TotalCount.Value;
 
-                        glaFyrIds = await DataReader.SelectAsync(glaFyrFileName, string.Format("WITH GLA.TR.DATE GE '{0}' AND WITH GLA.TR.DATE LE '{1}'", startOn, endOn));
-                    }
-                    else if (!string.IsNullOrEmpty(transactionDate))
-                    {
-                        glaFyrIds = await DataReader.SelectAsync(glaFyrFileName, string.Format("WITH GLA.TR.DATE EQ '{0}'", transactionDate));
-                    }
-                    glaFyrIds.ToList().Sort();
-                    return glaFyrIds;
-                });
-
-            var subListIds = glaFyrIds.Skip(offset).Take(limit);
-
-            glaDataContracts = await DataReader.BulkReadRecordAsync<GlaFyr>(glaFyrFileName, subListIds.ToArray());
-            var glpFyrKeys = await DataReader.SelectAsync(glpFyrFileName, "WITH GLP.POOLEE.ACCTS.LIST = '?'", subListIds.ToArray());
+            glaDataContracts = await DataReader.BulkReadRecordAsync<GlaFyr>(glaFyrFileName, subListIds);
+            var glpFyrKeys = await DataReader.SelectAsync(glpFyrFileName, "WITH GLP.POOLEE.ACCTS.LIST = '?'", subListIds);
             if (glpFyrKeys.Any())
                 glpDataContracts = await DataReader.BulkReadRecordAsync<GlpFyr>(glpFyrFileName, glpFyrKeys.ToArray(), true);
             glaFyrFiltered = glaDataContracts.ToList();
@@ -114,9 +142,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             Collection<DataContracts.Projects> projectContracts = null;
             Collection<DataContracts.ProjectsCf> grantsContracts = null;
             Collection<DataContracts.GlAccts> glAcctsContracts = null;
+
             if (personIds != null && personIds.Any())
             {
-                personContracts = await DataReader.BulkReadRecordAsync<Person>("PERSON", personIds);
+                personContracts = await DataReader.BulkReadRecordAsync<Person>("PERSON", personIds);          
                 instContracts = await DataReader.BulkReadRecordAsync<Institutions>("INSTITUTIONS", personIds);
             }
             string[] projectIds = glaDataContracts.Where(repo => !string.IsNullOrWhiteSpace(repo.GlaProjectsIds)).Select(id => id.GlaProjectsIds).Distinct().ToArray();
@@ -132,84 +161,218 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             List<GeneralLedgerActivity> ledgerActivities = new List<GeneralLedgerActivity>();
 
-            if(glaFyrFiltered != null && glaFyrFiltered.Any())
+            if (glaFyrFiltered != null && glaFyrFiltered.Any())
             {
+                RepositoryException exception = null;
+
                 foreach (var glaFyr in glaFyrFiltered)
                 {
-                    Person person = null;
-                    Institutions inst = null;
-                    if (personContracts != null)
-                    { 
-                        person = personContracts.FirstOrDefault(p => p.Recordkey == glaFyr.GlaAcctId);
-                    }
-                    if (instContracts != null)
+                    try
                     {
-                        inst = instContracts.FirstOrDefault(i => i.Recordkey == glaFyr.GlaAcctId);
-                    }
-                    string personGuid = string.Empty;
-                    string corpFlag = string.Empty;
-                    string instFlag = string.Empty;
-                    if (!string.IsNullOrEmpty(glaFyr.GlaAcctId))
-                    {
-                        if (person != null)
+                        Person person = null;
+                        Institutions inst = null;
+                        if (personContracts != null)
                         {
-                            personGuid = person.RecordGuid;
-                            if (!string.IsNullOrEmpty(person.PersonCorpIndicator) && person.PersonCorpIndicator.ToUpper().Equals("Y", StringComparison.OrdinalIgnoreCase))
+                            person = personContracts.FirstOrDefault(p => p.Recordkey == glaFyr.GlaAcctId);
+                        }
+                        if (instContracts != null)
+                        {
+                            inst = instContracts.FirstOrDefault(i => i.Recordkey == glaFyr.GlaAcctId);
+                        }
+                        string personGuid = string.Empty;
+                        string corpFlag = string.Empty;
+                        string instFlag = string.Empty;
+                        if (!string.IsNullOrEmpty(glaFyr.GlaAcctId))
+                        {
+                            if (person != null)
                             {
-                                corpFlag = "Y";
-                                if (inst != null)
+                                personGuid = person.RecordGuid;
+                                if (!string.IsNullOrEmpty(person.PersonCorpIndicator) && person.PersonCorpIndicator.ToUpper().Equals("Y", StringComparison.OrdinalIgnoreCase))
                                 {
-                                    instFlag = "Y";
+                                    corpFlag = "Y";
+                                    if (inst != null)
+                                    {
+                                        instFlag = "Y";
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    var description = glaFyr.GlaDescription;
-                    if (string.IsNullOrEmpty(description)) description = glaFyr.GlaRefNo;
-                    if (string.IsNullOrEmpty(description)) description = glaFyr.Recordkey;
-                    GeneralLedgerActivity ledgerActivity = new GeneralLedgerActivity(glaFyr.RecordGuid, glaFyr.Recordkey, description, glaFyr.GlaSysDate, glaFyr.GlaTrDate, glaFyr.GlaDebit, glaFyr.GlaCredit);
-                    ledgerActivity.GlaSource = await BuildGlaSourceCode(glaFyr.GlaSource);
-                    ledgerActivity.ReportingSegment = await BuildReportingSegment();
-                    ledgerActivity.GlaRefNumber = glaFyr.GlaRefNo;
-                    ledgerActivity.GlaAccountId = personGuid;
-                    ledgerActivity.GlaCorpFlag = corpFlag;
-                    ledgerActivity.GlaInstFlag = instFlag;
-                    ledgerActivity.HostCountry = await BuildHostCountry();
-                    ledgerActivity.ProjectId = glaFyr.GlaProjectsIds;
-                    if (!string.IsNullOrEmpty(glaFyr.GlaProjectsIds) && projectContracts != null)
-                    {
-                        var projContract = projectContracts.FirstOrDefault(pr => pr.Recordkey == glaFyr.GlaProjectsIds);
-                        if (projContract != null)
+                        var description = glaFyr.GlaDescription;
+                        if (string.IsNullOrEmpty(description)) description = glaFyr.GlaRefNo;
+                        if (string.IsNullOrEmpty(description)) description = glaFyr.Recordkey;
+
+                        var validationException = PreValidateLedgerActivity(glaFyr, description);
+                        if (validationException != null && validationException.Errors != null && validationException.Errors.Any())
                         {
-                            ledgerActivity.ProjectRefNo = projContract.PrjRefNo;
-                            ledgerActivity.ProjectGuid = projContract.RecordGuid;
+                            if (exception == null)
+                                exception = validationException;
+                            else
+                                exception.AddErrors(validationException.Errors);
+                            continue;
                         }
-                    }
-                    if (!string.IsNullOrEmpty(glaFyr.GlaProjectsIds) && grantsContracts != null)
-                    {
-                        var grantContract = grantsContracts.FirstOrDefault(pr => pr.Recordkey == glaFyr.GlaProjectsIds);
-                        if (grantContract != null) ledgerActivity.GrantsGuid = grantContract.RecordGuid;
-                    }
-                    if (glpDataContracts != null)
-                    {
-                        var glpContract = glpDataContracts.FirstOrDefault(glp => glp.GlpPooleeAcctsList.Contains(glaFyr.Recordkey));
-                        if (glpContract != null) ledgerActivity.IsPooleeAcct = glpContract != null ? true : false;
-                    }
-                    if (glAcctsContracts != null)
-                    {
-                        var glAccountNumber = glaFyr.Recordkey.Split('*')[0];
-                        var glAcctContract = glAcctsContracts.FirstOrDefault(gla => gla.Recordkey == glAccountNumber);
-                        if (glAcctContract != null) ledgerActivity.AccountingStringGuid = glAcctContract.RecordGuid;
+                        var ledgerActivity = new GeneralLedgerActivity(glaFyr.RecordGuid, glaFyr.Recordkey, description,
+                            glaFyr.GlaSysDate, glaFyr.GlaTrDate, glaFyr.GlaDebit, glaFyr.GlaCredit);
+
+
+                        ledgerActivity.GlaSource = await BuildGlaSourceCode(glaFyr.GlaSource);
+                        ledgerActivity.ReportingSegment = await BuildReportingSegment();
+                        ledgerActivity.GlaRefNumber = glaFyr.GlaRefNo;
+                        ledgerActivity.GlaAccountId = personGuid;
+                        ledgerActivity.GlaCorpFlag = corpFlag;
+                        ledgerActivity.GlaInstFlag = instFlag;
+                        ledgerActivity.HostCountry = await BuildHostCountry();
+                        ledgerActivity.ProjectId = glaFyr.GlaProjectsIds;
+                        if (!string.IsNullOrEmpty(glaFyr.GlaProjectsIds) && projectContracts != null)
+                        {
+                            var projContract = projectContracts.FirstOrDefault(pr => pr.Recordkey == glaFyr.GlaProjectsIds);
+                            if (projContract != null)
+                            {
+                                ledgerActivity.ProjectRefNo = projContract.PrjRefNo;
+                                ledgerActivity.ProjectGuid = projContract.RecordGuid;
+                            }
+                        }
+                        if (!string.IsNullOrEmpty(glaFyr.GlaProjectsIds) && grantsContracts != null)
+                        {
+                            var grantContract = grantsContracts.FirstOrDefault(pr => pr.Recordkey == glaFyr.GlaProjectsIds);
+                            if (grantContract != null) ledgerActivity.GrantsGuid = grantContract.RecordGuid;
+                        }
+                        if (glpDataContracts != null)
+                        {
+                            var glpContract = glpDataContracts.FirstOrDefault(glp => glp.GlpPooleeAcctsList.Contains(glaFyr.Recordkey));
+                            if (glpContract != null) ledgerActivity.IsPooleeAcct = glpContract != null ? true : false;
+                        }
+                        if (glAcctsContracts != null)
+                        {
+                            var glAccountNumber = glaFyr.Recordkey.Split('*')[0];
+                            var glAcctContract = glAcctsContracts.FirstOrDefault(gla => gla.Recordkey == glAccountNumber);
+                            if (glAcctContract != null) ledgerActivity.AccountingStringGuid = glAcctContract.RecordGuid;
+                        }
+
+                        ledgerActivities.Add(ledgerActivity);
                     }
 
-                    ledgerActivities.Add(ledgerActivity);
+                    catch (Exception ex)
+                    {
+                        if (exception == null)
+                        {
+                            exception = new RepositoryException();
+                        }
+                        exception.AddError(new RepositoryError("Bad.Data", ex.Message) {
+                            Id = glaFyr.RecordGuid,
+                            SourceId = glaFyr.Recordkey
+                        });
+                    }
+                }
+
+                if (exception != null && exception.Errors != null && exception.Errors.Any())
+                {
+                    throw exception;
                 }
             }
 
-            return (ledgerActivities != null && ledgerActivities.Any()) ? new Tuple<IEnumerable<GeneralLedgerActivity>, int>(ledgerActivities, glaFyrIds.Count()) :
+            return (ledgerActivities != null && ledgerActivities.Any()) ? new Tuple<IEnumerable<GeneralLedgerActivity>, int>(ledgerActivities, totalCount) :
                 new Tuple<IEnumerable<GeneralLedgerActivity>, int>(new List<GeneralLedgerActivity>(), 0);
-        }        
+        }
+
+        /// <summary>
+        /// Perform validation prior to calling the constructor and, if an error occurs, add error to the collection
+        /// </summary>
+        /// <param name="glaFyr"></param>
+        /// <param name="description"></param>
+        /// <returns>RepositoryException</returns>
+        private RepositoryException PreValidateLedgerActivity(GlaFyr glaFyr, string description)
+        {
+
+            RepositoryException exception = null;
+
+            if (string.IsNullOrEmpty(glaFyr.RecordGuid))
+            {
+                if (exception == null)
+                {
+                    exception = new RepositoryException();
+                }
+                exception.AddError(new RepositoryError("Bad.Data", "Guid is required.")
+                {
+                    Id = !string.IsNullOrEmpty(glaFyr.RecordGuid) ? glaFyr.RecordGuid : null,
+                    SourceId = !string.IsNullOrEmpty(glaFyr.Recordkey) ? glaFyr.Recordkey : null
+                });
+            }
+            if (string.IsNullOrEmpty(glaFyr.Recordkey))
+            {
+                if (exception == null)
+                {
+                    exception = new RepositoryException();
+                }
+                exception.AddError(new RepositoryError("Bad.Data", "Accounting string is required.")
+                {
+                    Id = !string.IsNullOrEmpty(glaFyr.RecordGuid) ? glaFyr.RecordGuid : null,
+                    SourceId = !string.IsNullOrEmpty(glaFyr.Recordkey) ? glaFyr.Recordkey : null
+                });
+            }
+            if (string.IsNullOrEmpty(description))
+            {
+                if (exception == null)
+                {
+                    exception = new RepositoryException();
+                }
+                exception.AddError(new RepositoryError("Bad.Data", "Description is required.")
+                {
+                    Id = !string.IsNullOrEmpty(glaFyr.RecordGuid) ? glaFyr.RecordGuid : null,
+                    SourceId = !string.IsNullOrEmpty(glaFyr.Recordkey) ? glaFyr.Recordkey : null
+                });
+            }
+            if (!glaFyr.GlaTrDate.HasValue)
+            {
+                if (exception == null)
+                {
+                    exception = new RepositoryException();
+                }
+                exception.AddError(new RepositoryError("Bad.Data", "Transaction date is required.")
+                {
+                    Id = !string.IsNullOrEmpty(glaFyr.RecordGuid) ? glaFyr.RecordGuid : null,
+                    SourceId = !string.IsNullOrEmpty(glaFyr.Recordkey) ? glaFyr.Recordkey : null
+                });
+            }
+
+            if ((!glaFyr.GlaDebit.HasValue && !glaFyr.GlaCredit.HasValue) || (glaFyr.GlaDebit == 0 && glaFyr.GlaCredit == 0))
+            {
+                if (exception == null)
+                {
+                    exception = new RepositoryException();
+                }
+                exception.AddError(new RepositoryError("Bad.Data", "Credit/Debit value is required.")
+                {
+                    Id = !string.IsNullOrEmpty(glaFyr.RecordGuid) ? glaFyr.RecordGuid : null,
+                    SourceId = !string.IsNullOrEmpty(glaFyr.Recordkey) ? glaFyr.Recordkey : null
+                });
+            }
+
+
+            DateTime? enteredOn = null;
+            if (glaFyr.GlaSysDate != null && glaFyr.GlaSysDate.HasValue)
+            {
+                enteredOn = glaFyr.GlaSysDate;
+            }
+            else if (glaFyr.GlaTrDate != null && glaFyr.GlaTrDate.HasValue)
+            {
+                enteredOn = glaFyr.GlaTrDate;
+            }
+            if (enteredOn == null || !enteredOn.HasValue)
+            {
+                if (exception == null)
+                {
+                    exception = new RepositoryException();
+                }
+                exception.AddError(new RepositoryError("Bad.Data", "EnteredOn date is required.")
+                {
+                    Id = !string.IsNullOrEmpty(glaFyr.RecordGuid) ? glaFyr.RecordGuid : null,
+                    SourceId = !string.IsNullOrEmpty(glaFyr.Recordkey) ? glaFyr.Recordkey : null
+                });
+            }
+
+            return exception;
+        }
 
         /// <summary>
         /// Returns a single general ledger activity record.
@@ -223,11 +386,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 throw new ArgumentNullException("Guid is required.");
             }
             var recordInfo = await GetRecordInfoFromGuidAsync(guid);
-            if(recordInfo == null)
+            if (recordInfo == null)
             {
                 throw new KeyNotFoundException("General ledger activity not found for GUID " + guid);
             }
-            
+            if (!recordInfo.Entity.StartsWith("GLA.", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new KeyNotFoundException("General ledger activity not found for GUID " + guid);
+            }
             var glaFyr = await DataReader.ReadRecordAsync<GlaFyr>(recordInfo.Entity, recordInfo.PrimaryKey, true);
             var year = recordInfo.Entity.Split('.')[1].ToString();
             var glpFyrKeys = await DataReader.SelectAsync(string.Format("GLP.{0}", year), string.Format("WITH GLP.POOLEE.ACCTS.LIST = '{0}'", recordInfo.PrimaryKey));
@@ -248,7 +414,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     if (!string.IsNullOrEmpty(person.PersonCorpIndicator) && person.PersonCorpIndicator.ToUpper().Equals("Y", StringComparison.OrdinalIgnoreCase))
                     {
                         corpFlag = "Y";
-                        var inst = DataReader.ReadRecordAsync<Institutions>("INSTITUTIONS", glaFyr.GlaAcctId);
+                        var inst = await DataReader.ReadRecordAsync<Institutions>("INSTITUTIONS", glaFyr.GlaAcctId);
                         if (inst != null)
                         {
                             instFlag = "Y";
@@ -260,39 +426,68 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var description = glaFyr.GlaDescription;
             if (string.IsNullOrEmpty(description)) description = glaFyr.GlaRefNo;
             if (string.IsNullOrEmpty(description)) description = glaFyr.Recordkey;
-            GeneralLedgerActivity ledgerActivity = new GeneralLedgerActivity(glaFyr.RecordGuid, glaFyr.Recordkey, description, glaFyr.GlaSysDate, glaFyr.GlaTrDate, glaFyr.GlaDebit, glaFyr.GlaCredit);
-            ledgerActivity.GlaSource = await BuildGlaSourceCode(glaFyr.GlaSource);
-            ledgerActivity.ReportingSegment = await BuildReportingSegment();
-            ledgerActivity.GlaRefNumber = glaFyr.GlaRefNo;
-            ledgerActivity.GlaAccountId = personGuid;
-            ledgerActivity.GlaCorpFlag = corpFlag;
-            ledgerActivity.GlaInstFlag = instFlag;
-            ledgerActivity.HostCountry = await BuildHostCountry();
-            ledgerActivity.ProjectId = glaFyr.GlaProjectsIds;
-            if (!string.IsNullOrEmpty(glaFyr.GlaProjectsIds))
-            {
-                var projContract = await DataReader.ReadRecordAsync<DataContracts.Projects>("PROJECTS", glaFyr.GlaProjectsIds);
-                if (projContract != null)
-                {
-                    ledgerActivity.ProjectRefNo = projContract.PrjRefNo;
-                    ledgerActivity.ProjectGuid = projContract.RecordGuid;
-                }
-                var grantsContract = await DataReader.ReadRecordAsync<DataContracts.ProjectsCf>("PROJECTS.CF", glaFyr.GlaProjectsIds);
-                if (grantsContract != null)
-                {
-                    ledgerActivity.GrantsGuid = grantsContract.RecordGuid;
-                }
-            }
-            var glAcctsContract = await DataReader.ReadRecordAsync<DataContracts.GlAccts>("GL.ACCTS", glaFyr.Recordkey.Split('*')[0]);
-            if (glAcctsContract != null) ledgerActivity.AccountingStringGuid = glAcctsContract.RecordGuid;
-            ledgerActivity.IsPooleeAcct = glpFyrContracts != null ? true : false;
 
+            var validationException = PreValidateLedgerActivity(glaFyr, description);
+            if (validationException != null && validationException.Errors != null && validationException.Errors.Any())
+            {
+                throw validationException;
+            }
+
+
+            GeneralLedgerActivity ledgerActivity = null;
+
+            try
+            {
+                ledgerActivity = new GeneralLedgerActivity(glaFyr.RecordGuid, glaFyr.Recordkey, description, glaFyr.GlaSysDate, glaFyr.GlaTrDate, glaFyr.GlaDebit, glaFyr.GlaCredit);
+                ledgerActivity.GlaSource = await BuildGlaSourceCode(glaFyr.GlaSource);
+                ledgerActivity.ReportingSegment = await BuildReportingSegment();
+                ledgerActivity.GlaRefNumber = glaFyr.GlaRefNo;
+                ledgerActivity.GlaAccountId = personGuid;
+                ledgerActivity.GlaCorpFlag = corpFlag;
+                ledgerActivity.GlaInstFlag = instFlag;
+                ledgerActivity.HostCountry = await BuildHostCountry();
+                ledgerActivity.ProjectId = glaFyr.GlaProjectsIds;
+                if (!string.IsNullOrEmpty(glaFyr.GlaProjectsIds))
+                {
+                    var projContract = await DataReader.ReadRecordAsync<DataContracts.Projects>("PROJECTS", glaFyr.GlaProjectsIds);
+                    if (projContract != null)
+                    {
+                        ledgerActivity.ProjectRefNo = projContract.PrjRefNo;
+                        ledgerActivity.ProjectGuid = projContract.RecordGuid;
+                    }
+                    var grantsContract = await DataReader.ReadRecordAsync<DataContracts.ProjectsCf>("PROJECTS.CF", glaFyr.GlaProjectsIds);
+                    if (grantsContract != null)
+                    {
+                        ledgerActivity.GrantsGuid = grantsContract.RecordGuid;
+                    }
+                }
+                var glAcctsContract = await DataReader.ReadRecordAsync<DataContracts.GlAccts>("GL.ACCTS", glaFyr.Recordkey.Split('*')[0]);
+                if (glAcctsContract != null) ledgerActivity.AccountingStringGuid = glAcctsContract.RecordGuid;
+                ledgerActivity.IsPooleeAcct = glpFyrContracts != null ? true : false;
+            }
+            catch (Exception ex)
+            {
+                var exception = new RepositoryException();   
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message));
+                throw exception;
+            }
             return ledgerActivity;
         }
 
-        #region build methods
+        /// <summary>
+        /// Return a Unidata Formatted Date string from an input argument of string type
+        /// </summary>
+        /// <param name="date">String representing a Date</param>
+        /// <returns>Unidata formatted Date string for use in Colleague Selection.</returns>
+        public async Task<string> GetUnidataFormattedDate(string date)
+        {
+            var internationalParameters = await InternationalParametersAsync();
+            var newDate = DateTime.Parse(date).Date;
+            return UniDataFormatter.UnidataFormatDate(newDate, internationalParameters.HostShortDateFormat, internationalParameters.HostDateDelimiter);
+        }
+        #endregion  
 
-        string institutionName = string.Empty;
+        #region private build methods    
         /// <summary>
         /// Builds reporting segment.
         /// </summary>
@@ -323,10 +518,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// </summary>
         /// <param name="source"></param>
         /// <returns></returns>
-        ApplValcodes sourceCodes = null;
         private async Task<string> BuildGlaSourceCode(string source)
         {
-            if(string.IsNullOrEmpty(source))
+            if (string.IsNullOrEmpty(source))
             {
                 throw new ArgumentNullException("GL source is required.");
             }
@@ -336,7 +530,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
 
             var sourceCode = sourceCodes.ValsEntityAssociation.FirstOrDefault(item => item.ValInternalCodeAssocMember.Equals(source, StringComparison.OrdinalIgnoreCase));
-            if(sourceCode == null)
+            if (sourceCode == null)
             {
                 throw new KeyNotFoundException(string.Format("GL source code not found for {0}.", source));
             }
@@ -344,9 +538,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return string.Concat(sourceCode.ValInternalCodeAssocMember + asterix + sourceCode.ValActionCode2AssocMember); ;
         }
 
-        string hostCountry = null;
         /// <summary>
-        /// Builds hosy country.
+        /// Builds host country.
         /// </summary>
         /// <returns></returns>
         private async Task<string> BuildHostCountry()
@@ -361,7 +554,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
         #endregion
 
-        #region Helper methods
+        #region private helper methods
 
         /// <summary>
         /// Get the GL Source Codes from Colleague.
@@ -398,8 +591,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns></returns>
         private async Task<Base.DataContracts.Defaults> GetDefaults()
         {
-            return await GetOrAddToCacheAsync<Data.Base.DataContracts.Defaults>("CoreDefaults", 
-                async () =>  
+            return await GetOrAddToCacheAsync<Data.Base.DataContracts.Defaults>("CoreDefaults",
+                async () =>
                 {
                     var coreDefaults = await DataReader.ReadRecordAsync<Data.Base.DataContracts.Defaults>("CORE.PARMS", "DEFAULTS");
                     if (coreDefaults == null)
@@ -411,19 +604,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }, Level1CacheTimeoutValue);
         }
 
-        /// <summary>
-        /// Return a Unidata Formatted Date string from an input argument of string type
-        /// </summary>
-        /// <param name="date">String representing a Date</param>
-        /// <returns>Unidata formatted Date string for use in Colleague Selection.</returns>
-        public async Task<string> GetUnidataFormattedDate(string date)
-        {
-            var internationalParameters = await InternationalParametersAsync();
-            var newDate = DateTime.Parse(date).Date;
-            return UniDataFormatter.UnidataFormatDate(newDate, internationalParameters.HostShortDateFormat, internationalParameters.HostDateDelimiter);
-        }
-
-        private Ellucian.Data.Colleague.DataContracts.IntlParams _internationalParameters;
         /// <summary>
         /// Gets international parameters.
         /// </summary>

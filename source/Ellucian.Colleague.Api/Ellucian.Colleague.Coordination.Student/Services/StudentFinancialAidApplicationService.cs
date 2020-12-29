@@ -1,15 +1,18 @@
-﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
+using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System;
@@ -65,19 +68,23 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// Gets all financial-aid-applications
         /// </summary>
         /// <returns>Collection of FinancialAidApplications DTO objects</returns>
-        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int>> GetAsync(int offset, int limit, FinancialAidApplication filterDto, bool bypassCache = false)
+        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int>> GetAsync(int offset, int limit, Dtos.FinancialAidApplication filterDto, bool bypassCache = false)
         {
+            CheckViewFinancialAidApplicationsPermission();
+
             try
             {
-                CheckViewFinancialAidApplicationsPermission();
 
                 // Get all financial aid years
-                var aidYearEntity = (await _financialAidReferenceDataRepository.GetFinancialAidYearsAsync(bypassCache));
+                var aidYearEntity = await _financialAidReferenceDataRepository.GetFinancialAidYearsAsync( bypassCache );
                 List<string> faSuiteYears = aidYearEntity.Select(k => k.Code).ToList();
 
                 //process filters 
                 string studentId = string.Empty;
                 string aidYear = string.Empty;
+                string source = string.Empty;
+                string methodology = string.Empty;
+
                 if (filterDto != null)
                 {
                     //get aid year
@@ -94,7 +101,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         {
                             studentId = await _personRepository.GetPersonIdFromGuidAsync(filterDto.Applicant.Person.Id);
                             if (string.IsNullOrEmpty(studentId))
-                                //throw new ArgumentException("Invalid Applicant Person Id " + filterDto.Applicant.Person.Id + " in the arguments");
                                 return new Tuple<IEnumerable<Dtos.FinancialAidApplication>, int>(new List<Dtos.FinancialAidApplication>(), 0);
                         }
                         catch // if bad guid, return empty set
@@ -103,14 +109,41 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                     }
 
+                    if(filterDto.Methodology != FinancialAidApplicationsMethodology.NotSet)
+                    {
+                        methodology = filterDto.Methodology.ToString().ToLower();
+                    }
+
+                    if(filterDto.Source != FinancialAidApplicationsSource.NotSet)
+                    {
+                        switch( filterDto.Source )
+                        {
+                            case FinancialAidApplicationsSource.Isir:
+                                source = "ISIR";
+                                break;
+                            case FinancialAidApplicationsSource.Profile:
+                                source = "PROF";
+                                break;
+                            case FinancialAidApplicationsSource.Manualfederal:
+                                source = "IAPP";
+                                break;
+                            case FinancialAidApplicationsSource.Manualinstitution:
+                                source = "SUPP";
+                                break;
+                        }
+                    }
                 }
 
                 var financialAidApplicationDtos = new List<Dtos.FinancialAidApplication>();
-                var fafsaDomainTuple = await _financialAidApplicationRepository.GetAsync(offset, limit, bypassCache, studentId, aidYear, faSuiteYears);
+                var fafsaDomainTuple = await _financialAidApplicationRepository.GetAsync(offset, limit, bypassCache, studentId, aidYear, faSuiteYears, methodology, source);
 
                 if (fafsaDomainTuple != null && fafsaDomainTuple.Item1.Any())
                 {
                     financialAidApplicationDtos = (await BuildFinancialAidApplicationDtoAsync(fafsaDomainTuple.Item1, bypassCache)).ToList();
+                    if( IntegrationApiException != null )
+                    {
+                        throw IntegrationApiException;
+                    }
                     return new Tuple<IEnumerable<Dtos.FinancialAidApplication>, int>(financialAidApplicationDtos, fafsaDomainTuple.Item2);
                 }
                 else
@@ -118,35 +151,22 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     return new Tuple<IEnumerable<Dtos.FinancialAidApplication>, int>(new List<Dtos.FinancialAidApplication>(), 0);
                 }
             }
-            catch (ArgumentNullException ex)
+            catch( IntegrationApiException )
             {
-                logger.Error(ex.Message);
-                throw new ArgumentNullException(ex.Message, ex);
+                throw;
             }
-            catch (ArgumentException ex)
+            catch(PermissionsException)
             {
-                logger.Error(ex.Message);
-                throw new ArgumentException(ex.Message, ex);
+                throw;
             }
-            catch (KeyNotFoundException ex)
+            catch( RepositoryException )
             {
-                logger.Error(ex.Message);
-                throw new KeyNotFoundException(ex.Message, ex);
+                throw;
             }
-            catch (PermissionsException ex)
+            catch( Exception e)
             {
-                logger.Error(ex.Message);
-                throw new PermissionsException(ex.Message, ex);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.Error(ex.Message);
-                throw new InvalidOperationException(ex.Message, ex);
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex.Message);
-                throw new Exception(ex.Message, ex);
+                logger.Error(e.Message);
+                throw new Exception(e.Message, e);
             }
         }
 
@@ -167,6 +187,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     // Convert the financial aid application object into DTO.
                     var finAidAppDto = (await BuildFinancialAidApplicationDtoAsync(new List<Domain.Student.Entities.Fafsa>() { fafsaDomainEntity }, bypassCache));
+                    if( IntegrationApiException != null )
+                    {
+                        throw IntegrationApiException;
+                    }
                     return finAidAppDto != null ? finAidAppDto.FirstOrDefault() : null;
                 }
                 else
@@ -174,154 +198,249 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     throw new KeyNotFoundException("financial-aid-applications not found for GUID " + id);
                 }
             }
-            catch (KeyNotFoundException ex)
+            catch(ArgumentNullException e)
             {
-                throw new KeyNotFoundException("financial-aid-applications not found for GUID " + id, ex);
+                IntegrationApiExceptionAddError( e.Message, "GUID.Not.Found", id, string.Empty );
+                throw IntegrationApiException;
+            }
+            catch (KeyNotFoundException e)
+            {
+                IntegrationApiExceptionAddError( e.Message, "GUID.Not.Found", id, string.Empty, System.Net.HttpStatusCode.NotFound );
+                throw IntegrationApiException;
             }
         }
 
-        private async Task<IEnumerable<Dtos.FinancialAidApplication>> BuildFinancialAidApplicationDtoAsync(IEnumerable<Domain.Student.Entities.Fafsa> fafsaEntities, bool bypassCache = true)
+        private async Task<IEnumerable<Dtos.FinancialAidApplication>> BuildFinancialAidApplicationDtoAsync(IEnumerable<Domain.Student.Entities.Fafsa> sources, bool bypassCache = true)
         {
-            if ((fafsaEntities == null) || (!fafsaEntities.Any()))
+            if ((sources == null) || (!sources.Any()))
             {
                 return null;
             }
 
             var financialAidApplicationDtos = new List<Dtos.FinancialAidApplication>();
             //get person guid collection
-            var personIds = fafsaEntities
-            .Where(x => (!string.IsNullOrEmpty(x.StudentId)))
-            .Select(x => x.StudentId).Distinct().ToList();
+            var personIds = sources
+                            .Where(x => (!string.IsNullOrEmpty(x.StudentId)))
+                            .Select(x => x.StudentId).Distinct().ToList();
             var personGuidCollection = await this._personRepository.GetPersonGuidsCollectionAsync(personIds);
 
-            foreach (var fafsaEntity in fafsaEntities)
+            foreach (var source in sources)
             {
-                var financialAidApplicationDto = new Dtos.FinancialAidApplication();
+                var dto = new Dtos.FinancialAidApplication();
 
-                financialAidApplicationDto.Id = fafsaEntity.Guid;
+                dto.Id = source.Guid;
                 //
                 // Set Applicant
                 //
-                if (string.IsNullOrEmpty(fafsaEntity.StudentId))
+                if (string.IsNullOrEmpty(source.StudentId))
                 {
-                    throw new ArgumentNullException(string.Concat("Applicant Person Id is required. Entity:'ISIR.FAFSA', Record Id :'", fafsaEntity.Id, "'"));
+                    IntegrationApiExceptionAddError( string.Format( "Applicant Person Id is required. Entity:'ISIR.FAFSA', Record Id :'{0}'", source.Id ), "Bad.Data", source.Guid, source.Id );
                 }
                 if (personGuidCollection == null)
                 {
-                    throw new KeyNotFoundException(string.Format("Unable to locate guid for student ID : {0}. Entity:'ISIR.FAFSA', Record Id :'{1}'", fafsaEntity.StudentId, fafsaEntity.Id));
+                    IntegrationApiExceptionAddError( string.Format( "Unable to locate guid for student ID : {0}. Entity:'ISIR.FAFSA', Record Id :'{1}'", source.StudentId, source.Id ), "GUID.Not.Found", 
+                        source.Guid, source.Id );
+                    throw IntegrationApiException;
                 }
                 var personGuid = string.Empty;
-                personGuidCollection.TryGetValue(fafsaEntity.StudentId, out personGuid);
-                if (string.IsNullOrEmpty(personGuid))
+                personGuidCollection.TryGetValue(source.StudentId, out personGuid);
+                if( string.IsNullOrEmpty( personGuid ) )
                 {
-                    throw new KeyNotFoundException(string.Format("Unable to locate guid for student ID : {0}. Entity:'ISIR.FAFSA', Record Id: '{1}'", fafsaEntity.StudentId, fafsaEntity.Id));
-                }
-                financialAidApplicationDto.Applicant = new FinancialAidApplicationApplicant() { Person = new GuidObject2(personGuid) };
-                //
-                // Set AidYear
-                //
-                if (string.IsNullOrEmpty(fafsaEntity.AwardYear))
-                {
-                    throw new ArgumentNullException(string.Concat("Aid Year Id is required. Entity:'ISIR.FAFSA', Record Id :'", fafsaEntity.Id, "'"));
+                    IntegrationApiExceptionAddError( string.Format( "Unable to locate guid for student ID : {0}. Entity:'ISIR.FAFSA', Record Id: '{1}'", source.StudentId, source.Id ), "GUID.Not.Found",
+                        source.Guid, source.Id );
                 }
                 else
                 {
-                    var aidYearGuid = ConvertCodeToGuid(await GetFinancialAidYearsAsync(bypassCache), fafsaEntity.AwardYear);
-                    if (!string.IsNullOrEmpty(aidYearGuid))
-                        financialAidApplicationDto.AidYear = new GuidObject2(aidYearGuid);
+                    dto.Applicant = new FinancialAidApplicationApplicant() { Person = new GuidObject2( personGuid ) };
+                }
+                //
+                // Set AidYear
+                //
+                if( string.IsNullOrEmpty( source.AwardYear ) )
+                {
+                    IntegrationApiExceptionAddError( string.Format( "Aid Year Id is required. Entity:'ISIR.FAFSA', Record Id :'{0}'", source.Id ), "Bad.Data",
+                        source.Guid, source.Id );
+                }
+                else
+                {
+                    var aidYearGuid = ConvertCodeToGuid( await GetFinancialAidYearsAsync( bypassCache ), source.AwardYear );
+                    if( !string.IsNullOrEmpty( aidYearGuid ) )
+                    {
+                        dto.AidYear = new GuidObject2( aidYearGuid );
+                    }
                     else
-                        throw new KeyNotFoundException(string.Format("Unable to locate guid for aid year ID : {0}. Entity:'ISIR.FAFSA', Record Id: '{1}'", fafsaEntity.AwardYear, fafsaEntity.Id));
+                    {
+                        IntegrationApiExceptionAddError( string.Format( "Unable to locate guid for aid year ID : {0}. Entity:'ISIR.FAFSA', Record Id: '{1}'", source.AwardYear, source.Id ), "GUID.Not.Found",
+                            source.Guid, source.Id );
+                    }
                 }
 
                 try
                 {
                     // Set Methodology
-                    var fafsaId = fafsaEntity.FafsaPrimaryId;
-                    if (fafsaEntity.FafsaPrimaryIdCorrected != null)
+                    var fafsaId = source.FafsaPrimaryId;
+                    if (source.FafsaPrimaryIdCorrected != null)
                     {
-                        fafsaId = fafsaEntity.FafsaPrimaryIdCorrected;
+                        fafsaId = source.FafsaPrimaryIdCorrected;
                     }
 
 
-                    financialAidApplicationDto.Methodology = FinancialAidApplicationsMethodology.NotSet;
-                    if (fafsaId == fafsaEntity.CsInstitutionalIsirId)
+                    dto.Methodology = FinancialAidApplicationsMethodology.NotSet;
+                    if (fafsaId == source.CsInstitutionalIsirId)
                     {
-                        financialAidApplicationDto.Methodology = FinancialAidApplicationsMethodology.Institutional;
+                        dto.Methodology = FinancialAidApplicationsMethodology.Institutional;
                     }
-                    if (fafsaId == fafsaEntity.CsFederalIsirId)
+                    if (fafsaId == source.CsFederalIsirId)
                     {
-                        financialAidApplicationDto.Methodology = FinancialAidApplicationsMethodology.Federal;
+                        dto.Methodology = FinancialAidApplicationsMethodology.Federal;
                     }
-                    if (fafsaId == fafsaEntity.CsFederalIsirId && fafsaId == fafsaEntity.CsInstitutionalIsirId)
+                    if (fafsaId == source.CsFederalIsirId && fafsaId == source.CsInstitutionalIsirId)
                     {
-                        financialAidApplicationDto.Methodology = FinancialAidApplicationsMethodology.Institutionalfederal;
+                        dto.Methodology = FinancialAidApplicationsMethodology.Institutionalfederal;
                     }
-                    if (financialAidApplicationDto.Methodology == FinancialAidApplicationsMethodology.NotSet)
+                    if (dto.Methodology == FinancialAidApplicationsMethodology.NotSet)
                     {
-                        var errorMessage = string.Format("Unable to identify methodology for application outcome '{0}'", fafsaEntity.Guid);
-                        throw new ArgumentException(errorMessage);
+                        IntegrationApiExceptionAddError( string.Format( "Unable to identify methodology for application outcome '{0}'", source.Guid ), "Bad.Data", source.Guid, source.Id );
                     }
 
                     // Set source
-                    if (fafsaEntity.FafsaPrimaryType != null)
+                    if (source.FafsaPrimaryType != null)
                     {
-                        switch (fafsaEntity.FafsaPrimaryType)
+                        switch (source.FafsaPrimaryType)
                         {
                             case ("ISIR"):
-                                financialAidApplicationDto.Source = FinancialAidApplicationsSource.Isir;
+                                dto.Source = FinancialAidApplicationsSource.Isir;
                                 break;
                             case ("CPSSG"):
-                                financialAidApplicationDto.Source = FinancialAidApplicationsSource.Isir;
+                                dto.Source = FinancialAidApplicationsSource.Isir;
                                 break;
                             case ("CORR"):
-                                financialAidApplicationDto.Source = FinancialAidApplicationsSource.Isir;
+                                dto.Source = FinancialAidApplicationsSource.Isir;
                                 break;
                             case ("PROF"):
-                                financialAidApplicationDto.Source = FinancialAidApplicationsSource.Profile;
+                                dto.Source = FinancialAidApplicationsSource.Profile;
                                 break;
                             case ("IAPP"):
-                                financialAidApplicationDto.Source = FinancialAidApplicationsSource.Manualfederal;
+                                dto.Source = FinancialAidApplicationsSource.Manualfederal;
                                 break;
                             case ("SUPP"):
-                                financialAidApplicationDto.Source = FinancialAidApplicationsSource.Manualinstitution;
+                                dto.Source = FinancialAidApplicationsSource.Manualinstitution;
                                 break;
                             default:
-                                financialAidApplicationDto.Source = FinancialAidApplicationsSource.NotSet;
+                                IntegrationApiExceptionAddError( string.Format( "The source '{0}' is not valid for 'isir', 'profile', 'manualFederal', or 'manualInstitution'", source.FafsaPrimaryType ), "Bad.Data", source.Guid, source.Id );
                                 break;
                         }
                     }
-                    if (financialAidApplicationDto.Methodology == FinancialAidApplicationsMethodology.NotSet)
-                    {
-                        var errorMessage = string.Format("Unable to identify methodology for application outcome '{0}'", fafsaEntity.Guid);
-                        throw new ArgumentException(errorMessage);
-                    }
 
-                    BuildDtoFromThisFafsa(fafsaEntity, financialAidApplicationDto);
+                    BuildDtoFromThisFafsa(source, dto);
 
-                    if (fafsaEntity.ApplicationCompletedOn != null)
+                    if (source.ApplicationCompletedOn != null)
                     {
-                        financialAidApplicationDto.ApplicationCompletedOn = fafsaEntity.ApplicationCompletedOn;
+                        dto.ApplicationCompletedOn = source.ApplicationCompletedOn;
                     }
-                    if (!string.IsNullOrEmpty(fafsaEntity.StateOfLegalResidence))
+                    if (!string.IsNullOrEmpty(source.StateOfLegalResidence))
                     {
-                        financialAidApplicationDto.StateOfLegalResidence = fafsaEntity.StateOfLegalResidence;
+                        dto.StateOfLegalResidence = source.StateOfLegalResidence;
                     }
 
                     // Update based on PROF fafsa record.
-                    if (financialAidApplicationDto.Source == FinancialAidApplicationsSource.Profile)
+                    if (dto.Source == FinancialAidApplicationsSource.Profile)
                     {
-                        UpdateDtoFromProfileFafsa(fafsaEntity, financialAidApplicationDto);
+                        UpdateDtoFromProfileFafsa(source, dto);
                     }
-                    financialAidApplicationDtos.Add(financialAidApplicationDto);
+
+                    //9.1.0 changes
+                    #region maritalStatus
+                    /*
+                     *  Notes from specs
+                        Choose FA.STU.MARITAL.STATUS.20 for (import year 2020+)
+                        Choose FA.STU.MARITAL.STATUS.18 for (import year s 2018, 2019)
+                        Choose FA.STU.MARITAL.STATUS.14 for (import years 2014, 2015, 2016, 2017)
+                        Choose FA.STU.MARITAL.STATUS.10 for (import years 2010, 2011, 2012, 2013) 
+                    */
+                    if (!string.IsNullOrEmpty( source.Type))
+                    {
+
+                        FinancialAidMaritalStatus finAidMarStatus = null;
+                        if( source.Type.Equals( "PROF", StringComparison.InvariantCultureIgnoreCase ) && !string.IsNullOrEmpty( source.AwardYear ) && !string.IsNullOrWhiteSpace( source.ProfileMaritalStatus ) )
+                        {
+                            dto.MaritalStatus = new MaritalStatusDtoProperty();
+                            finAidMarStatus = await _financialAidReferenceDataRepository.GetFinancialAidMaritalStatusAsync( source.AwardYearShortValue, source.ProfileMaritalStatus );
+                            dto.MaritalStatus.Value = source.ProfileMaritalStatus;
+                        }
+                        else if( !string.IsNullOrWhiteSpace( source.FafsaMaritalStatus ) )
+                        {
+                            dto.MaritalStatus = new MaritalStatusDtoProperty();
+                            finAidMarStatus = await _financialAidReferenceDataRepository.GetFinancialAidMaritalStatusAsync( "10", source.FafsaMaritalStatus );
+                            dto.MaritalStatus.Value = source.FafsaMaritalStatus;
+
+                        }
+                        if(finAidMarStatus != null)
+                        {
+                            dto.MaritalStatus.Title = finAidMarStatus.Description;
+                        }
+                    }
+                    #endregion maritalStatus
+
+                    //applicantFamilySize
+                    dto.ApplicantFamilySize = source.ApplicantFamilySize.HasValue? source.ApplicantFamilySize.Value : default(int?);
+
+                    //parentFamilySize
+                    dto.ParentFamilySize = source.ParentFamilySize.HasValue ? source.ParentFamilySize.Value : default( int? );
+
+                    //applicantNumberInCollege
+                    dto.ApplicantNumberInCollege = source.ApplicantNumberInCollege.HasValue ? source.ApplicantNumberInCollege.Value : default( int? );
+
+                    //parentNumberInCollege
+                    dto.ParentNumberInCollege = source.ParentNoInCollege.HasValue ? source.ParentNoInCollege.Value : default( int? );
+
+                    //parentsEducationLevel
+                    FinancialAidEducationLevelDtoProperty pelDto = null;
+                    if(!string.IsNullOrEmpty(source.FatherEducationLevel))
+                    {
+                        if( pelDto == null ) pelDto = new FinancialAidEducationLevelDtoProperty();
+                        pelDto.FirstParent = ConvertParentEducationLevel( source.FatherEducationLevel );
+                    }
+
+                    if( !string.IsNullOrEmpty( source.MotherEducationLevel ) )
+                    {
+                        if( pelDto == null ) pelDto = new FinancialAidEducationLevelDtoProperty();
+                        pelDto.SecondParent = ConvertParentEducationLevel( source.MotherEducationLevel );
+                    }
+                    if( pelDto != null ) dto.ParentsEducationLevel = pelDto;
+
+                    financialAidApplicationDtos.Add(dto);
+
 
                 }
                 catch (Exception e)
                 {
-                    var errorMessage = string.Format("Unable to build DTO for application. Entity:'ISIR.FAFSA', Record Id: '{0}'", fafsaEntity.Id);
-                    throw new ArgumentException(errorMessage);
+                    IntegrationApiExceptionAddError( string.Format( "Unable to build DTO for application. Entity:'ISIR.FAFSA', Record Id: '{0}'", source.Id ), "Bad.Data", source.Guid, source.Id );
                 }
             }
             return financialAidApplicationDtos;
+        }
+
+        /// <summary>
+        /// Returns Financial Aid Education Level.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        private FinancialAidApplicationsEducationLevel ConvertParentEducationLevel( string source )
+        {
+            FinancialAidApplicationsEducationLevel level = FinancialAidApplicationsEducationLevel.NotSet;
+            switch( source )
+            {
+                case ( "1" ):
+                    level = FinancialAidApplicationsEducationLevel.MiddleSchool; break;
+                case ( "2" ):
+                    level = FinancialAidApplicationsEducationLevel.HighSchool; break;
+                case ( "3" ):
+                    level = FinancialAidApplicationsEducationLevel.College; break;
+                case ( "4" ):
+                    level = FinancialAidApplicationsEducationLevel.Other; break;
+            }
+            return level;
         }
 
         private static void BuildDtoFromThisFafsa(Domain.Student.Entities.Fafsa fafsaEntity, Dtos.FinancialAidApplication financialAidApplicationDto)
@@ -667,7 +786,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 independenceCriteria.Add(FinancialAidApplicationsIndependenceCriteria.Married);
             }
-            if (independenceCriteria != null)
+            if (independenceCriteria != null && independenceCriteria.Any())
             {
                 financialAidApplicationDto.IndependenceCriteria = independenceCriteria;
             }
@@ -882,7 +1001,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             // User is not allowed to read FinancialAidApplications without the appropriate permissions
             if (!hasPermission)
             {
-                throw new PermissionsException(string.Format("User {0} does not have permission to view FinancialAidApplications.", CurrentUser.UserId));
+                IntegrationApiExceptionAddError( string.Format( "User {0} is not authorized to view financial-aid-applications.", CurrentUser.UserId), "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden );
+                throw IntegrationApiException;
             }
         }
     }

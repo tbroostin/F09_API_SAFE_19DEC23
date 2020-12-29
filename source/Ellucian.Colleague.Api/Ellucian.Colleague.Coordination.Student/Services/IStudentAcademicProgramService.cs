@@ -1,9 +1,10 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Dtos;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -23,9 +24,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             string startOn = "", string endOn = "", string program = "", string enrollmentStatus = "", string site = "", string academicLevel = "", string graduatedOn = "", List<string> credential = null, string graduatedAcademicPeriod = "");
 
         Task<Ellucian.Colleague.Dtos.StudentAcademicPrograms3> GetStudentAcademicProgramByGuid3Async(string guid);
-        //Task<Ellucian.Colleague.Dtos.StudentAcademicPrograms2> CreateStudentAcademicProgram3Async(Ellucian.Colleague.Dtos.StudentAcademicPrograms2 acadProgEnroll);
-        //Task<Ellucian.Colleague.Dtos.StudentAcademicPrograms2> UpdateStudentAcademicProgram3Async(Ellucian.Colleague.Dtos.StudentAcademicPrograms2 acadProgEnroll);
         Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.StudentAcademicPrograms3>, int>> GetStudentAcademicPrograms3Async(int offset, int limit, Dtos.StudentAcademicPrograms3 criteriaObj, bool bypassCache = false);
 
+        Task<Ellucian.Colleague.Dtos.StudentAcademicPrograms4> GetStudentAcademicProgramByGuid4Async(string guid);
+        Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.StudentAcademicPrograms4>, int>> GetStudentAcademicPrograms4Async(int offset, int limit, 
+            Dtos.StudentAcademicPrograms4 criteriaObj, string personFilterValue, bool bypassCache = false);
+
+        Task<Ellucian.Colleague.Dtos.StudentAcademicProgramsSubmissions> GetStudentAcademicProgramSubmissionByGuidAsync(string guid);
+        Task<Ellucian.Colleague.Dtos.StudentAcademicPrograms4> CreateStudentAcademicProgramSubmissionAsync(StudentAcademicProgramsSubmissions acadProgEnroll, bool bypassCache = false);
+        Task<StudentAcademicPrograms4> UpdateStudentAcademicProgramSubmissionAsync(Ellucian.Colleague.Dtos.StudentAcademicProgramsSubmissions acadProgEnroll, bool bypassCache = false);
+        Task<Dtos.StudentAcademicPrograms4> CreateStudentAcademicProgramReplacementsAsync(StudentAcademicProgramReplacements studentAcademicPrograms, bool bypassCache);
     }
 }

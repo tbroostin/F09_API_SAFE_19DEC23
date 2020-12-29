@@ -9,21 +9,29 @@ using Ellucian.Web.Dependency;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Repositories;
-
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Security;
+using Ellucian.Colleague.Domain.Repositories;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
     [RegisterType]
-    public class CommentSubjectAreaService : ICommentSubjectAreaService
+    public class CommentSubjectAreaService : BaseCoordinationService, ICommentSubjectAreaService
     {
         private readonly IReferenceDataRepository _referenceDataRepository;
         private readonly ILogger _logger;
         private const string _dataOrigin = "Colleague";
 
-        public CommentSubjectAreaService(IReferenceDataRepository referenceDataRepository, ILogger logger)
+        public CommentSubjectAreaService(
+            IReferenceDataRepository referenceDataRepository,
+            IAdapterRegistry adapterRegistry,
+            ICurrentUserFactory currentUserFactory,
+            IRoleRepository roleRepository,
+            IConfigurationRepository configurationRepository,
+            ILogger logger)
+            : base(adapterRegistry, currentUserFactory, roleRepository, logger, configurationRepository: configurationRepository)
         {
             _referenceDataRepository = referenceDataRepository;
-            _logger = logger;
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN HEDM</remarks>

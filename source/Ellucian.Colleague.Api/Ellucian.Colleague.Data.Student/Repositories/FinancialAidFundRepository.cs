@@ -1,6 +1,8 @@
 ﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Student.DataContracts;
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
@@ -22,6 +24,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class FinancialAidFundRepository : BaseColleagueRepository, IFinancialAidFundRepository
     {
+        private RepositoryException exception = new RepositoryException();
+        const string AllSelectedRecordsCache = "AllSelectedRecordKeys";
+        const int AllSelectedRecordsCacheTimeout = 20;
+
         /// <summary>
         /// Constructor for the FinancialAidReferenceDataRepository. 
         /// CacheTimeout value is set for Level1
@@ -45,18 +51,116 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>A list of FinancialAidFund domain entities</returns>
         /// <exception cref="ArgumentNullException">Thrown if the id argument is null or empty</exception>
         /// <exception cref="KeyNotFoundException">Thrown if no database records exist for the given id argument</exception>
-        public async Task<Tuple<IEnumerable<FinancialAidFund>, int>> GetFinancialAidFundsAsync(int offset, int limit, bool bypassCache)
+        public async Task<Tuple<IEnumerable<FinancialAidFund>, int>> GetFinancialAidFundsAsync(int offset, int limit, string code, string source, string aidType, List<string> classifications, string awardCategory, bool bypassCache)
         {
-            var FinancialAidFundsEntities = new List<FinancialAidFund>();
-            var criteria = new StringBuilder();
+            var FinancialAidFundsEntities = new List<FinancialAidFund>();            
 
-            string select = criteria.ToString();
-            string[] FinancialAidFundIds = await DataReader.SelectAsync("AWARDS", select);
-            var totalCount = FinancialAidFundIds.Count();
+            string selectedRecordCacheKey = CacheSupport.BuildCacheKey(AllSelectedRecordsCache, "AWARDS", code, source, aidType, classifications, awardCategory);
+            var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+               this,
+               ContainsKey,
+               GetOrAddToCacheAsync,
+               AddOrUpdateCacheAsync,
+               transactionInvoker,
+               selectedRecordCacheKey,
+               "AWARDS",
+               offset,
+               limit,
+               AllSelectedRecordsCacheTimeout,
+               async () =>
+               {
+                   // Filters
+                   var criteria = new StringBuilder();
+                   if (!string.IsNullOrEmpty(code))
+                   {
+                       criteria.Append(string.Format("WITH AW.ID = '{0}'", code));
+                   }
+                   if (!string.IsNullOrEmpty(source))
+                   {
+                       if (criteria.Length > 0) criteria.Append(" AND ");
+                       criteria.Append(string.Format("WITH AW.TYPE = '{0}'", source.Substring(0, 1).ToUpper()));
+                   }
+                   if (!string.IsNullOrEmpty(aidType))
+                   {
+                       var categoryCriteria = new StringBuilder();
+                       switch (aidType.ToLower())
+                       {
+                           case "loan":
+                               categoryCriteria.Append("WITH AC.LOAN.FLAG = 'Y'");
+                               break;
+                           case "grant":
+                               categoryCriteria.Append("WITH AC.GRANT.FLAG = 'Y'");
+                               break;
+                           case "scholarship":
+                               categoryCriteria.Append("WITH AC.SCHOLARSHIP.FLAG = 'Y'");
+                               break;
+                           case "work":
+                               categoryCriteria.Append("WITH AC.WORK.FLAG = 'Y'");
+                               break;
+                       }
+                       if (categoryCriteria.Length > 0)
+                       {
+                           string[] financialAidCategoryIds = await DataReader.SelectAsync("AWARD.CATEGORIES", categoryCriteria.ToString());
+                           if (financialAidCategoryIds == null || !financialAidCategoryIds.Any())
+                           {
+                               return new CacheSupport.KeyCacheRequirements()
+                               {
+                                   NoQualifyingRecords = true
+                               };
+                           }
+                           string codeList = string.Empty;
+                           foreach (var categoryCode in financialAidCategoryIds)
+                           {
+                               codeList = string.Concat(codeList, "'", categoryCode, "'");
+                           }
+                           if (!string.IsNullOrEmpty(codeList))
+                           {
+                               if (criteria.Length > 0) criteria.Append(" AND ");
+                               criteria.Append(string.Format("WITH AW.CATEGORY = {0}", codeList));
+                           }
+                           else
+                           {
+                               return new CacheSupport.KeyCacheRequirements()
+                               {
+                                   NoQualifyingRecords = true
+                               };
+                           }
+                       }
+                       else
+                       {
+                           return new CacheSupport.KeyCacheRequirements()
+                           {
+                               NoQualifyingRecords = true
+                           };
+                       }
+                   }
+                   if (classifications != null && classifications.Any())
+                   {
+                       foreach (var classification in classifications)
+                       {
+                           if (criteria.Length > 0) criteria.Append(" AND ");
+                           criteria.Append(string.Format("WITH AW.REPORTING.FUNDING.TYPE = '{0}'", classification));
+                       }
+                   }
+                   if (!string.IsNullOrEmpty(awardCategory))
+                   {
+                       if (criteria.Length > 0) criteria.Append(" AND ");
+                       criteria.Append(string.Format("WITH AW.CATEGORY = {0}", awardCategory));
+                   }
+                   return new CacheSupport.KeyCacheRequirements()
+                   {
+                       criteria = criteria.ToString()
+                   };
+               });
 
-            Array.Sort(FinancialAidFundIds);
+            if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
+            {
+                return new Tuple<IEnumerable<FinancialAidFund>, int>(FinancialAidFundsEntities, 0);
+            }
 
-            var subList = FinancialAidFundIds.Skip(offset).Take(limit).ToArray();
+            var totalCount = keyCacheObject.TotalCount.Value;
+
+            var subList = keyCacheObject.Sublist.ToArray();
             var FinancialAidFunds = await DataReader.BulkReadRecordAsync<Awards>("AWARDS", subList);
             {
                 if (FinancialAidFunds == null)

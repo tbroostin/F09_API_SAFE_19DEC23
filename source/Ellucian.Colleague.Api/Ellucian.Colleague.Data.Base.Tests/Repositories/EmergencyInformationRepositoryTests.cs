@@ -1,26 +1,28 @@
-﻿// Copyright 2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+
+using Ellucian.Colleague.Data.Base.DataContracts;
+using Ellucian.Colleague.Data.Base.Repositories;
+using Ellucian.Colleague.Data.Base.Transactions;
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Dmi.Runtime;
+using Ellucian.Web.Cache;
+using Ellucian.Web.Http.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using slf4net;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Ellucian.Data.Colleague;
-using System.Runtime.Caching;
-using Ellucian.Web.Cache;
-using slf4net;
-using Ellucian.Colleague.Data.Base.Repositories;
 using System.Collections.ObjectModel;
-using Ellucian.Colleague.Data.Base.DataContracts;
-using Ellucian.Web.Http.Configuration;
-using Ellucian.Colleague.Domain.Base.Entities;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Data.Colleague.DataContracts;
-using Ellucian.Colleague.Data.Base.Transactions;
+using System.Linq;
+using System.Runtime.Caching;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 {
-        
+
     [TestClass]
     public class EmergencyInformationRepositoryTests
     {
@@ -281,6 +283,474 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 emergencyInfoRepo = new EmergencyInformationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return emergencyInfoRepo;
+            }
+        }
+
+        [TestClass]
+        public class PersonEmergencyContacts_GetAll_GetById_Delete_Udate: BaseRepositorySetup
+        {
+            PersonContact pcWithError;
+            PersonContact pc;
+            string guid = "bef8da57-96c1-40db-b6bb-98c57af9f211";
+            EmergencyInformationRepository emergencyInformationRepository;
+            Collection<PersonEmer> peDc = new Collection<PersonEmer>();
+            Collection<PersonEmer> peDc1 = new Collection<PersonEmer>();
+            string[] personEmerIds = new string[] {"1"};
+            string[] personEmerNames = new string[] { "Name1", "Name2" };
+            List<string> personEmerkeys = new List<string> { };
+
+            //Filter values
+            string personId = "1";
+            string filterName = "Name1";
+            string[] filterPersonIds = new string[] { "2", "3" };
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                base.MockInitialize();
+                emergencyInformationRepository = BuildEmergencyInformationRepository();
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                base.MockCleanup();
+                emergencyInformationRepository = null;
+                peDc = null;
+                peDc1 = null;
+                personEmerIds = null;
+                personEmerNames = null;
+                personEmerkeys = null;
+                pcWithError = null;
+                pc = null;
+
+            }
+
+            // Set up for testing.
+            private EmergencyInformationRepository BuildEmergencyInformationRepository()
+            {
+                peDc = new Collection<PersonEmer>()
+                {
+                    new PersonEmer()
+                    {
+                        Recordkey = "1",
+                        RecordGuid = "bef8da57-96c1-40db-b6bb-98c57af9f211",
+                        EmerContactsEntityAssociation = new List<PersonEmerEmerContacts>()
+                        {
+                            new PersonEmerEmerContacts()
+                            {
+                                EmerContactAddressAssocMember = "123 any str",
+                                EmerEmergencyContactFlagAssocMember = "N",
+                                EmerNameAssocMember = "Name1",
+                                EmerDaytimePhoneAssocMember = "800 555 1212",
+                                EmerEveningPhoneAssocMember = "888 555 1212",
+                                EmerMissingContactFlagAssocMember = "emcfam",
+                                EmerOtherPhoneAssocMember = "eopam",
+                                EmerRelationshipAssocMember = "eram"
+                            }
+                        }
+                    }
+                };
+
+                peDc1 = new Collection<PersonEmer>()
+                {
+                    new PersonEmer()
+                    {
+                        Recordkey = "1",
+                        RecordGuid = "bef8da57-96c1-40db-b6bb-98c57af9f211",
+                        EmerContactsEntityAssociation = new List<PersonEmerEmerContacts>()
+                        {
+                            new PersonEmerEmerContacts()
+                            {
+                                EmerContactAddressAssocMember = "123 any str",
+                                EmerEmergencyContactFlagAssocMember = "N",
+                                EmerNameAssocMember = "Name1",
+                                EmerDaytimePhoneAssocMember = "800 555 1212",
+                                EmerEveningPhoneAssocMember = "888 555 1212",
+                                EmerMissingContactFlagAssocMember = "N",
+                                EmerOtherPhoneAssocMember = "eopam",
+                                EmerRelationshipAssocMember = "eram"
+                            }
+                        }
+                    },
+                    new PersonEmer()
+                    {
+                        Recordkey = "1",
+                        RecordGuid = "bef8da57-96c1-40db-b6bb-98c57af9f211",
+                        EmerContactsEntityAssociation = new List<PersonEmerEmerContacts>()
+                        {
+                            new PersonEmerEmerContacts()
+                            {
+                                EmerContactAddressAssocMember = "123 any str",
+                                EmerEmergencyContactFlagAssocMember = "",
+                                EmerNameAssocMember = "Name1",
+                                EmerDaytimePhoneAssocMember = "800 555 1212",
+                                EmerEveningPhoneAssocMember = "888 555 1212",
+                                EmerMissingContactFlagAssocMember = "",
+                                EmerOtherPhoneAssocMember = "eopam",
+                                EmerRelationshipAssocMember = "eram"
+                            },
+                            new PersonEmerEmerContacts()
+                            {
+                                EmerContactAddressAssocMember = "123 any str",
+                                EmerEmergencyContactFlagAssocMember = "",
+                                EmerNameAssocMember = "Name1",
+                                EmerDaytimePhoneAssocMember = "800 555 1212",
+                                EmerEveningPhoneAssocMember = "888 555 1212",
+                                EmerMissingContactFlagAssocMember = "",
+                                EmerOtherPhoneAssocMember = "eopam",
+                                EmerRelationshipAssocMember = "eram"
+                            }
+                        }
+                    }
+                };
+                pcWithError = new PersonContact(guid, "1", "1")
+                {
+                    PersonContactDetails = new List<PersonContactDetails>()
+                    {
+                        new PersonContactDetails()
+                        {
+                            ContactName = "Contact Name 1",
+                            DaytimePhone = "800 555 1212",
+                            ContactFlag = "Contact Flag 1",
+                            EveningPhone = "888 666 1212",
+                            MissingContactFlag = "Missing Contact Flag 1",
+                            OtherPhone = "800 444 1111",
+                            Relationship = "Relationship 1",
+                            Guid = guid
+                        }
+                    }
+                };
+
+                pc = new PersonContact(guid, "1", "1")
+                {
+                    PersonContactDetails = new List<PersonContactDetails>()
+                    {
+                        new PersonContactDetails()
+                        {
+                            ContactName = "Contact Name 1",
+                            DaytimePhone = "800 555 1212",
+                            ContactFlag = "Contact Flag 1",
+                            EveningPhone = "888 666 1212",
+                            MissingContactFlag = "Missing Contact Flag 1",
+                            OtherPhone = "800 444 1111",
+                            Relationship = "Relationship 1",
+                            Guid = guid
+                        }
+                    }
+                };
+
+                UpdatePersonEmerResponse response = new UpdatePersonEmerResponse()
+                {
+                    EmerNameGuid = guid,
+                    UpdatePersonEmerErrors = new List<UpdatePersonEmerErrors>()
+                    {
+                        new UpdatePersonEmerErrors()
+                        {
+                            ErrorCodes = "1",
+                            ErrorMessages = "Error Occured While Update."
+                        }
+                    }
+                };
+
+                transManagerMock.Setup(repo => repo.ExecuteAsync<UpdatePersonEmerRequest, UpdatePersonEmerResponse>(It.IsAny<UpdatePersonEmerRequest>()))
+                    .ReturnsAsync(response);
+
+                dataReaderMock.SetupSequence(repo => repo.SelectAsync("PERSON.EMER", It.IsAny<string[]>(), It.IsAny<string>()))
+                    .Returns(Task.FromResult(personEmerIds))
+                    .Returns(Task.FromResult(personEmerNames));
+
+                dataReaderMock.SetupSequence(repo => repo.SelectAsync("PERSON.EMER", It.IsAny<string>()))
+                    .Returns(Task.FromResult(personEmerIds))
+                    .Returns(Task.FromResult(personEmerNames));
+
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<PersonEmer>("PERSON.EMER", It.IsAny<string[]>(), It.IsAny<bool>()))
+                    .ReturnsAsync(peDc);
+
+                Dictionary<string, string> dict = new Dictionary<string, string>();
+                dict.Add("1|Name1", "bef8da57-96c1-40db-b6bb-98c57af9f211");
+
+                //0000045|Marsha Aus
+                Dictionary<string, RecordKeyLookupResult> rklDict = new Dictionary<string, RecordKeyLookupResult>();
+                rklDict.Add("PERSON.EMER+1+Name1", new RecordKeyLookupResult()
+                {
+                    Guid = "bef8da57-96c1-40db-b6bb-98c57af9f211",
+                    ModelName = "person-emergency-contacts"
+                });
+                dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(rklDict);
+
+
+                // Feed my pretend repository the necessary tools. This will be called with the get. Does not actually contain the pretend DB record.
+                emergencyInformationRepository = new EmergencyInformationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                emergencyInformationRepository.EthosExtendedDataDictionary = new Dictionary<string, string>();
+                emergencyInformationRepository.EthosExtendedDataDictionary.Add("A", "A");
+
+                return emergencyInformationRepository;
+            }
+
+
+            [TestMethod]
+            public async Task GetPersonContacts2Async()
+            {
+                var result = await emergencyInformationRepository.GetPersonContacts2Async(0, 100, It.IsAny<bool>(), personId, filterName, filterPersonIds);
+                Assert.IsNotNull(result);
+                Assert.AreEqual(peDc.Count(), result.Item2);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task GetPersonContacts2Async_RepositoryException()
+            {
+                Dictionary<string, RecordKeyLookupResult> rklDict = new Dictionary<string, RecordKeyLookupResult>();
+                rklDict.Add("PERSON.EMER+1+Name1", new RecordKeyLookupResult()
+                {
+                    Guid = "",
+                    ModelName = "person-emergency-contacts"
+                });
+                dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(rklDict);
+                await emergencyInformationRepository.GetPersonContacts2Async(0, 100, It.IsAny<bool>(), personId, filterName, filterPersonIds);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task GetPersonContacts2Async_GettingGuids_RepositoryException()
+            {
+                dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ThrowsAsync(new Exception());
+                await emergencyInformationRepository.GetPersonContacts2Async(0, 100, It.IsAny<bool>(), personId, filterName, filterPersonIds);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task GetPersonContacts2Async_ContactFlag_RepositoryException()
+            {                
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<PersonEmer>("PERSON.EMER", It.IsAny<string[]>(), It.IsAny<bool>()))
+                    .ReturnsAsync(peDc1);
+                await emergencyInformationRepository.GetPersonContacts2Async(0, 100, It.IsAny<bool>(), personId, filterName, filterPersonIds);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task GetPersonContactById2Async_Guid_Null()
+            {
+                await emergencyInformationRepository.GetPersonContactById2Async(string.Empty);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(KeyNotFoundException))]
+            public async Task GetPersonContactById2Async_KeyNotFoundException()
+            {
+                var id = peDc1.FirstOrDefault().Recordkey;
+                await emergencyInformationRepository.GetPersonContactById2Async(id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(KeyNotFoundException))]
+            public async Task GetPersonContactById2Async_Dictionary_Null()
+            {
+                var id = peDc1.FirstOrDefault().Recordkey;                
+                dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+                await emergencyInformationRepository.GetPersonContactById2Async(id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(KeyNotFoundException))]
+            public async Task GetPersonContactById2Async_foundEntry_Null()
+            {
+                var id = peDc1.FirstOrDefault().Recordkey;
+                GuidLookupResult result = null;
+                Dictionary<string, GuidLookupResult> dict = new Dictionary<string, GuidLookupResult>();
+                dict.Add(id, result);
+                dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dict);
+                await emergencyInformationRepository.GetPersonContactById2Async(id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task GetPersonContactById2Async_Wrong_Entity()
+            {
+                var id = peDc1.FirstOrDefault().Recordkey;
+                GuidLookupResult result = new GuidLookupResult()
+                {
+                    Entity = "PERSON.EMERs",
+                    PrimaryKey = "1",
+                    SecondaryKey = "Name1"
+                };
+                Dictionary<string, GuidLookupResult> dict = new Dictionary<string, GuidLookupResult>();
+                dict.Add(id, result);
+                dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dict);
+                await emergencyInformationRepository.GetPersonContactById2Async(id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task GetPersonContactById2Async_SecondaryKey_Null()
+            {
+                var id = peDc1.FirstOrDefault().Recordkey;
+                GuidLookupResult result = new GuidLookupResult()
+                {
+                    Entity = "PERSON.EMER",
+                    PrimaryKey = "1",
+                    SecondaryKey = ""
+                };
+                Dictionary<string, GuidLookupResult> dict = new Dictionary<string, GuidLookupResult>();
+                dict.Add(id, result);
+                dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dict);
+                await emergencyInformationRepository.GetPersonContactById2Async(id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(KeyNotFoundException))]
+            public async Task GetPersonContactById2Async_DataContract_Null()
+            {
+                var id = peDc1.FirstOrDefault().Recordkey;
+                GuidLookupResult result = new GuidLookupResult()
+                {
+                    Entity = "PERSON.EMER",
+                    PrimaryKey = "1",
+                    SecondaryKey = "Name1"
+                };
+                Dictionary<string, GuidLookupResult> dict = new Dictionary<string, GuidLookupResult>();
+                dict.Add(id, result);
+                dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dict);
+                await emergencyInformationRepository.GetPersonContactById2Async(id);
+            }
+
+            [TestMethod]
+            public async Task GetPersonContactById2Async()
+            {
+                var id = peDc1.FirstOrDefault().Recordkey;
+                GuidLookupResult glrResult = new GuidLookupResult()
+                {
+                    Entity = "PERSON.EMER",
+                    PrimaryKey = "1",
+                    SecondaryKey = "Name1"
+                };
+                Dictionary<string, GuidLookupResult> dict = new Dictionary<string, GuidLookupResult>();
+                dict.Add(id, glrResult);
+                dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dict);
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<PersonEmer>("PERSON.EMER", It.IsAny<string>(), It.IsAny<bool>()))
+                    .ReturnsAsync(peDc.FirstOrDefault());
+                var result = await emergencyInformationRepository.GetPersonContactById2Async(id);
+                Assert.IsNotNull(result);
+                Assert.AreEqual(peDc.FirstOrDefault().RecordGuid, result.PersonContactGuid);
+                Assert.AreEqual(peDc.FirstOrDefault().Recordkey, result.PersonContactRecordKey);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task UpdatePersonEmergencyContactsAsync_ArgumentNullException()
+            {
+                await emergencyInformationRepository.UpdatePersonEmergencyContactsAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task UpdatePersonEmergencyContactsAsync_RepositoryException()
+            {
+                await emergencyInformationRepository.UpdatePersonEmergencyContactsAsync(pcWithError);
+            }
+
+            [TestMethod]
+            public async Task UpdatePersonEmergencyContactsAsync()
+            {
+                var id = peDc1.FirstOrDefault().Recordkey;
+                GuidLookupResult glrResult = new GuidLookupResult()
+                {
+                    Entity = "PERSON.EMER",
+                    PrimaryKey = "1",
+                    SecondaryKey = "Name1"
+                };
+                Dictionary<string, GuidLookupResult> dict = new Dictionary<string, GuidLookupResult>();
+                dict.Add(id, glrResult);
+                dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dict);
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<PersonEmer>("PERSON.EMER", It.IsAny<string>(), It.IsAny<bool>()))
+                    .ReturnsAsync(peDc.FirstOrDefault());
+                UpdatePersonEmerResponse response1 = new UpdatePersonEmerResponse()
+                {
+                    EmerNameGuid = guid
+                };
+
+                transManagerMock.Setup(repo => repo.ExecuteAsync<UpdatePersonEmerRequest, UpdatePersonEmerResponse>(It.IsAny<UpdatePersonEmerRequest>()))
+                    .ReturnsAsync(response1);
+                var result = await emergencyInformationRepository.UpdatePersonEmergencyContactsAsync(pcWithError);
+            }
+        }
+
+        [TestClass]
+        public class PersonEmergencyContacts_Delete : BaseRepositorySetup
+        {
+            EmergencyInformationRepository emergencyInformationRepository;
+            [TestInitialize]
+            public void Initialize()
+            {
+                base.MockInitialize();
+                emergencyInformationRepository = BuildEmergencyInformationRepository();
+            }
+
+            // Set up for testing.
+            private EmergencyInformationRepository BuildEmergencyInformationRepository()
+            {                
+                // Feed my pretend repository the necessary tools. This will be called with the get. Does not actually contain the pretend DB record.
+                emergencyInformationRepository = new EmergencyInformationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+                return emergencyInformationRepository;
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                base.MockCleanup();
+                emergencyInformationRepository = null;
+            }
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task DeletePersonEmergencyContactsAsync_RepositoryException()
+            {
+                transManagerMock.Setup(repo => repo.ExecuteAsync<DeletePersonEmerRequest, DeletePersonEmerResponse>(It.IsAny<DeletePersonEmerRequest>()))
+                    .ReturnsAsync(new DeletePersonEmerResponse()
+                    {
+                        Error = true,
+                        DeletePersonEmerErrors = new List<DeletePersonEmerErrors>()
+                        {
+                            new DeletePersonEmerErrors()
+                            {
+                                ErrorCodes = "1",
+                                ErrorMessages = "ErrorMessages 1"
+                            }
+                        }
+                    });
+                PersonContact pc = new PersonContact("1", "1", "1")
+                {
+                    PersonContactDetails = new List<PersonContactDetails>()
+                    {
+                        new PersonContactDetails()
+                        {
+                            Guid = "bef8da57-96c1-40db-b6bb-98c57af9f211"
+                        }
+                    }
+                };
+                await emergencyInformationRepository.DeletePersonEmergencyContactsAsync(pc);
+            }
+
+            [TestMethod]
+            public async Task DeletePersonEmergencyContactsAsync()
+            {
+                transManagerMock.Setup(repo => repo.ExecuteAsync<DeletePersonEmerRequest, DeletePersonEmerResponse>(It.IsAny<DeletePersonEmerRequest>()))
+                    .ReturnsAsync(new DeletePersonEmerResponse()
+                    {
+                        Error = false
+                    });
+                PersonContact pc = new PersonContact("1", "1", "1")
+                {
+                    PersonContactDetails = new List<PersonContactDetails>()
+                    {
+                        new PersonContactDetails()
+                        {
+                            Guid = "bef8da57-96c1-40db-b6bb-98c57af9f211"
+                        }
+                    }
+                };
+                await emergencyInformationRepository.DeletePersonEmergencyContactsAsync(pc);
             }
         }
 

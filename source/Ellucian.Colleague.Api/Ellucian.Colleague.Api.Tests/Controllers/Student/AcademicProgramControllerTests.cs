@@ -18,6 +18,7 @@ using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -536,9 +537,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             academicProgramsController.Request.Headers.CacheControl =
                  new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
 
-            academicProgramsServiceMock.Setup(x => x.GetAcademicPrograms4Async( It.IsAny<string>(), false)).ReturnsAsync(academicProgramsCollection);
+            academicProgramsServiceMock.Setup(x => x.GetAcademicPrograms4Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<AcademicProgram4>(), false)).ReturnsAsync(academicProgramsCollection);
 
-            var sourceContexts = (await academicProgramsController.GetAcademicPrograms4Async(criteriaFilter)).ToList();
+            var sourceContexts = (await academicProgramsController.GetAcademicPrograms4Async(null, null, criteriaFilter)).ToList();
             Assert.AreEqual(academicProgramsCollection.Count, sourceContexts.Count);
             for (var i = 0; i < sourceContexts.Count; i++)
             {
@@ -556,9 +557,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             academicProgramsController.Request.Headers.CacheControl =
                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
 
-            academicProgramsServiceMock.Setup(x => x.GetAcademicPrograms4Async(It.IsAny<string>(),true)).ReturnsAsync(academicProgramsCollection);
+            academicProgramsServiceMock.Setup(x => x.GetAcademicPrograms4Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<AcademicProgram4>(), true)).ReturnsAsync(academicProgramsCollection);
 
-            var sourceContexts = (await academicProgramsController.GetAcademicPrograms4Async(criteriaFilter)).ToList();
+            var sourceContexts = (await academicProgramsController.GetAcademicPrograms4Async(null, null, criteriaFilter)).ToList();
             Assert.AreEqual(academicProgramsCollection.Count, sourceContexts.Count);
             for (var i = 0; i < sourceContexts.Count; i++)
             {
@@ -575,9 +576,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         public async Task AcademicProgramsController_GetAcademicPrograms_KeyNotFoundException()
         {
             //
-            academicProgramsServiceMock.Setup(x => x.GetAcademicPrograms4Async(It.IsAny<string>(), false))
+            academicProgramsServiceMock.Setup(x => x.GetAcademicPrograms4Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<AcademicProgram4>(), false))
                 .Throws<KeyNotFoundException>();
-            await academicProgramsController.GetAcademicPrograms4Async(criteriaFilter);
+            await academicProgramsController.GetAcademicPrograms4Async(null, null, criteriaFilter);
         }
 
         [TestMethod]
@@ -585,9 +586,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         public async Task AcademicProgramsController_GetAcademicPrograms_PermissionsException()
         {
 
-            academicProgramsServiceMock.Setup(x => x.GetAcademicPrograms4Async(It.IsAny<string>(), false))
+            academicProgramsServiceMock.Setup(x => x.GetAcademicPrograms4Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<AcademicProgram4>(), false))
                 .Throws<PermissionsException>();
-            await academicProgramsController.GetAcademicPrograms4Async(criteriaFilter);
+            await academicProgramsController.GetAcademicPrograms4Async(null, null, criteriaFilter);
         }
 
         [TestMethod]
@@ -595,9 +596,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         public async Task AcademicProgramsController_GetAcademicPrograms_ArgumentException()
         {
 
-            academicProgramsServiceMock.Setup(x => x.GetAcademicPrograms4Async(It.IsAny<string>(), false))
+            academicProgramsServiceMock.Setup(x => x.GetAcademicPrograms4Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<AcademicProgram4>(), false))
                 .Throws<ArgumentException>();
-            await academicProgramsController.GetAcademicPrograms4Async(criteriaFilter);
+            await academicProgramsController.GetAcademicPrograms4Async(null, null, criteriaFilter);
         }
 
         [TestMethod]
@@ -605,9 +606,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         public async Task AcademicProgramsController_GetAcademicPrograms_RepositoryException()
         {
 
-            academicProgramsServiceMock.Setup(x => x.GetAcademicPrograms4Async(It.IsAny<string>(), false))
+            academicProgramsServiceMock.Setup(x => x.GetAcademicPrograms4Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<AcademicProgram4>(), false))
                 .Throws<RepositoryException>();
-            await academicProgramsController.GetAcademicPrograms4Async(criteriaFilter);
+            await academicProgramsController.GetAcademicPrograms4Async(null, null, criteriaFilter);
         }
 
         [TestMethod]
@@ -615,9 +616,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         public async Task AcademicProgramsController_GetAcademicPrograms_IntegrationApiException()
         {
 
-            academicProgramsServiceMock.Setup(x => x.GetAcademicPrograms4Async(It.IsAny<string>(), false))
+            academicProgramsServiceMock.Setup(x => x.GetAcademicPrograms4Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<AcademicProgram4>(), false))
                 .Throws<IntegrationApiException>();
-            await academicProgramsController.GetAcademicPrograms4Async(criteriaFilter);
+            await academicProgramsController.GetAcademicPrograms4Async(null, null, criteriaFilter);
         }
 
         [TestMethod]
@@ -637,8 +638,11 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task AcademicProgramsController_GetAcademicPrograms_Exception()
         {
-            academicProgramsServiceMock.Setup(x => x.GetAcademicPrograms4Async(It.IsAny<string>(), false)).Throws<Exception>();
-            await academicProgramsController.GetAcademicPrograms4Async(criteriaFilter);
+            QueryStringFilter acadCatalog = new QueryStringFilter("academicCatalog", "{'academicCatalog':{'id':'6c669a92-9d61-42b6-b8cf-26b6dcd12419'}}");
+            QueryStringFilter recruitmentProg = new QueryStringFilter("recruitmentProgram", "{'recruitmentProgram':'active'}");
+
+            academicProgramsServiceMock.Setup(x => x.GetAcademicPrograms4Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<AcademicProgram4>(), false)).Throws<Exception>();
+            await academicProgramsController.GetAcademicPrograms4Async(acadCatalog, recruitmentProg, criteriaFilter);
         }
 
         [TestMethod]

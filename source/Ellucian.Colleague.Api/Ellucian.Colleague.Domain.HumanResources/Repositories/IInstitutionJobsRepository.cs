@@ -15,7 +15,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
 
         Task<Tuple<IEnumerable<InstitutionJobs>, int>> GetInstitutionJobsAsync(int offset, int limit, string personCode = "",
             string employerCode = "", string positionCode = "", string departmentCode = "", string convertedStartOn = "", string convertedEndOn = "",
-            string status = "", string classificationCode = "", string preference = "", bool bypassCache = false);
+            string status = "", string classificationCode = "", string preference = "", bool bypassCache = false, Dictionary<string, string> filterQualifiers = null);
 
         Task<InstitutionJobs> UpdateInstitutionJobsAsync(InstitutionJobs institutionJobsEntity);
 

@@ -1,8 +1,9 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.using System;
+﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.using System;
 
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using System;
+using System.Collections.Generic;
 
 namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
 {
@@ -24,5 +25,12 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         /// <param name="approverId">The approver ID.</param>
         /// <returns>An approver name or empty string.</returns>
         Task<String> GetApproverNameForIdAsync(string approverId);
+
+        /// <summary>
+        /// Gets the next approver for search criteria.
+        /// </summary>
+        /// <param name="searchCriteria"></param>
+        /// <returns></returns>
+        Task<IEnumerable<NextApprover>> QueryNextApproverByKeywordAsync(string searchCriteria);
     }
 }

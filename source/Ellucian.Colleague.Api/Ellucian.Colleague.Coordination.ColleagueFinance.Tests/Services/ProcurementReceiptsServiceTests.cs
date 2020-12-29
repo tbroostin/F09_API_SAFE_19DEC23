@@ -1,4 +1,4 @@
-//Copyright 2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -90,15 +90,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task ProcurementReceiptsService_GetProcurementReceiptsAsync_PermissionsException()
         {
             _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>());
-            await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
+            await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.ProcurementReceipts>(), It.IsAny<bool>());
         }
 
         [TestMethod]
         public async Task ProcurementReceiptsService_GetProcurementReceiptsAsync_EmptyTuple()
         {
-            _purchaseOrderReceiptRepositoryMock.Setup(i => i.GetPurchaseOrderReceiptsAsync(It.IsAny<int>(), It.IsAny<int>()))
+            _purchaseOrderReceiptRepositoryMock.Setup(i => i.GetPurchaseOrderReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>()))
                 .ReturnsAsync(new Tuple<IEnumerable<PurchaseOrderReceipt>, int>(new List<PurchaseOrderReceipt>(), 0));
-            var results = await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
+            var results = await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.ProcurementReceipts>(), It.IsAny<bool>());
 
             Assert.IsNotNull(results);
             Assert.AreEqual(results.Item2, 0);
@@ -106,12 +106,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         [TestMethod]
         [ExpectedException(typeof(KeyNotFoundException))]
-
         public async Task ProcurementReceiptsService_GetProcurementReceiptsAsync_KeyNotFoundException()
         {
             _purchaseOrderRepositoryMock.Setup(i => i.GetGuidFromIdAsync(It.IsAny<string>(), "PURCHASE.ORDERS")).ReturnsAsync(null);
 
-            var results = await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
+            var results = await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.ProcurementReceipts>(), It.IsAny<bool>());
         }
 
         [TestMethod]
@@ -119,7 +118,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task ProcurementReceiptsService_GetProcurementReceiptsAsync_ShippingMethods_Null()
         {
             _financeReferenceRepositoryMock.Setup(i => i.GetShippingMethodsAsync(It.IsAny<bool>())).ReturnsAsync(null);
-            var results = await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
+            var results = await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.ProcurementReceipts>(), It.IsAny<bool>());
         }
 
         [TestMethod]
@@ -127,7 +126,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task ProcurementReceiptsService_GetProcurementReceiptsAsync_ShippingMethods_InvalidId()
         {
             _procurementReceiptsCollection.First().ArrivedVia = "WrongShippedVia";
-            var results = await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
+            var results = await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.ProcurementReceipts>(), It.IsAny<bool>());
         }
 
         [TestMethod]
@@ -135,17 +134,63 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task ProcurementReceiptsService_GetProcurementReceiptsAsync_ReceivedByGuid()
         {
             _procurementReceiptsCollection.First().ReceivedBy = "WrongReceivedBy";
-            var results = await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
+            var results = await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.ProcurementReceipts>(), It.IsAny<bool>());
         }
 
-        [TestMethod]
-        
+        [TestMethod]     
         public async Task ProcurementReceiptsService_GetProcurementReceiptsAsync()
         {
-            var results = await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
+            var results = await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.ProcurementReceipts>(), It.IsAny<bool>());
             Assert.IsNotNull(results);
             Assert.AreEqual(1, results.Item2);
         }
+
+        [TestMethod]
+        public async Task ProcurementReceiptsService_GetProcurementReceiptsAsync_ValidFilter()
+        {
+           var filter = new ProcurementReceipts()
+            {
+                PurchaseOrder = new GuidObject2("90c7d97e-8564-49c9-b020-a0fd635660f5")
+            };
+            
+            _purchaseOrderRepositoryMock.Setup(x => x.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(purchaseOrder.Id);
+
+            var results = await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), filter, It.IsAny<bool>());
+            Assert.IsNotNull(results);
+            Assert.AreEqual(1, results.Item2);
+        }
+
+
+        [TestMethod]
+        public async Task ProcurementReceiptsService_GetProcurementReceiptsAsync_InvalidFilter()
+        {
+            var filter = new ProcurementReceipts()
+            {
+                PurchaseOrder = new GuidObject2("90c7d97e-8564-49c9-b020-a0fd635660f5")
+            };
+            
+            _purchaseOrderRepositoryMock.Setup(x => x.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+
+            var results = await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), filter, It.IsAny<bool>());
+            Assert.IsNotNull(results);
+            Assert.AreEqual(0, results.Item2);
+        }
+
+        [TestMethod]
+        public async Task ProcurementReceiptsService_GetProcurementReceiptsAsync_FilterException()
+        {
+            var filter = new ProcurementReceipts()
+            {
+                PurchaseOrder = new GuidObject2("90c7d97e-8564-49c9-b020-a0fd635660f5")
+            };
+
+            _purchaseOrderRepositoryMock.Setup(x => x.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
+
+            var results = await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), filter, It.IsAny<bool>());
+            Assert.IsNotNull(results);
+            Assert.AreEqual(0, results.Item2);
+        }
+
 
         [TestMethod]
         public async Task ProcurementReceiptsService_GetProcurementReceiptsByGuidAsync()
@@ -745,7 +790,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             purchaseOrder.AddLineItem(new LineItem("1", "Descr", 1, 100, 100));
             _purchaseOrderRepositoryMock.Setup(i => i.GetPurchaseOrdersByGuidAsync("90c7d97e-8564-49c9-b020-a0fd635660f5")).ReturnsAsync(purchaseOrder);
 
-            _purchaseOrderReceiptRepositoryMock.Setup(i => i.GetPurchaseOrderReceiptsAsync(It.IsAny<int>(), It.IsAny<int>()))
+            _purchaseOrderReceiptRepositoryMock.Setup(i => i.GetPurchaseOrderReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>()))
                .ReturnsAsync(new Tuple<IEnumerable<PurchaseOrderReceipt>, int>(_procurementReceiptsCollection, _procurementReceiptsCollection.Count()));
 
             _purchaseOrderReceiptRepositoryMock.Setup(i => i.GetPurchaseOrderReceiptByGuidAsync(It.IsAny<string>())).ReturnsAsync(_procurementReceiptsCollection.First());

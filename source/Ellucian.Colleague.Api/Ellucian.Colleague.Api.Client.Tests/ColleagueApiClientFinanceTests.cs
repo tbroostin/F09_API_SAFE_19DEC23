@@ -1,5 +1,6 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Dtos.Finance;
+using Ellucian.Colleague.Dtos.Finance.AccountActivity;
 using Ellucian.Rest.Client.Exceptions;
 using Ellucian.Web.Http.TestUtil;
 using Ellucian.Web.Infrastructure.TestUtil;
@@ -798,6 +799,133 @@ namespace Ellucian.Colleague.Api.Client.Tests
 
                 // Act
                 var clientResponse = await client.GetChargeCodesAsync();
+                _loggerMock.Verify();
+            }
+        }
+
+        [TestClass]
+        public class QueryStudentPotentialD7FinancialAid
+        {
+
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+            private string id;
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            PotentialD7FinancialAidCriteria criteria;
+            List<PotentialD7FinancialAid> potentialD7s;
+            string serializedResponse;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+
+                criteria = new PotentialD7FinancialAidCriteria()
+                {
+                    StudentId = "Valid",
+                    TermId = "Term",
+                    AwardPeriodAwardsToEvaluate = new List<AwardPeriodAwardTransmitExcessStatus>()
+                    {
+                        new AwardPeriodAwardTransmitExcessStatus()
+                        {
+                           AwardPeriodAward = "Foo",
+                           TransmitExcessIndicator = false,
+                        }
+                    }
+                };
+
+                potentialD7s = new List<PotentialD7FinancialAid>()
+                {
+                    new PotentialD7FinancialAid()
+                    {
+                        AwardPeriodAward = "Awdp*Award1",
+                        AwardDescription = "Description for Awdp*Award1",
+                        AwardAmount = 50m,
+                    },
+                };
+
+                serializedResponse = JsonConvert.SerializeObject(potentialD7s);
+            }
+
+            /// <summary>
+            /// Verify that valid input results in a valid response
+            /// </summary>
+            [TestMethod]
+            public async Task QueryStudentPotentialD7FinancialAid_ValidResponse()
+            {
+                // Arrange
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.QueryStudentPotentialD7FinancialAidAsync(criteria);
+
+                // Assert
+                Assert.AreEqual(potentialD7s[0].AwardPeriodAward, clientResponse.ToList()[0].AwardPeriodAward);
+                Assert.AreEqual(potentialD7s[0].AwardDescription, clientResponse.ToList()[0].AwardDescription);
+                Assert.AreEqual(potentialD7s[0].AwardAmount, clientResponse.ToList()[0].AwardAmount);
+            }
+
+            /// <summary>
+            /// Verify that a bad request results in an exception
+            /// </summary>
+            [TestMethod]
+            [ExpectedException(typeof(HttpRequestFailedException))]
+            public async Task QueryStudentPotentialD7FinancialAid_BadRequest()
+            {
+                // Arrange
+                var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+                response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+                response.RequestMessage = new HttpRequestMessage(HttpMethod.Get, "http://test");
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.QueryStudentPotentialD7FinancialAidAsync(criteria);
+                _loggerMock.Verify();
+            }
+
+            /// <summary>
+            /// Verify that a null input parameter results in an exception
+            /// </summary>
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task QueryStudentPotentialD7FinancialAid_NullCriteria()
+            {
+                // Arrange
+                var student = criteria.StudentId;
+                criteria.StudentId = null;
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                response.RequestMessage = new HttpRequestMessage(HttpMethod.Post, "http://test");
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.QueryStudentPotentialD7FinancialAidAsync(null);
                 _loggerMock.Verify();
             }
         }

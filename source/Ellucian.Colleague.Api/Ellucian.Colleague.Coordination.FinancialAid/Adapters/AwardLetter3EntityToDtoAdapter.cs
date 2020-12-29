@@ -81,6 +81,8 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Adapters
                 singleAward.AwardDescription = annualAward.AwardDescription;
                 singleAward.GroupName = annualAward.GroupName;
                 singleAward.GroupNumber = annualAward.GroupNumber;
+                singleAward.AwRenewableFlag = annualAward.AwRenewableFlag;
+                singleAward.AwRenewableText = annualAward.AwRenewableText;
 
                 // Add in the Award Period Information
                 var awardLetterAwardPeriodRecords = new List<Dtos.FinancialAid.AwardLetterAwardPeriod>();
@@ -103,6 +105,85 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Adapters
 
             }
 
+            var awardLetterHistoryCosts = new List<Dtos.FinancialAid.AwardLetterHistoryCost>();
+            if (sourceAwardLetter.AlhDirectCostDesc != null)
+            {
+                for (var i = 0; i < sourceAwardLetter.AlhDirectCostDesc.Count(); i++)
+                {
+                    var directCost = new Dtos.FinancialAid.AwardLetterHistoryCost();
+                    directCost.Description = sourceAwardLetter.AlhDirectCostDesc[i];
+                    directCost.Amount = sourceAwardLetter.AlhDirectCostAmount[i];
+                    directCost.CostType = "Direct Costs";
+                    awardLetterHistoryCosts.Add(directCost);
+                }
+            }
+            if (sourceAwardLetter.AlhIndirectCostDesc != null)
+            {
+                for (var j = 0; j < sourceAwardLetter.AlhIndirectCostDesc.Count(); j++)
+                {
+                    var indirectCost = new Dtos.FinancialAid.AwardLetterHistoryCost();
+                    indirectCost.Description = sourceAwardLetter.AlhIndirectCostDesc[j];
+                    indirectCost.Amount = sourceAwardLetter.AlhIndirectCostAmount[j];
+                    indirectCost.CostType = "Indirect Costs";
+                    awardLetterHistoryCosts.Add(indirectCost);
+                }
+            }
+
+            var offerLetterHousingEnrollmentItems = new List<Dtos.FinancialAid.OfferLetterHousingEnrollmentItem>();
+            if (sourceAwardLetter.AlhHousingDesc != null)
+            {
+                for (var i = 0; i < sourceAwardLetter.AlhHousingDesc.Count(); i++)
+                {
+                    var housingEnrollmentDesc = new Dtos.FinancialAid.OfferLetterHousingEnrollmentItem();
+                    housingEnrollmentDesc.AlhHousingDesc = sourceAwardLetter.AlhHousingDesc[i];
+                    offerLetterHousingEnrollmentItems.Add(housingEnrollmentDesc);
+                }
+            }
+            if (sourceAwardLetter.AlhEnrollmentStatus != null && offerLetterHousingEnrollmentItems != null && offerLetterHousingEnrollmentItems.Any())
+            {
+                for (var j = 0; j < sourceAwardLetter.AlhEnrollmentStatus.Count(); j++)
+                {
+                    if (offerLetterHousingEnrollmentItems.Count() < sourceAwardLetter.AlhEnrollmentStatus.Count())
+                    {
+                        var newEnrollmentDesc = new Dtos.FinancialAid.OfferLetterHousingEnrollmentItem();
+                        offerLetterHousingEnrollmentItems.Add(newEnrollmentDesc);
+                    }
+                    offerLetterHousingEnrollmentItems[j].AlhEnrollmentDesc = sourceAwardLetter.AlhEnrollmentStatus[j];
+                }
+            }
+            else if(sourceAwardLetter.AlhEnrollmentStatus != null)
+            {
+                for (var j = 0; j < sourceAwardLetter.AlhEnrollmentStatus.Count(); j++)
+                {
+                    var enrollmentDesc = new Dtos.FinancialAid.OfferLetterHousingEnrollmentItem();
+                    enrollmentDesc.AlhEnrollmentDesc = sourceAwardLetter.AlhEnrollmentStatus[j];
+                    offerLetterHousingEnrollmentItems.Add(enrollmentDesc);
+                }
+            }
+
+            // Get distinct award periods for a year
+            var awardPeriodsForYear = sourceAwardLetter.AwardLetterAnnualAwards.Any() ? sourceAwardLetter.AwardLetterAnnualAwards.SelectMany(a => a.AwardLetterAwardPeriods).ToList() : new List<Domain.FinancialAid.Entities.AwardLetterAwardPeriod>();
+            var distinctAwardPeriodColumnsForYear = awardPeriodsForYear.Any() ? awardPeriodsForYear.Select(ap => ap.ColumnNumber).Distinct().OrderBy(cn => cn).ToList() : new List<int>();
+            var awardPeriodTotals = new List<Dtos.FinancialAid.AwardPeriodTotal>();
+            // Calculate totals for total row for pdf
+            foreach (var columnNumber in distinctAwardPeriodColumnsForYear)
+            {
+                var columnGroupPeriods = awardPeriodsForYear.Where(ap => ap.ColumnNumber == columnNumber).ToList();
+                var updatedColumnGroupPeriods = new List<Domain.FinancialAid.Entities.AwardLetterAwardPeriod>();
+                var awardPeriodTotal = new Dtos.FinancialAid.AwardPeriodTotal();
+                foreach (var period in columnGroupPeriods)
+                {
+                    if (period.GroupNumber != 4)
+                    {
+                        updatedColumnGroupPeriods.Add(period);
+                    }
+                }
+                var totalAmountForPeriod = updatedColumnGroupPeriods.Any() ? updatedColumnGroupPeriods.Sum(p => p.AwardPeriodAmount) : null;
+                var nonNullAmount = totalAmountForPeriod.GetValueOrDefault();
+                awardPeriodTotal.TotalAmount = nonNullAmount;
+                awardPeriodTotals.Add(awardPeriodTotal);
+            }
+
             //create the DTO
             var awardLetterReportDto = new Dtos.FinancialAid.AwardLetter3()
             {
@@ -115,6 +196,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Adapters
                 AwardLetterParameterId = sourceAwardLetter.AwardLetterParameterId,
                 Id = sourceAwardLetter.Id,
                 StudentOfficeCode = sourceAwardLetter.StudentOfficeCode,
+                AwardLetterHistoryType = sourceAwardLetter.AwardLetterHistoryType,
 
                 ContactName = sourceAwardLetter.ContactName,
                 ContactAddress = officeAddress,
@@ -129,8 +211,32 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Adapters
 
                 OpeningParagraph = sourceAwardLetter.OpeningParagraph,
                 ClosingParagraph = sourceAwardLetter.ClosingParagraph,
+                PreAwardText = sourceAwardLetter.PreAwardText,
+                PostAwardText = sourceAwardLetter.PostAwardText,
+                PostClosingText = sourceAwardLetter.PostClosingText,
                 AcceptedDate = sourceAwardLetter.AcceptedDate,
                 CreatedDate = sourceAwardLetter.CreatedDate,
+                AlhEnrollmentStatus = sourceAwardLetter.AlhEnrollmentStatus,
+                AlhHousingInd = sourceAwardLetter.AlhHousingInd,
+                AlhHousingDesc = sourceAwardLetter.AlhHousingDesc,
+                OfferLetterHousingEnrollmentItem = offerLetterHousingEnrollmentItems,
+
+                // Direct cost assignment
+                AlhDirectCostAmount = sourceAwardLetter.AlhDirectCostAmount,
+                AlhDirectCostDesc = sourceAwardLetter.AlhDirectCostDesc,
+                AlhDirectCostComp = sourceAwardLetter.AlhDirectCostComp,
+                AwardLetterHistoryCosts = awardLetterHistoryCosts,
+
+                // Indirect cost assignment
+                AlhIndirectCostAmount = sourceAwardLetter.AlhIndirectCostAmount,
+                AlhIndirectCostDesc = sourceAwardLetter.AlhIndirectCostDesc,
+                AlhIndirectCostComp = sourceAwardLetter.AlhIndirectCostComp,
+
+                // Pell entitlement assignment
+                AlhPellEntitlementList = sourceAwardLetter.AlhPellEntitlementList,
+
+                //Total amount for period for PDF
+                AwardPeriodTotals = awardPeriodTotals
             };
 
             return awardLetterReportDto;

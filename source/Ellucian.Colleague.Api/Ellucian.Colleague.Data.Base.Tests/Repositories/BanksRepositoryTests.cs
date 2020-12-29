@@ -455,30 +455,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 var results = await repositoryUnderTest.GetAllBanksAsync();
                 loggerMock.Verify(l => l.Info(It.IsAny<ArgumentOutOfRangeException>(), It.IsAny<string>(), It.IsAny<object[]>()));
                 Assert.IsFalse(results.Any(r => r.Value.RoutingId == "foobar" || r.Value.Name == "foobar bank"));
-            }
-
-            [TestMethod]
-            public async Task RecacheTest()
-            {
-                var recache = false;
-                var expected = await testDataRepository.GetAllBanksAsync(recache);
-
-                cacheProviderMock.Setup(x => x.Contains(It.IsAny<string>(), It.IsAny<string>()))
-                    .Returns<string, string>((s1, s2) => recache).Verifiable();
-                cacheProviderMock.Setup(x => x.AddAndUnlockSemaphore(It.IsAny<string>(), It.IsAny<object>(), It.IsAny<SemaphoreSlim>(), It.IsAny<CacheItemPolicy>(), It.IsAny<string>()))
-                    .Returns(true).Verifiable();
-
-                await repositoryUnderTest.GetAllBanksAsync(recache);
-                cacheProviderMock.Verify(c =>
-                    c.AddAndUnlockSemaphore(It.IsAny<string>(), It.IsAny<object>(), It.IsAny<SemaphoreSlim>(), It.IsAny<CacheItemPolicy>(), It.IsAny<string>()),
-                    Times.Once);
-
-                recache = true;
-                await repositoryUnderTest.GetAllBanksAsync(recache);
-                cacheProviderMock.Verify(c =>
-                    c.AddAndUnlockSemaphore(It.IsAny<string>(), It.IsAny<object>(), It.IsAny<SemaphoreSlim>(), It.IsAny<CacheItemPolicy>(), It.IsAny<string>()),
-                    Times.Exactly(2));
-            }
+            }            
         }
         #endregion
 
@@ -518,21 +495,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 cacheProviderMock = null;
                 repositoryUnderTest = null;
                 testDataRepository = null;
-            }
-
-            [TestMethod]
-            public async Task GetBankAsync_WritesToCache()
-            {
-                var bankId = "123-12345";
-                var banks = await testDataRepository.BankTransferInformation();
-                cacheProviderMock.Setup(x => x.Contains(It.IsAny<string>(), It.IsAny<string>())).Returns(false);
-                cacheProviderMock.Setup(x => x.AddAndUnlockSemaphore(It.IsAny<string>(), It.IsAny<object>(), It.IsAny<SemaphoreSlim>(), It.IsAny<CacheItemPolicy>(), It.IsAny<string>()))
-                    .Returns(true);
-
-                var bank = await repositoryUnderTest.GetBankAsync(bankId);
-
-                cacheProviderMock.Verify(m => m.AddAndUnlockSemaphore(It.IsAny<string>(), It.IsAny<object>(), It.IsAny<SemaphoreSlim>(), It.IsAny<CacheItemPolicy>(), It.IsAny<string>()));
-            }
+            }            
         }
         #endregion
 

@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates
 
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
@@ -72,13 +72,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             string selectCriteria = string.Empty;
             string[] studentCourseSecIds;
             StudentSectionsAttendances StudentSectionsAttendances = new StudentSectionsAttendances(studentId);
-            if (studentId == null )
+            if (studentId == null)
             {
                 throw new ArgumentNullException("studentId", "Student Id must be provided. ");
             }
-           
+
             var studentAttendances = new List<StudentAttendance>();
-            if(sectionIds!=null && sectionIds.Any())
+            if (sectionIds != null && sectionIds.Any())
             {
                 var queryStringSectionIds = sectionIds.ToArray();
                 selectCriteria = "WITH SCS.COURSE.SECTION EQ '?'";
@@ -90,9 +90,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 selectCriteria = "WITH SCS.STUDENT EQ " + "'" + studentId + "'";
                 studentCourseSecIds = await DataReader.SelectAsync("STUDENT.COURSE.SEC", selectCriteria);
             }
-           
+
             var studentCourseSecData = await RetrieveBulkDataInBatchAsync<StudentCourseSec>(studentCourseSecIds, "STUDENT.COURSE.SEC");
-             studentAttendances = BuildStudentAttendances(studentCourseSecData,null);
+            studentAttendances = BuildStudentAttendances(studentCourseSecData, null);
             StudentSectionsAttendances.AddStudentAttendances(studentAttendances);
             return StudentSectionsAttendances;
         }
@@ -207,10 +207,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 throw new ApplicationException(err);
             }
             return updatedStudentAttendance;
-
-
-
-
         }
 
         /// <summary>
@@ -350,12 +346,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 // Build a dictionary of STUDENT.COURSE.SEC data keyed by student for easy retrieval later
                 Dictionary<string, List<StudentCourseSec>> studentCourseSecDict = new Dictionary<string, List<StudentCourseSec>>();
-                foreach(var scs in studentCourseSecData)
+                foreach (var scs in studentCourseSecData)
                 {
                     if (studentCourseSecDict.ContainsKey(scs.ScsStudent))
                     {
                         studentCourseSecDict[scs.ScsStudent].Add(scs);
-                    } else
+                    }
+                    else
                     {
                         studentCourseSecDict.Add(scs.ScsStudent, new List<StudentCourseSec>() { scs });
                     }
@@ -373,8 +370,19 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 {
                                     DateTimeOffset? meetingStartTime = att.ScsAttendanceStartTimesAssocMember.HasValue ? att.ScsAttendanceStartTimesAssocMember.ToTimeOfDayDateTimeOffset(colleagueTimeZone) : null;
                                     DateTimeOffset? meetingEndTime = att.ScsAttendanceEndTimesAssocMember.HasValue ? att.ScsAttendanceEndTimesAssocMember.ToTimeOfDayDateTimeOffset(colleagueTimeZone) : null;
-                                    var attendances = studentCourseSecDict[studentCourseSec.ScsStudent].Where(s=>s.ScsCourseSection==studentCourseSec.ScsCourseSection).SelectMany(scs => scs.ScsAttendanceEntityAssociation).ToList();
+                                    var attendances = studentCourseSecDict[studentCourseSec.ScsStudent].Where(s => s != null && s.ScsCourseSection == studentCourseSec.ScsCourseSection).SelectMany(scs => scs.ScsAttendanceEntityAssociation).ToList();
+
                                     int cumulativeMinutesAttended = attendances.Sum(scsa => scsa.ScsAttendanceMinutesAssocMember ?? 0);
+
+                                    // Set the last date attendance was recorded for the student
+                                    DateTime? lastAttendanceRecorded = attendances.Where(sa => !string.IsNullOrEmpty(sa.ScsAttendanceTypesAssocMember)).Max(sa => sa.ScsAbsentDatesAssocMember);
+
+                                    // Set the total section attendance counts for the student
+                                    int daysPresent = attendances.Where(sa => string.Compare(sa.ScsAttendanceTypesAssocMember, "P", true) == 0).Count();
+                                    int daysAbsent = attendances.Where(sa => string.Compare(sa.ScsAttendanceTypesAssocMember, "A", true) == 0).Count();
+                                    int daysExcused = attendances.Where(sa => string.Compare(sa.ScsAttendanceTypesAssocMember, "E", true) == 0).Count();
+                                    int daysLate = attendances.Where(sa => string.Compare(sa.ScsAttendanceTypesAssocMember, "L", true) == 0).Count();
+
                                     // If no date specified, use the current item's date as reference point for minutes attended to date
                                     DateTime? dateForComparison = date.HasValue ? date.Value : att.ScsAbsentDatesAssocMember ?? null;
                                     int minutesAttendedToDate = 0;
@@ -390,14 +398,19 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                         EndTime = meetingEndTime,
                                         InstructionalMethod = string.IsNullOrEmpty(att.ScsAttendanceInstrMethodsAssocMember) ? null : att.ScsAttendanceInstrMethodsAssocMember.ToUpper(),
                                         MinutesAttendedToDate = minutesAttendedToDate,
-                                        CumulativeMinutesAttended = cumulativeMinutesAttended
+                                        CumulativeMinutesAttended = cumulativeMinutesAttended,
+                                        LastAttendanceRecorded = lastAttendanceRecorded,
+                                        NumberOfDaysPresent = daysPresent,
+                                        NumberOfDaysAbsent = daysAbsent,
+                                        NumberOfDaysExcused = daysExcused,
+                                        NumberOfDaysLate = daysLate
                                     };
                                     studentAttendances.Add(studentAttendance);
                                 }
                                 catch (Exception ex)
                                 {
                                     var attendanceError = "Unable to update attendance info for item in STUDENT.COURSE.SEC " + studentCourseSec.Recordkey;
-                                    LogDataError("Student Attendance Error", studentCourseSec.Recordkey, studentCourseSec, ex, attendanceError);
+                                    logger.Error(ex, attendanceError);
                                 }
                             }
                         }
@@ -405,16 +418,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         {
                             var attendanceError = "Unable to update attendance info for item in STUDENT.COURSE.SEC " + studentCourseSec.Recordkey + ". Missing date";
                             logger.Error(attendanceError);
-                            LogDataError("Student Attendance", studentCourseSec.Recordkey, studentCourseSec);
                         }
                     }
-
 
                 }
             }
             return studentAttendances;
         }
-
 
         private async Task<List<T>> RetrieveBulkDataInBatchAsync<T>(IEnumerable<string> Ids, string tableToRead, int batchCount = 5000) where T : class, IColleagueEntity
         {

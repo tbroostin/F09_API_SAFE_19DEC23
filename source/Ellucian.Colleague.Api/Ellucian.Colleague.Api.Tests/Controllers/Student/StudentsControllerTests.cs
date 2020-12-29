@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base;
@@ -35,6 +35,240 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
     public class StudentsControllerTests
     {
         [TestClass]
+        public class StudentTests_Get_Eedm_V16
+        {
+            #region Test Context
+
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get { return testContextInstance; }
+                set { testContextInstance = value; }
+            }
+
+            #endregion
+
+            private IAcademicHistoryService academicHistoryService;
+            private IStudentService studentService;
+            private IStudentRestrictionService studentRestrictionService;
+            private IStudentRepository studentRepo;
+            private IStudentProgramRepository studentProgramRepo;
+            private IRequirementRepository requirementRepo;
+            private IAcademicCreditRepository acadCredRepo;
+            private ICourseRepository courseRepo;
+            private IAdapterRegistry adapterRegistry;
+            private StudentsController studentsController;
+            private IEmergencyInformationService emergencyInformationService;
+            private ILogger logger;
+            private ApiSettings apiSettings;
+            private string studentId = "0000001";
+            private string lastName = "Smith";
+            //private string studentProgramId1 = "10";
+            private string[] programIds = new string[] { "BA.MATH", "BA.ENGL" };
+            private string[] programCodes = new string[] { "PROG1", "PROG2" };
+            private string[] catalogCodes = new string[] { "2011", "2012" };
+            private string[] academicCreditIds = new string[] { "19000", "38001", "39" };
+
+            //private string personFilter = "1a507924-f207-460a-8c1d-1854ebe80565";
+            private string typeFilter = "1a507924-f207-460a-8c1d-1854ebe80561";
+            private string cohortsFilter = "1b507924-f207-460a-8c1d-1854ebe80561";
+            private string studentGuid = "1a507924-f207-460a-8c1d-1854ebe80566";
+            private string residencyFilter = "b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09";
+
+            private Ellucian.Web.Http.Models.QueryStringFilter criteriaFilter = new Web.Http.Models.QueryStringFilter("criteria", "");
+            private Ellucian.Web.Http.Models.QueryStringFilter personFilter = new Web.Http.Models.QueryStringFilter("person", "");
+
+            private Ellucian.Colleague.Dtos.Students2 studentsDto;
+
+            Mock<IAcademicHistoryService> academicHistoryServiceMock;
+            Mock<IStudentService> studentServiceMock;
+            Mock<IStudentRestrictionService> studentRestrictionServiceMock;
+            Mock<IStudentRepository> studentRepoMock;
+            Mock<IStudentProgramRepository> studentProgramRepoMock;
+            Mock<IRequirementRepository> requirementRepoMock;
+            Mock<IAcademicCreditRepository> acadCredRepoMock;
+            Mock<ICourseRepository> courseRepoMock;
+            Mock<IEmergencyInformationService> emergencyInformationServiceMock;
+            Mock<IAdapterRegistry> adapterRegistryMock;
+
+            private IStudentRepository testStudentRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                // mock needed ctor items
+                academicHistoryServiceMock = new Mock<IAcademicHistoryService>();
+                studentServiceMock = new Mock<IStudentService>();
+                studentRestrictionServiceMock = new Mock<IStudentRestrictionService>();
+                studentRepoMock = new Mock<IStudentRepository>();
+                studentProgramRepoMock = new Mock<IStudentProgramRepository>();
+                requirementRepoMock = new Mock<IRequirementRepository>();
+                acadCredRepoMock = new Mock<IAcademicCreditRepository>();
+                courseRepoMock = new Mock<ICourseRepository>();
+                emergencyInformationServiceMock = new Mock<IEmergencyInformationService>();
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+
+                academicHistoryService = academicHistoryServiceMock.Object;
+                studentService = studentServiceMock.Object;
+                studentRestrictionService = studentRestrictionServiceMock.Object;
+                studentRepo = studentRepoMock.Object;
+                studentProgramRepo = studentProgramRepoMock.Object;
+                requirementRepo = requirementRepoMock.Object;
+                acadCredRepo = acadCredRepoMock.Object;
+                courseRepo = courseRepoMock.Object;
+                adapterRegistry = adapterRegistryMock.Object;
+                logger = new Mock<ILogger>().Object;
+                emergencyInformationService = emergencyInformationServiceMock.Object;
+
+                testStudentRepo = new TestStudentRepository();
+
+                // setup students Dto object                
+                studentsDto = new Dtos.Students2();
+                studentsDto.Id = studentGuid;
+
+                var residency = new StudentResidenciesDtoProperty();
+                residency.Residency = new GuidObject2("1a507924-f207-460a-8c1d-1854ebe80567");
+                var residencies = new List<StudentResidenciesDtoProperty>() {residency};
+                studentsDto.Residencies = residencies;
+
+                var type = new StudentTypesDtoProperty();
+                type.Type = new GuidObject2(typeFilter);
+                var types = new List<StudentTypesDtoProperty>() { type };
+                studentsDto.Types = types;
+
+                var filterResidency = new StudentResidenciesDtoProperty();
+                filterResidency.Residency = new GuidObject2(residencyFilter);
+                var filterResidencies = new List<StudentResidenciesDtoProperty>() { filterResidency };
+                studentsDto.Residencies = residencies;
+
+                var studentDtoList = new List<Students2>() { studentsDto };
+                var studentTuple = new Tuple<IEnumerable<Students2>, int>(studentDtoList, 1);
+
+                studentServiceMock.Setup(
+                    s =>
+                        s.GetStudents2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Students2>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(studentTuple);
+                
+                studentServiceMock.Setup(s => s.GetStudentsByGuid2Async(studentGuid, It.IsAny<bool>())).ReturnsAsync(studentsDto);
+
+                studentServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
+
+                // create new students controller
+                studentsController = new StudentsController(adapterRegistry, academicHistoryService, studentService,
+                    studentProgramRepo, studentRestrictionService, requirementRepo, emergencyInformationService, logger,
+                    apiSettings)
+                {
+                    Request = new HttpRequestMessage()
+                };
+            }
+
+
+            [TestMethod]
+            public async Task StudentsController_GetStudentByGuid2_V16()
+            {
+                var student = await studentsController.GetStudentsByGuid2Async(studentGuid);
+                Assert.AreSame(student.Id, studentGuid);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentsController_GetStudentsByGuid2Async_Exception_V16()
+            {
+                studentServiceMock.Setup(x => x.GetStudentsByGuid2Async(studentGuid, It.IsAny<bool>())).Throws<Exception>();
+                await studentsController.GetStudentsByGuid2Async(string.Empty);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentsController_GetStudentsByGuid2_KeyNotFoundException_V16()
+            {
+                studentServiceMock.Setup(x => x.GetStudentsByGuid2Async(It.IsAny<string>(), It.IsAny<bool>()))
+                    .Throws<KeyNotFoundException>();
+                await studentsController.GetStudentsByGuid2Async(studentGuid);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentController_GetStudentsByGuid2_PermissionsException_V16()
+            {
+                studentServiceMock.Setup(x => x.GetStudentsByGuid2Async(It.IsAny<string>(), It.IsAny<bool>()))
+                    .Throws<PermissionsException>();
+                await studentsController.GetStudentsByGuid2Async(studentGuid);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentsController_GetStudentsByGuid2_ArgumentException_V16()
+            {
+                studentServiceMock.Setup(x => x.GetStudentsByGuid2Async(It.IsAny<string>(), It.IsAny<bool>()))
+                    .Throws<ArgumentException>();
+                await studentsController.GetStudentsByGuid2Async(studentGuid);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentsController_GetStudentsByGuid2_RepositoryException_V16()
+            {
+                studentServiceMock.Setup(x => x.GetStudentsByGuid2Async(It.IsAny<string>(), It.IsAny<bool>()))
+                    .Throws<RepositoryException>();
+                await studentsController.GetStudentsByGuid2Async(studentGuid);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentsController_GetStudentsByGuid2_IntegrationApiException_V16()
+            {
+                studentServiceMock.Setup(x => x.GetStudentsByGuid2Async(It.IsAny<string>(), It.IsAny<bool>()))
+                    .Throws<IntegrationApiException>();
+                await studentsController.GetStudentsByGuid2Async(studentGuid);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentsController_GetStudentsByGuid2_Exception_V16()
+            {
+                studentServiceMock.Setup(x => x.GetStudentsByGuid2Async(It.IsAny<string>(), It.IsAny<bool>()))
+                    .Throws<Exception>();
+                await studentsController.GetStudentsByGuid2Async(studentGuid);
+            }
+
+            [TestMethod]
+            public async Task StudentsController_GetStudents_NoCache_V16()
+            {
+                studentsController.Request.Headers.CacheControl =
+                     new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+
+                var student = await studentsController.GetStudents2Async(new Paging(1, 0), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>());
+                Assert.IsTrue(student is IHttpActionResult);
+            }
+            
+            [TestCleanup]
+            public void Cleanup()
+            {
+                testStudentRepo = null;
+                studentsController = null;
+                academicHistoryService = null;
+                studentService = null;
+                studentRestrictionService = null;
+                studentRepo = null;
+                studentProgramRepo = null;
+                requirementRepo = null;
+                acadCredRepo = null;
+                courseRepo = null;
+                adapterRegistry = null;
+                logger = null;
+                emergencyInformationService = null;
+            }
+        }
+
+            [TestClass]
         public class StudentTests_Get_Eedm_V7
         {
             #region Test Context
@@ -593,14 +827,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 studentsDto.Person = new GuidObject2(personFilter);
                 studentsDto.Residencies = new List<StudentResidenciesDtoProperty>()
                 {  new StudentResidenciesDtoProperty()
-                    { Residency = new GuidObject2("1a507924-f207-460a-8c1d-1854ebe80567") } };
-                studentsDto.Tags = new List<StudentTagsDtoProperty>()
-                {  new StudentTagsDtoProperty()
-                { Tag = new GuidObject2("1a507924-f207-460a-8c1d-1854ebe80562") }};
+                    { Residency = new GuidObject2("1a507924-f207-460a-8c1d-1854ebe80567") } };               
                 studentsDto.Types = new List<StudentTypesDtoProperty>()
                 {  new StudentTypesDtoProperty() { Type  =  new GuidObject2(typeFilter) } };
-                studentsDto.Cohorts = new List<StudentCohortsDtoProperty>()
-                {  new StudentCohortsDtoProperty() { Cohort =  new GuidObject2(cohortsFilter) }};
                 studentsDto.LevelClassifications = new List<StudentLevelClassificationsDtoProperty>()
                 {  new StudentLevelClassificationsDtoProperty() { Level = new GuidObject2("2a507924-f207-460a-8c1d-1854ebe80561") }};
 
@@ -648,7 +877,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                      new Dtos.Students2 { Person = new GuidObject2("guid1") });
                 studentsController.Request.Properties.Add(
                       string.Format("FilterObject{0}", "personFilter"),
-                      new Dtos.Filters.PersonFilterFilter { personFilterId = personFilter });
+                      new Dtos.Filters.PersonFilterFilter2 { personFilter = new GuidObject2(personFilter)});
 
                 var student = await studentsController.GetStudents2Async(new Paging(1, 0), 
                     criteriaFilter, personCriteriaFilter);
@@ -666,7 +895,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                      new Dtos.Students2 { Person = new GuidObject2("guid1") });
                 studentsController.Request.Properties.Add(
                       string.Format("FilterObject{0}", "personFilter"),
-                      new Dtos.Filters.PersonFilterFilter { personFilterId = personFilter });
+                      new Dtos.Filters.PersonFilterFilter2 { personFilter = new GuidObject2(personFilter) });
 
                 var student = await studentsController.GetStudents2Async(null, 
                     criteriaFilter, personCriteriaFilter);
@@ -684,7 +913,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                       new Dtos.Students2 { Person = new GuidObject2("guid1") });
                 studentsController.Request.Properties.Add(
                       string.Format("FilterObject{0}", "personFilter"),
-                      new Dtos.Filters.PersonFilterFilter { personFilterId = personFilter });
+                      new Dtos.Filters.PersonFilterFilter2 { personFilter = new GuidObject2(personFilter) });
                 var student = await studentsController.GetStudents2Async(new Paging(1, 0), 
                     criteriaFilter, personCriteriaFilter);
                 Assert.IsTrue(student is IHttpActionResult);
@@ -701,7 +930,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                      new Dtos.Students2 { Person = new GuidObject2("guid1") });
                 studentsController.Request.Properties.Add(
                       string.Format("FilterObject{0}", "personFilter"),
-                      new Dtos.Filters.PersonFilterFilter { personFilterId = personFilter });
+                      new Dtos.Filters.PersonFilterFilter2 { personFilter = new GuidObject2(personFilter) });
 
                 var student = await studentsController.GetStudents2Async(null, 
                     criteriaFilter, personCriteriaFilter);
@@ -947,7 +1176,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 emergencyInformationService = null;
             }
         }
-
 
         [TestClass]
         public class BaseStudentTests
@@ -1887,7 +2115,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
         }
 
-
         [TestClass]
         public class QueryStudentsById4Async_Tests
         {
@@ -2031,5 +2258,86 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.AreEqual(studentBatch3s.Dto.Count(), result.Count());
             }
         }
+
+        #region Planning Student
+
+        [TestClass]
+        public class GetPlanningStudent_Tests
+        {
+            #region Test Context
+
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+
+            #endregion Test Context
+
+            private IStudentProgramRepository studentProgramRepo;
+            private IStudentService studentService;
+            private IAdapterRegistry adapterRegistry;
+            private StudentsController studentsController;
+
+            Mock<IStudentProgramRepository> studentProgramRepoMock = new Mock<IStudentProgramRepository>();
+            Mock<IStudentService> studentServiceMock = new Mock<IStudentService>();
+            Mock<IAdapterRegistry> adapterRegistryMock = new Mock<IAdapterRegistry>();
+
+            private ApiSettings apiSettings;
+            private ILogger logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                studentProgramRepo = studentProgramRepoMock.Object;
+                studentService = studentServiceMock.Object;
+                adapterRegistry = adapterRegistryMock.Object;
+                logger = new Mock<ILogger>().Object;
+
+                // mock students controller
+                studentsController = new StudentsController(adapterRegistry, null, studentService, studentProgramRepo,
+                    null, null, null, logger, apiSettings);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                studentsController = null;
+                adapterRegistry = null;
+                studentProgramRepo = null;
+            }
+
+            [TestMethod]
+            public async Task GetPlanningStudent()
+            {
+                // arrange
+                var planningStudentDto = new PlanningStudent() { Id = "0000001", DegreePlanId = 12, LastName = "smith" };
+                studentServiceMock.Setup(svc => svc.GetPlanningStudentAsync(It.IsAny<string>())).Returns(Task.FromResult(new PrivacyWrapper<Dtos.Student.PlanningStudent>(planningStudentDto, false)));
+
+                // act
+                var result = await studentsController.GetPlanningStudentAsync("0000001");
+
+                // assert
+                Assert.IsTrue(result is PlanningStudent);
+                Assert.AreEqual("0000001", result.Id);
+            }
+        }
+
+        #endregion Planning Student
     }
 }

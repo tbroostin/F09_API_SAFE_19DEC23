@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,32 +20,38 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json.Linq;
 using slf4net;
+using Ellucian.Colleague.Dtos.ColleagueFinance;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 {
     #region Purchase Orders V11
     [TestClass]
-    public class PurchaseOrdersControllerTests_v11
+    public class PurchaseOrdersControllerTests_GET_v11
     {
         public TestContext TestContext { get; set; }
         private Mock<IPurchaseOrderService> _mockPurchaseOrdersService;
+        private Dtos.ColleagueFinance.PurchaseOrderCreateUpdateResponse purchaseOrderResponseCollection;
+        private Dtos.ColleagueFinance.PurchaseOrderCreateUpdateRequest purchaseOrderRequestCollection;
         private Mock<ILogger> _loggerMock;
         private PurchaseOrdersController _purchaseOrdersController;
 
         private Dtos.PurchaseOrders2 _purchaseOrder;
         private List<Dtos.PurchaseOrders2> _purchaseOrders;
         private string Guid = "02dc2629-e8a7-410e-b4df-572d02822f8b";
+        private string personId = "0000100";
         private Paging page;
+        private QueryStringFilter criteriaFilter = new QueryStringFilter("criteria", "");
         private int limit;
         private int offset;
         private Tuple<IEnumerable<PurchaseOrders2>, int> purchaseOrdersTuple;
+        private List<PurchaseOrderSummary> purchaseOrderSummaryCollection;
 
         [TestInitialize]
         public void Initialize()
         {
             LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
             EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
-
+            purchaseOrderSummaryCollection = new List<PurchaseOrderSummary>();
             _loggerMock = new Mock<ILogger>();
             _mockPurchaseOrdersService = new Mock<IPurchaseOrderService>();
 
@@ -108,6 +114,61 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             page = new Paging(limit, offset);
         }
 
+        private void BuildPurchaseOrderPostRequest() { 
+}
+        private void BuildRequisitionSummaryData()
+        {
+            purchaseOrderSummaryCollection = new List<PurchaseOrderSummary>()
+            {
+                new PurchaseOrderSummary()
+                {
+                   Id = "1",
+                   Date = DateTime.Today.AddDays(2),
+                   InitiatorName = "Test User",
+                   RequestorName = "Test User",
+                   Status = PurchaseOrderStatus.InProgress,
+                   StatusDate = DateTime.Today.AddDays(2),
+                   VendorId = "0000190",
+                   VendorName = "Basic Office Supply",
+                   Amount = 10.00m,
+                   Number = "0000001",
+                   Requisitions = new List<RequisitionLinkSummary>()
+                   {
+                       new RequisitionLinkSummary()
+                       {
+                           Id = "1",
+                           Number = "0000001"
+                       }
+                   }
+
+                },
+                new PurchaseOrderSummary()
+                {
+                     Id = "2",
+                   Date = DateTime.Today.AddDays(2),
+                   InitiatorName = "Test User",
+                   RequestorName = "Test User",
+                   Status = PurchaseOrderStatus.InProgress,
+                   StatusDate = DateTime.Today.AddDays(2),
+                   VendorId = "0000190",
+                   VendorName = "Basic Office Supply",
+                   Amount = 10.00m,
+                   Number = "0000002",
+                   Requisitions = new List<RequisitionLinkSummary>()
+                   {
+                       new RequisitionLinkSummary()
+                       {
+                           Id = "2",
+                           Number = "0000002"
+                       }
+                   }
+                }
+
+            };
+            _mockPurchaseOrdersService.Setup(r => r.GetPurchaseOrderSummaryByPersonIdAsync(It.IsAny<string>())).ReturnsAsync(purchaseOrderSummaryCollection);
+
+        }
+
         [TestCleanup]
         public void Cleanup()
         {
@@ -117,12 +178,12 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         }
 
         [TestMethod]
-        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersByGuidAsync2()
+        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersByGuidAsync()
         {
             var expected = _purchaseOrders.FirstOrDefault(po => po.Id == Guid);
-            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersByGuidAsync2(It.IsAny<string>())).ReturnsAsync(expected);
+            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersByGuidAsync(It.IsAny<string>())).ReturnsAsync(expected);
 
-            var actual = await _purchaseOrdersController.GetPurchaseOrdersByGuidAsync2(Guid);
+            var actual = await _purchaseOrdersController.GetPurchaseOrdersByGuidAsync(Guid);
             Assert.IsNotNull(actual);
 
             Assert.AreEqual(expected.Id, actual.Id);
@@ -134,7 +195,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         }
 
         [TestMethod]
-        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync2()
+        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync()
         {
 
             purchaseOrdersTuple = new Tuple<IEnumerable<PurchaseOrders2>, int>(_purchaseOrders, 3);
@@ -142,8 +203,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             _purchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
             _purchaseOrdersController.Request.Headers.CacheControl =
              new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
-            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync2(offset, limit, It.IsAny<bool>())).ReturnsAsync(purchaseOrdersTuple);
-            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync2(page);
+            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync(offset, limit, It.IsAny<PurchaseOrders2>(), It.IsAny<bool>())).ReturnsAsync(purchaseOrdersTuple);
+            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync(page, criteriaFilter);
             var cancelToken = new System.Threading.CancellationToken(false);
             System.Net.Http.HttpResponseMessage httpResponseMessage = await actuals.ExecuteAsync(cancelToken);
             List<PurchaseOrders2> ActualsAPI = ((ObjectContent<IEnumerable<PurchaseOrders2>>)httpResponseMessage.Content).Value as List<PurchaseOrders2>;
@@ -157,7 +218,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         }
 
         [TestMethod]
-        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync2_cache()
+        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync_cache()
         {
 
             purchaseOrdersTuple = new Tuple<IEnumerable<PurchaseOrders2>, int>(_purchaseOrders, 3);
@@ -165,8 +226,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             _purchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
             _purchaseOrdersController.Request.Headers.CacheControl =
              new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
-            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync2(offset, limit, It.IsAny<bool>())).ReturnsAsync(purchaseOrdersTuple);
-            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync2(page);
+            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync(offset, limit, It.IsAny<PurchaseOrders2>(), It.IsAny<bool>())).ReturnsAsync(purchaseOrdersTuple);
+            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync(page, criteriaFilter);
             var cancelToken = new System.Threading.CancellationToken(false);
             System.Net.Http.HttpResponseMessage httpResponseMessage = await actuals.ExecuteAsync(cancelToken);
             List<PurchaseOrders2> ActualsAPI = ((ObjectContent<IEnumerable<PurchaseOrders2>>)httpResponseMessage.Content).Value as List<PurchaseOrders2>;
@@ -180,15 +241,15 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         }
 
         [TestMethod]
-        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync2_NoCache()
+        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync_NoCache()
         {
             purchaseOrdersTuple = new Tuple<IEnumerable<PurchaseOrders2>, int>(_purchaseOrders, 3);
 
             _purchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
             _purchaseOrdersController.Request.Headers.CacheControl =
              new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
-            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync2(offset, limit, It.IsAny<bool>())).ReturnsAsync(purchaseOrdersTuple);
-            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync2(page);
+            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync(offset, limit, It.IsAny<PurchaseOrders2>(), It.IsAny<bool>())).ReturnsAsync(purchaseOrdersTuple);
+            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync(page, criteriaFilter);
             var cancelToken = new System.Threading.CancellationToken(false);
             System.Net.Http.HttpResponseMessage httpResponseMessage = await actuals.ExecuteAsync(cancelToken);
             List<PurchaseOrders2> ActualsAPI = ((ObjectContent<IEnumerable<PurchaseOrders2>>)httpResponseMessage.Content).Value as List<PurchaseOrders2>;
@@ -202,7 +263,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         }
 
         [TestMethod]
-        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync2_Paging()
+        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync_Paging()
         {
             var DtosAPI = new List<Dtos.PurchaseOrders2>();
             DtosAPI.Add(_purchaseOrder);
@@ -214,8 +275,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             _purchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
             _purchaseOrdersController.Request.Headers.CacheControl =
              new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
-            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync2(1, 1, It.IsAny<bool>())).ReturnsAsync(purchaseOrdersTuple);
-            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync2(page);
+            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync(1, 1, It.IsAny<PurchaseOrders2>(), It.IsAny<bool>())).ReturnsAsync(purchaseOrdersTuple);
+            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync(page, criteriaFilter);
             var cancelToken = new System.Threading.CancellationToken(false);
             System.Net.Http.HttpResponseMessage httpResponseMessage = await actuals.ExecuteAsync(cancelToken);
             List<PurchaseOrders2> ActualsAPI = ((ObjectContent<IEnumerable<PurchaseOrders2>>)httpResponseMessage.Content).Value as List<PurchaseOrders2>;
@@ -229,146 +290,324 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         }
 
         [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersByGuidAsync2_KeyNotFoundExecpt()
+        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync_EmptyFilterParams()
         {
-            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersByGuidAsync2(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
 
-            var actual = await _purchaseOrdersController.GetPurchaseOrdersByGuidAsync2(Guid);
+            purchaseOrdersTuple = new Tuple<IEnumerable<PurchaseOrders2>, int>( _purchaseOrders, 3 );
+
+            _purchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri( "http://localhost" ) };
+            
+            _purchaseOrdersController.Request.Properties.Add( "EmptyFilterProperties", true );
+            _purchaseOrdersController.Request.Headers.CacheControl =
+             new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+            _mockPurchaseOrdersService.Setup( x => x.GetPurchaseOrdersAsync( offset, limit, It.IsAny<PurchaseOrders2>(), It.IsAny<bool>() ) ).ReturnsAsync( purchaseOrdersTuple );
+            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync( page, criteriaFilter );
+            var cancelToken = new System.Threading.CancellationToken( false );
+            System.Net.Http.HttpResponseMessage httpResponseMessage = await actuals.ExecuteAsync( cancelToken );
+            List<PurchaseOrders2> ActualsAPI = ( (ObjectContent<IEnumerable<PurchaseOrders2>>) httpResponseMessage.Content ).Value as List<PurchaseOrders2>;
+            Assert.AreEqual( 0, ActualsAPI.Count() );
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
-        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersByGuidAsync2_PermissionsException()
+        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersByGuidAsync_KeyNotFoundExecpt()
         {
-            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersByGuidAsync2(It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersByGuidAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
 
-            var actual = await _purchaseOrdersController.GetPurchaseOrdersByGuidAsync2(Guid);
+            var actual = await _purchaseOrdersController.GetPurchaseOrdersByGuidAsync(Guid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersByGuidAsync_PermissionsException()
+        {
+            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersByGuidAsync(It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+
+            var actual = await _purchaseOrdersController.GetPurchaseOrdersByGuidAsync(Guid);
             Assert.IsNotNull(actual);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
-        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersByGuidAsync2_ArgumentException()
+        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersByGuidAsync_ArgumentException()
         {
-            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersByGuidAsync2(It.IsAny<string>())).ThrowsAsync(new ArgumentException());
+            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersByGuidAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentException());
 
-            var actual = await _purchaseOrdersController.GetPurchaseOrdersByGuidAsync2(Guid);
+            var actual = await _purchaseOrdersController.GetPurchaseOrdersByGuidAsync(Guid);
             Assert.IsNotNull(actual);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
-        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersByGuidAsync2_RepositoryException()
+        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersByGuidAsync_RepositoryException()
         {
-            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersByGuidAsync2(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersByGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
 
-            var actual = await _purchaseOrdersController.GetPurchaseOrdersByGuidAsync2(Guid);
+            var actual = await _purchaseOrdersController.GetPurchaseOrdersByGuidAsync(Guid);
             Assert.IsNotNull(actual);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
-        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersByGuidAsync2_IntegrationApiException()
+        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersByGuidAsync_IntegrationApiException()
         {
-            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersByGuidAsync2(It.IsAny<string>())).ThrowsAsync(new IntegrationApiException());
+            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersByGuidAsync(It.IsAny<string>())).ThrowsAsync(new IntegrationApiException());
 
-            var actual = await _purchaseOrdersController.GetPurchaseOrdersByGuidAsync2(Guid);
+            var actual = await _purchaseOrdersController.GetPurchaseOrdersByGuidAsync(Guid);
             Assert.IsNotNull(actual);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
-        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersByGuidAsync2_Exception()
+        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersByGuidAsync_Exception()
         {
-            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersByGuidAsync2(It.IsAny<string>())).ThrowsAsync(new Exception());
+            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersByGuidAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
 
-            var actual = await _purchaseOrdersController.GetPurchaseOrdersByGuidAsync2(Guid);
+            var actual = await _purchaseOrdersController.GetPurchaseOrdersByGuidAsync(Guid);
             Assert.IsNotNull(actual);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
-        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersByGuidAsync2_nullGuid()
+        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersByGuidAsync_nullGuid()
         {
             // _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersByGuidAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
 
-            var actual = await _purchaseOrdersController.GetPurchaseOrdersByGuidAsync2(null);
+            var actual = await _purchaseOrdersController.GetPurchaseOrdersByGuidAsync(null);
             Assert.IsNotNull(actual);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
-        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync2_KeyNotFoundExecpt()
+        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync_KeyNotFoundExecpt()
         {
             _purchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
             _purchaseOrdersController.Request.Headers.CacheControl =
              new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
-            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync2(offset, limit, It.IsAny<bool>()))
+            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync(offset, limit, new PurchaseOrders2(), It.IsAny<bool>()))
                 .ThrowsAsync(new KeyNotFoundException());
-            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync2(page);
+            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync(page, criteriaFilter);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
-        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync2_PermissionsException()
+        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync_PermissionsException()
         {
             _purchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
             _purchaseOrdersController.Request.Headers.CacheControl =
              new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
-            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync2(offset, limit, It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
-            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync2(page);
+            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync(offset, limit, new PurchaseOrders2(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync(page, criteriaFilter);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
-        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync2_ArgumentException()
+        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync_ArgumentException()
         {
             _purchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
             _purchaseOrdersController.Request.Headers.CacheControl =
              new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
-            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync2(offset, limit, It.IsAny<bool>())).ThrowsAsync(new ArgumentException());
-            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync2(page);
+            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync(offset, limit, new PurchaseOrders2(), It.IsAny<bool>())).ThrowsAsync(new ArgumentException());
+            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync(page, criteriaFilter);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
-        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync2_RepositoryException()
+        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync_RepositoryException()
         {
             _purchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
             _purchaseOrdersController.Request.Headers.CacheControl =
              new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
-            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync2(offset, limit, It.IsAny<bool>())).ThrowsAsync(new RepositoryException());
-            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync2(page);
+            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync(offset, limit, new PurchaseOrders2(), It.IsAny<bool>())).ThrowsAsync(new RepositoryException());
+            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync(page, criteriaFilter);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
-        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync2_IntegrationApiException()
+        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync_IntegrationApiException()
         {
             _purchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
             _purchaseOrdersController.Request.Headers.CacheControl =
              new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
-            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync2(offset, limit, It.IsAny<bool>())).ThrowsAsync(new IntegrationApiException());
-            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync2(page);
+            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync(offset, limit, new PurchaseOrders2(), It.IsAny<bool>())).ThrowsAsync(new IntegrationApiException());
+            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync(page, criteriaFilter);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
-        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync2_Exception()
+        public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync_Exception()
         {
             _purchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
             _purchaseOrdersController.Request.Headers.CacheControl =
              new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
-            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync2(offset, limit, It.IsAny<bool>())).ThrowsAsync(new Exception());
-            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync2(page);
+            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync(offset, limit, new PurchaseOrders2(), It.IsAny<bool>())).ThrowsAsync(new Exception());
+            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync(page, criteriaFilter);
         }
 
 
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PoController_GetPurchaseOrderSummaryByPersonIdAsync_PersonId_Null()
+        {
+            await _purchaseOrdersController.GetPurchaseOrderSummaryByPersonIdAsync(null);
+        }
+
+        [TestMethod]
+        public async Task PoController_GetPurchaseOrderSummaryByPersonIdAsync()
+        {
+            var expected = purchaseOrderSummaryCollection.AsEnumerable();
+            _mockPurchaseOrdersService.Setup(r => r.GetPurchaseOrderSummaryByPersonIdAsync(It.IsAny<string>())).ReturnsAsync(expected);
+            var requisitions = await _purchaseOrdersController.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+            Assert.AreEqual(requisitions.ToList().Count, expected.Count());
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PoController_GetPurchaseOrderSummaryByPersonIdAsync_ArgumentNullException()
+        {
+            _mockPurchaseOrdersService.Setup(r => r.GetPurchaseOrderSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentNullException());
+            await _purchaseOrdersController.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PoController_GetPurchaseOrderSummaryByPersonIdAsync_Exception()
+        {
+            _mockPurchaseOrdersService.Setup(r => r.GetPurchaseOrderSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
+            await _purchaseOrdersController.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PoController_GetPurchaseOrderSummaryByPersonIdAsync_KeyNotFoundException()
+        {
+            _mockPurchaseOrdersService.Setup(r => r.GetPurchaseOrderSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
+            await _purchaseOrdersController.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PoController_GetPurchaseOrderSummaryByPersonIdAsync_ApplicationException()
+        {
+            _mockPurchaseOrdersService.Setup(r => r.GetPurchaseOrderSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new ApplicationException());
+            await _purchaseOrdersController.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+        }
+        #region "Post"
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PoController_PostPurchaseOrderAsync_ArgumentNullException()
+        {
+            _mockPurchaseOrdersService.Setup(r => r.CreateUpdatePurchaseOrderAsync(It.IsAny<PurchaseOrderCreateUpdateRequest>())).ThrowsAsync(new ArgumentNullException());
+           
+           await _purchaseOrdersController.PostPurchaseOrderAsync(null);
+        }
+
+        [TestMethod]
+        public async Task PoController_PostPurchaseOrderAsync()
+        {
+
+            Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderCreateUpdateRequest request = new Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderCreateUpdateRequest()
+            {
+                PersonId = "0000001",
+                ConfEmailAddresses = new List<string>() { "anamika.a@ellucian.com" },
+                InitiatorInitials = "ANA",
+                IsPersonVendor = false,
+                PurchaseOrder = new Dtos.ColleagueFinance.PurchaseOrder
+                {
+                    Id = "",
+                    Number = "",
+                    Status = 0,
+                    StatusDate = new DateTime(2020, 01, 01),
+                    Amount = 90.00M,
+                    CurrencyCode = "",
+                    Date = new DateTime(2020, 01, 01),
+                    MaintenanceDate = new DateTime(2020, 01, 01),
+                    VendorId = "0000189",
+                    VendorName = "Beatrice Clarke & Company",
+                    InitiatorName = "Anamika A",
+                    RequestorName = "Anamika A",
+                    ApType = "AP",
+                    ShipToCode = "DT",
+                    CommodityCode = "",
+                    Comments = "This is Purchase Order creation",
+                    InternalComments = "This is Purchase Order creation"
+                }
+            };
+
+            Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderCreateUpdateResponse po = new Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderCreateUpdateResponse();
+            po.PurchaseOrderId = "P00001";
+            po.PurchaseOrderNumber = "P00001";
+            po.PurchaseOrderDate = new DateTime(2020, 01, 01);
+            po.ErrorOccured = false;
+            po.ErrorMessages = null;
+           
+
+            _mockPurchaseOrdersService.Setup(r => r.CreateUpdatePurchaseOrderAsync(It.IsAny<PurchaseOrderCreateUpdateRequest>())).ReturnsAsync(po);
+            var result = await _purchaseOrdersController.PostPurchaseOrderAsync(purchaseOrderRequestCollection);
+
+            Assert.IsNotNull(result);
+        }
+        #endregion
+
+        #region VOID
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PoController_VoidPurchaseOrderAsync_ArgumentNullException()
+        {
+            _mockPurchaseOrdersService.Setup(r => r.VoidPurchaseOrderAsync(It.IsAny<PurchaseOrderVoidRequest>())).ThrowsAsync(new ArgumentNullException());
+
+            await _purchaseOrdersController.VoidPurchaseOrderAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PoController_VoidPurchaseOrderAsync_PermissionException()
+        {
+            PurchaseOrderVoidRequest request = new PurchaseOrderVoidRequest()
+            {
+                PersonId = "0000123",
+                PurchaseOrderId = "P00001",
+                InternalComments = "PO Voided",
+                ConfirmationEmailAddresses = "abc@mail.com"
+            };
+            _mockPurchaseOrdersService.Setup(r => r.VoidPurchaseOrderAsync(It.IsAny<PurchaseOrderVoidRequest>())).ThrowsAsync(new PermissionsException());
+
+            await _purchaseOrdersController.VoidPurchaseOrderAsync(request);
+        }
+
+        [TestMethod]
+        public async Task PoController_VoidPurchaseOrderAsync()
+        {
+            PurchaseOrderVoidRequest request = new PurchaseOrderVoidRequest()
+            {
+                PersonId = "0000123",
+                PurchaseOrderId = "123",
+                InternalComments = "PO Voided",
+                ConfirmationEmailAddresses = "abc@mail.com"
+            };
+
+            PurchaseOrderVoidResponse response = new PurchaseOrderVoidResponse()
+            {
+                PurchaseOrderId = "123",
+                PurchaseOrderNumber = "P0000123",
+                ErrorOccured = false,
+                ErrorMessages = null,
+                WarningOccured = false,
+                WarningMessages = null
+            };
+            
+            _mockPurchaseOrdersService.Setup(r => r.VoidPurchaseOrderAsync(It.IsAny<PurchaseOrderVoidRequest>())).ReturnsAsync(response);
+            var result = await _purchaseOrdersController.VoidPurchaseOrderAsync(request);
+
+            Assert.IsNotNull(result);
+        }
+        #endregion
     }
 
     [TestClass]
-    public class PurchaseOrdersControllerTests_V11
+    public class PurchaseOrdersControllerTests_PUT_POST_V11
     {
         [TestClass]
         public class PurchaseOrdersControllerTests_POST_v11
@@ -389,6 +628,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             private List<PurchaseOrdersLineItemsDtoProperty> lineItems;
             private Dtos.DtoProperties.Amount2DtoProperty amount;
             private List<Dtos.DtoProperties.PurchaseOrdersAccountDetailDtoProperty> accountDetails;
+            private List<PurchaseOrderSummary> purchaseOrderSummaryCollection;
 
             #endregion
 
@@ -504,452 +744,67 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
             #endregion
 
+            
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_IntegrationApiException_When_PurchaseOrder_Null()
+            public async Task PoController_PostPurchaseOrdersAsync_KeyNotFoundException()
             {
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(null);
+                purchaseOrderServiceMock.Setup(s => s.PostPurchaseOrdersAsync(It.IsAny<PurchaseOrders2>())).ThrowsAsync(new KeyNotFoundException());
+
+                await purchaseOrdersController.PostPurchaseOrdersAsync(purchaseOrders);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_Vendor_Null()
+            public async Task PoController_PostPurchaseOrdersAsync_PermissionsException()
             {
-                purchaseOrders.Vendor = null;
+                purchaseOrderServiceMock.Setup(s => s.PostPurchaseOrdersAsync(It.IsAny<PurchaseOrders2>())).ThrowsAsync(new PermissionsException());
 
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
+                await purchaseOrdersController.PostPurchaseOrdersAsync(purchaseOrders);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_Vendor_ExistingVendor_Null()
+            public async Task PoController_PostPurchaseOrdersAsync_RepositoryException()
             {
-                purchaseOrders.Vendor.ExistingVendor.Vendor.Id = null;
+                purchaseOrderServiceMock.Setup(s => s.PostPurchaseOrdersAsync(It.IsAny<PurchaseOrders2>())).ThrowsAsync(new RepositoryException());
 
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
+                await purchaseOrdersController.PostPurchaseOrdersAsync(purchaseOrders);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_OrderOn_Is_Default_Date()
+            public async Task PoController_PostPurchaseOrdersAsync_IntegrationApiException()
             {
-                purchaseOrders.OrderedOn = default(DateTime);
+                purchaseOrderServiceMock.Setup(s => s.PostPurchaseOrdersAsync(It.IsAny<PurchaseOrders2>())).ThrowsAsync(new IntegrationApiException());
 
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
+                await purchaseOrdersController.PostPurchaseOrdersAsync(purchaseOrders);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_TransactionDate_Is_Default_Date()
+            public async Task PoController_PostPurchaseOrdersAsync_ConfigurationException()
             {
-                purchaseOrders.TransactionDate = default(DateTime);
+                purchaseOrderServiceMock.Setup(s => s.PostPurchaseOrdersAsync(It.IsAny<PurchaseOrders2>())).ThrowsAsync(new ConfigurationException());
 
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
+                await purchaseOrdersController.PostPurchaseOrdersAsync(purchaseOrders);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_OrderOn_GreaterThan_DeliveredBy()
+            public async Task PoController_PostPurchaseOrdersAsync_Exception()
             {
-                purchaseOrders.OrderedOn = DateTime.Today.AddDays(5);
+                purchaseOrderServiceMock.Setup(s => s.PostPurchaseOrdersAsync(It.IsAny<PurchaseOrders2>())).ThrowsAsync(new Exception());
 
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
+                await purchaseOrdersController.PostPurchaseOrdersAsync(purchaseOrders);
             }
-
             [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_Destination_Country_Not_CAN_AND_USA()
-            {
-                purchaseOrders.OverrideShippingDestination.Place.Country.Code = IsoCode.AUS;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_Contact_Ext_Length_Morethan_4()
-            {
-                purchaseOrders.OverrideShippingDestination.Contact.Extension = "12345";
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_ManualVendor_Country_Not_CAN_AND_USA()
-            {
-                purchaseOrders.Vendor.ManualVendorDetails.Place.Country.Code = IsoCode.AUS;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_PaymentSource_Null()
-            {
-                purchaseOrders.PaymentSource = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_Comment_Null()
-            {
-                purchaseOrders.Comments.FirstOrDefault().Comment = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_Comment_Type_NotSet()
-            {
-                purchaseOrders.Comments.FirstOrDefault().Type = CommentTypes.NotSet;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_Buyer_Null()
-            {
-                purchaseOrders.Buyer.Id = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_Initiator_Detail_Null()
-            {
-                purchaseOrders.Initiator.Detail.Id = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_PayTerms_Null()
-            {
-                purchaseOrders.PaymentTerms.Id = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_Clasification_Null()
-            {
-                purchaseOrders.Classification.Id = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_SubmittedBy_Null()
-            {
-                purchaseOrders.SubmittedBy.Id = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_Null()
-            {
-                purchaseOrders.LineItems = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_CommodityCode_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().CommodityCode.Id = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_UnitOfMeasure_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().UnitOfMeasure.Id = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_UnitPrice_Value_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().UnitPrice.Value = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_UnitPrice_Currency_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().UnitPrice.Currency = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AdditionalAmount_Value_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AdditionalAmount.Value = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AdditionalAmount_Currency_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AdditionalAmount.Currency = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_TaxCodeId_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().TaxCodes.FirstOrDefault().Id = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_TradeDiscount_AmountAndPer_NotNull()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().TradeDiscount.Percent = 10;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_TradeDiscount_Amount_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().TradeDiscount.Amount.Value = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_TradeDiscount_Currency_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().TradeDiscount.Amount.Currency = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_AccountingString_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().AccountingString = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_AllocatedAmount_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.Allocated.Amount.Value = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_AllocatedAmount_Currency_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.Allocated.Amount.Currency = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_AllocationTaxAmount_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.TaxAmount.Value = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_AllocationTaxAmount_Currency_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.TaxAmount.Currency = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_Allocation_AdditionalAmount_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.AdditionalAmount.Value = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_Allocation_AdditionalAmount_Currency_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.AdditionalAmount.Currency = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_Allocation_DiscountAmount_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.DiscountAmount.Value = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_Allocation_DiscountAmount_Currency_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.DiscountAmount.Currency = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_SubmittedBy_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().SubmittedBy.Id = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_Allocation_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_Description_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().Description = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_Quantity_Is_Zero()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().Quantity = 0;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_UnitPrice_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().UnitPrice = null;
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_PartNumber_Length_Morethan_11()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().PartNumber = "012345678911";
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_KeyNotFoundException()
-            {
-                purchaseOrderServiceMock.Setup(s => s.PostPurchaseOrdersAsync2(It.IsAny<PurchaseOrders2>())).ThrowsAsync(new KeyNotFoundException());
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_PermissionsException()
-            {
-                purchaseOrderServiceMock.Setup(s => s.PostPurchaseOrdersAsync2(It.IsAny<PurchaseOrders2>())).ThrowsAsync(new PermissionsException());
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_RepositoryException()
-            {
-                purchaseOrderServiceMock.Setup(s => s.PostPurchaseOrdersAsync2(It.IsAny<PurchaseOrders2>())).ThrowsAsync(new RepositoryException());
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_IntegrationApiException()
-            {
-                purchaseOrderServiceMock.Setup(s => s.PostPurchaseOrdersAsync2(It.IsAny<PurchaseOrders2>())).ThrowsAsync(new IntegrationApiException());
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ConfigurationException()
-            {
-                purchaseOrderServiceMock.Setup(s => s.PostPurchaseOrdersAsync2(It.IsAny<PurchaseOrders2>())).ThrowsAsync(new ConfigurationException());
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_Exception()
-            {
-                purchaseOrderServiceMock.Setup(s => s.PostPurchaseOrdersAsync2(It.IsAny<PurchaseOrders2>())).ThrowsAsync(new Exception());
-
-                await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
-            }
-
-            [TestMethod]
-            public async Task PoController_PostPurchaseOrdersAsync2()
+            public async Task PoController_PostPurchaseOrdersAsync()
             {
                 purchaseOrders.Id = "00000000-0000-0000-0000-000000000000";
-                purchaseOrderServiceMock.Setup(s => s.PostPurchaseOrdersAsync2(It.IsAny<PurchaseOrders2>())).ReturnsAsync(purchaseOrders);
+                purchaseOrderServiceMock.Setup(s => s.PostPurchaseOrdersAsync(It.IsAny<PurchaseOrders2>())).ReturnsAsync(purchaseOrders);
 
-                var result = await purchaseOrdersController.PostPurchaseOrdersAsync2(purchaseOrders);
+                var result = await purchaseOrdersController.PostPurchaseOrdersAsync(purchaseOrders);
 
                 Assert.IsNotNull(result);
                 Assert.AreEqual(purchaseOrders.Id, result.Id);
@@ -977,7 +832,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             private Dtos.DtoProperties.Amount2DtoProperty amount;
             private List<Dtos.DtoProperties.PurchaseOrdersAccountDetailDtoProperty> accountDetails;
 
-            private string guid = "1adc2629-e8a7-410e-b4df-572d02822f8b";
+            private string guid = "1adc2629-e8a7-410e-b4df-572d02822f8b";         
 
             #endregion
 
@@ -1100,476 +955,476 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
             #endregion
 
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_IntegrationApiException_When_Guid_Null()
-            {
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(null, It.IsAny<PurchaseOrders2>());
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_IntegrationApiException_When_Guid_Null()
+            //{
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(null, It.IsAny<PurchaseOrders2>());
+            //}
 
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_IntegrationApiException_When_PurchaseOrder_Null()
-            {
-                await purchaseOrdersController.PutPurchaseOrdersAsync2("1", null);
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_IntegrationApiException_When_PurchaseOrder_Null()
+            //{
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync("1", null);
+            //}
 
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_IntegrationApiException_When_Guid_Is_EmptyGuid()
-            {
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(Guid.Empty.ToString(), purchaseOrders);
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_IntegrationApiException_When_Guid_Is_EmptyGuid()
+            //{
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(Guid.Empty.ToString(), purchaseOrders);
+            //}
 
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_IntegrationApiException_When_Guid_And_PurchaseOrderId_NotEqual()
-            {
-                await purchaseOrdersController.PutPurchaseOrdersAsync2("2", purchaseOrders);
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_IntegrationApiException_When_Guid_And_PurchaseOrderId_NotEqual()
+            //{
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync("2", purchaseOrders);
+            //}
 
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_Vendor_Null()
-            {
-                purchaseOrders.Vendor = null;
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_Vendor_Null()
+            //{
+            //    purchaseOrders.Vendor = null;
 
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
 
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_Vendor_ExistingVendor_Null()
-            {
-                purchaseOrders.Vendor.ExistingVendor.Vendor.Id = null;
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_Vendor_ExistingVendor_Null()
+            //{
+            //    purchaseOrders.Vendor.ExistingVendor.Vendor.Id = null;
 
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
 
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_OrderOn_Is_Default_Date()
-            {
-                purchaseOrders.OrderedOn = default(DateTime);
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_OrderOn_Is_Default_Date()
+            //{
+            //    purchaseOrders.OrderedOn = default(DateTime);
 
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
 
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_TransactionDate_Is_Default_Date()
-            {
-                purchaseOrders.TransactionDate = default(DateTime);
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_TransactionDate_Is_Default_Date()
+            //{
+            //    purchaseOrders.TransactionDate = default(DateTime);
 
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
 
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_OrderOn_GreaterThan_DeliveredBy()
-            {
-                purchaseOrders.OrderedOn = DateTime.Today.AddDays(5);
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_OrderOn_GreaterThan_DeliveredBy()
+            //{
+            //    purchaseOrders.OrderedOn = DateTime.Today.AddDays(5);
 
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
 
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_Destination_Country_Not_CAN_AND_USA()
-            {
-                purchaseOrders.OverrideShippingDestination.Place.Country.Code = IsoCode.AUS;
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_Destination_Country_Not_CAN_AND_USA()
+            //{
+            //    purchaseOrders.OverrideShippingDestination.Place.Country.Code = IsoCode.AUS;
 
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
 
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_Contact_Ext_Length_Morethan_4()
-            {
-                purchaseOrders.OverrideShippingDestination.Contact.Extension = "12345";
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_Contact_Ext_Length_Morethan_4()
+            //{
+            //    purchaseOrders.OverrideShippingDestination.Contact.Extension = "12345";
 
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
             
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_ManualVendor_Country_Not_CAN_AND_USA()
-            {
-                purchaseOrders.Vendor.ManualVendorDetails.Place.Country = new AddressCountry();
-                purchaseOrders.Vendor.ManualVendorDetails.Place.Country.Code = IsoCode.AUS;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_PaymentSource_Null()
-            {
-                purchaseOrders.PaymentSource = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_Comment_Null()
-            {
-                purchaseOrders.Comments.FirstOrDefault().Comment = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_Comment_Type_NotSet()
-            {
-                purchaseOrders.Comments.FirstOrDefault().Type = CommentTypes.NotSet;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_Buyer_Null()
-            {
-                purchaseOrders.Buyer.Id = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_Initiator_Detail_Null()
-            {
-                purchaseOrders.Initiator.Detail.Id = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_PayTerms_Null()
-            {
-                purchaseOrders.PaymentTerms.Id = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_Clasification_Null()
-            {
-                purchaseOrders.Classification.Id = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_SubmittedBy_Null()
-            {
-                purchaseOrders.SubmittedBy.Id = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_Null()
-            {
-                purchaseOrders.LineItems = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_CommodityCode_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().CommodityCode.Id = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_UnitOfMeasure_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().UnitOfMeasure.Id = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_UnitPrice_Value_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().UnitPrice.Value = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_UnitPrice_Currency_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().UnitPrice.Currency = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AdditionalAmount_Value_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AdditionalAmount.Value = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AdditionalAmount_Currency_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AdditionalAmount.Currency = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_TaxCodeId_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().TaxCodes.FirstOrDefault().Id = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_TradeDiscount_AmountAndPer_NotNull()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().TradeDiscount.Percent = 10;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_TradeDiscount_Amount_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().TradeDiscount.Amount.Value = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_TradeDiscount_Currency_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().TradeDiscount.Amount.Currency = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_AccountingString_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().AccountingString = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_AllocatedAmount_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.Allocated.Amount.Value = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_AllocatedAmount_Currency_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.Allocated.Amount.Currency = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_AllocationTaxAmount_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.TaxAmount.Value = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_AllocationTaxAmount_Currency_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.TaxAmount.Currency = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_Allocation_AdditionalAmount_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.AdditionalAmount.Value = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_Allocation_AdditionalAmount_Currency_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.AdditionalAmount.Currency = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_Allocation_DiscountAmount_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.DiscountAmount.Value = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_Allocation_DiscountAmount_Currency_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.DiscountAmount.Currency = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_SubmittedBy_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().SubmittedBy.Id = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_AccountDetails_Allocation_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_Description_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().Description = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_Quantity_Is_Zero()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().Quantity = 0;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_UnitPrice_Null()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().UnitPrice = null;
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PutPurchaseOrdersAsync2_ArgumentNullException_When_PO_LineItems_PartNumber_Length_Morethan_11()
-            {
-                purchaseOrders.LineItems.FirstOrDefault().PartNumber = "012345678911";
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_KeyNotFoundException()
-            {
-                purchaseOrderServiceMock.Setup(s => s.PutPurchaseOrdersAsync2(It.IsAny<string>(), It.IsAny<PurchaseOrders2>())).ThrowsAsync(new KeyNotFoundException());
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_PermissionsException()
-            {
-                purchaseOrderServiceMock.Setup(s => s.PutPurchaseOrdersAsync2(It.IsAny<string>(), It.IsAny<PurchaseOrders2>())).ThrowsAsync(new PermissionsException());
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_RepositoryException()
-            {
-                purchaseOrderServiceMock.Setup(s => s.PutPurchaseOrdersAsync2(It.IsAny<string>(), It.IsAny<PurchaseOrders2>())).ThrowsAsync(new RepositoryException());
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_IntegrationApiException()
-            {
-                purchaseOrderServiceMock.Setup(s => s.PutPurchaseOrdersAsync2(It.IsAny<string>(), It.IsAny<PurchaseOrders2>())).ThrowsAsync(new IntegrationApiException());
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_ConfigurationException()
-            {
-                purchaseOrderServiceMock.Setup(s => s.PutPurchaseOrdersAsync2(It.IsAny<string>(), It.IsAny<PurchaseOrders2>())).ThrowsAsync(new ConfigurationException());
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task PoController_PostPurchaseOrdersAsync2_Exception()
-            {
-                purchaseOrderServiceMock.Setup(s => s.PutPurchaseOrdersAsync2(It.IsAny<string>(), It.IsAny<PurchaseOrders2>())).ThrowsAsync(new Exception());
-
-                await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_ManualVendor_Country_Not_CAN_AND_USA()
+            //{
+            //    purchaseOrders.Vendor.ManualVendorDetails.Place.Country = new AddressCountry();
+            //    purchaseOrders.Vendor.ManualVendorDetails.Place.Country.Code = IsoCode.AUS;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_PaymentSource_Null()
+            //{
+            //    purchaseOrders.PaymentSource = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_Comment_Null()
+            //{
+            //    purchaseOrders.Comments.FirstOrDefault().Comment = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_Comment_Type_NotSet()
+            //{
+            //    purchaseOrders.Comments.FirstOrDefault().Type = CommentTypes.NotSet;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_Buyer_Null()
+            //{
+            //    purchaseOrders.Buyer.Id = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_Initiator_Detail_Null()
+            //{
+            //    purchaseOrders.Initiator.Detail.Id = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_PayTerms_Null()
+            //{
+            //    purchaseOrders.PaymentTerms.Id = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_Clasification_Null()
+            //{
+            //    purchaseOrders.Classification.Id = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_SubmittedBy_Null()
+            //{
+            //    purchaseOrders.SubmittedBy.Id = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_Null()
+            //{
+            //    purchaseOrders.LineItems = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_CommodityCode_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().CommodityCode.Id = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_UnitOfMeasure_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().UnitOfMeasure.Id = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_UnitPrice_Value_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().UnitPrice.Value = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_UnitPrice_Currency_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().UnitPrice.Currency = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_AdditionalAmount_Value_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().AdditionalAmount.Value = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_AdditionalAmount_Currency_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().AdditionalAmount.Currency = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_TaxCodeId_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().TaxCodes.FirstOrDefault().Id = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_TradeDiscount_AmountAndPer_NotNull()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().TradeDiscount.Percent = 10;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_TradeDiscount_Amount_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().TradeDiscount.Amount.Value = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_TradeDiscount_Currency_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().TradeDiscount.Amount.Currency = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_AccountDetails_AccountingString_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().AccountingString = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_AccountDetails_AllocatedAmount_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.Allocated.Amount.Value = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_AccountDetails_AllocatedAmount_Currency_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.Allocated.Amount.Currency = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_AccountDetails_AllocationTaxAmount_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.TaxAmount.Value = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_AccountDetails_AllocationTaxAmount_Currency_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.TaxAmount.Currency = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_AccountDetails_Allocation_AdditionalAmount_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.AdditionalAmount.Value = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_AccountDetails_Allocation_AdditionalAmount_Currency_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.AdditionalAmount.Currency = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_AccountDetails_Allocation_DiscountAmount_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.DiscountAmount.Value = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_AccountDetails_Allocation_DiscountAmount_Currency_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.DiscountAmount.Currency = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_AccountDetails_SubmittedBy_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().SubmittedBy.Id = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_AccountDetails_Allocation_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_Description_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().Description = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_Quantity_Is_Zero()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().Quantity = 0;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_UnitPrice_Null()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().UnitPrice = null;
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_LineItems_PartNumber_Length_Morethan_11()
+            //{
+            //    purchaseOrders.LineItems.FirstOrDefault().PartNumber = "012345678911";
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PostPurchaseOrdersAsync_KeyNotFoundException()
+            //{
+            //    purchaseOrderServiceMock.Setup(s => s.PutPurchaseOrdersAsync(It.IsAny<string>(), It.IsAny<PurchaseOrders2>())).ThrowsAsync(new KeyNotFoundException());
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PostPurchaseOrdersAsync_PermissionsException()
+            //{
+            //    purchaseOrderServiceMock.Setup(s => s.PutPurchaseOrdersAsync(It.IsAny<string>(), It.IsAny<PurchaseOrders2>())).ThrowsAsync(new PermissionsException());
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PostPurchaseOrdersAsync_RepositoryException()
+            //{
+            //    purchaseOrderServiceMock.Setup(s => s.PutPurchaseOrdersAsync(It.IsAny<string>(), It.IsAny<PurchaseOrders2>())).ThrowsAsync(new RepositoryException());
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PostPurchaseOrdersAsync_IntegrationApiException()
+            //{
+            //    purchaseOrderServiceMock.Setup(s => s.PutPurchaseOrdersAsync(It.IsAny<string>(), It.IsAny<PurchaseOrders2>())).ThrowsAsync(new IntegrationApiException());
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PostPurchaseOrdersAsync_ConfigurationException()
+            //{
+            //    purchaseOrderServiceMock.Setup(s => s.PutPurchaseOrdersAsync(It.IsAny<string>(), It.IsAny<PurchaseOrders2>())).ThrowsAsync(new ConfigurationException());
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
+
+            //[TestMethod]
+            //[ExpectedException(typeof(HttpResponseException))]
+            //public async Task PoController_PostPurchaseOrdersAsync_Exception()
+            //{
+            //    purchaseOrderServiceMock.Setup(s => s.PutPurchaseOrdersAsync(It.IsAny<string>(), It.IsAny<PurchaseOrders2>())).ThrowsAsync(new Exception());
+
+            //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+            //}
 
             [TestMethod]
             public async Task PoController_PutPurchaseOrdersAsync()
             {
-                purchaseOrderServiceMock.Setup(s => s.PutPurchaseOrdersAsync2(It.IsAny<string>(), It.IsAny<PurchaseOrders2>())).ReturnsAsync(purchaseOrders);
-                purchaseOrderServiceMock.Setup(s => s.GetPurchaseOrdersByGuidAsync2(guid)).ReturnsAsync(purchaseOrders);
+                purchaseOrderServiceMock.Setup(s => s.PutPurchaseOrdersAsync(It.IsAny<string>(), It.IsAny<PurchaseOrders2>())).ReturnsAsync(purchaseOrders);
+                purchaseOrderServiceMock.Setup(s => s.GetPurchaseOrdersByGuidAsync(guid)).ReturnsAsync(purchaseOrders);
 
                 purchaseOrders.Id = null;
 
-                var result = await purchaseOrdersController.PutPurchaseOrdersAsync2(guid, purchaseOrders);
+                var result = await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
 
                 Assert.IsNotNull(result);
             }

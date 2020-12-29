@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -126,6 +126,34 @@ namespace Ellucian.Colleague.Api.Controllers
                 watch.Stop();
                 _logger.Info("Course search returned in: " + watch.ElapsedMilliseconds.ToString());
                 return coursesPage;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString() + ex.StackTrace);
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+            }
+        }
+        /// <summary>
+        /// Performs a search of sections that are available for Instant Enrollment only.
+        /// The criteria supplied is keyword and various filters which may be used to search and narrow list of sections.
+        /// </summary>
+        /// <param name="criteria"></param>
+        /// <param name="pageSize"></param>
+        /// <param name="pageIndex"></param>
+        /// <returns></returns>
+        /// <accessComments>Any authenticated user can perform search on sections and view Instant Enrollment catalog.</accessComments>
+        public async Task<SectionPage> PostInstantEnrollmentCourseSearchAsync([FromBody]InstantEnrollmentCourseSearchCriteria criteria, int pageSize=10, int pageIndex=0)
+        {
+            try
+            {
+                // Logging the timings for monitoring
+                _logger.Info("Call Course Search Service from Courses controller... ");
+                var watch = new Stopwatch();
+                watch.Start();
+                SectionPage sectionPage = await _courseService.InstantEnrollmentSearchAsync(criteria, pageSize, pageIndex);
+                watch.Stop();
+                _logger.Info("Course search returned in: " + watch.ElapsedMilliseconds.ToString());
+                return sectionPage;
             }
             catch (Exception ex)
             {
@@ -457,6 +485,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="id">The GUID of the course</param>
         /// <returns>The requested <see cref="Dtos.Course5">Course.</see></returns>
         [EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Ellucian.Colleague.Dtos.Course5> GetHedmCourse5ByIdAsync(string id)
         {
             var bypassCache = false;
@@ -483,7 +512,7 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             catch (PermissionsException e)
             {
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -704,6 +733,7 @@ namespace Ellucian.Colleague.Api.Controllers
         ///  <param name="activeOn">named query</param>
         /// <returns>Filtered <see cref="Dtos.Course5">Courses.</see></returns>
         [HttpGet]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [ValidateQueryStringFilter()]
         [QueryStringFilterFilter("criteria", typeof(Dtos.Course5))]
         [QueryStringFilterFilter("activeOn", typeof(Dtos.Filters.ActiveOnFilter))]
@@ -809,7 +839,12 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (ArgumentNullException e)
             {
@@ -1025,6 +1060,16 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (ConfigurationException e)
             {
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (Exception ex)
             {
@@ -1301,6 +1346,16 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.Forbidden);
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (Exception e)
             {

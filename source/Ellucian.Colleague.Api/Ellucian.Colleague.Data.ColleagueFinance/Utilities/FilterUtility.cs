@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System.Linq;
 using slf4net;
@@ -18,7 +18,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Utilities
         /// </summary>
         /// <param name="criteria">Cost center query criteria</param>
         /// <returns>Boolean indicating whether or not the filter is "wide open".</returns>
-        public static bool IsFilterWideOpen(CostCenterQueryCriteria criteria)
+        public static bool IsFilterWideOpen(BaseGlComponentQueryCriteria criteria)
         {
             // Are we limiting the results using individual components?
             if (criteria.ComponentCriteria.Where(x => x.IndividualComponentValues != null && x.IndividualComponentValues.Any()).Any())

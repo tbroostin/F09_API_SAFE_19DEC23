@@ -45,7 +45,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Entities
             public void NumberOfPropertiesTest()
             {
                 var awardProperties = typeof(Award).GetProperties(BindingFlags.Public | BindingFlags.Instance);
-                Assert.AreEqual(10, awardProperties.Count());
+                Assert.AreEqual(12, awardProperties.Count());
             }
 
 

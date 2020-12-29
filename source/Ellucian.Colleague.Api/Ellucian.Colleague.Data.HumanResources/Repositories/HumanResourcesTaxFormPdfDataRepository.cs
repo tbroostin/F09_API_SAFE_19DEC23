@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -36,6 +36,23 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             : base(cacheProvider, transactionFactory, logger)
         {
             // nothing to do
+        }
+
+        /// <summary>
+        /// Gets the boolean value that indicates if the client is set up to use the Guam version of the W2 form.
+        /// </summary>
+        /// <returns>Boolean value where true = Guam and false = USA</returns>
+        public async Task<bool> GetW2GuamFlag()
+        {
+            var qtdYtdParameter = await DataReader.ReadRecordAsync<QtdYtdParameterW2Pdf>("HR.PARMS", "QTD.YTD.PARAMETER");
+            if (qtdYtdParameter != null && !string.IsNullOrWhiteSpace(qtdYtdParameter.QypW2UseGuamTemplate))
+            {
+                return qtdYtdParameter.QypW2UseGuamTemplate.ToUpper() == "Y";
+            }
+            else
+            {
+                return false;
+            }
         }
 
         /// <summary>
@@ -328,7 +345,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
 
             // Call the PDF accessed CTX to send an email notification
-            TxNotifyHrPdfAccessRequest pdfRequest = new TxNotifyHrPdfAccessRequest();            
+            TxNotifyHrPdfAccessRequest pdfRequest = new TxNotifyHrPdfAccessRequest();
             pdfRequest.AFormType = "W2";
             pdfRequest.APersonId = dataContractW2.Ww2oEmployeeId;
             pdfRequest.ARecordId = dataContractW2.Recordkey;
@@ -421,7 +438,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             domainEntityW2c.EmployeeId = dataContractW2c.Ww2coEmployeeId;
             domainEntityW2c.EmployeeFirstName = dataContractW2c.Ww2coFirstName;
             domainEntityW2c.EmployeeLastName = dataContractW2c.Ww2coLastName;
-            domainEntityW2c.EmployeeMiddleName = dataContractW2c.Ww2coMiddleName;
+            domainEntityW2c.EmployeeMiddleName = !string.IsNullOrEmpty(dataContractW2c.Ww2coMiddleName) ? dataContractW2c.Ww2coMiddleName.Substring(0, 1) : string.Empty;
             domainEntityW2c.EmployeeSuffix = dataContractW2c.Ww2coSuffix;
             domainEntityW2c.EmployeeAddressLine1 = dataContractW2c.Ww2coEmplyeAddrLine1;
             domainEntityW2c.EmployeeAddressLine2 = dataContractW2c.Ww2coEmplyeAddrLine2;
@@ -473,9 +490,56 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             domainEntityW2c.Box12dCode = dataContractW2c.Ww2coCodeBoxCodeD;
             domainEntityW2c.Box12dAmount = W2cAmountStringToDecimal(dataContractW2c.Ww2coCodeBoxAmountD, recordId, dataContractW2c);
 
-            domainEntityW2c.Box13CheckBox1 = dataContractW2c.Ww2coCheckBox1 == "A" ? "x" : null;
-            domainEntityW2c.Box13CheckBox2 = dataContractW2c.Ww2coCheckBox3 == "A" ? "x" : null;
-            domainEntityW2c.Box13CheckBox3 = dataContractW2c.Ww2coCheckBox6 == "A" ? "x" : null;
+            if (dataContractW2c.Ww2coCheckBox1 == "A")
+            {
+                domainEntityW2c.Box13CheckBox1 = "x";
+                domainEntityW2c.Box13CheckBox1Prev = null;
+
+            }
+            else if (dataContractW2c.Ww2coCheckBox1 == "R")
+            {
+                domainEntityW2c.Box13CheckBox1 = null;
+                domainEntityW2c.Box13CheckBox1Prev = "x";
+            }
+            else
+            {
+                domainEntityW2c.Box13CheckBox1 = null;
+                domainEntityW2c.Box13CheckBox1Prev = null;
+            }
+
+            if (dataContractW2c.Ww2coCheckBox3 == "A")
+            {
+                domainEntityW2c.Box13CheckBox2 = "x";
+                domainEntityW2c.Box13CheckBox2Prev = null;
+
+            }
+            else if (dataContractW2c.Ww2coCheckBox3 == "R")
+            {
+                domainEntityW2c.Box13CheckBox2 = null;
+                domainEntityW2c.Box13CheckBox2Prev = "x";
+            }
+            else
+            {
+                domainEntityW2c.Box13CheckBox2 = null;
+                domainEntityW2c.Box13CheckBox3Prev = null;
+            }
+
+            if (dataContractW2c.Ww2coCheckBox6 == "A")
+            {
+                domainEntityW2c.Box13CheckBox3 = "x";
+                domainEntityW2c.Box13CheckBox3Prev = null;
+
+            }
+            else if (dataContractW2c.Ww2coCheckBox6 == "R")
+            {
+                domainEntityW2c.Box13CheckBox3 = null;
+                domainEntityW2c.Box13CheckBox3Prev = "x";
+            }
+            else
+            {
+                domainEntityW2c.Box13CheckBox3 = null;
+                domainEntityW2c.Box13CheckBox3Prev = null;
+            }
 
             if (!string.IsNullOrEmpty(dataContractW2c.Ww2coOtherBoxCodeE))
             {
@@ -630,7 +694,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             // Assign the previous W2 values
             if (dataContractW2c.Ww2coChangedSsnOrName == "Y")
             {
-                dataContractW2c.Ww2coChangedSsnOrName = "x";
+                domainEntityW2c.ChangesSsnOrName = "x";
                 string ssnPrev = "";
                 if (dataContractW2c != null && !string.IsNullOrEmpty(dataContractW2c.Ww2coSsnPrev))
                 {
@@ -702,10 +766,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             domainEntityW2c.Box12dCodePrev = dataContractW2c.Ww2coCodeBoxCodeDPrev;
             domainEntityW2c.Box12dAmountPrev = W2cAmountStringToDecimal(dataContractW2c.Ww2coCodeBoxAmntDPrev, recordId, dataContractW2c);
 
-            domainEntityW2c.Box13CheckBox1Prev = dataContractW2c.Ww2coCheckBox1Prev == "A" ? "x" : null;
-            domainEntityW2c.Box13CheckBox2Prev = dataContractW2c.Ww2coCheckBox3Prev == "A" ? "x" : null;
-            domainEntityW2c.Box13CheckBox3Prev = dataContractW2c.Ww2coCheckBox6Prev == "A" ? "x" : null;
-
             if (!string.IsNullOrEmpty(dataContractW2c.Ww2coOtherBoxCodeEPrev))
             {
                 domainEntityW2c.Box14Line1Prev = dataContractW2c.Ww2coOtherBoxCodeEPrev + " - " + W2cAmountStringToDecimal(dataContractW2c.Ww2coOtherBoxAmntEPrev, recordId, dataContractW2c);
@@ -747,7 +807,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 domainEntityW2c.Box15Line2Section1Prev = dataContractW2c.Ww2coStateCodeBPrev;
             }
-            
+
             if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateIdCPrev))
             {
                 domainEntityW2c.Box15Line1Section2Prev = dataContractW2c.Ww2coStateIdCPrev;
@@ -1117,6 +1177,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             domainEntity1095c.EmployeePostalCode = dataContract1095cWhist.TfcwhPostalCode;
             domainEntity1095c.EmployeeZipExtension = dataContract1095cWhist.TfcwhZipExtension;
             domainEntity1095c.EmployeeCountry = dataContract1095cWhist.TfcwhCountryName;
+            domainEntity1095c.EmployeeAge = dataContract1095cWhist.TfcwhAge;
 
             // Assign the offer of coverage codes
             domainEntity1095c.OfferOfCoverage12Month = dataContract1095cWhist.TfcwhOfferCode12mnth;
@@ -1162,6 +1223,21 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             domainEntity1095c.SafeHarborCodeOctober = dataContract1095cWhist.TfcwhSafeHarborCodeOct;
             domainEntity1095c.SafeHarborCodeNovember = dataContract1095cWhist.TfcwhSafeHarborCodeNov;
             domainEntity1095c.SafeHarborCodeDecember = dataContract1095cWhist.TfcwhSafeHarborCodeDec;
+
+            // Assign zip codes
+            domainEntity1095c.ZipCode12Month = dataContract1095cWhist.TfcwhZip12mnth;
+            domainEntity1095c.ZipCodeJanuary = dataContract1095cWhist.TfcwhZipJan;
+            domainEntity1095c.ZipCodeFebruary = dataContract1095cWhist.TfcwhZipFeb;
+            domainEntity1095c.ZipCodeMarch = dataContract1095cWhist.TfcwhZipMar;
+            domainEntity1095c.ZipCodeApril = dataContract1095cWhist.TfcwhZipApr;
+            domainEntity1095c.ZipCodeMay = dataContract1095cWhist.TfcwhZipMay;
+            domainEntity1095c.ZipCodeJune = dataContract1095cWhist.TfcwhZipJun;
+            domainEntity1095c.ZipCodeJuly = dataContract1095cWhist.TfcwhZipJul;
+            domainEntity1095c.ZipCodeAugust = dataContract1095cWhist.TfcwhZipAug;
+            domainEntity1095c.ZipCodeSeptember = dataContract1095cWhist.TfcwhZipSep;
+            domainEntity1095c.ZipCodeOctober = dataContract1095cWhist.TfcwhZipOct;
+            domainEntity1095c.ZipCodeNovember = dataContract1095cWhist.TfcwhZipNov;
+            domainEntity1095c.ZipCodeDecember = dataContract1095cWhist.TfcwhZipDec;
 
             // Is the employee self-insured
             domainEntity1095c.EmployeeIsSelfInsured = false;
@@ -1401,18 +1477,24 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             t4DomainEntity.EmployeeLastName = dataContractT4.Wt4oSurname.ToUpper();
 
             t4DomainEntity.SocialInsuranceNumber = dataContractT4.Wt4oSin;
-            if(!string.IsNullOrEmpty(t4DomainEntity.SocialInsuranceNumber) && t4DomainEntity.SocialInsuranceNumber.Length > 8)
+            if (!string.IsNullOrEmpty(t4DomainEntity.SocialInsuranceNumber) && t4DomainEntity.SocialInsuranceNumber.Length > 8)
             {
                 t4DomainEntity.SocialInsuranceNumber = t4DomainEntity.SocialInsuranceNumber.Substring(0, 3) + " " + t4DomainEntity.SocialInsuranceNumber.Substring(3, 3) + " " + t4DomainEntity.SocialInsuranceNumber.Substring(6);
             }
 
-            if(dataContractT4.Wt4oPensionRgstNo != null)
+            if (dataContractT4.Wt4oPensionRgstNo != null)
             {
                 t4DomainEntity.RPPorDPSPRegistrationNumber = dataContractT4.Wt4oPensionRgstNo.FirstOrDefault();
             }
 
+            // get AMENDED flag
+            if (dataContractT4.Wt4oFormText != null)
+            {
+                t4DomainEntity.Amended = dataContractT4.Wt4oFormText.FirstOrDefault();
+            }
+
             t4DomainEntity.EmployeeAddressLine1 = dataContractT4.Wt4oAddr1;
-            if(string.IsNullOrWhiteSpace(dataContractT4.Wt4oAddr2))
+            if (string.IsNullOrWhiteSpace(dataContractT4.Wt4oAddr2))
             {
                 t4DomainEntity.EmployeeAddressLine2 = (dataContractT4.Wt4oCity ?? string.Empty) + ", " + (dataContractT4.Wt4oProvinceCode ?? string.Empty) + " " + (dataContractT4.Wt4oPostalCode ?? string.Empty);
                 t4DomainEntity.EmployeeAddressLine3 = countryDesc;
@@ -1431,9 +1513,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             // Employer info
             t4DomainEntity.EmployerAddressLine1 = dataContractT4.Wt4oPayerName1;
-            if(string.IsNullOrWhiteSpace(dataContractT4.Wt4oPayerName2))
+            if (string.IsNullOrWhiteSpace(dataContractT4.Wt4oPayerName2))
             {
-                if(dataContractT4.Wt4oYear != "2010")
+                if (dataContractT4.Wt4oYear != "2010")
                 {
                     t4DomainEntity.EmployerAddressLine2 = dataContractT4.Wt4oPayerAddr1;
                     if (string.IsNullOrWhiteSpace(dataContractT4.Wt4oPayerAddr2))

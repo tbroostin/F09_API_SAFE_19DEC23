@@ -1,28 +1,28 @@
-﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 
-using System.Collections.Generic;
-using Ellucian.Web.Http.Controllers;
-using System.Web.Http;
-using System.ComponentModel;
 using Ellucian.Colleague.Api.Licensing;
+using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
+using Ellucian.Colleague.Coordination.Student.Services;
+using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Web.Http;
+using Ellucian.Web.Http.Controllers;
+using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Web.Http.ModelBinding;
+using Ellucian.Web.Http.Models;
 using Ellucian.Web.License;
+using Ellucian.Web.Security;
 using slf4net;
 using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Ellucian.Web.Http.Exceptions;
-using Ellucian.Colleague.Api.Utility;
-using Ellucian.Web.Security;
-using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Web.Http.Models;
-using Ellucian.Web.Http.Filters;
-using Ellucian.Web.Http;
-using System.Linq;
-using Ellucian.Colleague.Coordination.Student.Services;
+using System.Web.Http;
 using System.Web.Http.ModelBinding;
-using Ellucian.Web.Http.ModelBinding;
-using Ellucian.Colleague.Domain.Base.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {

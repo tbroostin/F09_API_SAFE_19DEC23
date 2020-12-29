@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using System;
 
 namespace Ellucian.Colleague.Domain.Base
@@ -6,6 +6,9 @@ namespace Ellucian.Colleague.Domain.Base
     [Serializable]
     public static class BasePermissionCodes
     {
+        // Access to update a langauge
+        public const string UpdateLanguage = "UPDATE.LANGUAGE";
+
         // Access to create person
         public const string CreatePerson = "CREATE.PERSON";
 
@@ -30,26 +33,35 @@ namespace Ellucian.Colleague.Domain.Base
         // Access to view any person's data
         public const string ViewAnyPerson = "VIEW.ANY.PERSON";
 
-        // Access to view any person relationships
-        public const string ViewAnyPersonRelationship = "VIEW.PERSON.RELATIONSHIPS";
+        // Access to view any personal relationships
+        public const string ViewAnyRelationship = "VIEW.RELATIONSHIP";
 
         // Access to view any nonperson relationships
         public const string ViewAnyNonPersonRelationship = "VIEW.NONPERSON.RELATIONSHIPS";
 
         // Access to create/update any person relationships
-        public const string UpdatePersonRelationship = "UPDATE.PERSON.RELATIONSHIPS";
+        public const string UpdatePersonalRelationship = "UPDATE.RELATIONSHIP";
 
         // Access to create/update any nonperson relationships
         public const string UpdateNonPersonRelationship = "UPDATE.NONPERSON.RELATIONSHIPS";
 
         // Access to delete any person relationships
-        public const string DeletePersonRelationship = "DELETE.PERSON.RELATIONSHIPS";
+        public const string DeletePersonalRelationship = "DELETE.RELATIONSHIP";
 
         // Access to delete any nonperson relationships
         public const string DeleteNonPersonRelationship = "DELETE.NONPERSON.RELATIONSHIPS";
 
+        // Access to create/update any person relationships
+        public const string ProcessRelationshipRequest = "PROCESS.RELATIONSHIP.REQUEST";
+
         // Access to view integration configuration information
         public const string ViewIntegrationConfig = "VIEW.INTEGRATION.CONFIG";
+
+        // Access to view Person Match Request information
+        public const string ViewPersonMatchRequest = "VIEW.PERSON.MATCH.REQUEST";
+
+        // Access to view Person Match Request information
+        public const string CreatePersonMatchRequestProspects = "CREATE.PERSON.MATCH.REQUEST.PROSPECTS";
 
         // Enables a person to update their own email addresses.
         // Used in endpoint UpdatePersonProfile: PUT persons/{personId} application/vnd.ellucian-person-profile.v{}+json
@@ -97,74 +109,15 @@ namespace Ellucian.Colleague.Domain.Base
         // Used in endpoint GetStudentRestrictions: GET students/{studentId}/restrictions
         public const string ViewPersonRestrictions = "VIEW.PERSON.RESTRICTIONS";
 
-        // Enables a person to update the organizational relationships (assign managers/subordinates)
-        // Used in endpoints for modifying organizational relationships
-        // CreateOrganizationalRelationship: POST /organizational-relationships
-        // UpdateOrganizationalRelationship: POST /organizational-relationships/{id}
-        // DeleteOrganizationalRelationship: DELETE /organizational-relationships/{id}
+        /// <summary>
+        /// Enables a person to update the organizational relationships (assign managers/subordinates)
+        /// </summary>
         public const string UpdateOrganizationalRelationships = "UPDATE.ORGANIZATIONAL.RELATIONSHIPS";
 
         /// <summary>
-        /// Enables a person to view employee W2 tax information
-        /// Used in TaxFormConsentService
+        /// Enables a person to view the organizational relationships (manager/subordinate)
         /// </summary>
-        public const string ViewEmployeeW2 = "VIEW.EMPLOYEE.W2";
-
-        /// <summary>
-        /// Enables a person to view employee 1095C tax information
-        /// Used in TaxFormConsent service
-        /// </summary>
-        public const string ViewEmployee1095C = "VIEW.EMPLOYEE.1095C";
-        
-        /// <summary>
-        /// Enable user to view their own T4A information
-        /// </summary>
-        public const string ViewT4A = "VIEW.T4A";
-
-        /// <summary>
-        /// Enable user to view another user's T4A information (ie: Tax Information Admin)
-        /// </summary>
-        public const string ViewRecipientT4A = "VIEW.RECIPIENT.T4A";
-
-        /// <summary>
-        /// Enables a user to view another employee's T4 information (ie: Tax Information Admin)
-        /// </summary>
-        public const string ViewEmployeeT4 = "VIEW.EMPLOYEE.T4";
-
-        /// <summary>
-        /// Enables a user to view their own W2 information
-        /// </summary>
-        public const string ViewW2 = "VIEW.W2";
-
-        /// <summary>
-        /// Enables a user to view their own 1095C information
-        /// </summary>
-        public const string View1095C = "VIEW.1095C";
-
-        /// <summary>
-        /// Enables a user to view their own T4 information
-        /// </summary>
-        public const string ViewT4 = "VIEW.T4";
-
-        /// <summary>
-        /// Enables access to the user's own 1098 tax form data
-        /// </summary>
-        public const string View1098 = "VIEW.1098";
-
-        /// <summary>
-        /// Enables access to other users' 1098 data (ie: Tax Information Admin)
-        /// </summary>
-        public const string ViewStudent1098 = "VIEW.STUDENT.1098";
-
-        /// <summary>
-        /// Enables access to the user's own T2202A tax form data
-        /// </summary>
-        public const string ViewT2202A = "VIEW.T2202A";
-
-        /// <summary>
-        /// Enables access to other users' T2202A data (ie: Tax Information Admin)
-        /// </summary>
-        public const string ViewStudentT2202A = "VIEW.STUDENT.T2202A";
+        public const string ViewOrganizationalRelationships = "VIEW.ORGANIZATIONAL.RELATIONSHIPS";
 
         // Access to view any comments
         public const string ViewComment = "VIEW.COMMENT";
@@ -180,16 +133,14 @@ namespace Ellucian.Colleague.Domain.Base
         /// </summary>
         public const string ViewStudentAccountActivity = "VIEW.STUDENT.ACCOUNT.ACTIVITY";
 
-        /// <summary>
-        /// Enables a user to view their own 1099MI information
-        /// </summary>
-        public const string View1099MISC = "VIEW.1099MISC";
-
-        // Access to view any personal relationships
-        public const string ViewAnyRelationship = "VIEW.RELATIONSHIP";
-
-        // Access to view any person contacts
+        // Access to view any person contacts and person-emergency-contacts
         public const string ViewAnyPersonContact = "VIEW.PERSON.CONTACT";
+
+        // Access to view any person contacts and person-emergency-contacts
+        public const string UpdatePersonContact = "UPDATE.PERSON.CONTACT";
+
+        // Access to view any person contacts and person-emergency-contacts
+        public const string DeletePersonContact = "DELETE.PERSON.CONTACT";
 
         // Access to view any person guardians
         public const string ViewAnyPersonGuardian = "VIEW.PERSON.GUARDIAN";
@@ -205,5 +156,125 @@ namespace Ellucian.Colleague.Domain.Base
 
         // Access to Recruiter operations
         public const string PerformRecruiterOperations = "PERFORM.RECRUITER.OPERATIONS";
+
+        // Access to update a country
+        public const string UpdateCountry = "UPDATE.COUNTRY";
+
+        // Access to update a currency
+        public const string UpdateCurrency = "UPDATE.CURRENCY";
+
+        // Enables access to view External Education
+        public const string ViewExternalEducation = "VIEW.EXTERNAL.EDUCATION";
+
+        // Enables access to create External Education
+        public const string CreateExternalEducation = "UPDATE.EXTERNAL.EDUCATION";
+
+        // Access to view person-external-edcuation-credentials
+        public const string ViewPersonExternalEducationCredentials = "VIEW.PER.EXT.EDUC.CREDENTIAL";
+
+        // Access to update/create person-external-education-credentials
+        public const string UpdatePersonExternalEducationCredentials = "UPDATE.PER.EXT.EDUC.CREDENTIAL";
+
+        // Access to update configuration-settings
+        public const string UpdateConfigurationSettings = "UPDATE.CONFIG.SETTING";
+
+        // Access to update collection-configuration-settings
+        public const string UpdateCollectionConfigurationSettings = "UPDATE.COLLECTION.CONFIGURATION.SETTING";
+
+        // Access to update default-settings
+        public const string UpdateDefaultSettings = "UPDATE.DEFAULT.SETTING";
+
+        // Access to update CompoundConfigurationSettings
+        public const string UpdateCompoundConfigurationSettings = "UPDATE.CMPD.SETTING";
+
+        // Access to update mapping-settings
+        public const string UpdateMappingSettings = "UPDATE.MAPPING.SETTING";
+
+        // Permission to query phone numbers
+        public const string QueryPhoneNumbers = "QUERY.PHONE.NUMBERS";
+
+        // Permission to create an Attachment Collection
+        public const string CreateAttachmentCollection = "CREATE.ATTACHMENT.COLLECTION";
+
+        /// <summary>
+        /// Enables an account to reset all passwords. 
+        /// </summary>
+        public const string AdminResetAllPasswords = "ADMIN.RESET.ALL.PASSWORDS";
+
+        #region Tax Information
+
+        /// <summary>
+        /// Enables a person to view employee W-2 tax information
+        /// Used in TaxFormConsentService
+        /// </summary>
+        public const string ViewEmployeeW2 = "VIEW.EMPLOYEE.W2";
+
+        /// <summary>
+        /// Enables a user to view their own W-2 information
+        /// </summary>
+        public const string ViewW2 = "VIEW.W2";
+
+        /// <summary>
+        /// Enables a person to view employee 1095-C tax information
+        /// Used in TaxFormConsent service
+        /// </summary>
+        public const string ViewEmployee1095C = "VIEW.EMPLOYEE.1095C";
+
+        /// <summary>
+        /// Enables a user to view their own 1095-C information
+        /// </summary>
+        public const string View1095C = "VIEW.1095C";
+
+        /// <summary>
+        /// Enables a user to view another employee's T4 information (ie: Tax Information Admin)
+        /// </summary>
+        public const string ViewEmployeeT4 = "VIEW.EMPLOYEE.T4";
+
+        /// <summary>
+        /// Enable user to view their own T4A information
+        /// </summary>
+        public const string ViewT4A = "VIEW.T4A";
+
+        /// <summary>
+        /// Enable user to view another user's T4A information (ie: Tax Information Admin)
+        /// </summary>
+        public const string ViewRecipientT4A = "VIEW.RECIPIENT.T4A";
+
+        /// <summary>
+        /// Enables a user to view their own T4 information
+        /// </summary>
+        public const string ViewT4 = "VIEW.T4";
+
+        /// <summary>
+        /// Enables access to other users' 1098 data (ie: Tax Information Admin)
+        /// </summary>
+        public const string ViewStudent1098 = "VIEW.STUDENT.1098";
+
+        /// <summary>
+        /// Enables access to the user's own 1098 tax form data
+        /// </summary>
+        public const string View1098 = "VIEW.1098";
+
+        /// <summary>
+        /// Enables access to other users' T2202A data (ie: Tax Information Admin)
+        /// </summary>
+        public const string ViewStudentT2202A = "VIEW.STUDENT.T2202A";
+
+        /// <summary>
+        /// Enables access to the user's own T2202A tax form data
+        /// </summary>
+        public const string ViewT2202A = "VIEW.T2202A";
+
+        /// <summary>
+        /// Enables a user to view their own 1099-MI information
+        /// </summary>
+        public const string View1099MISC = "VIEW.1099MISC";
+
+        /// <summary>
+        /// Enables a user to view their own 1099-NEC information
+        /// </summary>
+        public const string View1099NEC = "VIEW.1099NEC";
+
+        #endregion
     }
 }

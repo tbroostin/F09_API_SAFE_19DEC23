@@ -102,5 +102,11 @@ namespace Ellucian.Colleague.Dtos.Base
         /// Indicates if user can view or update their gender identity
         /// </summary>
         public UserProfileViewUpdateOption CanViewUpdateGenderIdentity { get; set; }
+
+        /// <summary>
+        /// List of "web obtained" type of addresses that may be used for Address Change Requests. 
+        /// An example is the Graduation Application option "Request this be my new address going forward"
+        /// </summary>
+        public List<string> ChangeRequestAddressTypes { get; set; }
     }
 }

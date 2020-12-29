@@ -1,4 +1,5 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,8 +12,11 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Base.Tests;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
@@ -249,7 +253,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             [ExpectedException(typeof(HttpResponseException))]
             public async Task CommerceTaxCodesController_PutThrowsIntAppiExc()
             {
-                var result = await CommerceTaxCodesController.PutCommerceTaxCodeAsync(CommerceTaxCodeList[0]);
+                var result = await CommerceTaxCodesController.PutCommerceTaxCodeAsync("9ae3a175-1dfd-4937-b97b-3c9ad596e023", CommerceTaxCodeList[0]);
             }
 
             [TestMethod]
@@ -274,6 +278,264 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 commerceTaxCode.Description = null;
 
                 return commerceTaxCode;
+            }
+        }
+
+        [TestClass]
+        public class CommerceTaxCodeController_CommerceTaxCodeRatesTests
+        {
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext { get; set; }
+
+            private Mock<ICommerceTaxCodeService> commerceTaxCodeServiceMock;
+            private Mock<ILogger> loggerMock;
+            private CommerceTaxCodesController commerceTaxCodeController;
+            private IEnumerable<Domain.Base.Entities.CommerceTaxCodeRate> allCommerceTaxCodeRates;
+            private List<Dtos.CommerceTaxCodeRates> commerceTaxCodeRatesCollection;
+            private string expectedGuid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc";
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                commerceTaxCodeServiceMock = new Mock<ICommerceTaxCodeService>();
+                loggerMock = new Mock<ILogger>();
+                commerceTaxCodeRatesCollection = new List<Dtos.CommerceTaxCodeRates>();
+
+                allCommerceTaxCodeRates = new List<Domain.Base.Entities.CommerceTaxCodeRate>()
+                {
+                    new Domain.Base.Entities.CommerceTaxCodeRate("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "FL2", "FL2 Bookstore Tax Code 2%"),
+                    new Domain.Base.Entities.CommerceTaxCodeRate("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "ST", "Sales Tax"),
+                    new Domain.Base.Entities.CommerceTaxCodeRate("d2253ac7-9931-4560-b42f-1fccd43c952e", "G1", "GST 85% rebate")
+                };
+
+                foreach (var source in allCommerceTaxCodeRates)
+                {
+                    var commerceTaxCodeRates = new Ellucian.Colleague.Dtos.CommerceTaxCodeRates
+                    {
+                        Id = source.Guid,
+                        Code = source.Code,
+                        Title = source.Description,
+                        Description = null
+                    };
+                    commerceTaxCodeRatesCollection.Add(commerceTaxCodeRates);
+                }
+
+                commerceTaxCodeController = new CommerceTaxCodesController(commerceTaxCodeServiceMock.Object, loggerMock.Object)
+                {
+                    Request = new HttpRequestMessage()
+                };
+                commerceTaxCodeController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                commerceTaxCodeController = null;
+                allCommerceTaxCodeRates = null;
+                commerceTaxCodeRatesCollection = null;
+                loggerMock = null;
+                commerceTaxCodeServiceMock = null;
+            }
+
+            [TestMethod]
+            public async Task CommerceTaxCodeController_GetCommerceTaxCodeRates_ValidateFields_Nocache()
+            {
+                commerceTaxCodeController.Request.Headers.CacheControl =
+                     new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+                commerceTaxCodeServiceMock.Setup(x => x.GetCommerceTaxCodeRatesAsync(false)).ReturnsAsync(commerceTaxCodeRatesCollection);
+
+                var sourceContexts = (await commerceTaxCodeController.GetCommerceTaxCodeRatesAsync()).ToList();
+                Assert.AreEqual(commerceTaxCodeRatesCollection.Count, sourceContexts.Count);
+                for (var i = 0; i < sourceContexts.Count; i++)
+                {
+                    var expected = commerceTaxCodeRatesCollection[i];
+                    var actual = sourceContexts[i];
+                    Assert.AreEqual(expected.Id, actual.Id, "Id, Index=" + i.ToString());
+                    Assert.AreEqual(expected.Title, actual.Title, "Title, Index=" + i.ToString());
+                    Assert.AreEqual(expected.Code, actual.Code, "Code, Index=" + i.ToString());
+                }
+            }
+
+            [TestMethod]
+            public async Task CommerceTaxCodeController_GetCommerceTaxCodeRates_ValidateFields_Cache()
+            {
+                commerceTaxCodeController.Request.Headers.CacheControl =
+                    new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+
+                commerceTaxCodeServiceMock.Setup(x => x.GetCommerceTaxCodeRatesAsync(true)).ReturnsAsync(commerceTaxCodeRatesCollection);
+
+                var sourceContexts = (await commerceTaxCodeController.GetCommerceTaxCodeRatesAsync()).ToList();
+                Assert.AreEqual(commerceTaxCodeRatesCollection.Count, sourceContexts.Count);
+                for (var i = 0; i < sourceContexts.Count; i++)
+                {
+                    var expected = commerceTaxCodeRatesCollection[i];
+                    var actual = sourceContexts[i];
+                    Assert.AreEqual(expected.Id, actual.Id, "Id, Index=" + i.ToString());
+                    Assert.AreEqual(expected.Title, actual.Title, "Title, Index=" + i.ToString());
+                    Assert.AreEqual(expected.Code, actual.Code, "Code, Index=" + i.ToString());
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CommerceTaxCodeController_GetCommerceTaxCodeRates_KeyNotFoundException()
+            {
+                //
+                commerceTaxCodeServiceMock.Setup(x => x.GetCommerceTaxCodeRatesAsync(false))
+                    .Throws<KeyNotFoundException>();
+                await commerceTaxCodeController.GetCommerceTaxCodeRatesAsync();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CommerceTaxCodeController_GetCommerceTaxCodeRates_PermissionsException()
+            {
+
+                commerceTaxCodeServiceMock.Setup(x => x.GetCommerceTaxCodeRatesAsync(false))
+                    .Throws<PermissionsException>();
+                await commerceTaxCodeController.GetCommerceTaxCodeRatesAsync();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CommerceTaxCodeController_GetCommerceTaxCodeRates_ArgumentException()
+            {
+
+                commerceTaxCodeServiceMock.Setup(x => x.GetCommerceTaxCodeRatesAsync(false))
+                    .Throws<ArgumentException>();
+                await commerceTaxCodeController.GetCommerceTaxCodeRatesAsync();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CommerceTaxCodeController_GetCommerceTaxCodeRates_RepositoryException()
+            {
+
+                commerceTaxCodeServiceMock.Setup(x => x.GetCommerceTaxCodeRatesAsync(false))
+                    .Throws<RepositoryException>();
+                await commerceTaxCodeController.GetCommerceTaxCodeRatesAsync();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CommerceTaxCodeController_GetCommerceTaxCodeRates_IntegrationApiException()
+            {
+
+                commerceTaxCodeServiceMock.Setup(x => x.GetCommerceTaxCodeRatesAsync(false))
+                    .Throws<IntegrationApiException>();
+                await commerceTaxCodeController.GetCommerceTaxCodeRatesAsync();
+            }
+
+            [TestMethod]
+            public async Task CommerceTaxCodeController_GetCommerceTaxCodeRatesByGuidAsync_ValidateFields()
+            {
+                var expected = commerceTaxCodeRatesCollection.FirstOrDefault();
+                commerceTaxCodeServiceMock.Setup(x => x.GetCommerceTaxCodeRatesByGuidAsync(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
+
+                var actual = await commerceTaxCodeController.GetCommerceTaxCodeRatesByGuidAsync(expected.Id);
+
+                Assert.AreEqual(expected.Id, actual.Id, "Id");
+                Assert.AreEqual(expected.Title, actual.Title, "Title");
+                Assert.AreEqual(expected.Code, actual.Code, "Code");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CommerceTaxCodeController_GetCommerceTaxCodeRates_Exception()
+            {
+                commerceTaxCodeServiceMock.Setup(x => x.GetCommerceTaxCodeRatesAsync(false)).Throws<Exception>();
+                await commerceTaxCodeController.GetCommerceTaxCodeRatesAsync();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CommerceTaxCodeController_GetCommerceTaxCodeRatesByGuidAsync_Exception()
+            {
+                commerceTaxCodeServiceMock.Setup(x => x.GetCommerceTaxCodeRatesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<Exception>();
+                await commerceTaxCodeController.GetCommerceTaxCodeRatesByGuidAsync(string.Empty);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CommerceTaxCodeController_GetCommerceTaxCodeRatesByGuid_KeyNotFoundException()
+            {
+                commerceTaxCodeServiceMock.Setup(x => x.GetCommerceTaxCodeRatesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
+                    .Throws<KeyNotFoundException>();
+                await commerceTaxCodeController.GetCommerceTaxCodeRatesByGuidAsync(expectedGuid);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CommerceTaxCodeController_GetCommerceTaxCodeRatesByGuid_PermissionsException()
+            {
+                commerceTaxCodeServiceMock.Setup(x => x.GetCommerceTaxCodeRatesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
+                    .Throws<PermissionsException>();
+                await commerceTaxCodeController.GetCommerceTaxCodeRatesByGuidAsync(expectedGuid);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CommerceTaxCodeController_GetCommerceTaxCodeRatesByGuid_ArgumentException()
+            {
+                commerceTaxCodeServiceMock.Setup(x => x.GetCommerceTaxCodeRatesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
+                    .Throws<ArgumentException>();
+                await commerceTaxCodeController.GetCommerceTaxCodeRatesByGuidAsync(expectedGuid);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CommerceTaxCodeController_GetCommerceTaxCodeRatesByGuid_RepositoryException()
+            {
+                commerceTaxCodeServiceMock.Setup(x => x.GetCommerceTaxCodeRatesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
+                    .Throws<RepositoryException>();
+                await commerceTaxCodeController.GetCommerceTaxCodeRatesByGuidAsync(expectedGuid);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CommerceTaxCodeController_GetCommerceTaxCodeRatesByGuid_IntegrationApiException()
+            {
+                commerceTaxCodeServiceMock.Setup(x => x.GetCommerceTaxCodeRatesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
+                    .Throws<IntegrationApiException>();
+                await commerceTaxCodeController.GetCommerceTaxCodeRatesByGuidAsync(expectedGuid);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CommerceTaxCodeController_GetCommerceTaxCodeRatesByGuid_Exception()
+            {
+                commerceTaxCodeServiceMock.Setup(x => x.GetCommerceTaxCodeRatesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
+                    .Throws<Exception>();
+                await commerceTaxCodeController.GetCommerceTaxCodeRatesByGuidAsync(expectedGuid);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CommerceTaxCodeController_PostCommerceTaxCodeRatesAsync_Exception()
+            {
+                await commerceTaxCodeController.PostCommerceTaxCodeRatesAsync(commerceTaxCodeRatesCollection.FirstOrDefault());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CommerceTaxCodeController_PutCommerceTaxCodeRatesAsync_Exception()
+            {
+                var sourceContext = commerceTaxCodeRatesCollection.FirstOrDefault();
+                await commerceTaxCodeController.PutCommerceTaxCodeRatesAsync(sourceContext.Id, sourceContext);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CommerceTaxCodeController_DeleteCommerceTaxCodeRatesAsync_Exception()
+            {
+                await commerceTaxCodeController.DeleteCommerceTaxCodeRatesAsync(commerceTaxCodeRatesCollection.FirstOrDefault().Id);
             }
         }
     }

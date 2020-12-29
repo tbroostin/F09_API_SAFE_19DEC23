@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -12,11 +12,11 @@ using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Api.Licensing;
 using slf4net;
 using Ellucian.Colleague.Configuration.Licensing;
+using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Web.License;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Domain.Exceptions;
@@ -98,7 +98,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="criteria">Address Query Criteria including PersonIds list.</param>
         /// <returns>List of Address Objects <see cref="Ellucian.Colleague.Dtos.Base.Address">Address</see></returns>
-        public IEnumerable<Ellucian.Colleague.Dtos.Base.Address> QueryAddresses(AddressQueryCriteria criteria)
+        /// <accessComments>User must have VIEW.ADDRESS permission or search for their own address(es)</accessComments>
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.Base.Address>> QueryAddressesAsync(AddressQueryCriteria criteria)
         {
             if (criteria.PersonIds == null || criteria.PersonIds.Count() <= 0)
             {
@@ -107,6 +108,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
+                await _addressService.QueryAddressPermissionAsync(criteria.PersonIds);
+
                 var addressDtoCollection = new List<Ellucian.Colleague.Dtos.Base.Address>();
                 var addressCollection = _addressRepository.GetPersonAddressesByIds(criteria.PersonIds.ToList());
                 // Get the right adapter for the type mapping
@@ -121,6 +124,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             catch (PermissionsException pex)
             {
+                _logger.Error(pex.Message, "QueryAddresses error");
                 throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
@@ -171,7 +175,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -194,7 +198,76 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
         }
-        
+
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
+        /// <summary>
+        /// Read (GET) a Address using a GUID
+        /// </summary>
+        /// <param name="guid">GUID to desired Address</param>
+        /// <returns>An address object <see cref="Dtos.Addresses"/> in HeDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [EedmResponseFilter]
+        public async Task<Dtos.Addresses> GetAddressByGuid2Async(string guid)
+        {
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("Null id argument",
+                    IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
+            }
+            try
+            {
+                var address = await _addressService.GetAddressesByGuid2Async(guid);
+
+                if (address != null)
+                {
+
+                    AddEthosContextProperties(await _addressService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _addressService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              new List<string>() { address.Id }));
+                }
+                return address;
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
         /// <summary>
         /// Get all addresses with paging
         /// </summary>
@@ -231,9 +304,90 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
+        /// Get all addresses with paging
+        /// </summary>
+        /// <param name="page"></param>
+        /// <param name="personFilter">Selection from SaveListParms definition or person-filters</param>
+        /// <returns></returns>
+        [HttpGet]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
+        [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter2))]
+        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        public async Task<IHttpActionResult> GetAddresses2Async(Paging page, QueryStringFilter personFilter)
+        {
+            try
+            {
+                var bypassCache = false;
+                if (Request.Headers.CacheControl != null)
+                {
+                    if (Request.Headers.CacheControl.NoCache)
+                    {
+                        bypassCache = true;
+                    }
+                }
+                if (page == null)
+                {
+                    page = new Paging(200, 0);
+                }
+
+                if (CheckForEmptyFilterParameters())
+                    return new PagedHttpActionResult<IEnumerable<Dtos.Addresses>>(new List<Dtos.Addresses>(), page, 0, this.Request);
+
+                string personFilterValue = string.Empty;
+                var personFilterObj = GetFilterObject<Dtos.Filters.PersonFilterFilter2>(_logger, "personFilter");
+                if (personFilterObj != null)
+                {
+                    if (personFilterObj.personFilter != null)
+                    {
+                        personFilterValue = personFilterObj.personFilter.Id;
+                    }
+                }
+
+                var pageOfItems = await _addressService.GetAddresses2Async(page.Offset, page.Limit, personFilterValue, bypassCache);
+
+                AddEthosContextProperties(await _addressService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _addressService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              pageOfItems.Item1.Select(a => a.Id).ToList()));
+
+                return new PagedHttpActionResult<IEnumerable<Dtos.Addresses>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
@@ -336,6 +490,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="id">Guid to Address in Colleague</param>
         /// <param name="address"><see cref="Dtos.Addresses">Address</see> to update</param>
         /// <returns>An address object <see cref="Dtos.Addresses"/> in HeDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPut, EedmResponseFilter]
         public async Task<Dtos.Addresses> PutAddress2Async([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.Addresses address)
         {
@@ -376,7 +531,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -392,6 +547,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (Exception e)
             {
@@ -450,7 +610,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         #region Delete Methods
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
-        /// Delete an existing Address in Colleague (Not Supported)
+        /// Delete an existing Address in Colleague 
         /// </summary>
         /// <param name="id">Unique ID representing the Address to delete</param>
         [HttpDelete]
@@ -463,7 +623,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {

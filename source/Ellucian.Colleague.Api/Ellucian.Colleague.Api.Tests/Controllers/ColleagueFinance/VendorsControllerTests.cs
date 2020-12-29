@@ -1,4 +1,5 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -62,7 +63,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             _vendorsCollection.Add(vendors1);
 
             BuildData();
-            
+
             _vendorsController = new VendorsController(_vendorsServiceMock.Object, _loggerMock.Object)
             {
                 Request = new HttpRequestMessage()
@@ -78,10 +79,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 Id = Vendors1Guid,
                 Comment = "Some comment",
                 DefaultCurrency = CurrencyIsoCode.USD,
-                PaymentSources = new List<GuidObject2>() 
+                PaymentSources = new List<GuidObject2>()
                 {
                     new GuidObject2("03ef76f3-61be-4990-8a99-9a80282fc420")
-                },                
+                },
                 RelatedVendor = new List<RelatedVendorDtoProperty>()
                 {
                    new RelatedVendorDtoProperty()
@@ -90,8 +91,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                        Vendor = new GuidObject2("4f937f08-f6a0-4a1c-8d55-9f2a6dd6be46")
                    }
                 },
-                StartOn = DateTime.Today,                
-                Classifications = new List<GuidObject2>() 
+                StartOn = DateTime.Today,
+                Classifications = new List<GuidObject2>()
                 {
                     new GuidObject2("d82d70be-9229-48d8-b673-4d87528726d0")
                 },
@@ -99,15 +100,15 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 {
                     Organization = new GuidObject2("b42ca98d-edee-42da-8ddf-2a9e915221e7")
                 },
-                PaymentTerms = new List<GuidObject2>() 
+                PaymentTerms = new List<GuidObject2>()
                 {
                     new GuidObject2("88393aeb-8239-4324-8203-707aa1181122")
                 },
-                VendorHoldReasons = new List<GuidObject2>() 
+                VendorHoldReasons = new List<GuidObject2>()
                 {
                     new GuidObject2("c8263488-bf7d-45a7-9190-39b9587561a1")
                 },
-                Statuses = new List<Dtos.EnumProperties.VendorsStatuses?>() 
+                Statuses = new List<Dtos.EnumProperties.VendorsStatuses?>()
                 {
                     Dtos.EnumProperties.VendorsStatuses.Holdpayment
                 }
@@ -130,10 +131,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task VendorsController_GetVendors()
         {
             _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
-            
+
             _vendorsController.Request.Headers.CacheControl =
-                new System.Net.Http.Headers.CacheControlHeaderValue {NoCache = false};
-           
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
             var tuple = new Tuple<IEnumerable<Dtos.Vendors>, int>(_vendorsCollection, 1);
 
             _vendorsServiceMock
@@ -146,7 +147,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
             HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
 
-            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.Vendors>>) httpResponseMessage.Content)
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.Vendors>>)httpResponseMessage.Content)
                 .Value as IEnumerable<Dtos.Vendors>;
 
             Assert.IsNotNull(actuals);
@@ -176,7 +177,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 //Assert.AreEqual(expected.Person.Id, actual.Person.Id);
                 //Assert.AreEqual(expected.Institution.Id, actual.Institution.Id);
                 //Assert.AreEqual(expected.Recognition.FirstOrDefault().Id, actual.Recognition.FirstOrDefault().Id);
-               
+
             }
         }
 
@@ -365,7 +366,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task VendorsController_GetVendorByGuid()
         {
             _vendorsController.Request.Headers.CacheControl =
-                new System.Net.Http.Headers.CacheControlHeaderValue {NoCache = false};
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
 
             var expected = _vendorsCollection.FirstOrDefault(x => x.Id.Equals(Vendors1Guid, StringComparison.OrdinalIgnoreCase));
 
@@ -424,7 +425,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         }
 
         [TestMethod]
-        [ExpectedException(typeof (HttpResponseException))]
+        [ExpectedException(typeof(HttpResponseException))]
         public async Task VendorController_GetVendorByGuid_ArgumentException()
         {
             _vendorsServiceMock.Setup(x => x.GetVendorsByGuidAsync(It.IsAny<string>()))
@@ -634,7 +635,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         {
             _vendorsServiceMock.Setup(i => i.PutVendorAsync(Vendors1Guid, _vendorDto)).ThrowsAsync(new ArgumentException());
             var result = await _vendorsController.PutVendorsAsync(Vendors1Guid, _vendorDto);
-        }        
+        }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
@@ -648,7 +649,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task VendorController_PutVendor_ValidateUpdateRequest_Request_Null_Exception()
         {
             await _vendorsController.PutVendorsAsync(Vendors1Guid, null);
-        }        
+        }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
@@ -752,13 +753,13 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             await _vendorsController.PutVendorsAsync(Vendors1Guid, _vendorDto);
         }
 
-        
+
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task VendorController_PutVendor_Exception()
         {
             var expected = _vendorsCollection.FirstOrDefault();
-               await _vendorsController.PutVendorsAsync(expected.Id, expected);
+            await _vendorsController.PutVendorsAsync(expected.Id, expected);
         }
 
         #endregion
@@ -769,7 +770,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         [ExpectedException(typeof(HttpResponseException))]
         public async Task VendorController_PostVendor_Exception()
         {
-            var expected = _vendorsCollection.FirstOrDefault();         
+            var expected = _vendorsCollection.FirstOrDefault();
             await _vendorsController.PostVendorsAsync(expected);
         }
 
@@ -803,9 +804,11 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
         private List<Dtos.Vendors2> _vendorsCollection;
         private Dtos.Vendors2 _vendorDto;
+        private Dtos.Vendors2 _vendorDto2;
         private readonly DateTime _currentDate = DateTime.Now;
         private const string Vendors1Guid = "a830e686-7692-4012-8da5-b1b5d44389b4";
         private QueryStringFilter criteriaFilter = new QueryStringFilter("criteria", "");
+        private QueryStringFilter vendorDetailFilter = new QueryStringFilter("vendorDetail", "");
 
         [TestInitialize]
         public void Initialize()
@@ -877,7 +880,48 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 {
                     Dtos.EnumProperties.VendorsStatuses.Holdpayment
                 },
-                Types = new List<VendorTypes>() {  VendorTypes.Travel}
+                Types = new List<VendorTypes>() { VendorTypes.Travel }
+            };
+
+            _vendorDto2 = new Ellucian.Colleague.Dtos.Vendors2
+            {
+                Id = Vendors1Guid,
+                Comment = "Some comment",
+                DefaultCurrency = CurrencyIsoCode.USD,
+                PaymentSources = new List<GuidObject2>()
+                {
+                    new GuidObject2("03ef76f3-61be-4990-8a99-9a80282fc420")
+                },
+                RelatedVendor = new List<RelatedVendorDtoProperty>()
+                {
+                   new RelatedVendorDtoProperty()
+                   {
+                       Type = Dtos.EnumProperties.VendorType.ParentVendor,
+                       Vendor = new GuidObject2("4f937f08-f6a0-4a1c-8d55-9f2a6dd6be46")
+                   }
+                },
+                StartOn = DateTime.Today,
+                Classifications = new List<GuidObject2>()
+                {
+                    new GuidObject2("d82d70be-9229-48d8-b673-4d87528726d0")
+                },
+                VendorDetail = new VendorDetailsDtoProperty()
+                {
+                    Organization = new GuidObject2("b42ca98d-edee-42da-8ddf-2a9e915221e7")
+                },
+                PaymentTerms = new List<GuidObject2>()
+                {
+                    new GuidObject2("88393aeb-8239-4324-8203-707aa1181122")
+                },
+                VendorHoldReasons = new List<GuidObject2>()
+                {
+                    new GuidObject2("c8263488-bf7d-45a7-9190-39b9587561a1")
+                },
+                Statuses = new List<Dtos.EnumProperties.VendorsStatuses?>()
+                {
+                    Dtos.EnumProperties.VendorsStatuses.Holdpayment
+                },
+                Types = new List<VendorTypes>() { VendorTypes.Travel }
             };
         }
 
@@ -903,11 +947,11 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             var tuple = new Tuple<IEnumerable<Dtos.Vendors2>, int>(_vendorsCollection, 1);
 
             _vendorsServiceMock
-                .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(), 
-                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<bool>()))
+                .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
                 .ReturnsAsync(tuple);
 
-            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter);
+            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
 
             var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -944,11 +988,11 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                   new Dtos.Vendors2() { VendorDetail = new Dtos.DtoProperties.VendorDetailsDtoProperty() { Person = new GuidObject2("PersonGUID123") } });
 
             _vendorsServiceMock
-                .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(), 
-                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<bool>()))
+                .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
                 .ReturnsAsync(tuple);
 
-            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter);
+            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
 
             var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -968,7 +1012,129 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         }
 
         [TestMethod]
-        public async Task VendorsController_GetVendors_()
+        public async Task VendorsController_GetVendors_vendordetail_organizations()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.Vendors2>, int>(_vendorsCollection, 1);
+            // var criteria = "{\"vendordetail\":\"PersonGUID123\"}";
+            // var criteria = @"{'vendorDetail':{'person': {'id':'PersonGUID123'}}}";
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.Vendors2() { VendorDetail = new Dtos.DtoProperties.VendorDetailsDtoProperty() { Organization = new GuidObject2("PersonGUID123") } });
+
+            _vendorsServiceMock
+                .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.Vendors2>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.Vendors2>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+        [TestMethod]
+        public async Task VendorsController_GetVendors_vendordetail_institution()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.Vendors2>, int>(_vendorsCollection, 1);
+            // var criteria = "{\"vendordetail\":\"PersonGUID123\"}";
+            // var criteria = @"{'vendorDetail':{'person': {'id':'PersonGUID123'}}}";
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.Vendors2() { VendorDetail = new Dtos.DtoProperties.VendorDetailsDtoProperty() { Institution = new GuidObject2("PersonGUID123") } });
+
+            _vendorsServiceMock
+                .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.Vendors2>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.Vendors2>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+       
+
+        [TestMethod]
+        public async Task VendorsController_GetVendors_vendordetail_NameQuery()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.Vendors2>, int>(_vendorsCollection, 1);
+            // var criteria = "{\"vendordetail\":\"PersonGUID123\"}";
+            // var criteria = @"{'vendorDetail':{'person': {'id':'PersonGUID123'}}}";
+            var filterGroupName = "vendorDetail";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.Filters.VendorDetail() { vendorDetail = new GuidObject2("PersonGUID123") } );
+
+            _vendorsServiceMock
+                .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.Vendors2>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.Vendors2>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+        [TestMethod]
+        public async Task VendorsController_GetVendors_relatedReference()
         {
             _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
 
@@ -985,11 +1151,134 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                   new Dtos.Vendors2() { relatedReference = new List<RelatedVendorDtoProperty>() { new RelatedVendorDtoProperty() { Type = Dtos.EnumProperties.VendorType.ParentVendor } } });
 
             _vendorsServiceMock
-                .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(), 
-                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<bool>()))
+                .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
                 .ReturnsAsync(tuple);
 
-            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter);
+            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.Vendors2>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.Vendors2>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+        [TestMethod]
+        public async Task VendorsController_GetVendors_relatedReference_PaymentVendor()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.Vendors2>, int>(_vendorsCollection, 1);
+            // var criteria = @"{'relatedReference':'parentVendor'}";
+            // var criteria = @"{'relatedReference':[{'type':'parentVendor'}]}";
+
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.Vendors2() { relatedReference = new List<RelatedVendorDtoProperty>() { new RelatedVendorDtoProperty() { Type = Dtos.EnumProperties.VendorType.PaymentVendor } } });
+
+            _vendorsServiceMock
+                .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.Vendors2>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.Vendors2>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+        [TestMethod]
+        public async Task VendorsController_GetVendors_relatedVendors()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.Vendors2>, int>(_vendorsCollection, 1);
+            // var criteria = @"{'relatedReference':'parentVendor'}";
+            // var criteria = @"{'relatedReference':[{'type':'parentVendor'}]}";
+
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.Vendors2() { RelatedVendor = new List<RelatedVendorDtoProperty>() { new RelatedVendorDtoProperty() { Type = Dtos.EnumProperties.VendorType.ParentVendor } } });
+
+            _vendorsServiceMock
+                .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.Vendors2>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.Vendors2>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+        [TestMethod]
+        public async Task VendorsController_GetVendors_relatedVendors_PaymentVendors()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.Vendors2>, int>(_vendorsCollection, 1);
+            // var criteria = @"{'relatedReference':'parentVendor'}";
+            // var criteria = @"{'relatedReference':[{'type':'parentVendor'}]}";
+
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.Vendors2() { RelatedVendor = new List<RelatedVendorDtoProperty>() { new RelatedVendorDtoProperty() { Type = Dtos.EnumProperties.VendorType.PaymentVendor} } });
+
+            _vendorsServiceMock
+                .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
 
             var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -1017,20 +1306,20 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
 
             var tuple = new Tuple<IEnumerable<Dtos.Vendors2>, int>(_vendorsCollection, 1);
-  
+
             // var criteria = @"{ 'statuses':['active','approved'] }";
 
             var filterGroupName = "criteria";
             _vendorsController.Request.Properties.Add(
                   string.Format("FilterObject{0}", filterGroupName),
-                  new Dtos.Vendors2() { VendorDetail = new Dtos.DtoProperties.VendorDetailsDtoProperty() { Person = new GuidObject2("PersonGUID123") } });
+                  new Dtos.Vendors2() { Statuses = new List<VendorsStatuses?>() { VendorsStatuses.Active, VendorsStatuses.Approved, VendorsStatuses.Holdpayment } });
 
             _vendorsServiceMock
-                .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(), 
-                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<bool>()))
+                .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
                 .ReturnsAsync(tuple);
 
-            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter);
+            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
 
             var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -1067,11 +1356,11 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                   new Dtos.Vendors2() { Classifications = new List<GuidObject2>() { new GuidObject2("classificationsGUID123") } });
 
             _vendorsServiceMock
-                .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(), 
-                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<bool>()))
+                .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
                 .ReturnsAsync(tuple);
 
-            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter);
+            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
 
             var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -1091,6 +1380,85 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         }
 
         [TestMethod]
+        public async Task VendorsController_GetVendors_taxId()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.Vendors2>, int>(_vendorsCollection, 1);
+            //var criteria = "{\"classifications\":\"classificationsGUID123\"}";
+            var criteria = @"{'classifications':[{'id':'classificationsGUID123'}]}";
+
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.Vendors2() { TaxId = "tax123" });
+
+            _vendorsServiceMock
+                .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.Vendors2>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.Vendors2>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+        [TestMethod]
+        public async Task VendorsController_GetVendors_taxId_empty()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.Vendors2>, int>(_vendorsCollection, 1);
+        
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.Vendors2() { TaxId = string.Empty });
+            _vendorsController.Request.Properties.Add("EmptyFilterProperties", true);
+            _vendorsServiceMock
+                .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.Vendors2>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.Vendors2>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+        [TestMethod]
         public async Task VendorsController_GetVendors_vendorType()
         {
             _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
@@ -1108,11 +1476,11 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                   new Dtos.Vendors2() { Types = new List<VendorTypes>() { VendorTypes.Travel } });
 
             _vendorsServiceMock
-                .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(), 
-                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<bool>()))
+                .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
                 .ReturnsAsync(tuple);
 
-            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter);
+            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
 
             var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -1136,10 +1504,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task VendorsController_GetVendors_KeyNotFoundException()
         {
             //var paging = new Paging(100, 0);
-            _vendorsServiceMock.Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(), 
-                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<bool>()))
+            _vendorsServiceMock.Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
                 .Throws<KeyNotFoundException>();
-            await _vendorsController.GetVendorsAsync(null, criteriaFilter);
+            await _vendorsController.GetVendorsAsync2(null, criteriaFilter, vendorDetailFilter);
         }
 
         [TestMethod]
@@ -1148,9 +1516,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         {
             var paging = new Paging(100, 0);
             _vendorsServiceMock.Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
-                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<bool>()))
+                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
                 .Throws<PermissionsException>();
-            await _vendorsController.GetVendorsAsync(paging, criteriaFilter);
+            await _vendorsController.GetVendorsAsync2(paging, criteriaFilter, vendorDetailFilter);
         }
 
         [TestMethod]
@@ -1158,10 +1526,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task VendorsController_GetVendors_ArgumentException()
         {
             var paging = new Paging(100, 0);
-            _vendorsServiceMock.Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(), 
-                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<bool>()))
+            _vendorsServiceMock.Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
                 .Throws<ArgumentException>();
-            await _vendorsController.GetVendorsAsync(paging, criteriaFilter);
+            await _vendorsController.GetVendorsAsync2(paging, criteriaFilter, vendorDetailFilter);
         }
 
         [TestMethod]
@@ -1169,10 +1537,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task VendorsController_GetVendors_RepositoryException()
         {
             var paging = new Paging(100, 0);
-            _vendorsServiceMock.Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(), 
-                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<bool>()))
+            _vendorsServiceMock.Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
                 .Throws<RepositoryException>();
-            await _vendorsController.GetVendorsAsync(paging, criteriaFilter);
+            await _vendorsController.GetVendorsAsync2(paging, criteriaFilter, vendorDetailFilter);
         }
 
         [TestMethod]
@@ -1181,9 +1549,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         {
             var paging = new Paging(100, 0);
             _vendorsServiceMock.Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
-                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<bool>()))
+                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
                 .Throws<IntegrationApiException>();
-            await _vendorsController.GetVendorsAsync(paging, criteriaFilter);
+            await _vendorsController.GetVendorsAsync2(paging, criteriaFilter, vendorDetailFilter);
         }
 
         [TestMethod]
@@ -1191,10 +1559,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task VendorsController_GetVendors_Exception()
         {
             var paging = new Paging(100, 0);
-            _vendorsServiceMock.Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(), 
-                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<bool>()))
+            _vendorsServiceMock.Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
                 .Throws<Exception>();
-            await _vendorsController.GetVendorsAsync(paging, criteriaFilter);
+            await _vendorsController.GetVendorsAsync2(paging, criteriaFilter, vendorDetailFilter);
         }
 
         #endregion GetVendors
@@ -1302,6 +1670,17 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             Assert.AreEqual(_vendorDto.VendorDetail.Organization.Id, result.VendorDetail.Organization.Id);
             Assert.AreEqual(_vendorDto.VendorHoldReasons, result.VendorHoldReasons);
         }
+
+        //[TestMethod]
+        //[ExpectedException(typeof(HttpResponseException))]
+        //public async Task VendorController_PUT_Unset_VendorDetail_organization_id()
+        //{
+        //    _vendorDto2.VendorDetail.Organization = null;
+        //    _vendorsServiceMock.Setup(i => i.PutVendorAsync2(Vendors1Guid, It.IsAny<Vendors2>())).ReturnsAsync(_vendorDto2);
+        //    _vendorsServiceMock.Setup(i => i.GetVendorsByGuidAsync2(Vendors1Guid)).ReturnsAsync(_vendorDto);
+        //    var result = await _vendorsController.PutVendorsAsync2(Vendors1Guid, _vendorDto2);
+
+        //}
 
         [TestMethod]
         public async Task VendorController_PutVendor_ValidateUpdateRequest_RequestId_Null()
@@ -1455,132 +1834,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             _vendorsServiceMock.Setup(i => i.PutVendorAsync2(Vendors1Guid, _vendorDto)).ThrowsAsync(new ArgumentException());
             var result = await _vendorsController.PutVendorsAsync2(Vendors1Guid, _vendorDto);
         }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task VendorController_PutVendor_ValidateUpdateRequest_Guid_Null_Exception()
-        {
-            await _vendorsController.PutVendorsAsync2(string.Empty, _vendorDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task VendorController_PutVendor_ValidateUpdateRequest_Request_Null_Exception()
-        {
-            await _vendorsController.PutVendorsAsync2(Vendors1Guid, null);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task VendorController_PutVendor_ValidateUpdateRequest_EmptyGuid_Null_Exception()
-        {
-            await _vendorsController.PutVendorsAsync2(new Guid().ToString(), _vendorDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task VendorController_PutVendor_ValidateUpdateRequest_RequestIdIsEmptyGuid_Null_Exception()
-        {
-            _vendorDto.Id = new Guid().ToString();
-            await _vendorsController.PutVendorsAsync2(Vendors1Guid, _vendorDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task VendorController_PutVendor_ValidateUpdateRequest_GuidsNotMatching_Exception()
-        {
-            _vendorDto.Id = Guid.NewGuid().ToString();
-            await _vendorsController.PutVendorsAsync2(Vendors1Guid, _vendorDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task VendorController_PutVendor_ValidateVendor_EndOnHasValue_Exception()
-        {
-            _vendorDto.EndOn = DateTime.Today;
-            await _vendorsController.PutVendorsAsync2(Vendors1Guid, _vendorDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task VendorController_PutVendor_ValidateVendor_VendorDetail_Null__Exception()
-        {
-            _vendorDto.VendorDetail = null;
-            await _vendorsController.PutVendorsAsync2(Vendors1Guid, _vendorDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task VendorController_PutVendor_ValidateVendor_Organization_Null__Exception()
-        {
-            _vendorDto.VendorDetail.Organization = null;
-            await _vendorsController.PutVendorsAsync2(Vendors1Guid, _vendorDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task VendorController_PutVendor_ValidateVendor_MoreThanOneVendorDetail__Exception()
-        {
-            _vendorDto.VendorDetail.Institution = new GuidObject2("");
-            _vendorDto.VendorDetail.Person = new GuidObject2("");
-
-            await _vendorsController.PutVendorsAsync2(Vendors1Guid, _vendorDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task VendorController_PutVendor_ValidateVendor_OrgNotNull_PersonNotNull_Exception()
-        {
-            _vendorDto.VendorDetail.Institution = null;
-            _vendorDto.VendorDetail.Person = new GuidObject2("");
-
-            await _vendorsController.PutVendorsAsync2(Vendors1Guid, _vendorDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task VendorController_PutVendor_ValidateVendor_PersonNotNull_OrgNotNull_Exception()
-        {
-            _vendorDto.VendorDetail.Organization = null;
-            _vendorDto.VendorDetail.Institution = new GuidObject2("");
-            _vendorDto.VendorDetail.Person = new GuidObject2("");
-
-            await _vendorsController.PutVendorsAsync2(Vendors1Guid, _vendorDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task VendorController_PutVendor_ValidateVendor_ClassificationId_Null_Exception()
-        {
-            _vendorDto.Classifications.First().Id = string.Empty;
-            await _vendorsController.PutVendorsAsync2(Vendors1Guid, _vendorDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task VendorController_PutVendor_ValidateVendor_PaymentTermId_Null_Exception()
-        {
-            _vendorDto.PaymentTerms.First().Id = string.Empty;
-            await _vendorsController.PutVendorsAsync2(Vendors1Guid, _vendorDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task VendorController_PutVendor_ValidateVendor_VendorHoldReasonsId_Null_Exception()
-        {
-            _vendorDto.VendorHoldReasons.First().Id = string.Empty;
-            await _vendorsController.PutVendorsAsync2(Vendors1Guid, _vendorDto);
-        }
-
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task VendorController_PutVendor_Exception()
-        {
-            var expected = _vendorsCollection.FirstOrDefault();
-            await _vendorsController.PutVendorsAsync2(expected.Id, expected);
-        }
-
         #endregion
 
         #region Post
@@ -1594,7 +1847,1063 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         }
 
         #endregion
-        
+
+    }
+
+    #endregion
+
+    #region vendors-maximum v11
+
+    [TestClass]
+    public class VendorsMaximumControllerTests_v11
+    {
+        public TestContext TestContext { get; set; }
+
+        private Mock<IVendorsService> _vendorsServiceMock;
+        private Mock<ILogger> _loggerMock;
+
+        private VendorsController _vendorsController;
+
+        private List<Dtos.VendorsMaximum> _vendorsCollection;
+        private Dtos.VendorsMaximum _vendorDto;
+        private Dtos.VendorsMaximum _vendorDto2;
+        private readonly DateTime _currentDate = DateTime.Now;
+        private const string Vendors1Guid = "a830e686-7692-4012-8da5-b1b5d44389b4";
+        private QueryStringFilter criteriaFilter = new QueryStringFilter("criteria", "");
+        private QueryStringFilter vendorDetailFilter = new QueryStringFilter("vendorDetail", "");
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.DeploymentDirectory, "App_Data"));
+
+            _vendorsServiceMock = new Mock<IVendorsService>();
+            _loggerMock = new Mock<ILogger>();
+
+            _vendorsCollection = new List<Dtos.VendorsMaximum>();
+
+            var vendors1 = new Ellucian.Colleague.Dtos.VendorsMaximum
+            {
+                Id = Vendors1Guid,
+            };
+
+            _vendorsCollection.Add(vendors1);
+
+            BuildData();
+
+            _vendorsController = new VendorsController(_vendorsServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+            _vendorsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+            _vendorsController.Request.Properties.Add("PartialInputJsonObject", JObject.FromObject(_vendorDto));
+        }
+
+        private void BuildData()
+        {
+            _vendorDto = new Ellucian.Colleague.Dtos.VendorsMaximum
+            {
+                Id = Vendors1Guid,
+                DefaultCurrency = CurrencyIsoCode.USD,
+
+                StartOn = DateTime.Today,
+
+                VendorDetail = new VendorDetailsDtoProperty()
+                {
+                    Organization = new GuidObject2("b42ca98d-edee-42da-8ddf-2a9e915221e7")
+                },
+
+                Statuses = new List<Dtos.EnumProperties.VendorsStatuses?>()
+                {
+                    Dtos.EnumProperties.VendorsStatuses.Holdpayment
+                },
+                Types = new List<VendorTypes>() { VendorTypes.Travel }
+            };
+
+            _vendorDto2 = new Ellucian.Colleague.Dtos.VendorsMaximum
+            {
+                Id = Vendors1Guid,
+                DefaultCurrency = CurrencyIsoCode.USD,
+
+                StartOn = DateTime.Today,
+
+                VendorDetail = new VendorDetailsDtoProperty()
+                {
+                    Organization = new GuidObject2("b42ca98d-edee-42da-8ddf-2a9e915221e7")
+                },
+
+
+                Statuses = new List<Dtos.EnumProperties.VendorsStatuses?>()
+                {
+                    Dtos.EnumProperties.VendorsStatuses.Holdpayment
+                },
+                Types = new List<VendorTypes>() { VendorTypes.Travel }
+            };
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            _vendorsController = null;
+            _vendorsCollection = null;
+            _loggerMock = null;
+            _vendorsServiceMock = null;
+        }
+
+        #region Vendors
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorMaximum()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.VendorsMaximum>, int>(_vendorsCollection, 1);
+
+            _vendorsServiceMock
+                .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsMaximumAsync(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.VendorsMaximum>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+
+            }
+        }
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorsMaximum_VendorDetail()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.VendorsMaximum>, int>(_vendorsCollection, 1);
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.VendorsMaximum() { VendorDetail = new Dtos.DtoProperties.VendorDetailsDtoProperty() { Person = new GuidObject2("PersonGUID123") } });
+
+            _vendorsServiceMock
+               .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+               .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsMaximumAsync(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.VendorsMaximum>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorsMaximum_VendorDetail_Organizations()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.VendorsMaximum>, int>(_vendorsCollection, 1);
+
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.VendorsMaximum() { VendorDetail = new Dtos.DtoProperties.VendorDetailsDtoProperty() { Organization = new GuidObject2("PersonGUID123") } });
+
+            _vendorsServiceMock
+                .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+                   .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsMaximumAsync(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.VendorsMaximum>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorMaximum_VendorDetail_Institution()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.VendorsMaximum>, int>(_vendorsCollection, 1);
+
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.VendorsMaximum() { VendorDetail = new Dtos.DtoProperties.VendorDetailsDtoProperty() { Institution = new GuidObject2("PersonGUID123") } });
+
+            _vendorsServiceMock
+               .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsMaximumAsync(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.VendorsMaximum>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorsMaximum_VendorDetail_NameQuery()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.VendorsMaximum>, int>(_vendorsCollection, 1);
+
+            var filterGroupName = "vendorDetail";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.Filters.VendorDetail() { vendorDetail = new GuidObject2("PersonGUID123") });
+
+            _vendorsServiceMock
+               .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsMaximumAsync(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.VendorsMaximum>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorMaximum_Status()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.VendorsMaximum>, int>(_vendorsCollection, 1);
+
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.VendorsMaximum() { Statuses = new List<VendorsStatuses?>() { VendorsStatuses.Active, VendorsStatuses.Approved, VendorsStatuses.Holdpayment } });
+
+            _vendorsServiceMock
+               .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsMaximumAsync(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.VendorsMaximum>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorsMaximum_TaxId()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.VendorsMaximum>, int>(_vendorsCollection, 1);
+            //var criteria = "{\"classifications\":\"classificationsGUID123\"}";
+            var criteria = @"{'classifications':[{'id':'classificationsGUID123'}]}";
+
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.VendorsMaximum() { TaxId = "tax123" });
+
+            _vendorsServiceMock
+              .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+                 .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsMaximumAsync(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.VendorsMaximum>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorsMaximum_TaxId_empty()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.VendorsMaximum>, int>(_vendorsCollection, 1);
+
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.VendorsMaximum() { TaxId = string.Empty });
+            _vendorsController.Request.Properties.Add("EmptyFilterProperties", true);
+
+            _vendorsServiceMock
+              .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+              .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsMaximumAsync(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.VendorsMaximum>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+        [TestMethod]
+        public async Task VendorsController_GetVendorsMaximum_vendorType()
+        {
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var tuple = new Tuple<IEnumerable<Dtos.VendorsMaximum>, int>(_vendorsCollection, 1);
+            // var criteria = "";
+            // var vendorType = @"{'vendorType':'travel'} ";
+
+            var filterGroupName = "criteria";
+            _vendorsController.Request.Properties.Add(
+                  string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.VendorsMaximum() { Types = new List<VendorTypes>() { VendorTypes.Travel } });
+
+            _vendorsServiceMock
+              .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+               .ReturnsAsync(tuple);
+
+            var vendors = await _vendorsController.GetVendorsMaximumAsync(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            HttpResponseMessage httpResponseMessage = await vendors.ExecuteAsync(cancelToken);
+
+            var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>>)httpResponseMessage.Content)
+                .Value as IEnumerable<Dtos.VendorsMaximum>;
+
+            Assert.IsNotNull(actuals);
+            foreach (var actual in actuals)
+            {
+                var expected = _vendorsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorsMaximum_KeyNotFoundException()
+        {
+            //var paging = new Paging(100, 0);
+            _vendorsServiceMock
+             .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+               .Throws<KeyNotFoundException>();
+            await _vendorsController.GetVendorsMaximumAsync(null, criteriaFilter, vendorDetailFilter);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorsMaximum_Exception()
+        {
+            //var paging = new Paging(100, 0);
+            _vendorsServiceMock
+             .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+               .Throws<Exception>();
+            await _vendorsController.GetVendorsMaximumAsync(null, criteriaFilter, vendorDetailFilter);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorsMaximum_IntegrationApiException()
+        {
+            //var paging = new Paging(100, 0);
+            _vendorsServiceMock
+             .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+               .Throws<IntegrationApiException>();
+            await _vendorsController.GetVendorsMaximumAsync(null, criteriaFilter, vendorDetailFilter);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorsMaximum_PermissionsException()
+        {
+            var paging = new Paging(100, 0);
+            _vendorsServiceMock
+              .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .Throws<PermissionsException>();
+            await _vendorsController.GetVendorsMaximumAsync(paging, criteriaFilter, vendorDetailFilter);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorsMaximum_ArgumentException()
+        {
+            var paging = new Paging(100, 0);
+            _vendorsServiceMock
+              .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+                          .Throws<ArgumentException>();
+            await _vendorsController.GetVendorsMaximumAsync(paging, criteriaFilter, vendorDetailFilter);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorsMaximum_RepositoryException()
+        {
+            var paging = new Paging(100, 0);
+            _vendorsServiceMock
+              .Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>()))
+                 .Throws<RepositoryException>();
+            await _vendorsController.GetVendorsMaximumAsync(paging, criteriaFilter, vendorDetailFilter);
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorController_PostVendorsMaximum_Exception()
+        {
+            var expected = _vendorsCollection.FirstOrDefault();
+            await _vendorsController.PostVendorsMaximumAsync(expected);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorController_PutVendorsMaximum_Exception()
+        {
+            var expected = _vendorsCollection.FirstOrDefault();
+            await _vendorsController.PutVendorsMaximumAsync(expected.Id, expected);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorController_DeleteVendorsMaximum_Exception()
+        {
+            var expected = _vendorsCollection.FirstOrDefault();
+            await _vendorsController.DeleteVendorsMaximumAsync(expected.Id);
+        }
+        #endregion GetVendorsMaximum
+
+        #region GetVendorsMaximumByGuid
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorsMaximumByGuidAsync()
+        {
+            _vendorsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            var expected = _vendorsCollection.FirstOrDefault(x => x.Id.Equals(Vendors1Guid, StringComparison.OrdinalIgnoreCase));
+
+            _vendorsServiceMock.Setup(x => x.GetVendorsMaximumByGuidAsync(It.IsAny<string>())).ReturnsAsync(expected);
+
+            var actual = await _vendorsController.GetVendorsMaximumByGuidAsync(Vendors1Guid);
+
+            Assert.IsNotNull(expected);
+            Assert.AreEqual(expected.Id, actual.Id);
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorController_GetVendorsMaximumByGuidAsync_NullException()
+        {
+            await _vendorsController.GetVendorsMaximumByGuidAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorController_GetVendorsMaximumByGuidAsync_KeyNotFoundException()
+        {
+            _vendorsServiceMock.Setup(x => x.GetVendorsMaximumByGuidAsync(It.IsAny<string>()))
+                .Throws<KeyNotFoundException>();
+            await _vendorsController.GetVendorsMaximumByGuidAsync(Vendors1Guid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorController_GetVendorsMaximumByGuidAsync_PermissionsException()
+        {
+            _vendorsServiceMock.Setup(x => x.GetVendorsMaximumByGuidAsync(It.IsAny<string>()))
+                .Throws<PermissionsException>();
+            await _vendorsController.GetVendorsMaximumByGuidAsync(Vendors1Guid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorController_GetVendorsMaximumByGuidAsync_ArgumentException()
+        {
+            _vendorsServiceMock.Setup(x => x.GetVendorsMaximumByGuidAsync(It.IsAny<string>()))
+                .Throws<ArgumentException>();
+            await _vendorsController.GetVendorsMaximumByGuidAsync(Vendors1Guid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorController_GetVendorsMaximumByGuidAsync_RepositoryException()
+        {
+            _vendorsServiceMock.Setup(x => x.GetVendorsMaximumByGuidAsync(It.IsAny<string>()))
+                .Throws<RepositoryException>();
+            await _vendorsController.GetVendorsMaximumByGuidAsync(Vendors1Guid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorController_GetVendorsMaximumByGuidAsync_IntegrationApiException()
+        {
+            _vendorsServiceMock.Setup(x => x.GetVendorsMaximumByGuidAsync(It.IsAny<string>()))
+                .Throws<IntegrationApiException>();
+            await _vendorsController.GetVendorsMaximumByGuidAsync(Vendors1Guid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorController_GetVendorsMaximumByGuidAsync_Exception()
+        {
+            _vendorsServiceMock.Setup(x => x.GetVendorsMaximumByGuidAsync(It.IsAny<string>()))
+                .Throws<Exception>();
+            await _vendorsController.GetVendorsMaximumByGuidAsync(Vendors1Guid);
+        }
+
+        #endregion GetVendorsMaximumByGuidAsync
+    }
+
+    #endregion
+
+    #region QueryVendorsByPostAsync Tests
+
+    [TestClass]
+    public class QueryVendorsByPostAsyncTests
+    {
+        public TestContext TestContext { get; set; }
+
+        private Mock<IVendorsService> _vendorsServiceMock;
+        private Mock<ILogger> _loggerMock;
+
+        private VendorsController _vendorsController;
+
+        private Dtos.ColleagueFinance.VendorSearchCriteria criteriaDto;
+        private Dtos.ColleagueFinance.VendorSearchResult resultsDto;
+        private Dtos.ColleagueFinance.VendorSearchResult resultsDto1;
+        private List<Dtos.ColleagueFinance.VendorSearchResult> searchResult;
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.DeploymentDirectory, "App_Data"));
+
+            _vendorsServiceMock = new Mock<IVendorsService>();
+            _loggerMock = new Mock<ILogger>();
+
+            criteriaDto = new Dtos.ColleagueFinance.VendorSearchCriteria()
+            {
+                QueryKeyword = "Office supply"
+            };
+
+            BuildData();
+            _vendorsServiceMock.Setup(s => s.QueryVendorsByPostAsync(criteriaDto)).ReturnsAsync(searchResult);
+            _vendorsController = new VendorsController(_vendorsServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+        }
+
+        private void BuildData()
+        {
+            searchResult = new List<Dtos.ColleagueFinance.VendorSearchResult>();
+            resultsDto = new Ellucian.Colleague.Dtos.ColleagueFinance.VendorSearchResult
+            {
+                VendorId = "0000100",
+                VendorName = "Office & Supply",
+                VendorAddress = "Test address"
+            };
+            resultsDto1 = new Ellucian.Colleague.Dtos.ColleagueFinance.VendorSearchResult
+            {
+                VendorId = "0000101",
+                VendorName = "Office & Supply - 1",
+                VendorAddress = "Test address - 1"
+            };
+            searchResult.Add(resultsDto);
+            searchResult.Add(resultsDto1);
+
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            _vendorsController = null;
+            _loggerMock = null;
+            _vendorsServiceMock = null;
+            searchResult = null;
+        }
+
+        [TestMethod]
+        public async Task VendorsController_QueryVendorsByPostAsync_Success()
+        {
+            var results = await _vendorsController.QueryVendorsByPostAsync(criteriaDto);
+            Assert.IsNotNull(results);
+            Assert.IsTrue(results.Count() > 0);
+            Assert.AreEqual(searchResult.Count, results.Count());
+
+            Assert.IsTrue(results.Where(x => x.VendorId == resultsDto.VendorId).Count() == 1);
+            var actualDto = results.Where(x => x.VendorId == resultsDto.VendorId).FirstOrDefault();
+            Assert.AreEqual(resultsDto.VendorId, actualDto.VendorId);
+            Assert.AreEqual(resultsDto.VendorName, actualDto.VendorName);
+            Assert.AreEqual(resultsDto.VendorAddress, actualDto.VendorAddress);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_QueryVendorsByPostAsync_NullCriteria()
+        {
+            var results = await _vendorsController.QueryVendorsByPostAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_QueryVendorsByPostAsync_EmptyCriteria()
+        {
+            criteriaDto = new Dtos.ColleagueFinance.VendorSearchCriteria()
+            {
+                QueryKeyword = ""
+            };
+            var results = await _vendorsController.QueryVendorsByPostAsync(criteriaDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_QueryVendorsByPostAsync_ArgumentNullException()
+        {
+            _vendorsServiceMock.Setup(s => s.QueryVendorsByPostAsync(criteriaDto)).Throws(new ArgumentNullException());
+            _vendorsController = new VendorsController(_vendorsServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+
+            var results = await _vendorsController.QueryVendorsByPostAsync(criteriaDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_QueryVendorsByPostAsync_Exception()
+        {
+            _vendorsServiceMock.Setup(s => s.QueryVendorsByPostAsync(criteriaDto)).Throws(new Exception());
+            _vendorsController = new VendorsController(_vendorsServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+
+            var results = await _vendorsController.QueryVendorsByPostAsync(criteriaDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_QueryVendorsByPostAsync_KeyNotFoundException()
+        {
+            _vendorsServiceMock.Setup(s => s.QueryVendorsByPostAsync(criteriaDto)).Throws(new KeyNotFoundException());
+            _vendorsController = new VendorsController(_vendorsServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+
+            var results = await _vendorsController.QueryVendorsByPostAsync(criteriaDto);
+        }
+    }
+
+    #endregion
+
+    #region QueryVendorForVoucherAsync Tests
+
+    [TestClass]
+    public class QueryVendorForVoucherAsyncTests
+    {
+        public TestContext TestContext { get; set; }
+
+        private Mock<IVendorsService> _vendorsServiceMock;
+        private Mock<ILogger> _loggerMock;
+
+        private VendorsController _vendorsController;
+
+        private Dtos.ColleagueFinance.VendorSearchCriteria criteriaDto;
+        private Dtos.ColleagueFinance.VendorsVoucherSearchResult resultsDto;
+        private Dtos.ColleagueFinance.VendorsVoucherSearchResult resultsDto1;
+        private List<Dtos.ColleagueFinance.VendorsVoucherSearchResult> searchResult;
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.DeploymentDirectory, "App_Data"));
+
+            _vendorsServiceMock = new Mock<IVendorsService>();
+            _loggerMock = new Mock<ILogger>();
+
+            criteriaDto = new Dtos.ColleagueFinance.VendorSearchCriteria()
+            {
+                QueryKeyword = "Office supply"
+            };
+
+            BuildData();
+            _vendorsServiceMock.Setup(s => s.QueryVendorForVoucherAsync(criteriaDto)).ReturnsAsync(searchResult);
+            _vendorsController = new VendorsController(_vendorsServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+        }
+
+        private void BuildData()
+        {
+            searchResult = new List<Dtos.ColleagueFinance.VendorsVoucherSearchResult>();
+            resultsDto = new Ellucian.Colleague.Dtos.ColleagueFinance.VendorsVoucherSearchResult
+            {
+                VendorId = "0000192",
+                VendorNameLines = new List<string>() { "Blue Cross Office supply" },
+                VendorMiscName = null,
+                AddressLines = new List<string>() { "PO Box 69845" },
+                City = "Minneapolis",
+                State = "MN",
+                Zip = "55430",
+                Country = "",
+                FormattedAddress = "PO Box 69845 Minneapolis MN 55430",
+                AddressId = "143"
+            };
+            resultsDto1 = new Ellucian.Colleague.Dtos.ColleagueFinance.VendorsVoucherSearchResult
+            {
+                VendorId = "0000193",
+                VendorNameLines = new List<string>() { "Logistic Office supply" },
+                VendorMiscName = null,
+                AddressLines = new List<string>() { "PO Box 7777", "test" },
+                City = "New York",
+                State = "MN",
+                Zip = "55430",
+                Country = "USA",
+                FormattedAddress = "PO Box 7777 New York MN 55430",
+                AddressId = "144"
+            };
+            searchResult.Add(resultsDto);
+            searchResult.Add(resultsDto1);
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            _vendorsController = null;
+            _loggerMock = null;
+            _vendorsServiceMock = null;
+            searchResult = null;
+        }
+
+        [TestMethod]
+        public async Task VendorsController_QueryVendorForVoucherAsync_Success()
+        {
+            var results = await _vendorsController.QueryVendorForVoucherAsync(criteriaDto);
+            Assert.IsNotNull(results);
+            Assert.IsTrue(results.Count() > 0);
+            Assert.AreEqual(searchResult.Count, results.Count());
+
+            Assert.IsTrue(results.Where(x => x.VendorId == resultsDto.VendorId).Count() == 1);
+            var actualDto = results.Where(x => x.VendorId == resultsDto.VendorId).FirstOrDefault();
+            Assert.AreEqual(resultsDto.VendorId, actualDto.VendorId);
+            Assert.AreEqual(resultsDto.VendorNameLines, actualDto.VendorNameLines);
+            Assert.AreEqual(resultsDto.VendorMiscName, actualDto.VendorMiscName);
+            Assert.AreEqual(resultsDto.AddressLines, actualDto.AddressLines);
+            Assert.AreEqual(resultsDto.City, actualDto.City);
+            Assert.AreEqual(resultsDto.State, actualDto.State);
+            Assert.AreEqual(resultsDto.Zip, actualDto.Zip);
+            Assert.AreEqual(resultsDto.Country, actualDto.Country);
+            Assert.AreEqual(resultsDto.FormattedAddress, actualDto.FormattedAddress);
+            Assert.AreEqual(resultsDto.AddressId, actualDto.AddressId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_QueryVendorForVoucherAsync_NullCriteria()
+        {
+            var results = await _vendorsController.QueryVendorForVoucherAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_QueryVendorForVoucherAsync_EmptyCriteria()
+        {
+            criteriaDto = new Dtos.ColleagueFinance.VendorSearchCriteria()
+            {
+                QueryKeyword = ""
+            };
+            var results = await _vendorsController.QueryVendorForVoucherAsync(criteriaDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_QueryVendorForVoucherAsync_ArgumentNullException()
+        {
+            _vendorsServiceMock.Setup(s => s.QueryVendorForVoucherAsync(criteriaDto)).Throws(new ArgumentNullException());
+            _vendorsController = new VendorsController(_vendorsServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+
+            var results = await _vendorsController.QueryVendorForVoucherAsync(criteriaDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_QueryVendorForVoucherAsync_Exception()
+        {
+            _vendorsServiceMock.Setup(s => s.QueryVendorForVoucherAsync(criteriaDto)).Throws(new Exception());
+            _vendorsController = new VendorsController(_vendorsServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+
+            var results = await _vendorsController.QueryVendorForVoucherAsync(criteriaDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_QueryVendorForVoucherAsync_KeyNotFoundException()
+        {
+            _vendorsServiceMock.Setup(s => s.QueryVendorForVoucherAsync(criteriaDto)).Throws(new KeyNotFoundException());
+            _vendorsController = new VendorsController(_vendorsServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+
+            var results = await _vendorsController.QueryVendorForVoucherAsync(criteriaDto);
+        }
+    }
+
+    #endregion
+
+    #region GetVendorDefaultTaxFormInfoAsync Tests
+
+    [TestClass]
+    public class GetVendorDefaultTaxFormInfoAsyncTests
+    {
+        public TestContext TestContext { get; set; }
+
+        private Mock<IVendorsService> _vendorsServiceMock;
+        private Mock<ILogger> _loggerMock;
+
+        private VendorsController _vendorsController;
+
+        private string vendorId;
+        private string apType;
+        private Dtos.ColleagueFinance.VendorDefaultTaxFormInfo resultDto;
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.DeploymentDirectory, "App_Data"));
+
+            _vendorsServiceMock = new Mock<IVendorsService>();
+            _loggerMock = new Mock<ILogger>();
+
+            vendorId = "0000190";
+            apType = "AP";
+
+            BuildData();
+            _vendorsServiceMock.Setup(s => s.GetVendorDefaultTaxFormInfoAsync(vendorId, apType)).ReturnsAsync(resultDto);
+            _vendorsController = new VendorsController(_vendorsServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+        }
+
+        private void BuildData()
+        {
+
+            resultDto = new Ellucian.Colleague.Dtos.ColleagueFinance.VendorDefaultTaxFormInfo
+            {
+                VendorId = vendorId,
+                TaxForm = "1098",
+                TaxFormBoxCode = "MTG",
+                TaxFormState = "FL"
+            };
+
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            _vendorsController = null;
+            _loggerMock = null;
+            _vendorsServiceMock = null;
+            resultDto = null;
+        }
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorDefaultTaxFormInfoAsync_Success()
+        {
+            var actualDto = await _vendorsController.GetVendorDefaultTaxFormInfoAsync(vendorId, apType);
+            Assert.IsNotNull(actualDto);
+
+            Assert.AreEqual(resultDto.VendorId, actualDto.VendorId);
+            Assert.AreEqual(resultDto.TaxForm, actualDto.TaxForm);
+            Assert.AreEqual(resultDto.TaxFormBoxCode, actualDto.TaxFormBoxCode);
+            Assert.AreEqual(resultDto.TaxFormState, actualDto.TaxFormState);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorDefaultTaxFormInfoAsync_NullCriteria()
+        {
+            var actualDto = await _vendorsController.GetVendorDefaultTaxFormInfoAsync(null, null);
+            Assert.IsNull(actualDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorDefaultTaxFormInfoAsync_EmptyCriteria()
+        {
+            var actualDto = await _vendorsController.GetVendorDefaultTaxFormInfoAsync(string.Empty, string.Empty);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorDefaultTaxFormInfoAsync_ArgumentNullException()
+        {
+            _vendorsServiceMock.Setup(s => s.GetVendorDefaultTaxFormInfoAsync(null, null)).Throws(new ArgumentNullException());
+            _vendorsController = new VendorsController(_vendorsServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+
+            var results = await _vendorsController.GetVendorDefaultTaxFormInfoAsync(null, null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorDefaultTaxFormInfoAsync_Exception()
+        {
+            _vendorsServiceMock.Setup(s => s.GetVendorDefaultTaxFormInfoAsync(It.IsAny<string>(), It.IsAny<string>())).Throws(new Exception());
+            _vendorsController = new VendorsController(_vendorsServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+
+            var results = await _vendorsController.GetVendorDefaultTaxFormInfoAsync(vendorId, apType);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorDefaultTaxFormInfoAsync_KeyNotFoundException()
+        {
+            _vendorsServiceMock.Setup(s => s.GetVendorDefaultTaxFormInfoAsync(It.IsAny<string>(), It.IsAny<string>())).Throws(new KeyNotFoundException());
+            _vendorsController = new VendorsController(_vendorsServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+
+            var results = await _vendorsController.GetVendorDefaultTaxFormInfoAsync(vendorId, apType);
+        }
     }
 
     #endregion

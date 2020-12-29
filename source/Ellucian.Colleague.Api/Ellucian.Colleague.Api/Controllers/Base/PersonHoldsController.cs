@@ -1,4 +1,4 @@
-﻿// Copyright 2016 - 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016 - 2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -87,6 +87,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 return new PagedHttpActionResult<IEnumerable<Dtos.PersonHold>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
 
             }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -128,7 +133,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -183,7 +188,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -267,7 +272,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (InvalidOperationException e)
             {
@@ -327,7 +332,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException e)
             {
@@ -377,7 +382,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (RepositoryException e)
             {

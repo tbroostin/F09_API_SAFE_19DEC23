@@ -17,6 +17,7 @@ using slf4net;
 using Ellucian.Web.Http.Configuration;
 using System.Threading.Tasks;
 using System.Threading;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -32,6 +33,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         private string colleagueTimeZone;
         private List<AcademicCredit> _acadCreditsToSort;
         private List<string> _sortSpecificationIds = new List<string>() { "SORT1", "SORT2" };
+        protected Mock<IColleagueDataReader> dataReaderMock = new Mock<IColleagueDataReader>();
 
 
         [TestInitialize]
@@ -53,43 +55,172 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             }
 
-            //[TestMethod]
-            //public async Task AcademicCreditRepository_GetStudentCourseTransfersAsync()
-            //{
-            //    var dataAccessorMock = new Mock<IColleagueDataReader>();
-            //    dataAccessorMock.Setup<Task<string[]>>(acc => acc.SelectAsync("STUDENT.EQUIV.EVALS", It.IsAny<string>())).Returns(Task.FromResult(new string[] { "1"}));
+            [TestMethod]
+            public async Task AcademicCreditRepository_GetStudentCourseTransfersAsync()
+            {
+                dataReaderMock.Setup(acc => acc.SelectAsync("STUDENT.EQUIV.EVALS", It.IsAny<string>())).ReturnsAsync(new string[] { "1" });
 
-            //    Collection<StudentEquivEvals> studentEquivEvalsColl = new Collection<StudentEquivEvals>()
-            //    {
-            //        new StudentEquivEvals()
-            //        {
-            //            Recordkey = "1",
-            //            SteAcadPrograms = new List<string>() { "1", "2" },
-            //            SteCourseAcadCred = new List<string>() { "1" },
-            //            SteInstitution = "SteInst1",
-            //            SteStudentNonCourse = "Math 101"
-            //        }
-            //    };
-            //    Collection<StudentAcadCred> studentAcadCredColl = new Collection<StudentAcadCred>()
-            //    {
-            //        new StudentAcadCred()
-            //        {
-            //            Recordkey = "1",
-            //            StcStudentEquivEval = "1",
-            //            StcPersonId = "0003977"
-            //        }
-            //    };
+                Collection<StudentAcadCred> studentAcadCredColl = new Collection<StudentAcadCred>()
+                {
+                    new StudentAcadCred()
+                    {
+                        Recordkey = "1",
+                        StcStudentEquivEval = "1",
+                        StcPersonId = "0003977"
+                    }
+                };
+                BulkReadOutput<StudentAcadCred> bro = new Ellucian.Data.Colleague.BulkReadOutput<StudentAcadCred>()
+                {
+                    BulkRecordsRead = studentAcadCredColl
+                };
+                dataReaderMock.Setup(acc => acc.BulkReadRecordWithInvalidKeysAndRecordsAsync<StudentAcadCred>("STUDENT.ACAD.CRED", It.IsAny<string[]>(), It.IsAny<bool>()))
+                  .ReturnsAsync(bro);
 
-            //    dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentEquivEvals>("STUDENT.EQUIV.EVALS", It.IsAny<string>(), It.IsAny<bool>()))
-            //        .Returns(Task.FromResult(studentEquivEvalsColl));
+                Collection<StudentEquivEvals> studentEquivEvalsColl = new Collection<StudentEquivEvals>()
+                {
+                    new StudentEquivEvals()
+                    {
+                        Recordkey = "1",
+                        SteAcadPrograms = new List<string>() { "1", "2" },
+                        SteCourseAcadCred = new List<string>() { "1" },
+                        SteInstitution = "SteInst1",
+                        SteStudentNonCourse = "Math 101"
+                    }
+                };
+                BulkReadOutput<StudentEquivEvals> broSev = new Ellucian.Data.Colleague.BulkReadOutput<StudentEquivEvals>()
+                {
+                    BulkRecordsRead = studentEquivEvalsColl
+                };
 
-            //    dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", It.IsAny<string[]>(), It.IsAny<bool>()))
-            //        .ReturnsAsync(studentAcadCredColl);
+                dataReaderMock.Setup(acc => acc.BulkReadRecordWithInvalidKeysAndRecordsAsync<StudentEquivEvals>("STUDENT.EQUIV.EVALS", It.IsAny<string[]>(), It.IsAny<bool>()))
+                    .ReturnsAsync(broSev);
 
-            //    var results = await academicCreditRepository.GetStudentCourseTransfersAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
 
-            //    Assert.IsNotNull(results);
-            //}
+                var results = await academicCreditRepository.GetStudentCourseTransfersAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
+
+                Assert.IsNotNull(results);
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(RepositoryException))]
+        public async Task AcademicCreditRepository_GetStudentCourseTransfersAsync_StAcadCred_Error_RepoException()
+        {
+            dataReaderMock.Setup(acc => acc.SelectAsync("STUDENT.EQUIV.EVALS", It.IsAny<string>())).ReturnsAsync(new string[] { "1" });
+            Dictionary<string, string> dict = new Dictionary<string, string>();
+            dict.Add("1", "1");
+            Collection<StudentAcadCred> studentAcadCredColl = new Collection<StudentAcadCred>()
+            {
+                    new StudentAcadCred()
+                    {
+                        Recordkey = "1",
+                        StcStudentEquivEval = "1",
+                        StcPersonId = "0003977"
+                    }
+            };
+            BulkReadOutput<StudentAcadCred> bro = new Ellucian.Data.Colleague.BulkReadOutput<StudentAcadCred>()
+            {
+                BulkRecordsRead = studentAcadCredColl,
+                InvalidKeys = new string[] { "1" },
+                InvalidRecords = dict
+            };
+            dataReaderMock.Setup(acc => acc.BulkReadRecordWithInvalidKeysAndRecordsAsync<StudentAcadCred>("STUDENT.ACAD.CRED", It.IsAny<string[]>(), It.IsAny<bool>()))
+              .ReturnsAsync(bro);
+            var results = await academicCreditRepository.GetStudentCourseTransfersAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(RepositoryException))]
+        public async Task AcademicCreditRepository_GetStudentCourseTransfersAsync_StEquivLvl_Error_RepoException()
+        {
+            dataReaderMock.Setup(acc => acc.SelectAsync("STUDENT.EQUIV.EVALS", It.IsAny<string>())).ReturnsAsync(new string[] { "1" });
+            Dictionary<string, string> dict = new Dictionary<string, string>();
+            dict.Add("1", "1");
+            Collection<StudentAcadCred> studentAcadCredColl = new Collection<StudentAcadCred>()
+            {
+                    new StudentAcadCred()
+                    {
+                        Recordkey = "1",
+                        StcStudentEquivEval = "1",
+                        StcPersonId = "0003977"
+                    }
+            };
+            BulkReadOutput<StudentAcadCred> bro = new Ellucian.Data.Colleague.BulkReadOutput<StudentAcadCred>()
+            {
+                BulkRecordsRead = studentAcadCredColl
+            };
+            dataReaderMock.Setup(acc => acc.BulkReadRecordWithInvalidKeysAndRecordsAsync<StudentAcadCred>("STUDENT.ACAD.CRED", It.IsAny<string[]>(), It.IsAny<bool>()))
+              .ReturnsAsync(bro);
+
+            Collection<StudentEquivEvals> studentEquivEvalsColl = new Collection<StudentEquivEvals>()
+                {
+                    new StudentEquivEvals()
+                    {
+                        Recordkey = "1",
+                        SteAcadPrograms = new List<string>() { "1", "2" },
+                        SteCourseAcadCred = new List<string>() { "1" },
+                        SteInstitution = "SteInst1",
+                        SteStudentNonCourse = "Math 101"
+                    }
+                };
+            BulkReadOutput<StudentEquivEvals> broSev = new Ellucian.Data.Colleague.BulkReadOutput<StudentEquivEvals>()
+            {
+                BulkRecordsRead = studentEquivEvalsColl,
+                InvalidKeys = new string[] { "1" },
+                InvalidRecords = dict
+            };
+
+            dataReaderMock.Setup(acc => acc.BulkReadRecordWithInvalidKeysAndRecordsAsync<StudentEquivEvals>("STUDENT.EQUIV.EVALS", It.IsAny<string[]>(), It.IsAny<bool>()))
+                .ReturnsAsync(broSev);
+
+
+            var results = await academicCreditRepository.GetStudentCourseTransfersAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(KeyNotFoundException))]
+        public async Task AcademicCreditRepository_GetStudentCourseTransfersAsync_Invalid_StcStudentEquivEval_RepoException()
+        {
+            dataReaderMock.Setup(acc => acc.SelectAsync("STUDENT.EQUIV.EVALS", It.IsAny<string>())).ReturnsAsync(new string[] { "1" });
+            Dictionary<string, string> dict = new Dictionary<string, string>();
+            dict.Add("1", "1");
+            Collection<StudentAcadCred> studentAcadCredColl = new Collection<StudentAcadCred>()
+            {
+                    new StudentAcadCred()
+                    {
+                        Recordkey = "1",
+                        StcStudentEquivEval = "BAD_KEY",
+                        StcPersonId = "0003977"
+                    }
+            };
+            BulkReadOutput<StudentAcadCred> bro = new Ellucian.Data.Colleague.BulkReadOutput<StudentAcadCred>()
+            {
+                BulkRecordsRead = studentAcadCredColl
+            };
+            dataReaderMock.Setup(acc => acc.BulkReadRecordWithInvalidKeysAndRecordsAsync<StudentAcadCred>("STUDENT.ACAD.CRED", It.IsAny<string[]>(), It.IsAny<bool>()))
+              .ReturnsAsync(bro);
+
+            Collection<StudentEquivEvals> studentEquivEvalsColl = new Collection<StudentEquivEvals>()
+                {
+                    new StudentEquivEvals()
+                    {
+                        Recordkey = "1",
+                        SteAcadPrograms = new List<string>() { "1", "2" },
+                        SteCourseAcadCred = new List<string>() { "1" },
+                        SteInstitution = "SteInst1",
+                        SteStudentNonCourse = "Math 101"
+                    }
+                };
+            BulkReadOutput<StudentEquivEvals> broSev = new Ellucian.Data.Colleague.BulkReadOutput<StudentEquivEvals>()
+            {
+                BulkRecordsRead = studentEquivEvalsColl
+            };
+
+            dataReaderMock.Setup(acc => acc.BulkReadRecordWithInvalidKeysAndRecordsAsync<StudentEquivEvals>("STUDENT.EQUIV.EVALS", It.IsAny<string[]>(), It.IsAny<bool>()))
+                .ReturnsAsync(broSev);
+
+
+            var results = await academicCreditRepository.GetStudentCourseTransfersAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
         }
 
         [TestClass]
@@ -955,6 +1086,291 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
 
         [TestClass]
+        public class GetAcademicCreditsBySectionIdsWithInvalidKeysAsync : AcademicCreditRepositoryTests
+        {
+
+            [TestMethod]
+            public async Task Success_GetAcademicCreditsBySectionIdsAsync()
+            {
+                // This method should return all academic credits (unfiltered) for a section - of all statuses
+                // including drops, withdrawns, etc.
+                string[] allAcademicCreditIds = (await testAcademicCreditRepository.GetAsync()).Select(ai => ai.Id).ToArray();
+                // Which section Ids I use here is irrelevant - all academic credits will be returned by the data reader.
+                IEnumerable<string> sectionIds = new List<string>() { "1", "2" };
+               AcademicCreditsWithInvalidKeys credits = await academicCreditRepository.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIds);
+                // All should be returned
+                Assert.AreEqual(allAcademicCreditIds.Count(), credits.AcademicCredits.Count());
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task ThrowsExceptionWhenEmptySectionIds_GetAcademicCreditsBySectionIdsAsync()
+            {
+                IEnumerable<string> sectionIds = new List<string>();
+                AcademicCreditsWithInvalidKeys credits = await academicCreditRepository.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIds);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task ThrowsExceptionWhenNullSectionIds_GetAcademicCreditsBySectionIdsAsync()
+            {
+                AcademicCreditsWithInvalidKeys credits = await academicCreditRepository.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(null);
+            }
+            //validate DatReader.SelectAsync is called with distinct values
+            [TestMethod]
+            public async Task SectionIds_have_duplicates()
+            {
+                // This method should return all academic credits (unfiltered) for a section - of all statuses
+                // including drops, withdrawns, etc.
+                string[] allAcademicCreditIds = (await testAcademicCreditRepository.GetAsync()).Select(ai => ai.Id).ToArray();
+                // Which section Ids I use here is irrelevant - all academic credits will be returned by the data reader.
+                IEnumerable<string> sectionIds = new List<string>() { "1", "2","1","2" };
+                string[] nonDuplicateSectionIds = new string[] { "1", "2" };
+                AcademicCreditsWithInvalidKeys credits = await academicCreditRepository.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIds);
+                // All should be returned
+                Assert.AreEqual(allAcademicCreditIds.Count(), credits.AcademicCredits.Count());
+                dataReaderMock.Verify(d => d.SelectAsync("STUDENT.COURSE.SEC", "WITH SCS.COURSE.SECTION = '?' SAVING SCS.STUDENT.ACAD.CRED", nonDuplicateSectionIds,"?",true,It.IsAny<int>()));
+                Assert.AreEqual(allAcademicCreditIds.Count(), credits.AcademicCredits.Count());
+
+
+            }
+
+        }
+
+
+        [TestClass]
+        public class GetWithInvalidKeysAsync : AcademicCreditRepositoryTests
+        {
+
+            [TestMethod]
+            public async Task ReturnsSpecifiedAcademicCredits()
+            {
+                string[] allIds = (await testAcademicCreditRepository.GetAsync()).Select(ai => ai.Id).ToArray();
+                AcademicCreditsWithInvalidKeys credits = await academicCreditRepository.GetWithInvalidKeysAsync(allIds, false, false);
+                // All should be returned
+                Assert.AreEqual(allIds.Count(), credits.AcademicCredits.Count());
+            }
+
+            [TestMethod]
+            public async Task ReturnsSpecifiedAcademicCredits_StudentCourseSectionIds_Correct()
+            {
+                var allCredits = (await testAcademicCreditRepository.GetAsync()).ToList();
+                string[] allIds = allCredits.Select(ai => ai.Id).ToArray();
+                string[] allCourseIds = allCredits.Where(ai => ai.Course != null).Select(ai => ai.Id).ToArray();
+                string[] allNonCourseIds = allCredits.Where(ai => ai.Course == null).Select(ai => ai.Id).ToArray();
+                AcademicCreditsWithInvalidKeys credits = (await academicCreditRepository.GetWithInvalidKeysAsync(allIds, false, false));
+                List<AcademicCredit> courseCredits = credits.AcademicCredits.Where(c => c.Course != null).ToList();
+                List<AcademicCredit> nonCourseCredits = credits.AcademicCredits.Where(c => c.Course == null).ToList();
+
+                // All should be returned
+                Assert.AreEqual(allIds.Count(), credits.AcademicCredits.Count());
+                Assert.AreEqual(allCourseIds.Count(), courseCredits.Count());
+                Assert.AreEqual(allNonCourseIds.Count(), nonCourseCredits.Count());
+
+                for (int i = 0; i > allCourseIds.Count(); i++)
+                {
+                    Assert.AreEqual(allCourseIds[i], courseCredits[i].StudentCourseSectionId);
+                }
+                for (int j = 0; j > allNonCourseIds.Count(); j++)
+                {
+                    Assert.AreEqual(allNonCourseIds[j], nonCourseCredits[j].StudentCourseSectionId);
+                }
+            }
+
+            [TestMethod]
+            public async Task AcademicCredit_AdjustedCredits_is_0_when_StcAltcumContribCmplCred_is_null()
+            {
+                List<AcademicCredit> expected = (await testAcademicCreditRepository.GetAsync()).ToList();
+                string[] allIds = expected.Select(ai => ai.Id).ToArray();
+                AcademicCreditsWithInvalidKeys credits = await academicCreditRepository.GetWithInvalidKeysAsync(allIds, false, false);
+                // All should be returned
+                Assert.AreEqual(allIds.Count(), credits.AcademicCredits.Count());
+                for (int i = 0; i < allIds.Count(); i++)
+                {
+                    if (expected[i].AdjustedCredit == null)
+                    {
+                        Assert.IsNull(credits.AcademicCredits.ElementAt(i).AdjustedCredit);
+                    }
+                    else
+                    {
+                        Assert.IsNotNull(credits.AcademicCredits.ElementAt(i).AdjustedCredit);
+                        Assert.AreEqual(expected[i].AdjustedCredit, credits.AcademicCredits.ElementAt(i).AdjustedCredit);
+                    }
+                }
+            }
+
+            [TestMethod]
+            public async Task Exclude_Drops_when_includeDrops_flag_is_False()
+            {
+                List<CreditStatus> filteredStatuses = new List<CreditStatus>()
+                {
+                    CreditStatus.Add,
+                    CreditStatus.New,
+                    CreditStatus.Preliminary,
+                    CreditStatus.Withdrawn,
+                    CreditStatus.TransferOrNonCourse
+                };
+                List<AcademicCredit> allCredits = (await testAcademicCreditRepository.GetAsync()).ToList();
+                List<AcademicCredit> expected = (await testAcademicCreditRepository.GetAsync()).Where(ac => filteredStatuses.Contains(ac.Status)).ToList();
+                string[] allIds = allCredits.Select(ai => ai.Id).ToArray();
+                string[] expectedIds = expected.Select(ai => ai.Id).ToArray();
+                AcademicCreditsWithInvalidKeys credits = await academicCreditRepository.GetWithInvalidKeysAsync(allIds, false, true, false);
+                // All should be returned
+                Assert.AreEqual(expectedIds.Count(), credits.AcademicCredits.Count());
+                for (int i = 0; i < expectedIds.Count(); i++)
+                {
+                    if (expected[i].AdjustedCredit == null)
+                    {
+                        Assert.IsNull(credits.AcademicCredits.ElementAt(i).AdjustedCredit);
+                    }
+                    else
+                    {
+                        Assert.IsNotNull(credits.AcademicCredits.ElementAt(i).AdjustedCredit);
+                        Assert.AreEqual(expected[i].AdjustedCredit, credits.AcademicCredits.ElementAt(i).AdjustedCredit);
+                    }
+                }
+            }
+
+
+            [TestMethod]
+            public async Task Return_Drops_when_includeDrops_flag_is_True()
+            {
+                List<CreditStatus> filteredStatuses = new List<CreditStatus>()
+                {
+                    CreditStatus.Add,
+                    CreditStatus.New,
+                    CreditStatus.Preliminary,
+                    CreditStatus.Withdrawn,
+                    CreditStatus.TransferOrNonCourse,
+                    CreditStatus.Dropped
+                };
+                List<AcademicCredit> allCredits = (await testAcademicCreditRepository.GetAsync()).ToList();
+                List<AcademicCredit> expected = (await testAcademicCreditRepository.GetAsync()).Where(ac => filteredStatuses.Contains(ac.Status)).ToList();
+                string[] allIds = allCredits.Select(ai => ai.Id).ToArray();
+                string[] expectedIds = expected.Select(ai => ai.Id).ToArray();
+                AcademicCreditsWithInvalidKeys credits = await academicCreditRepository.GetWithInvalidKeysAsync(allIds, false, true, true);
+                // All should be returned
+                Assert.AreEqual(expectedIds.Count(), credits.AcademicCredits.Count());
+                for (int i = 0; i < expectedIds.Count(); i++)
+                {
+                    if (expected[i].AdjustedCredit == null)
+                    {
+                        Assert.IsNull(credits.AcademicCredits.ElementAt(i).AdjustedCredit);
+                    }
+                    else
+                    {
+                        Assert.IsNotNull(credits.AcademicCredits.ElementAt(i).AdjustedCredit);
+                        Assert.AreEqual(expected[i].AdjustedCredit, credits.AcademicCredits.ElementAt(i).AdjustedCredit);
+                    }
+                }
+            }
+
+            [TestMethod]
+            public async Task MissingRecordThrows()
+            {
+                Collection<StudentAcadCred> stcEmptyResponse = new Collection<StudentAcadCred>();
+                string[] requestedIds3 = { "1", "missng", "3" };
+                dataReaderMock.Setup<Task<Collection<StudentAcadCred>>>(acc => acc.BulkReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", requestedIds3, true)).Returns(Task.FromResult(stcEmptyResponse));
+
+                AcademicCreditsWithInvalidKeys credits = await academicCreditRepository.GetWithInvalidKeysAsync(requestedIds3);
+                Assert.AreEqual(0, credits.AcademicCredits.Count());
+                Assert.AreEqual(3, credits.InvalidAcademicCreditIds.Count());
+            }
+            [TestMethod]
+            public async Task BlankIdThrows()
+            {
+                Collection<StudentAcadCred> stcEmptyResponse = new Collection<StudentAcadCred>();
+                string[] requestedIds3 = { "1", "", "3" };
+                dataReaderMock.Setup<Task<Collection<StudentAcadCred>>>(acc => acc.BulkReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", requestedIds3, true)).Returns(Task.FromResult(stcEmptyResponse));
+
+                AcademicCreditsWithInvalidKeys credits = await academicCreditRepository.GetWithInvalidKeysAsync(new List<string>() { "1", "", "3" });
+                Assert.AreEqual(0, credits.AcademicCredits.Count());
+                Assert.AreEqual(3, credits.InvalidAcademicCreditIds.Count());
+
+            }
+
+            [TestMethod]
+            public async Task NullIdThrows()
+            {
+                Collection<StudentAcadCred> stcEmptyResponse = new Collection<StudentAcadCred>();
+
+                string[] requestedIds3 = { "1", null, "3" };
+                dataReaderMock.Setup<Task<Collection<StudentAcadCred>>>(acc => acc.BulkReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", requestedIds3, true)).Returns(Task.FromResult(stcEmptyResponse));
+
+                AcademicCreditsWithInvalidKeys credits = await academicCreditRepository.GetWithInvalidKeysAsync(requestedIds3);
+                Assert.AreEqual(0, credits.AcademicCredits.Count());
+                Assert.AreEqual(3, credits.InvalidAcademicCreditIds.Count());
+
+            }
+
+            [TestMethod]
+            public async Task InvalidIdThrows()
+            {
+                Collection<StudentAcadCred> stcEmptyResponse = new Collection<StudentAcadCred>();
+
+                string[] requestedIds3 = { "1", "Invalid", "3" };
+                dataReaderMock.Setup<Task<Collection<StudentAcadCred>>>(acc => acc.BulkReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", requestedIds3, true)).Returns(Task.FromResult(stcEmptyResponse));
+
+                AcademicCreditsWithInvalidKeys credits = await academicCreditRepository.GetWithInvalidKeysAsync(requestedIds3);
+                Assert.AreEqual(0, credits.AcademicCredits.Count());
+                Assert.AreEqual(3, credits.InvalidAcademicCreditIds.Count());
+
+            }
+
+            [TestMethod]
+            public async Task EmptyListReturnsEmptyList()
+            {
+                AcademicCreditsWithInvalidKeys credits = await academicCreditRepository.GetWithInvalidKeysAsync(new List<string>() { });
+                Assert.AreEqual(0, credits.AcademicCredits.Count());
+            }
+
+            [TestMethod]
+            public async Task AcademicCredit_CompletedCredit_is_null_when_StcCmplCred_is_null()
+            {
+                List<AcademicCredit> expected = (await testAcademicCreditRepository.GetAsync()).ToList();
+                string[] allIds = expected.Select(ai => ai.Id).ToArray();
+                AcademicCreditsWithInvalidKeys credits = await academicCreditRepository.GetWithInvalidKeysAsync(allIds, false, false);
+                // All should be returned
+                Assert.AreEqual(allIds.Count(), credits.AcademicCredits.Count());
+                for (int i = 0; i < allIds.Count(); i++)
+                {
+                    if (expected[i].CompletedCredit == null)
+                    {
+                        Assert.IsNull(credits.AcademicCredits.ElementAt(i).CompletedCredit);
+                    }
+                    else
+                    {
+                        Assert.IsNotNull(credits.AcademicCredits.ElementAt(i).CompletedCredit);
+                        Assert.AreEqual(expected[i].CompletedCredit, credits.AcademicCredits.ElementAt(i).CompletedCredit);
+                    }
+                }
+            }
+            [TestMethod]
+            public async Task AcademicCredit_GPACredit_is_null_when_StcGpaCred_is_null()
+            {
+                List<AcademicCredit> expected = (await testAcademicCreditRepository.GetAsync()).ToList();
+                string[] allIds = expected.Select(ai => ai.Id).ToArray();
+                AcademicCreditsWithInvalidKeys credits = await academicCreditRepository.GetWithInvalidKeysAsync(allIds, false, false);
+                // All should be returned
+                Assert.AreEqual(allIds.Count(), credits.AcademicCredits.Count());
+                for (int i = 0; i < allIds.Count(); i++)
+                {
+                    if (expected[i].GpaCredit == null)
+                    {
+                        Assert.IsNull(credits.AcademicCredits.ElementAt(i).GpaCredit);
+                    }
+                    else
+                    {
+                        Assert.IsNotNull(credits.AcademicCredits.ElementAt(i).GpaCredit);
+                        Assert.AreEqual(expected[i].GpaCredit, credits.AcademicCredits.ElementAt(i).GpaCredit);
+                    }
+                }
+            }
+
+
+        }
+        [TestClass]
         public class GetSortedAcademicCreditsBySortSpecificationIdAsync : AcademicCreditRepositoryTests
         {
             Dictionary<string, Transactions.SortStudentAcadCredsResponse> responseDict;
@@ -1093,6 +1509,128 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
         }
 
+        [TestClass]
+        public class FilterAcademicCreditsAsync : AcademicCreditRepositoryTests
+        {
+            string criteria = "WITH STC.COURSE.LEVEL EQ '100' ";
+            [TestInitialize]
+            public  void TestInitialize()
+            {
+                criteria = "WITH STC.COURSE.LEVEL EQ '100' ";
+            }
+            //test with null parameters
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task FilterAcademicCredits_AcademicCredits_Is_Null()
+            {
+                IEnumerable<AcademicCredit> filteredCredits;
+               filteredCredits= await academicCreditRepository.FilterAcademicCreditsAsync(null, criteria);
+            }
+
+            [TestMethod]
+            public async Task FilterAcademicCredits_Criteria_Is_Null()
+            {
+                IEnumerable<AcademicCredit> filteredCredits;
+                filteredCredits = await academicCreditRepository.FilterAcademicCreditsAsync(_acadCreditsToSort, null);
+                Assert.AreEqual(5, filteredCredits.Count());
+                Assert.AreEqual(_acadCreditsToSort[0], filteredCredits.ToList()[0]);
+                Assert.AreEqual(_acadCreditsToSort[1], filteredCredits.ToList()[1]);
+                Assert.AreEqual(_acadCreditsToSort[2], filteredCredits.ToList()[2]);
+                Assert.AreEqual(_acadCreditsToSort[3], filteredCredits.ToList()[3]);
+                Assert.AreEqual(_acadCreditsToSort[4], filteredCredits.ToList()[4]);
+
+            }
+            //test with empty parameters
+            [TestMethod]
+            public async Task FilterAcademicCredits_AcademicCredits_Is_Empty()
+            {
+                IEnumerable<AcademicCredit> filteredCredits;
+                filteredCredits = await academicCreditRepository.FilterAcademicCreditsAsync(new List<AcademicCredit>(), criteria);
+                Assert.AreEqual(0, filteredCredits.Count());
+            }
+
+            [TestMethod]
+            public async Task FilterAcademicCredits_Criteria_Is_Empty()
+            {
+                IEnumerable<AcademicCredit> filteredCredits;
+                filteredCredits = await academicCreditRepository.FilterAcademicCreditsAsync(_acadCreditsToSort, string.Empty);
+                Assert.AreEqual(_acadCreditsToSort, filteredCredits);
+            }
+            //test when datareader throws exception
+            [TestMethod]
+            public async Task FilterAcademicCredits_DataReader_Throws_Exception()
+            {
+                IEnumerable<AcademicCredit> filteredCredits;
+                dataReaderMock.Setup(d => d.SelectAsync("STUDENT.ACAD.CRED", It.IsAny<string[]>(), It.IsAny<string>())).Throws<Exception>();
+                filteredCredits = await academicCreditRepository.FilterAcademicCreditsAsync(_acadCreditsToSort, criteria);
+            }
+            //test when datareader return empty filter ids- it means none of the academic credits met the critria hence retuen empty list
+            [TestMethod]
+            public async Task FilterAcademicCredits_DataReader_Returns_Empty_FilteredIds()
+            {
+                IEnumerable<AcademicCredit> filteredCredits;
+                string[] creditIds = new string[] { };
+                dataReaderMock.Setup<Task<string[]>>(d => d.SelectAsync("STUDENT.ACAD.CRED", It.IsAny<string[]>(), It.IsAny<string>())).Returns(Task.FromResult(creditIds));
+                filteredCredits = await academicCreditRepository.FilterAcademicCreditsAsync(_acadCreditsToSort, criteria);
+                Assert.AreEqual(0, filteredCredits.Count());
+            }
+            //test when datareader returns null filter ids- it means none of the academic credits met the criteria hence returns empty list
+            [TestMethod]
+            public async Task FilterAcademicCredits_DataReader_Returns_Null_FilteredIds()
+            {
+                IEnumerable<AcademicCredit> filteredCredits;
+                string[] creditIds =null;
+                dataReaderMock.Setup<Task<string[]>>(d => d.SelectAsync("STUDENT.ACAD.CRED", It.IsAny<string[]>(), It.IsAny<string>())).Returns(Task.FromResult(creditIds));
+                filteredCredits = await academicCreditRepository.FilterAcademicCreditsAsync(_acadCreditsToSort, criteria);
+                Assert.AreEqual(0, filteredCredits.Count());
+            }
+            //test when datareader returns subset
+            [TestMethod]
+            public async Task FilterAcademicCredits_DataReader_Returns_Subset_FilteredIds()
+            {
+                IEnumerable<AcademicCredit> filteredCredits;
+                string[] creditIds = new string[] { "2", "4" };
+                dataReaderMock.Setup<Task<string[]>>(d => d.SelectAsync("STUDENT.ACAD.CRED", It.IsAny<string[]>(), It.IsAny<string>())).Returns(Task.FromResult(creditIds));
+                filteredCredits = await academicCreditRepository.FilterAcademicCreditsAsync(_acadCreditsToSort, criteria);
+                Assert.AreEqual(2,filteredCredits.Count());
+            }
+            //test when datareader returns all
+            [TestMethod]
+            public async Task FilterAcademicCredits_DataReader_Returns_All_FilteredIds()
+            {
+                IEnumerable<AcademicCredit> filteredCredits;
+                string[] creditIds = new string[] {"1", "2","3", "4" ,"5"};
+                dataReaderMock.Setup<Task<string[]>>(d => d.SelectAsync("STUDENT.ACAD.CRED", It.IsAny<string[]>(), It.IsAny<string>())).Returns(Task.FromResult(creditIds));
+                filteredCredits = await academicCreditRepository.FilterAcademicCreditsAsync(_acadCreditsToSort, criteria);
+                Assert.AreEqual(5, filteredCredits.Count());
+                Assert.AreEqual(_acadCreditsToSort[0], filteredCredits.ToList()[0]);
+                Assert.AreEqual(_acadCreditsToSort[1], filteredCredits.ToList()[1]);
+                Assert.AreEqual(_acadCreditsToSort[2], filteredCredits.ToList()[2]);
+                Assert.AreEqual(_acadCreditsToSort[3], filteredCredits.ToList()[3]);
+                Assert.AreEqual(_acadCreditsToSort[4], filteredCredits.ToList()[4]);
+            }
+            //test when datareader returns filteredId which is not in list of academic credits //not possible but in case
+            [TestMethod]
+            public async Task FilterAcademicCredits_DataReader_Returns_NotInList_FilteredIds()
+            {
+                IEnumerable<AcademicCredit> filteredCredits;
+                string[] creditIds = new string[] { "7","8" };
+                dataReaderMock.Setup<Task<string[]>>(d => d.SelectAsync("STUDENT.ACAD.CRED", It.IsAny<string[]>(), It.IsAny<string>())).Returns(Task.FromResult(creditIds));
+                filteredCredits = await academicCreditRepository.FilterAcademicCreditsAsync(_acadCreditsToSort, criteria);
+                Assert.AreEqual(0, filteredCredits.Count());
+            }
+            //test when datareader returns filteredId which is not in list of academic credits //not possible but in case
+            [TestMethod]
+            public async Task FilterAcademicCredits_DataReader_Returns_Few_NotInList_FilteredIds()
+            {
+                IEnumerable<AcademicCredit> filteredCredits;
+                string[] creditIds = new string[] { "1", "8", "2" };
+                dataReaderMock.Setup<Task<string[]>>(d => d.SelectAsync("STUDENT.ACAD.CRED", It.IsAny<string[]>(), It.IsAny<string>())).Returns(Task.FromResult(creditIds));
+                filteredCredits = await academicCreditRepository.FilterAcademicCreditsAsync(_acadCreditsToSort, criteria);
+                Assert.AreEqual(2, filteredCredits.Count());
+            }
+        }
+
         private async Task<AcademicCreditRepository> BuildValidAcademicCreditRepository()
         {
 
@@ -1100,7 +1638,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             var loggerMock = new Mock<ILogger>();
             var apiSettingsMock = new ApiSettings("null");
             // Set up data reader for mocking 
-            var dataReaderMock = new Mock<IColleagueDataReader>();
+          //  var dataReaderMock = new Mock<IColleagueDataReader>();
             var transactionInvokerMock = new Mock<IColleagueTransactionInvoker>();
             transactionFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataReaderMock.Object);
             transactionFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transactionInvokerMock.Object);

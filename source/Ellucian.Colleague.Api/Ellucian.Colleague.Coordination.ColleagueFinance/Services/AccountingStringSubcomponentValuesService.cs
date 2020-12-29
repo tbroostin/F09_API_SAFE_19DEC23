@@ -145,6 +145,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         }
                     }
                 }
+                else
+                {
+                    throw new ArgumentException(string.Concat("Unable to find a matching GL subcomponent for '", source.Type, "' in the table 'ACCT.STRUCTURE.INTG'"));
+                }
+            }
+            else
+            {
+                throw new ArgumentException(string.Concat("Unable to find any records in the table 'ACCT.STRUCTURE.INTG'"));
             }
             return accountingStringSubcomponentValues;
         }

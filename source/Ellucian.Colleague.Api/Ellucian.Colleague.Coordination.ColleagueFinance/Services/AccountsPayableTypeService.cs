@@ -9,6 +9,7 @@ using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
+using System.Linq;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 {
@@ -40,11 +41,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var ApTypeDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableType, Ellucian.Colleague.Dtos.ColleagueFinance.AccountsPayableType>();
             var ApTypeDtos = new List<Ellucian.Colleague.Dtos.ColleagueFinance.AccountsPayableType>();
 
-            foreach (var type in ApTypeDomainEntities)
+            if (ApTypeDomainEntities != null && ApTypeDomainEntities.Any())
             {
-                ApTypeDtos.Add(ApTypeDtoAdapter.MapToType(type));
+                //sort the entities on code, then by description
+                ApTypeDomainEntities = ApTypeDomainEntities.OrderBy(x => x.Code);
+                foreach (var type in ApTypeDomainEntities)
+                {
+                    ApTypeDtos.Add(ApTypeDtoAdapter.MapToType(type));
+                }
             }
-
             return ApTypeDtos;
         }
     }

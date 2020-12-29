@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -12,8 +12,9 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// </summary>
         /// <param name="personId">ID of the person assigned to and requesting the 1098-T.</param>
         /// <param name="recordId">ID of the record containing the pdf data for a 1098-T tax form</param>
+        /// <param name="suppressNotification">Optional parameter to suppress PDf access email notifications</param>
         /// <returns>1098-T/E data for a pdf</returns>
-        Task<Form1098PdfData> Get1098PdfAsync(string personId, string recordId);
+        Task<Form1098PdfData> Get1098PdfAsync(string personId, string recordId, bool suppressNotification = false);
 
         /// <summary>
         /// Get the T2202A data for a PDF.

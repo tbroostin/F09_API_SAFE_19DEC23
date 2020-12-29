@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.using System;
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.using System;
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -29,11 +29,36 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         Task<GeneralLedgerAccount> GetAsync(string generalLedgerAccountId, IEnumerable<string> majorComponentStartPositions);
 
         /// <summary>
+        /// Retrieves the list of expense GL account DTOs for which the user has access.
+        /// </summary>
+        /// <param name="glAccounts">All GL accounts for the user, or just the expense type ones.</param>
+        /// <param name="glAccountStructure">GL account structure.</param>
+        /// <returns>A collection of expense GL account DTOs for the user.</returns>
+        Task<IEnumerable<GlAccount>> GetUserGeneralLedgerAccountsAsync(IEnumerable<string> glAccounts, GeneralLedgerAccountStructure glAccountStructure);
+
+
+        /// <summary>
+        /// Restricts a list of GL accounts to those that are active.
+        /// </summary>
+        /// <param name="glAccounts">List of general ledger account strings.</param>
+        /// <returns>A list of active general ledger account strings.</returns>
+        Task<List<string>> GetActiveGeneralLedgerAccounts(List<string> glAccounts);
+
+        /// <summary>
         /// Retrieves a GL account validation response.
         /// </summary>
         /// <param name="generalLedgerAccountId">GL account ID.</param>
         /// <param name="fiscalYear">Optional; General Ledger fiscal year.</param>
         /// <returns></returns>
         Task<GlAccountValidationResponse> ValidateGlAccountAsync(string generalLedgerAccountId, string fiscalYear);
+
+        /// <summary>
+        /// Retrieves all the component description for supplied gl component ids from respective major component description file
+        /// </summary>
+        /// <param name="generalLedgerComponentKeys"></param>
+        /// <param name="glComponentType"></param>
+        /// <returns></returns>
+        Task<Dictionary<string, string>> GetGlComponentDescriptionsByIdsAndComponentTypeAsync(IEnumerable<string> generalLedgerComponentIds, GeneralLedgerComponentType glComponentType);
+
     }
 }

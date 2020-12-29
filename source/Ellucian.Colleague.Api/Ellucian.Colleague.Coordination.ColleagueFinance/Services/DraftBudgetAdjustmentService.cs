@@ -1,7 +1,8 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
+using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -23,6 +24,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
     [RegisterType]
     public class DraftBudgetAdjustmentService : BaseCoordinationService, IDraftBudgetAdjustmentService
     {
+        private IGeneralLedgerConfigurationRepository generalLedgerConfigurationRepository;
         private readonly IDraftBudgetAdjustmentsRepository draftBudgetAdjustmentRepository;
         public DraftBudgetAdjustment adjustmentOutputDto;
 
@@ -34,11 +36,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="currentUserFactory">User factory</param>
         /// <param name="roleRepository">Role repository</param>
         /// <param name="logger">Logger object</param>
-        public DraftBudgetAdjustmentService(IDraftBudgetAdjustmentsRepository draftBudgetAdjustmentRepository,
-            IAdapterRegistry adapterRegistry, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger)
+        public DraftBudgetAdjustmentService(IDraftBudgetAdjustmentsRepository draftBudgetAdjustmentRepository, 
+            IGeneralLedgerConfigurationRepository generalLedgerConfigurationRepository,
+            IAdapterRegistry adapterRegistry, 
+            ICurrentUserFactory currentUserFactory, 
+            IRoleRepository roleRepository, ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger)
         {
             this.draftBudgetAdjustmentRepository = draftBudgetAdjustmentRepository;
+            this.generalLedgerConfigurationRepository = generalLedgerConfigurationRepository;
         }
 
         /// <summary>
@@ -51,6 +57,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             if (draftBudgetAdjustmentDto == null)
             {
                 throw new ArgumentNullException("draftBudgetAdjustmentDto", "Draft budget adjustment is required.");
+            }
+
+            // Get the account structure configuration.
+            var glAccountStructure = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
+            if (glAccountStructure == null || !glAccountStructure.MajorComponentStartPositions.Any())
+            {
+                throw new ConfigurationException("Account structure must be defined.");
             }
 
             // Check the permission code to create or update a draft budget adjustment.
@@ -114,7 +127,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
 
             // Call the repository method to create or update the draft budget adjustment.
-            var adjustmentOutputEntity = await draftBudgetAdjustmentRepository.SaveAsync(adjustmentInputEntity);
+            var adjustmentOutputEntity = await draftBudgetAdjustmentRepository.SaveAsync(adjustmentInputEntity, glAccountStructure.MajorComponentStartPositions);
 
             // Throw an exception if a draft budget adjustment was not returned.
             if (adjustmentOutputEntity == null)

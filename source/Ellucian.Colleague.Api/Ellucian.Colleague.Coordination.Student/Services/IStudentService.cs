@@ -1,12 +1,11 @@
 ﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
-
 using System;
+using System.Threading.Tasks;
 using System.Collections.Generic;
+using Ellucian.Colleague.Coordination.Base;
+using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Dtos.Student.Transcripts;
-using System.Threading.Tasks;
-using Ellucian.Colleague.Coordination.Base.Services;
-using Ellucian.Colleague.Coordination.Base;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -24,14 +23,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         Task<string> CheckTranscriptStatusAsync(string orderId, string currentStatusCode);
 
         Task<PrivacyWrapper<IEnumerable<Dtos.Student.StudentBatch3>>> QueryStudentsById4Async(IEnumerable<string> studentIds, bool inheritFromPerson = false, bool getDegreePlan = false, string term = null);
-        Task<Tuple<byte[],string>> GetUnofficialTranscriptAsync(string studentId, string path, string transcriptGrouping, string reportWatermarkPath, string deviceInfoPath);
+        Task<Tuple<byte[], string>> GetUnofficialTranscriptAsync(string studentId, string path, string transcriptGrouping, string reportWatermarkPath, string deviceInfoPath);
         Task<Dtos.Student.RegistrationResponse> RegisterAsync(string studentId, IEnumerable<Dtos.Student.SectionRegistration> sectionRegistrations);
-        
+
         Task CheckStudentAccessAsync(string studentId);
 
         //StudentCohort
-        Task<IEnumerable<Dtos.StudentCohort>> GetAllStudentCohortsAsync(bool bypassCache);
-        Task<Dtos.StudentCohort> GetStudentCohortByGuidAsync(string id);
+        Task<IEnumerable<Dtos.StudentCohort>> GetAllStudentCohortsAsync( Dtos.Filters.CodeItemFilter criteria = null, bool bypassCache = false);
+        Task<Dtos.StudentCohort> GetStudentCohortByGuidAsync(string id, bool bypassCache = false);
 
         //ResidentType
         Task<IEnumerable<Ellucian.Colleague.Dtos.ResidentType>> GetResidentTypesAsync(bool bypassCache);
@@ -45,5 +44,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         Task<Tuple<IEnumerable<Dtos.Students>, int>> GetStudentsAsync(int offset, int limit, bool bypassCache = false, string person = "", string type = "", string cohorts = "", string residency = "");
         Task<Tuple<IEnumerable<Dtos.Students2>, int>> GetStudents2Async(int offset, int limit, Dtos.Students2 criteriaFilter, string personFilter, bool bypassCache = false);
         Task<PrivacyWrapper<List<Dtos.Student.Student>>> Search3Async(Dtos.Student.StudentSearchCriteria criteria, int pageSize = int.MaxValue, int pageIndex = 1);
+
+        #region Planning Student
+        Task<PrivacyWrapper<Dtos.Student.PlanningStudent>> GetPlanningStudentAsync(string studentId);
+        #endregion Planning Student
     }
 }

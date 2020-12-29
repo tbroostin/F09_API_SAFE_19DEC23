@@ -17,6 +17,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Tests;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -146,7 +147,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(InvalidOperationException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task StudentTranscriptGradesOptionsService_GetStudentTranscriptGradesOptions_GradeSchemes_Null()
         {
             _studentReferenceRepositoryMock.Setup(repo => repo.GetGradeSchemesAsync(It.IsAny<bool>())).ReturnsAsync(null);
@@ -155,7 +156,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task StudentTranscriptGradesOptionsService_GetStudentTranscriptGradesOptions_GradeSchemes_NotFound()
         {
             _gradeSchemeCollection = new List<GradeScheme>() { new GradeScheme("invalid", "1", "x") };
@@ -165,7 +166,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(InvalidOperationException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task StudentTranscriptGradesOptionsService_GetStudentTranscriptGradesOptions_Grade_Null()
         {
             _gradeRepositoryMock.Setup(repo => repo.GetHedmAsync(It.IsAny<bool>())).ReturnsAsync(null);
@@ -174,7 +175,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task StudentTranscriptGradesOptionsService_GetStudentTranscriptGradesOptions_Grade_NotFound()
         {
             _gradeCollection = new List<Grade>() { new Grade("invalid", "1", "x", "x", "x", "x") };

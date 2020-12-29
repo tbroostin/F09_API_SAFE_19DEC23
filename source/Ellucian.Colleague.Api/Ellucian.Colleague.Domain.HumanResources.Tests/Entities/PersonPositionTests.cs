@@ -19,6 +19,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         public string alternateSupervisorId;
         public DateTime startDate;
         public DateTime? endDate;
+        public Decimal? fullTimeEquivalent;
 
         public PersonPosition personPosition;
 
@@ -27,7 +28,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         {
             public PersonPosition createPersonPosition()
             {
-                return new PersonPosition(id, personId, positionId, startDate);
+                return new PersonPosition(id, personId, positionId, startDate, fullTimeEquivalent);
             }
 
             [TestInitialize]
@@ -37,6 +38,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 personId = "0003914";
                 positionId = "1234MUSADJ1234";
                 startDate = new DateTime(2016, 3, 17);
+                fullTimeEquivalent = 0.5m;
             }
 
             [TestMethod]
@@ -47,6 +49,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 Assert.AreEqual(personId, personPosition.PersonId);
                 Assert.AreEqual(positionId, personPosition.PositionId);
                 Assert.AreEqual(startDate, personPosition.StartDate);
+                Assert.AreEqual(fullTimeEquivalent, personPosition.FullTimeEquivalent);
             }
 
             [TestMethod]
@@ -88,8 +91,9 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 endDate = null;
                 supervisorId = "0003915";
                 alternateSupervisorId = "0003916";
+                fullTimeEquivalent = 0.5m;
 
-                personPosition = new PersonPosition(id, personId, positionId, startDate);
+                personPosition = new PersonPosition(id, personId, positionId, startDate, fullTimeEquivalent);
             }
 
             [TestMethod]
@@ -151,6 +155,14 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
 
                 Assert.AreEqual(personPosition.EndDate, personPosition.StartDate);
             }
+
+            [TestMethod]
+            public void FTETest()
+            {
+                personPosition.FullTimeEquivalent = 0.5m;
+
+                Assert.AreEqual(0.5m, personPosition.FullTimeEquivalent);
+            }
         }
 
         [TestClass]
@@ -158,7 +170,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         {
             public PersonPosition createPersonPosition()
             {
-                return new PersonPosition(id, personId, positionId, startDate);
+                return new PersonPosition(id, personId, positionId, startDate, fullTimeEquivalent);
             }
 
             [TestInitialize]
@@ -168,6 +180,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 personId = "0003914";
                 positionId = "1234MUSADJ1234";
                 startDate = new DateTime(2016, 3, 17);
+                fullTimeEquivalent = 0.5m;
             }
 
             [TestMethod]

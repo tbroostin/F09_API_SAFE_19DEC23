@@ -8,7 +8,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 {
     public interface IFinancialAidYearService : IBaseService
     {
-        Task<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidYear>> GetFinancialAidYearsAsync(bool bypassCache);
+        Task<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidYear>> GetFinancialAidYearsAsync(string academicPeriodId = "", bool bypassCache = false);
         Task<Ellucian.Colleague.Dtos.FinancialAidYear> GetFinancialAidYearByGuidAsync(string guid);
     }
 }

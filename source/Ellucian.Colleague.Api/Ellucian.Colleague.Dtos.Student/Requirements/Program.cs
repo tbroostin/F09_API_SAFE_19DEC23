@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -33,10 +33,17 @@ namespace Ellucian.Colleague.Dtos.Student.Requirements
         public IEnumerable<string> Catalogs { get; set; }
 
         /// <summary>
-        /// Anticiapted Completion Date of the Program
+        /// Anticipated Completion Date of the Program
         /// </summary>
         public DateTime? AnticipatedCompletionDate { get; set; }
-
+        /// <summary>
+        /// Start Date of Student Program
+        /// </summary>
+        public DateTime? ProgramStartDate { get; set; }
+        /// <summary>
+        /// End Date of Student Program (when inactive or graduated).
+        /// </summary>
+        public DateTime? ProgramEndDate { get; set; }
         /// <summary>
         /// List of Majors included in this program
         /// </summary>
@@ -85,6 +92,11 @@ namespace Ellucian.Colleague.Dtos.Student.Requirements
         /// Indicates whether graduation is allowed from this program.
         /// </summary>
         public bool IsGraduationAllowed { get; set; }
+
+        /// <summary>
+        /// Indicates whether the academic program is active or not.
+        /// </summary>
+        public bool IsActive { get; set; }
 
         /// <summary>
         /// Locations where this program is offered.

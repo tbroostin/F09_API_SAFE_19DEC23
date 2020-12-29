@@ -1,0 +1,114 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{BA6CC859-0852-4027-AABF-8536C495D239}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ellucian.Colleague.Dtos.Planning</RootNamespace>
+    <AssemblyName>Ellucian.Colleague.Dtos.Planning</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <EnableCodeInspectionOnBuild>true</EnableCodeInspectionOnBuild>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\Ellucian.Colleague.Dtos.Planning.XML</DocumentationFile>
+    <NoWarn>
+    </NoWarn>
+    <WarningsAsErrors>1570,1571,1572,1573,1591</WarningsAsErrors>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\Ellucian.Colleague.Dtos.Planning.XML</DocumentationFile>
+    <WarningsAsErrors>1570,1571,1572,1573,1591</WarningsAsErrors>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net40\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.IdentityModel" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Advisee.cs" />
+    <Compile Include="AdviseeSearchCriteria.cs" />
+    <Compile Include="AdvisingPermissions.cs" />
+    <Compile Include="Advisor.cs" />
+    <Compile Include="AdvisorQueryCriteria.cs" />
+    <Compile Include="CatalogPolicy.cs" />
+    <Compile Include="CompletedAdvisement.cs" />
+    <Compile Include="DegreePlanPreview5.cs" />
+    <Compile Include="DegreePlanPreview4.cs" />
+    <Compile Include="DegreePlanPreview6.cs" />
+    <Compile Include="DegreePlanRetrievalType.cs" />
+    <Compile Include="DegreePlanReviewRequest.cs" />
+    <Compile Include="DegreePlansSearchCriteria.cs" />
+    <Compile Include="DegreePlanPreview3.cs" />
+    <Compile Include="DegreePlanArchive2.cs" />
+    <Compile Include="DegreePlanArchive.cs" />
+    <Compile Include="DegreePlanPreview.cs" />
+    <Compile Include="DegreePlanPreview2.cs" />
+    <Compile Include="LoadDegreePlanRequest.cs" />
+    <Compile Include="PlanningConfiguration.cs" />
+    <Compile Include="PlanningStudentCriteria.cs" />
+    <Compile Include="ProgramEvaluation.cs" />
+    <Compile Include="ProgramEvaluation2.cs" />
+    <Compile Include="ProgramEvaluation3.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.Base\Ellucian.Colleague.Dtos.Base.csproj">
+      <Project>{A147BD58-ECC6-409B-A633-128946AAA456}</Project>
+      <Name>Ellucian.Colleague.Dtos.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.Student\Ellucian.Colleague.Dtos.Student.csproj">
+      <Project>{28EB3CAC-2FA7-401E-8246-0C03C50FDEDA}</Project>
+      <Name>Ellucian.Colleague.Dtos.Student</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- begin ellucian project settings -->
+  <Import Project="$(SolutionDir)CodeAnalysis\CodeScan.proj" Condition="Exists('$(SolutionDir)CodeAnalysis\CodeScan.proj ')" />
+  <Import Project="$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets" Condition="Exists('$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets ')" />
+  <Import Project="$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets" Condition="Exists('$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets')" />
+  <!-- end ellucian project settings -->
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

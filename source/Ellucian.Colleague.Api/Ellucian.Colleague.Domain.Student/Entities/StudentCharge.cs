@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -42,7 +42,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// <summary>
         /// The charge type.  One of, "tuition", "fee", "housing", or "meal".
         /// </summary>
-        public string ChargeType { get; private set; }
+        public string ChargeType { get; set; }
 
         /// <summary>
         /// The Due Date or the date that this is charged on.
@@ -91,6 +91,31 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public bool ChargeFromElevate { get; set; }
 
         /// <summary>
+        /// The usage associated with the charge (i.e. tax reporting only)
+        /// </summary>
+        public string Usage { get; set; }
+
+        /// <summary>
+        /// The date the charge orginated for sonsideration in tax report generation.
+        /// </summary>
+        public DateTime? OriginatedOn { get; set; }
+
+        /// <summary>
+        /// The override description associated with the charge.
+        /// </summary>
+        public string OverrideDescription { get; set; }
+
+        /// <summary>
+        /// The start date of the activity associated with the charge.
+        /// </summary>
+        public DateTime? BillingStartDate { get; set; }
+
+        /// <summary>
+        /// he end date of the activity associated with the charge.
+        /// </summary>
+        public DateTime? BillingEndDate { get; set; }
+
+        /// <summary>
         /// Constructor initializes the StudentCharges transaction object.
         /// </summary>
         
@@ -110,6 +135,25 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             }
             PersonId = personId;
             ChargeType = chargeType;
+            ChargeDate = chargeDate.Value;
+            Comments = new List<string>();
+        }
+
+        /// <summary>
+        /// Constructor initializes the StudentCharges transaction object.
+        /// </summary>
+
+        public StudentCharge(string personId, DateTime? chargeDate)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "Person ID is required when creating a StudentCharge.");
+            }
+            if (!chargeDate.HasValue)
+            {
+                chargeDate = DateTime.Today;
+            }
+            PersonId = personId;
             ChargeDate = chargeDate.Value;
             Comments = new List<string>();
         }

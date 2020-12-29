@@ -1,4 +1,5 @@
-﻿//Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.Entities;
@@ -15,6 +16,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Domain.Base.Services;
 
 namespace Ellucian.Colleague.Data.HumanResources.Repositories
 {
@@ -56,6 +58,20 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             return await GetGuidValcodeAsync<BeneficiaryTypes>("HR", "BENEFICIARY.TYPES",
                 (cl, g) => new BeneficiaryTypes(g, cl.ValInternalCodeAssocMember, (string.IsNullOrEmpty(cl.ValExternalRepresentationAssocMember)
                     ? cl.ValInternalCodeAssocMember : cl.ValExternalRepresentationAssocMember)), bypassCache: ignoreCache);
+        }
+
+        /// <summary>
+        /// Gets the Beneficiary categories/types
+        /// </summary>
+        /// <returns>Returns list of Beneficiary Categories</returns>
+        public async Task<IEnumerable<BeneficiaryCategory>> GetBeneficiaryCategoriesAsync()
+        {
+            return await GetOrAddToCacheAsync<IEnumerable<BeneficiaryCategory>>("AllBeneficiaryCategories",
+               async () =>
+               {
+                   return await GetValcodeAsync<BeneficiaryCategory>("HR", "BENEFICIARY.TYPES",
+                       category => new BeneficiaryCategory(category.ValInternalCodeAssocMember, category.ValExternalRepresentationAssocMember, category.ValActionCode1AssocMember));
+               }, Level1CacheTimeoutValue);
         }
 
         /// <summary>
@@ -219,7 +235,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             else
             {
-                return await GetOrAddToCacheAsync<IEnumerable<DeductionType>>("AllDeductionTypes", async () => await this.BuildAllDeductionTypes2(), Level1CacheTimeoutValue);
+                return await GetOrAddToCacheAsync<IEnumerable<DeductionType>>("AllDeductionTypes2", async () => await this.BuildAllDeductionTypes2(), Level1CacheTimeoutValue);
             }
         }
 
@@ -230,14 +246,32 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             var deductionTypeRecords = await DataReader.BulkReadRecordAsync<DataContracts.Bended>(deductionTypeIds);
 
+            var exception = new RepositoryException();
 
             foreach (var deductionTypeRecord in deductionTypeRecords)
             {
-
-                deductionTypeEntities.Add(new DeductionType(deductionTypeRecord.RecordGuid, deductionTypeRecord.Recordkey, string.IsNullOrEmpty(deductionTypeRecord.BdDesc) ? deductionTypeRecord.Recordkey : deductionTypeRecord.BdDesc, deductionTypeRecord.BdInstitutionType, deductionTypeRecord.BdCalcMethod, deductionTypeRecord.BdWithholdingPayCycles, deductionTypeRecord.BdTxablTaxCodes, deductionTypeRecord.BdDeferTaxCodes));
-
+                try
+                {
+                    deductionTypeEntities.Add(new DeductionType(deductionTypeRecord.RecordGuid, deductionTypeRecord.Recordkey,
+                        string.IsNullOrEmpty(deductionTypeRecord.BdDesc) ? deductionTypeRecord.Recordkey : deductionTypeRecord.BdDesc,
+                        deductionTypeRecord.BdInstitutionType, deductionTypeRecord.BdCalcMethod,
+                        deductionTypeRecord.BdWithholdingPayCycles, deductionTypeRecord.BdTxablTaxCodes, deductionTypeRecord.BdDeferTaxCodes));
+                }
+                catch (KeyNotFoundException ex)
+                {
+                    exception.AddError(
+                        new RepositoryError("deductionTypes.id", ex.Message)
+                        {
+                            Id = deductionTypeRecord.RecordGuid,
+                            SourceId = deductionTypeRecord.Recordkey
+                        }
+                    );
+                }
             }
-
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
 
             return deductionTypeEntities;
         }
@@ -301,61 +335,122 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 (e, g) => new EarningType2(g, e.Recordkey, e.EtpDesc), bypassCache: ignoreCache);
         }
 
-    /// <summary>
-    /// Get a collection of employee classifications
-    /// </summary>
-    /// <param name="ignoreCache">Bypass cache flag</param>
-    /// <returns>Collection of employee classifications</returns>
-    public async Task<IEnumerable<EmploymentClassification>> GetEmploymentClassificationsAsync(bool ignoreCache)
-        {
-            return await GetGuidValcodeAsync<EmploymentClassification>("HR", "CLASSIFICATIONS",
-                (e, g) => new EmploymentClassification(g, e.ValInternalCodeAssocMember, e.ValExternalRepresentationAssocMember,
-                    EmploymentClassificationType.Position), bypassCache: ignoreCache);
-        }
-
-    /// <summary>
-    /// Get all Employment Department objects, built from database data
-    /// </summary>
-    /// <returns>A list of Employment Department objects</returns>
-    public async Task<IEnumerable<EmploymentDepartment>> GetEmploymentDepartmentsAsync(bool ignoreCache = false)
-    {
-        if (ignoreCache)
-        {
-            return await BuildAllEmploymentDepartments();
-        }
-        else
-        {
-            return await GetOrAddToCacheAsync<IEnumerable<EmploymentDepartment>>("AllEmploymentDepartments", async () => await this.BuildAllEmploymentDepartments(), Level1CacheTimeoutValue);
-        }
-    }
-
-    private async Task<IEnumerable<EmploymentDepartment>> BuildAllEmploymentDepartments()
-    {
-        var employmentDepartmentEntities = new List<EmploymentDepartment>();
-        var employmentDepartmentIds = await DataReader.SelectAsync("DEPTS", "WITH DEPTS.TYPE NE 'A'");
-
-        var employmentDepartmentRecords = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Depts>(employmentDepartmentIds);
-
-        foreach (var employmentDepartmentRecord in employmentDepartmentRecords)
-        {
-                try
-                {
-                    var empDeptGuidInfo = await GetGuidFromRecordInfoAsync("DEPTS", employmentDepartmentRecord.Recordkey, "DEPT.INTG.KEY.IDX", employmentDepartmentRecord.DeptIntgKeyIdx);
-
-                    employmentDepartmentEntities.Add(new EmploymentDepartment(empDeptGuidInfo, employmentDepartmentRecord.Recordkey, !string.IsNullOrEmpty(employmentDepartmentRecord.DeptsDesc) ? employmentDepartmentRecord.DeptsDesc : employmentDepartmentRecord.Recordkey));
-                }
-                catch (Exception e)
-                {
-                    throw new KeyNotFoundException("No GUID found for entity DEPTS and ID " + employmentDepartmentRecord.Recordkey);
-
-                }
-
-
+        /// <summary>
+        /// Get a collection of employee classifications
+        /// </summary>
+        /// <param name="ignoreCache">Bypass cache flag</param>
+        /// <returns>Collection of employee classifications</returns>
+        public async Task<IEnumerable<EmploymentClassification>> GetEmploymentClassificationsAsync(bool ignoreCache)
+            {
+                return await GetGuidValcodeAsync<EmploymentClassification>("HR", "CLASSIFICATIONS",
+                    (e, g) => new EmploymentClassification(g, e.ValInternalCodeAssocMember, e.ValExternalRepresentationAssocMember,
+                        EmploymentClassificationType.Position), bypassCache: ignoreCache);
             }
 
+        /// <summary>
+        /// Get all Employment Department objects, built from database data
+        /// </summary>
+        /// <returns>A list of Employment Department objects</returns>
+        public async Task<IEnumerable<EmploymentDepartment>> GetEmploymentDepartmentsAsync(bool ignoreCache = false)
+        {
+            if (ignoreCache)
+            {
+                return await BuildAllEmploymentDepartments();
+            }
+            else
+            {
+                return await GetOrAddToCacheAsync<IEnumerable<EmploymentDepartment>>("AllEmploymentDepartments", async () => await this.BuildAllEmploymentDepartments(), Level1CacheTimeoutValue);
+            }
+        }
 
-        return employmentDepartmentEntities;
-    }
+
+        private async Task<IEnumerable<EmploymentDepartment>> BuildAllEmploymentDepartments()
+        {
+            var employmentDepartmentEntities = new List<EmploymentDepartment>();
+            var employmentDepartmentIds = await DataReader.SelectAsync("DEPTS", "");
+            var employmentDepartmentRecords = await DataReader.BulkReadRecordAsync<Depts>(employmentDepartmentIds);
+            var employmentDepartmentGuids = await GetDepartmentGuidsCollectionAsync(employmentDepartmentIds);
+            var exception = new RepositoryException();
+
+            foreach (var employmentDepartmentRecord in employmentDepartmentRecords)
+            {
+                try
+                {
+                    var id = employmentDepartmentRecord.Recordkey;
+                    if (!string.IsNullOrEmpty(id))
+                    {
+                        string guid = null;
+                        if (employmentDepartmentGuids.TryGetValue(id, out guid))
+                        {
+                            var desc = !string.IsNullOrEmpty(employmentDepartmentRecord.DeptsDesc) ? employmentDepartmentRecord.DeptsDesc : employmentDepartmentRecord.Recordkey;
+                            employmentDepartmentEntities.Add(new EmploymentDepartment(guid, id, desc)
+                            {
+                                Status = !string.IsNullOrEmpty(employmentDepartmentRecord.DeptsActiveFlag) && employmentDepartmentRecord.DeptsActiveFlag.Equals("I", StringComparison.OrdinalIgnoreCase) ? EmploymentDepartmentStatuses.Inactive : EmploymentDepartmentStatuses.Active
+                            });
+                        }
+                        else
+                        {
+                            exception.AddError(new RepositoryError("Bad.Data", "No GUID found for the entity 'DEPTS' with a key of '" + employmentDepartmentRecord.Recordkey + "'"));
+                        }
+                    }
+
+                }
+                catch (Exception)
+                {
+                    exception.AddError(new RepositoryError("Bad.Data","No GUID found for the entity 'DEPTS' with a key of '" + employmentDepartmentRecord.Recordkey + "'"));
+                }
+            }
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+
+            return employmentDepartmentEntities;
+        }
+
+        /// <summary>
+        /// Using a collection of  ids, get a dictionary collection of associated guids
+        /// </summary>
+        /// <param name="deptIds">collection of ids</param>
+        /// <returns>Dictionary consisting of an id (key) and guid (value)</returns>
+        public async Task<Dictionary<string, string>> GetDepartmentGuidsCollectionAsync(IEnumerable<string> deptIds)
+        {
+            if ((deptIds == null) || (deptIds != null && !deptIds.Any()))
+            {
+                return new Dictionary<string, string>();
+            }
+
+            var guidCollection = new Dictionary<string, string>();
+            try
+            {
+                var deptGuidLookup = deptIds.Distinct().ToList().ConvertAll(p => new RecordKeyLookup("DEPTS", p, "DEPT.INTG.KEY.IDX", p, false)).ToArray();
+                var recordKeyLookupResults = await DataReader.SelectAsync(deptGuidLookup);
+                if ((recordKeyLookupResults != null) && (recordKeyLookupResults.Any()))
+                {
+                    foreach (var recordKeyLookupResult in recordKeyLookupResults)
+                    {
+                        if (recordKeyLookupResult.Value != null)
+                        {
+                            var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                            if (!guidCollection.ContainsKey(splitKeys[1]))
+                            {
+                                guidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (KeyNotFoundException ex)
+            {
+                throw new KeyNotFoundException(ex.Message, ex); ;
+            }
+            catch (Exception ex)
+            {
+                throw new RepositoryException("Error occurred while getting DEPTS guids.", ex); ;
+            }
+
+            return guidCollection;
+        }
 
         /// <summary>
         /// Get a collection of EmploymentPerformanceReviewRating
@@ -390,6 +485,49 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         {
             return await GetGuidCodeItemAsync<Jobskills, EmploymentProficiency>("AllEmploymentProficiencies", "JOBSKILLS",
                 (ep, g) => new EmploymentProficiency(g, ep.Recordkey, ep.JskDesc) { Certification = ep.JskLicenseCert, Comment = ep.JskComment, Authority = ep.JskAuthority }, bypassCache: ignoreCache);
+        }
+
+
+        /// <summary>
+        /// Get guid for employment status ending reasons code
+        /// </summary>
+        /// <param name="code">AcadCredentials code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetEmploymentStatusEndingReasonsGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetEmploymentStatusEndingReasonsAsync(false);
+            EmploymentStatusEndingReason codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetEmploymentStatusEndingReasonsAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'STATUS.ENDING.REASONS', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'STATUS.ENDING.REASONS', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'STATUS.ENDING.REASONS', Record ID:'", code, "'"));
+            }
+            return guid;
+
         }
 
         /// <summary>
@@ -494,41 +632,15 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         private async Task<IEnumerable<PayCycle2>> BuildAllPayCycles()
         {
             var payCycleEntities = new List<PayCycle2>();
-            // exclude any LDM.GUID entries that contain a secondary key and/or index
-            string criteria = "WITH LDM.GUID.ENTITY EQ 'PAYCYCLE' AND LDM.GUID.SECONDARY.KEY EQ '' ";
 
-            //retrive string array of applicable guids
-            var ldmGuidPayCycle = await DataReader.SelectAsync("LDM.GUID", criteria);
-            if ((ldmGuidPayCycle != null) && (ldmGuidPayCycle.Any()))
+            // BulkReadRecord to get a collection of Paycycle data contracts. 
+            var payCycleRecords = await DataReader.BulkReadRecordAsync<Paycycle>("PAYCYCLE", "");
+
+            foreach (var payCycleRecord in payCycleRecords)
             {
-                // using the string array of applicable guids, convert this into a guidLookup
-                var guidLookUp = ldmGuidPayCycle.Select(guid => new GuidLookup(guid)).ToArray();
-                if ((guidLookUp == null) || (!guidLookUp.Any()))
-                {
-                    return payCycleEntities;
-                }
-                // BulkReadRecord to get a collection of Paycycle data contracts. The guid returned
-                // in the data contract may not be correct, therefore additional processing is required.
-                var payCycleRecords = await DataReader.BulkReadRecordAsync<Paycycle>("PAYCYCLE", guidLookUp);
-
-                // Perform a guid lookup to get a collection of guids and ids
-                var payCycleDictionary = await DataReader.SelectAsync(guidLookUp);
-
-                if ((payCycleDictionary == null) || (!payCycleDictionary.Any()))
-                {
-                    return payCycleEntities;
-                }
-
-                foreach (var payCycleRecord in payCycleRecords)
-                {
-                    // using the id, retrieve the correct guid from the collection of guids and ids
-                    var ldmGuid = payCycleDictionary.FirstOrDefault(id => id.Value != null && payCycleRecord.Recordkey.Equals(id.Value.PrimaryKey, StringComparison.OrdinalIgnoreCase));
-                    if (!ldmGuid.Equals(new KeyValuePair<string, GuidLookupResult>()))
-                    {
-                        payCycleEntities.Add(new PayCycle2(ldmGuid.Key, payCycleRecord.Recordkey, payCycleRecord.PcyDesc) {});
-                    }
-                }
+                payCycleEntities.Add(new PayCycle2(payCycleRecord.RecordGuid, payCycleRecord.Recordkey, payCycleRecord.PcyDesc) { });
             }
+
             return payCycleEntities;
         }
 
@@ -828,8 +940,18 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                    ? cl.ValInternalCodeAssocMember : cl.ValExternalRepresentationAssocMember), cl.ValActionCode1AssocMember), bypassCache: ignoreCache);
         }
 
-
-
+        /// <summary>
+        /// Get all TimeUnits from HR.VALCODES
+        /// </summary>
+        /// <param name="ignoreCache"></param>
+        /// <returns>Collection of TimeUnits Entities</returns>
+        public async Task<IEnumerable<TimeUnits>> GetTimeUnitsAsync(bool ignoreCache)
+        {
+            return await GetGuidValcodeAsync<TimeUnits>("HR", "TIME.UNITS",
+               (cl, g) => new TimeUnits(g, cl.ValInternalCodeAssocMember, (string.IsNullOrEmpty(cl.ValExternalRepresentationAssocMember)
+                   ? cl.ValInternalCodeAssocMember : cl.ValExternalRepresentationAssocMember), cl.ValActionCode1AssocMember), bypassCache: ignoreCache);
+        }
+        
         /// <summary>
         /// Get a collection of Assignment Contract Types
         /// </summary>

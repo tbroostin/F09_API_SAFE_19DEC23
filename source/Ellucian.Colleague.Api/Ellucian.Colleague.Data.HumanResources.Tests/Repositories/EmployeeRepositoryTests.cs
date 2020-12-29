@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -18,6 +17,7 @@ using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using System.Threading;
 using Ellucian.Colleague.Data.HumanResources.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Base.Transactions;
 
 namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 {
@@ -694,12 +694,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
     }
 
     #endregion GetEmployeeKeysAsync
-
+ 
     [TestClass]
-    public class EmployeeRepositoryTests_V11
-    {
-        [TestClass]
-        public class EmployeeRepositoryTests_POST_AND_PUT : BaseRepositorySetup
+    public class EmployeeRepositoryTests_POST_AND_PUT : BaseRepositorySetup
         {
             #region DECLARATIONS
 
@@ -896,8 +893,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 Assert.IsNotNull(result);
             }
         }
-    }
-
+   
     [TestClass]
     public class EmployeeRepositoryTests_V12 : BaseRepositorySetup
     {
@@ -961,7 +957,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 .ReturnsAsync(new Employes() { RecordGuid = "guid", Recordkey = "key" });
 
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Employes>(It.IsAny<string[]>(), It.IsAny<bool>()))
-                .Returns<string[], bool>((ids, b) => Task.FromResult(employesCollDataList));
+                .Returns<string[], bool>((i, b) => Task.FromResult(employesCollDataList));
 
             dataReaderMock.Setup(repo => repo.SelectAsync("PERPOS", It.IsAny<string>(),
                         It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(personIdList.ToArray());
@@ -996,15 +992,76 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             string field = "LDM.DEFAULTS";
             LdmDefaults ldmDefaults = new LdmDefaults() { LdmdExcludeBenefits = excludeBenefits, LdmdLeaveStatusCodes = leaveStatuses };
             dataReaderMock.Setup(repo => repo.ReadRecord<LdmDefaults>(fileName, field, It.IsAny<bool>())).Returns(ldmDefaults);
+
+            var ids = new List<string>();
+            GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+            {
+                Offset = 0,
+                Limit = 1,
+                CacheName = "AllEmployees:",
+                Entity = "HPER",
+                Sublist = ids.ToList(),
+                TotalCount = ids.ToList().Count,
+                KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+            };
+            transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                .ReturnsAsync(resp);
         }
 
         [TestMethod]
         public async Task GetAllEmployees_V12()
         {
-            List<string> contractTypes = new List<string>() { "FT", "PT" };
-            var testData = await repositoryUnderTest.GetEmployees2Async(0, 100, person: Guid.NewGuid().ToString(), campus: Guid.NewGuid().ToString(), status: "leave", startOn: DateTime.Now.ToString(), endOn: DateTime.Now.ToString(), rehireableStatusEligibility: "eligible", rehireableStatusType: "1", contractTypeCodes: contractTypes , contractDetailTypeCode: "PT");
+            var ids = hrperIdList;
 
-            Assert.AreEqual(testData.Item2, 40);
+            GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+            {
+                Offset = 0,
+                Limit = 1,
+                CacheName = "AllEmployees:",
+                Entity = "HPER",
+                Sublist = ids.ToList(),
+                TotalCount = ids.ToList().Count,
+                KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+            };
+            transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                .ReturnsAsync(resp);
+
+            List<string> contractTypes = new List<string>() { "FT", "PT" };
+            var testData = await repositoryUnderTest.GetEmployees2Async(0, 100);
+
+            Assert.AreEqual(100, testData.Item2);
         }
 
         [TestMethod]
@@ -1212,5 +1269,4 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         }
 
     }
-
 }

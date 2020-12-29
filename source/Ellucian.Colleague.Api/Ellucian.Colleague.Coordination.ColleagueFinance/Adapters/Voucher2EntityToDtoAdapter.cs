@@ -14,7 +14,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
     /// <summary>
     /// Adapter for mapping from the voucher entity to the voucher DTO.
     /// </summary>
-    public class Voucher2EntityToDtoAdapter : AutoMapperAdapter<Ellucian.Colleague.Domain.ColleagueFinance.Entities.Voucher, Ellucian.Colleague.Dtos.ColleagueFinance.Voucher>
+    public class Voucher2EntityToDtoAdapter : AutoMapperAdapter<Ellucian.Colleague.Domain.ColleagueFinance.Entities.Voucher, Ellucian.Colleague.Dtos.ColleagueFinance.Voucher2>
     {
         public Voucher2EntityToDtoAdapter(IAdapterRegistry adapterRegistry, ILogger logger)
             : base(adapterRegistry, logger)
@@ -35,6 +35,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
             voucherDto.VoucherId = Source.Id;
             voucherDto.VendorId = Source.VendorId;
             voucherDto.VendorName = Source.VendorName;
+
+            voucherDto.VendorAddressLines = Source.VendorAddressLines;
+            voucherDto.VendorCity = Source.VendorCity;
+            voucherDto.VendorState = Source.VendorState;
+            voucherDto.VendorZip = Source.VendorZip;
+            voucherDto.VendorCountry = Source.VendorCountry;
+                        
             voucherDto.Amount = Source.Amount;
             voucherDto.Date = Source.Date;
             voucherDto.DueDate = Source.DueDate;
@@ -75,8 +82,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
                     voucherDto.Status = Dtos.ColleagueFinance.VoucherStatus.Cancelled;
                     break;
             }
-
+            voucherDto.StatusDate = Source.StatusDate;
             voucherDto.ApType = Source.ApType;
+
+            voucherDto.ConfirmationEmailAddresses = new List<string>();
+            if ((Source.ConfirmationEmailAddresses != null) && (Source.ConfirmationEmailAddresses.Count > 0))
+            {
+                foreach (var item in Source.ConfirmationEmailAddresses)
+                {
+                    voucherDto.ConfirmationEmailAddresses.Add(item);
+                }
+            }
+
 
             voucherDto.LineItems = new List<Dtos.ColleagueFinance.LineItem>();
             voucherDto.Approvers = new List<Dtos.ColleagueFinance.Approver>();
@@ -87,6 +104,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
             var lineItemGlDistributionDtoAdapter = new LineItemGlDistributionEntityToDtoAdapter(adapterRegistry, logger);
             var lineItemTaxesDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.LineItemTax, Dtos.ColleagueFinance.LineItemTax>(adapterRegistry, logger);
             var approverDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.Approver, Dtos.ColleagueFinance.Approver>(adapterRegistry, logger);
+            var lineItemReqTaxesDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.LineItemReqTax, Dtos.ColleagueFinance.LineItemReqTax>(adapterRegistry, logger);
 
             // Convert the voucher line item domain entities into DTOS.
             foreach (var lineItem in Source.LineItems)
@@ -111,6 +129,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
                     // Add the line item taxes DTOs to the line item DTO.
                     lineItemDto.LineItemTaxes.Add(lineItemTaxesDto);
                 }
+
+                // Now convert each line item tax domain entity into a DTO
+                foreach (var lineItemReqTax in lineItem.ReqLineItemTaxCodes)                {                    var lineItemReqTaxesDto = lineItemReqTaxesDtoAdapter.MapToType(lineItemReqTax);
+
+                    // Add the line item taxes DTOs to the line item DTO
+                    lineItemDto.ReqLineItemTaxCodes.Add(lineItemReqTaxesDto);                }
+
 
                 // Add the voucher line item DTO to the voucher DTO.
                 voucherDto.LineItems.Add(lineItemDto);

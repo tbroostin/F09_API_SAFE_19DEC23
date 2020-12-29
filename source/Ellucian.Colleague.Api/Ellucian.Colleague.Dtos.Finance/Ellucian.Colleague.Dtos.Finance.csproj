@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Ellucian.Colleague.Dtos.Finance</RootNamespace>
     <AssemblyName>Ellucian.Colleague.Dtos.Finance</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <EnableCodeInspectionOnBuild>true</EnableCodeInspectionOnBuild>
     <TargetFrameworkProfile />
@@ -49,6 +49,7 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.IdentityModel" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -80,6 +81,7 @@
     <Compile Include="AccountActivity\NamedType.cs" />
     <Compile Include="AccountActivity\OtherType.cs" />
     <Compile Include="AccountActivity\PaymentPlanCategory.cs" />
+    <Compile Include="AccountActivity\PotentialD7FinancialAid.cs" />
     <Compile Include="AccountActivity\RefundCategory.cs" />
     <Compile Include="AccountActivity\RoomAndBoardType.cs" />
     <Compile Include="AccountActivity\SponsorshipCategory.cs" />
@@ -94,6 +96,7 @@
     <Compile Include="AccountDue\PaymentPlanDueItem.cs" />
     <Compile Include="AccountHolder.cs" />
     <Compile Include="AccountHolderQueryCriteria.cs" />
+    <Compile Include="AwardPeriodAwardTransmitExcessStatus.cs" />
     <Compile Include="BillingTermPaymentPlanInformation.cs" />
     <Compile Include="InvoicePayment.cs" />
     <Compile Include="InvoiceQueryCriteria.cs" />
@@ -103,6 +106,7 @@
     <Compile Include="PaymentPlanIneligibilityReason.cs" />
     <Compile Include="PaymentPlanQueryCriteria.cs" />
     <Compile Include="PaymentTermsAcceptance2.cs" />
+    <Compile Include="PotentialD7FinancialAidCriteria.cs" />
     <Compile Include="Receipt.cs" />
     <Compile Include="ReceivableCharge.cs" />
     <Compile Include="ReceivableInvoice.cs" />

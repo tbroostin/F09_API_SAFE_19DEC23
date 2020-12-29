@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Dtos.Student.Requirements;
 using Ellucian.Web.Adapters;
 using slf4net;
@@ -23,7 +23,8 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
             List<Domain.Student.Entities.Requirements.AcadResult> appliedCredits = new List<Domain.Student.Entities.Requirements.AcadResult>();
             List<Domain.Student.Entities.Requirements.AcadResult> appliedCourses = new List<Domain.Student.Entities.Requirements.AcadResult>();
             List<Domain.Student.Entities.Requirements.AcadResult> creditsIncludedInGPA = new List<Domain.Student.Entities.Requirements.AcadResult>();
-            
+            List<Domain.Student.Entities.Requirements.AcadResult> allRelated = null;
+
             // here are all the courses and credits that eval applied to this group
             allApplied = Source.GetApplied().ToList();
 
@@ -35,6 +36,11 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
 
             // Additional academic credits that will display with the requirement because they are included in the gpa calculation for the group
             creditsIncludedInGPA = Source.GetCreditsToIncludeInGpa().Except(allApplied).ToList();
+            //Get the related credits for the group. This is only going to get credits and not planned courses.
+            if (Source.GetRelated() != null)
+            {
+                allRelated = Source.GetRelated().Where(ac => ac.GetAcadCredId() != null).ToList();
+            }
 
             var acadResultMapper = new AutoMapperAdapter<Domain.Student.Entities.Requirements.AcadResultExplanation, Dtos.Student.Requirements.AcadResultExplanation>(adapterRegistry, logger);
             // init
@@ -43,11 +49,18 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
             groupResult.ForceAppliedAcademicCreditIds = new List<string>();
             groupResult.ForceDeniedAcademicCreditIds = new List<string>();
             groupResult.AcademicCreditIdsIncludedInGPA = new List<string>();
+
             groupResult.AppliedAcademicCredits.AddRange(appliedCredits.Select(ac => new CreditResult() { AcademicCreditId = ac.GetAcadCredId(), Explanation = acadResultMapper.MapToType(ac.Explanation) }));
             groupResult.AppliedPlannedCourses.AddRange(appliedCourses.Select(ac => new CourseResult() { CourseId = ac.GetCourse().Id, Explanation = acadResultMapper.MapToType(ac.Explanation) }));
             groupResult.ForceAppliedAcademicCreditIds.AddRange(Source.ForceAppliedAcademicCreditIds);
             groupResult.ForceDeniedAcademicCreditIds.AddRange(Source.ForceDeniedAcademicCreditIds);
             groupResult.AcademicCreditIdsIncludedInGPA.AddRange(creditsIncludedInGPA.Select(ac => ac.GetAcadCredId()));
+            if (allRelated != null)
+            {
+                groupResult.RelatedAcademicCredits = new List<CreditResult>();
+                groupResult.RelatedAcademicCredits.AddRange(allRelated.Select(ac => new CreditResult() { AcademicCreditId = ac.GetAcadCredId(), Explanation = (ac.Result == Domain.Student.Entities.Requirements.Result.MinGrade ? AcadResultExplanation.MinGrade : acadResultMapper.MapToType(ac.Explanation)) }));
+            }
+
 
             var completionStatusMapper = new AutoMapperAdapter<Domain.Student.Entities.Requirements.CompletionStatus, Dtos.Student.Requirements.CompletionStatus>(adapterRegistry, logger);
             var planningStatusMapper = new AutoMapperAdapter<Domain.Student.Entities.Requirements.PlanningStatus, Dtos.Student.Requirements.PlanningStatus>(adapterRegistry, logger);

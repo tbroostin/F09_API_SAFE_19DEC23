@@ -103,6 +103,99 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                    (campusOrg, g) => new CampusOrganization(campusOrg.Recordkey, g, campusOrg.CmpDesc, campusOrg.CmpCorpId, campusOrg.CmpOrgType), bypassCache: bypassCache);
         }
 
+
+        /// <summary>
+        /// Gets CampusOrganization2 objects matching the campusOrgIds.
+        /// </summary>
+        /// <param name="campusOrgIds">List of campus organization ids</param>
+        /// <returns>IEnumerable<CampusOrganization2></returns>
+        public async Task<IEnumerable<CampusOrganization2>> GetCampusOrganizations2Async(List<string> campusOrgIds)
+        {
+            if (campusOrgIds == null)
+            {
+                throw new ArgumentNullException("campusOrgIds");
+            }
+            if (!campusOrgIds.Any())
+            {
+                throw new ArgumentException("campusOrgIds are required to get CampusOrganization2 objects");
+            }
+
+            // Select all the CampusOrgs with CAMPUS.ORGS.ID equal to the input campusOrgIds
+            var criteria = "WITH CAMPUS.ORGS.ID EQ ?";
+            var campusOrgKeys = await DataReader.SelectAsync("CAMPUS.ORGS", criteria, campusOrgIds.Select(id => string.Format("\"{0}\"", id)).ToArray());
+            if (campusOrgKeys == null)
+            {
+                var message = "Unexpected null returned from CAMPUS.ORGS SelectAsync";
+                logger.Error(message);
+                throw new ApplicationException(message);
+            }
+
+            if (!campusOrgKeys.Any())
+            {
+                var message = "No CAMPUS.ORGS keys exist for the given campusOrgIds ";
+                logger.Error(message + string.Join(",", campusOrgIds));
+                throw new KeyNotFoundException(message);
+            }
+
+            //bulkread the records in chunks for all the keys
+            var campusOrgsRecords = new List<CampusOrgs>();
+            for (int i = 0; i < campusOrgKeys.Count(); i += bulkReadSize)
+            {
+                var subList = campusOrgKeys.Skip(i).Take(bulkReadSize);
+                var selectedRecords = await DataReader.BulkReadRecordAsync<CampusOrgs>(subList.ToArray());
+                if (selectedRecords == null)
+                {
+                    logger.Error("Unexpected: Null returned from bulk read of CampusOrgs records");
+                }
+                else
+                {
+                    campusOrgsRecords.AddRange(selectedRecords);
+                }
+            }
+
+            if (!campusOrgsRecords.Any())
+            {
+                var message = "No CampusOrganization2 records available for given campusOrgIds";
+                logger.Error(message);
+                throw new ApplicationException(message);
+            }
+
+            var campusOrganization2Entities = new List<CampusOrganization2>();
+
+            foreach (var campusOrgsRecord in campusOrgsRecords)
+            {
+                if (campusOrgsRecord != null)
+                {
+                    try
+                    {
+                        // Build the CampusOrganization2 object
+                        campusOrganization2Entities.Add(BuildCampusOrganization2Item(campusOrgsRecord));
+                    }
+                    catch (Exception e)
+                    {
+                        LogDataError("CampusOrgs", campusOrgsRecord.Recordkey, campusOrgsRecord, e, e.Message);
+                    }
+                }
+            }
+
+            return campusOrganization2Entities;
+        }
+
+        /// <summary>
+        /// Helper to build a CampusOrganization2 object based on a CampusOrgs record
+        /// </summary>
+        /// <param name="campusOrgsRecord"></param>
+        private CampusOrganization2 BuildCampusOrganization2Item(CampusOrgs campusOrgsRecord)
+        {
+            if (campusOrgsRecord == null)
+            {
+                throw new ArgumentNullException("campusOrgsRecord");
+            }
+
+            var campusOrganization2Object = new CampusOrganization2(campusOrgsRecord.Recordkey, campusOrgsRecord.CmpDesc);
+
+            return campusOrganization2Object;
+        }        
         #endregion
 
         #region CampusInvolvements

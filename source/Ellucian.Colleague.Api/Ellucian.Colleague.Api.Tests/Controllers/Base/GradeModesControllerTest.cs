@@ -1,4 +1,5 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -77,19 +78,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             ReferenceDataRepository = null;
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task GradeModeController_GetThrowsIntAppiExc()
-        {
-            var result = await GradeModesController.GetGradeModesAsync();
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task GradeModeController_GetByIDThrowsIntAppiExc()
-        {
-            var result = await GradeModesController.GetGradeModeByIdAsync(gradeModeGuid);
-        }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]

@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -24,6 +24,8 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// </summary>
         public string NextApproverName { get { return nextApproverName; } }
         private string nextApproverName;
+
+        public string NextApproverPersonId { get; set; }
 
         /// <summary>
         /// This constructor initializes a next approver domain entity.

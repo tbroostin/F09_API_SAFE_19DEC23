@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -16,6 +16,7 @@ using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Web.Security;
 using Ellucian.Web.Http.Filters;
+using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -47,6 +48,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// If the request header "Cache-Control" attribute is set to "no-cache" the data returned will be pulled fresh from the database, otherwise cached data is returned.
         /// </summary>
         /// <returns>All Source objects.</returns>
+        /// 
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Source>> GetSourcesAsync()
         {
@@ -60,7 +63,16 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
-                return await _sourceService.GetSourcesAsync(bypassCache);
+                var getSources = await _sourceService.GetSourcesAsync(bypassCache);
+
+                if (getSources != null && getSources.Any())
+                {
+                    AddEthosContextProperties(await _sourceService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _sourceService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              getSources.Select(a => a.Id).ToList()));
+                }
+
+                return getSources;                
             }
             catch (KeyNotFoundException e)
             {
@@ -85,10 +97,16 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="id">Id of Source to retrieve</param>
         /// <returns>A <see cref="Ellucian.Colleague.Dtos.Source">Source.</see></returns>
+        /// 
+        [HttpGet, EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.Source> GetSourceByIdAsync(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                    await _sourceService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _sourceService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { id }));
                 return await _sourceService.GetSourceByIdAsync(id);
             }
             catch (KeyNotFoundException e)

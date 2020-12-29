@@ -51,6 +51,9 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves all citizenship statuses.
         /// </summary>
         /// <returns>All CitizenshipStatuses objects.</returns>
+        /// 
+        [HttpGet]
+        [EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.CitizenshipStatus>> GetCitizenshipStatusesAsync()
         {
@@ -64,7 +67,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                         bypassCache = true;
                     }
                 }
-                return await _demographicService.GetCitizenshipStatusesAsync(bypassCache);
+
+                var citizenshipStatuses = await _demographicService.GetCitizenshipStatusesAsync(bypassCache);
+
+                if (citizenshipStatuses != null && citizenshipStatuses.Any())
+                {
+                    AddEthosContextProperties(await _demographicService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _demographicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              citizenshipStatuses.Select(a => a.Id).ToList()));
+                }
+                return citizenshipStatuses;
             }
             catch (Exception ex)
             {
@@ -78,10 +90,17 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves a citizenship status by ID.
         /// </summary>
         /// <returns>A <see cref="Ellucian.Colleague.Dtos.CitizenshipStatus">CitizenshipStatus.</see></returns>
+        /// 
+        [HttpGet]
+        [EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.CitizenshipStatus> GetCitizenshipStatusByIdAsync(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                   await _demographicService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                   await _demographicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { id }));
                 return await _demographicService.GetCitizenshipStatusByGuidAsync(id);
             }
             catch (KeyNotFoundException e)

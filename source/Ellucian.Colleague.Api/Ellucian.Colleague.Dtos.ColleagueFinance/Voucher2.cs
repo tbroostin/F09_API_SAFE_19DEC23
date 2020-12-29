@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -31,7 +31,7 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
 
         /// <summary>
         /// This is the voucher amount.
-        /// </summary>
+        /// </summary> 
         public decimal Amount { get; set; }
 
         /// <summary>
@@ -101,6 +101,11 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         public VoucherStatus Status { get; set; }
 
         /// <summary>
+        /// This is the voucher status date
+        /// </summary>
+        public DateTime StatusDate { get; set; }
+
+        /// <summary>
         /// This is the voucher AP type.
         /// </summary>
         public string ApType { get; set; }
@@ -114,5 +119,37 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// This is the list of approval information on the voucher.
         /// </summary>
         public List<Approver> Approvers { get; set; }
+
+        /// <summary>
+        /// This is the vendor address.        
+        /// </summary>
+        public List<string> VendorAddressLines { get; set; }
+
+        /// <summary>
+        /// This is the vendor city.
+        /// </summary>
+        public string VendorCity { get; set; }
+
+        /// <summary>
+        /// This is the vendor state.
+        /// </summary>
+        public string VendorState { get; set; }
+
+        /// <summary>
+        /// This is the vendor postal code.
+        /// </summary>
+        public string VendorZip { get; set; }
+
+        /// <summary>
+        /// This is the vendor country.
+        /// </summary>
+        public string VendorCountry { get; set; }
+
+
+        /// <summary>
+        /// List of email addresses - confirmation email notifications would be sent to these email addresses on create / update .
+        /// </summary>
+        public List<string> ConfirmationEmailAddresses { get; set; }
+
     }
 }

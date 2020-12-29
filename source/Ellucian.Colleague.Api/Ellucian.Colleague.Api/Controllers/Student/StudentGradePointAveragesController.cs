@@ -82,14 +82,6 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 //Criteria
                 var criteriaObj = GetFilterObject<Dtos.StudentGradePointAverages>(_logger, "criteria");
 
-                //academicPeriod
-                string academicPeriodFilterValue = string.Empty;
-                var academicPeriodFilterObj = GetFilterObject<Dtos.Filters.AcademicPeriodNamedQueryFilter>(_logger, "academicPeriod");
-                if (academicPeriodFilterObj != null && academicPeriodFilterObj.AcademicPeriod != null && !string.IsNullOrEmpty(academicPeriodFilterObj.AcademicPeriod.Id))
-                {
-                    academicPeriodFilterValue = academicPeriodFilterObj.AcademicPeriod.Id != null ? academicPeriodFilterObj.AcademicPeriod.Id : null;
-                }
-
                 //gradeDate
                 string gradeDateFilterValue = string.Empty;
                 var gradeDateFilterObj = GetFilterObject<Dtos.Filters.GradeDateFilter>(_logger, "gradeDate");

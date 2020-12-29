@@ -1,8 +1,7 @@
-﻿using System;
+﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ellucian.Web.Http.EthosExtend
 {
@@ -31,5 +30,32 @@ namespace Ellucian.Web.Http.EthosExtend
         /// Extended Schema Identifier
         /// </summary>
         public string ExtendedSchemaResourceId { get; set; }
+
+        /// <summary>
+        /// Extended Filters from URI
+        /// </summary>
+        public Dictionary<string, List<string>> ExtendedFilterDefinitions { get; set; }
+
+        /// <summary>
+        /// Bulk representation version
+        /// </summary>
+        public string BulkRepresentation { get; set; }
+
+        /// <summary>
+        /// System setting for Bypassing Cache for configuration data
+        /// </summary>
+        public bool BypassCache { get; set; }
+
+        /// <summary>
+        /// Check to see if we should be reporting Ethos Extend Errors for stand-alone
+        /// spec driven APIs.
+        /// </summary>
+        public bool ReportEthosExtendedErrors { get; set; }
+
+        public EthosResourceRouteInfo()
+        {
+            ExtendedFilterDefinitions = new Dictionary<string, List<string>>();
+            ReportEthosExtendedErrors = false;
+        }
     }
 }

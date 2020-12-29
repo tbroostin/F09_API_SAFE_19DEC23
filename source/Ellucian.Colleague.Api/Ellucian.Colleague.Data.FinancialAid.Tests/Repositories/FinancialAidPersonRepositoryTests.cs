@@ -1,19 +1,18 @@
-﻿/*Copyright 2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2018 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Domain.FinancialAid.Tests;
-using Ellucian.Colleague.Domain.FinancialAid.Entities;
 using Ellucian.Colleague.Data.FinancialAid.Repositories;
 using Moq;
 using System.Collections.ObjectModel;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.FinancialAid.Repositories;
 using Ellucian.Colleague.Domain.Base.Entities;
+using System.Threading;
 
 namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
 {
@@ -93,6 +92,20 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                     
                 });
 
+            dataReaderMock.Setup<Task<Base.DataContracts.Dflts>>(dr => dr.ReadRecordAsync<Base.DataContracts.Dflts>("CORE.PARMS", "DEFAULTS", true))
+                .Returns<string, string, bool>((file, key, b) =>
+                {
+                    return Task.FromResult(new Base.DataContracts.Dflts() { DfltsFixedLenPerson = "7" });
+                });
+
+            // Needed to for GetOrAddToCacheAsync 
+            cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .Returns(Task.FromResult(new Tuple<object, SemaphoreSlim>(
+                null,
+                new SemaphoreSlim(1, 1)
+            )));
+
             return new FinancialAidPersonRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);                        
         }
 
@@ -139,6 +152,14 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
         }
 
         [TestMethod]
+        public async Task LastNameWithSpecialCharacter_SearchFinancialAidPersonsByKeywordAsync_ReturnsExpectedResultTest()
+        {
+            actualPersons = await actualRepository.SearchFinancialAidPersonsByKeywordAsync("O'Hruska");
+            Assert.IsTrue(actualPersons.Any());
+            Assert.AreEqual("0002345", actualPersons.First().Id);
+        }
+
+        [TestMethod]
         public async Task IdAsKeyword_SearchFinancialAidPersonsByKeywordAsync_ReturnsExpectedResultTest()
         {
             actualPersons = await actualRepository.SearchFinancialAidPersonsByKeywordAsync(expectedRepository.personData.First().id);
@@ -146,7 +167,41 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             {
                 new PersonBase(expectedRepository.personData.First().id, expectedRepository.personData.First().lastName, expectedRepository.personData.First().privacyCode)
             };
+
             CollectionAssert.AreEqual(expectedPersons, actualPersons.ToList());
+        }
+
+        [TestMethod]
+        public async Task IdStartsWithNonZeroNumber_SearchFinancialAidPersonsByKeywordAsync_ReturnsExpectedResultTest()
+        {
+            actualPersons = await actualRepository.SearchFinancialAidPersonsByKeywordAsync(expectedRepository.personData.Last().id);
+            expectedPersons = new List<PersonBase>()
+            {
+                new PersonBase(expectedRepository.personData.Last().id, expectedRepository.personData.Last().lastName, expectedRepository.personData.Last().privacyCode)
+            };
+            CollectionAssert.AreEqual(expectedPersons, actualPersons.ToList());
+        }
+
+        [TestMethod]
+        public async Task IdLengthLongerThanDefault_SearchFinancialAidPersonsByKeywordAsync_ReturnsExpectedResultTest()
+        {
+            actualPersons = await actualRepository.SearchFinancialAidPersonsByKeywordAsync("123456789");
+            Assert.IsTrue(actualPersons.Any());
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task AlphaNumericId_SearchFinancialAidPersonsByKeywordAsync_ThrowsExceptionTest()
+        {
+            await actualRepository.SearchFinancialAidPersonsByKeywordAsync("AB12345");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public async Task IdWithSpecialCharacters_SearchFinancialAidPersonsByKeywordAsync_ThrowsExceptionTest()
+        {
+            await actualRepository.SearchFinancialAidPersonsByKeywordAsync("00_12345");
         }
 
         [TestMethod]

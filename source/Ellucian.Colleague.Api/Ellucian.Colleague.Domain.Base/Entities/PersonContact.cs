@@ -66,5 +66,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public string OtherPhone { get; set; }
 
         public string Relationship { get; set; }
+
+        public string Guid { get; set; }
     }
 }

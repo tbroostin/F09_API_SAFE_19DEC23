@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -37,8 +37,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// Returns the section registration date overrides specific to the registration group for any of the requested section Ids. 
         /// </summary>
         /// <param name="sectionIds">Section Ids for which override dates are requested</param>
+        /// <param name="considerUsersGroup">This is set to true if the registration group should be considered for dates calculation, otherwise set to false</param>
         /// <returns>Any SectionRegistrationDate items applicable to the sections requested. </returns>
-        public async Task<IEnumerable<Dtos.Student.SectionRegistrationDate>> GetSectionRegistrationDatesAsync(IEnumerable<string> sectionIds)
+        public async Task<IEnumerable<Dtos.Student.SectionRegistrationDate>> GetSectionRegistrationDatesAsync(IEnumerable<string> sectionIds, bool considerUsersGroup = true)
         {
             if (sectionIds == null || sectionIds.Count() == 0)
             {
@@ -76,7 +77,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var registrationTerms = await _termRepository.GetRegistrationTermsAsync();
 
             // We now have all the necessary inforamtion - call domain service to calculate the correct dates for each provided section.
-            IEnumerable<Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationDate> sectionRegistrationDatesEntities = SectionProcessor.GetSectionRegistrationDates(registrationGroup, sections, registrationTerms);
+            IEnumerable<Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationDate> sectionRegistrationDatesEntities = SectionProcessor.GetSectionRegistrationDates(registrationGroup, sections, registrationTerms, considerUsersGroup);
 
             // For any overrides retrieved we now have to convert them into DTOs and return. 
 

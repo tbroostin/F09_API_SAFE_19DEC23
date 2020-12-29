@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
@@ -79,10 +79,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <param name="classificationCode">The employment classification associated with the position. </param>
         /// <param name="preference">The preference for a job </param>
         /// <param name="bypassCache"></param>
+        /// <param name="filterQualifiers"></param>
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<InstitutionJobs>, int>> GetInstitutionJobsAsync(int offset, int limit, string personCode = "",
             string employerCode = "", string positionCode = "", string departmentCode = "", string convertedStartOn = "",
-            string convertedEndOn = "", string status = "", string classificationCode = "", string preference = "", bool bypassCache = false)
+            string convertedEndOn = "", string status = "", string classificationCode = "", string preference = "", bool bypassCache = false, Dictionary<string,string> filterQualifiers = null)
         {
             var perposIds = new List<string>();
             var selectionCriteria = new StringBuilder();
@@ -90,6 +91,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             try
             {
+                var startOnOperation = filterQualifiers != null && filterQualifiers.ContainsKey("StartOn") ? filterQualifiers["StartOn"] : "EQ";
+                var endOnOperation = filterQualifiers != null && filterQualifiers.ContainsKey("EndOn") ? filterQualifiers["EndOn"] : "EQ";
 
                 //startOn - select any records in PERPOS using PERPOS.START.DATE
                 //endOn - select any records in PERPOS using PERPOS.END.DATE 
@@ -97,7 +100,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 {
                     if (!string.IsNullOrEmpty(convertedStartOn))
                     {
-                        selectionCriteria.Append("WITH PERPOS.START.DATE EQ '");
+                        selectionCriteria.Append(string.Format("WITH PERPOS.START.DATE {0} '", startOnOperation));
                         selectionCriteria.Append(convertedStartOn);
                         selectionCriteria.Append("'");
                     }
@@ -107,7 +110,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         {
                             selectionCriteria.Append("AND ");
                         }
-                        selectionCriteria.Append("WITH PERPOS.END.DATE EQ '");
+                        selectionCriteria.Append(string.Format("WITH PERPOS.END.DATE {0} '", endOnOperation));
                         selectionCriteria.Append(convertedEndOn);
                         selectionCriteria.Append("'");
                         selectionCriteria.Append(" AND PERPOS.END.DATE NE ''");
@@ -200,7 +203,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         //status (active) - select any records in PERPOS where the PERPOS.END.DATE is null or the PERPOS.END.DATE 
                         //is on or after the request date.
                         case "active":
-                            selectionCriteria.AppendFormat(" AND WITH PERPOS.START.DATE LE '{0}'", today);
+                            // selectionCriteria.AppendFormat(" AND WITH PERPOS.START.DATE LE '{0}'", today);
                             selectionCriteria.Append(" AND WITH PERPOS.END.DATE EQ ''");
                             selectionCriteria.AppendFormat(" OR PERPOS.END.DATE GT '{0}'", today);
                             break;
@@ -243,7 +246,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
                 var personIds = perposRecords.Select(e => e.PerposHrpId);
 
-                var criteria = string.Format("WITH PPWG.PERPOS.ID EQ ?");
+                var criteria = string.Format("WITH PPWG.PERPOS.ID EQ ? AND PPWG.TYPE NE 'M'");
                 //var perposwgKeys = await DataReader.SelectAsync("PERPOSWG", criteria, perposSubList);
                 var perposwgKeys = await DataReader.SelectAsync("PERPOSWG", criteria, perposSubList.Select(id => string.Format("\"{0}\"", id)).ToArray());
 
@@ -328,10 +331,16 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                
                 var hostCorpId = coreDefaultData.DefaultHostCorpId;
 
-                foreach (var perpos in perposRecords)
+
+                Dictionary<string, string> ldmGuidCollection = new Dictionary<string, string>();
+                ldmGuidCollection = await GetInstitutionJobsGuidDictionary( perposSubList );
+
+                foreach( var perpos in perposRecords)
                 {
                     if (perpos != null)
                     {
+                        string errorKey = perpos.Recordkey;
+
                         try
                         {
                             var positionRecord = positionRecords.Where(p => p.Recordkey == perpos.PerposPositionId);
@@ -340,18 +349,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                             var personBenefitsRecords = perbenRecords.Where(ps => ps.PerbenHrpId == perpos.PerposHrpId);
                             var hrPersonRecord = hrperRecords.Where(hr => hr.Recordkey == perpos.PerposHrpId);
 
-                            //The data reader can sometimes get the wrong 
-                            //var guid = perposRecord.RecordGuid;
-                            //var criteria = string.Format("WITH LDM.GUID.PRIMARY.KEY EQ '{0}' AND LDM.GUID.SECONDARY.KEY EQ '' AND LDM.GUID.ENTITY EQ 'PERPOS' AND LDM.GUID.REPLACED.BY EQ ''", perposSubList);
-                            //var guidRecords = await DataReader.SelectAsync("LDM.GUID", criteria);
-                            var guidList = await DataReader.SelectAsync("LDM.GUID", "WITH LDM.GUID.PRIMARY.KEY EQ '?' AND LDM.GUID.SECONDARY.KEY EQ '' AND LDM.GUID.ENTITY EQ 'PERPOS' AND LDM.GUID.REPLACED.BY EQ ''", perposSubList);
-                            var ldmGuidRecords = await DataReader.BulkReadRecordAsync<LdmGuid>(guidList);
-                            Dictionary <string, string> ldmGuidCollection = new Dictionary<string, string>();
-                            foreach (var ldmGuidRecord in ldmGuidRecords)
-                            {
-                                ldmGuidCollection.Add(ldmGuidRecord.LdmGuidPrimaryKey, ldmGuidRecord.Recordkey);
-                            }
-                          
                             institutionJobsEntities.Add(
                                 await BuildInstitutionJobsAsync(perpos, personPositionWages, positionRecord, 
                                 personBenefitsRecords, personStatusRecords, hrPersonRecord, ldmGuidCollection, 
@@ -359,7 +356,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         }
                         catch (Exception e)
                         {
-                            LogDataError("InstitutionJobs", perpos.Recordkey, perpos, e, e.Message);
+                            var errorMessage = string.Format("Record key: {0}. {1}", errorKey, "Duplicate GUID found. To resolve errors, run Remove Duplicate GUIDs (RDGU) for PERPOS.");
+                            LogDataError("InstitutionJobs", perpos.Recordkey, perpos, e, errorMessage);
                         }
                     }
                 }
@@ -367,11 +365,61 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             catch (RepositoryException e)
             {
-                throw e;
+                if( e.Errors != null && e.Errors.Any() )
+                {
+                    string errorMessage = string.Empty;
+                    e.Errors.ToList().ForEach( i =>
+                    {
+                        errorMessage += i.Code + "\r\n";
+                    } );
+                    throw new RepositoryException( errorMessage, e );
+                }
+                else
+                {
+                    throw;
+                }
             }
 
         }
 
+        /// <summary>
+        /// Gets dictionary with colleague id and guid key pair for institution-jobs.
+        /// </summary>
+        /// <param name="ids"></param>
+        /// <returns>Dictionary containing entity PK (key) and guid (value)</returns>
+        public async Task<Dictionary<string, string>> GetInstitutionJobsGuidDictionary( IEnumerable<string> ids )
+        {
+            var ldmGuidCollection = new Dictionary<string, string>();
+
+            if( ( ids == null ) || ( !ids.Any() ) )
+            {
+                return ldmGuidCollection;
+            }
+
+            var lookups = ids.Select( i => new RecordKeyLookup( "PERPOS", i, string.Empty, string.Empty, false ) );
+            var ldmGuidRecords = await DataReader.SelectAsync( lookups.ToArray() );
+
+            var exception = new RepositoryException();
+
+            foreach( var e in ldmGuidRecords )
+            {
+                var output = string.Empty;
+                var key = e.Key.Split( new char[] { '+' }, StringSplitOptions.RemoveEmptyEntries );
+                if( ldmGuidCollection.TryGetValue( e.Key[ 1 ].ToString(), out output ) )
+                {
+                    var errorMessage = string.Format( "Duplicate key found for key '{0}'.", e.Key );
+                    exception.AddError( new RepositoryError( key[ 1 ].ToString(), "invalid.key", errorMessage ) );
+                }
+                else
+                    ldmGuidCollection.Add( key[ 1 ], e.Value.Guid );
+            }
+
+            if( exception.Errors.Any() )
+            {
+                throw exception;
+            }
+            return ldmGuidCollection;
+        }
 
         /// <summary>
         /// Update an InstitutionJobs domain entity
@@ -508,7 +556,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     var perpos = await DataReader.ReadRecordAsync<DataContracts.Perpos>("PERPOS", guid);
 
                     // select all the PERPOSWG ids with the HRP.ID equal to the input person id.
-                    var criteria = string.Format("WITH PPWG.PERPOS.ID EQ '{0}'", perpos.Recordkey);
+                    // excluding stipend records.
+                    var criteria = string.Format("WITH PPWG.PERPOS.ID EQ '{0}' AND PPWG.TYPE NE 'M'", perpos.Recordkey);
                     var perposwgKeys = await DataReader.SelectAsync("PERPOSWG", criteria);
 
 
@@ -526,7 +575,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
                     var personIds = perposwgRecords.Select(e => e.PpwgHrpId);
 
-                    // select all the PERPOSWG ids with the HRP.ID equal to the input person id.
+                    // select all the POSITION ids with the HRP.ID equal to the input person id.
                     criteria = string.Format("WITH POSITION.ID EQ '{0}'", perpos.PerposPositionId);
                     var positionKeys = await DataReader.SelectAsync("POSITION", criteria);
 
@@ -584,16 +633,14 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         }
                     }
 
-                    Dictionary<string, string> ldmGuidCollection = new Dictionary<string, string>();                   
-                    var ldmGuidCriteria = string.Format("WITH LDM.GUID.PRIMARY.KEY EQ '{0}' AND LDM.GUID.SECONDARY.KEY EQ '' AND LDM.GUID.ENTITY EQ 'PERPOS' AND LDM.GUID.REPLACED.BY EQ ''", perpos.Recordkey);
-                    var guidRecords = await DataReader.SelectAsync("LDM.GUID", ldmGuidCriteria);
-                    if ((guidRecords == null) || (!guidRecords.Any()))
+                    Dictionary<string, string> ldmGuidCollection = new Dictionary<string, string>();
+                    ldmGuidCollection = await GetInstitutionJobsGuidDictionary( new List<string>() { perpos.Recordkey } );
+
+                    if (( ldmGuidCollection == null) || (!ldmGuidCollection.Any()))
                     {
                         throw new ArgumentNullException("guid", string.Format("LDM.GUID Unable to locate guid for perpos id: {0}", perpos.Recordkey));
 
                     }
-                    ldmGuidCollection.Add(perpos.Recordkey, guidRecords[0]);
-
                     var ldmDefaults = DataReader.ReadRecord<LdmDefaults>("CORE.PARMS", "LDM.DEFAULTS");
                     var hostCountry = await GetHostCountryAsync();
                     var coreDefaultData = GetDefaults();

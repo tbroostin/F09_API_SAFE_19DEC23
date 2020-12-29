@@ -1,8 +1,10 @@
-﻿/// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿/// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
@@ -20,6 +22,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class PersonVisaRepository :BaseColleagueRepository, IPersonVisaRepository
     {
+
+        const string AllPersonVisasCache = "AllPersonVisas";
+        const int AllPersonVisasCacheTimeout = 20; // Clear from cache every 20 minutes
+        RepositoryException exception = null;
+
         #region ..ctor
         public PersonVisaRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
@@ -80,108 +87,149 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
-        /// Gets all PersonVisa entities
+        /// Gets a collection of PersonVisa domain entities
         /// </summary>
         /// <param name="offset"></param>
         /// <param name="limit"></param>
+        /// <param name="person"></param>
+        /// <param name="visaTypeCategories"></param>
+        /// <param name="visaTypeDetail"></param>
         /// <param name="bypassCache"></param>
-        /// <returns></returns>
+        /// <returns>ollection of PersonVisa domain entities</returns>
         public async Task<Tuple<IEnumerable<PersonVisa>, int>> GetAllPersonVisas2Async(int offset, int limit, string person, List<string> visaTypeCategories, string visaTypeDetail, bool bypassCache)
         {
-            //Criteria to filter out the records which has visa type specified in VISA.TYPE column
-            string criteria = "WITH VISA.TYPE NE ''";
+            var personVisas = new List<PersonVisa>();
+            int totalCount = 0;
+            string[] subList = null;
+            var studentAcademicPeriodsCacheKey = CacheSupport.BuildCacheKey(AllPersonVisasCache, person, visaTypeCategories, visaTypeDetail);
 
-            if (!string.IsNullOrEmpty(person))
+            var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+               this,
+               ContainsKey,
+               GetOrAddToCacheAsync,
+               AddOrUpdateCacheAsync,
+               transactionInvoker,
+               studentAcademicPeriodsCacheKey,
+               "FOREIGN.PERSON",
+               offset,
+               limit,
+               AllPersonVisasCacheTimeout,
+               async () =>
+               {
+                   //Criteria to filter out the records which has visa type specified in VISA.TYPE column
+                   string criteria = "WITH VISA.TYPE NE ''";
+
+                   if (!string.IsNullOrEmpty(person))
+                   {
+                       var entity = await this.GetRecordInfoFromGuidAsync(person);
+
+                       if (entity != null && entity.Entity == "PERSON")
+                       {
+                           var personCriteria = string.Format(" AND WITH ID EQ '{0}'", entity.PrimaryKey);
+                           criteria = string.Concat(criteria, personCriteria);
+                       }
+                       else
+                       {
+                           return new CacheSupport.KeyCacheRequirements()
+                           {
+                               NoQualifyingRecords = true
+                           };
+                       }
+                   }
+
+                   if (!string.IsNullOrEmpty(visaTypeDetail))
+                   {
+                       var entity = await this.GetRecordInfoFromGuidAsync(visaTypeDetail);
+
+                       if (entity != null && entity.PrimaryKey == "VISA.TYPES")
+                       {
+                           var personCriteria = string.Format(" AND WITH VISA.TYPE EQ '{0}'", entity.SecondaryKey);
+                           criteria = string.Concat(criteria, personCriteria);
+                       }
+                       else
+                       {
+                           return new CacheSupport.KeyCacheRequirements()
+                           {
+                               NoQualifyingRecords = true
+                           };
+                       }
+                   }
+
+                   if (visaTypeCategories != null && visaTypeCategories.Any() && visaTypeCategories.Count > 0)
+                   {
+                       criteria = string.Concat(criteria, " AND WITH VISA.TYPE EQ '?'");
+                   }
+
+                   var personIds = await DataReader.SelectAsync("PERSON", criteria, visaTypeCategories != null ? visaTypeCategories.ToArray() : null);
+                   if (!personIds.Any() && personIds.Count() == 0)
+                   {                    
+                       return new CacheSupport.KeyCacheRequirements()
+                       {
+                           NoQualifyingRecords = true
+                       }; 
+                   }
+
+                   var requirements = new CacheSupport.KeyCacheRequirements()
+                   {
+                       limitingKeys = personIds.Distinct().ToList(),
+                   };
+
+                   return requirements;
+
+               });
+
+            if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
             {
-                var entity = await this.GetRecordInfoFromGuidAsync(person);
-                //if (entity == null || entity.Entity != "PERSON")
-                //{
-                //    throw new KeyNotFoundException(string.Format("No person visa information for id {0} Key not found.", person));
-                //}
-                //var personCriteria = string.Format(" AND WITH @ID EQ '{0}'", entity.PrimaryKey);
-                //criteria = string.Concat(criteria, personCriteria);
-
-                if (entity != null && entity.Entity == "PERSON")
-                {
-                    var personCriteria = string.Format(" AND WITH ID EQ '{0}'", entity.PrimaryKey);
-                    criteria = string.Concat(criteria, personCriteria);
-                }
-                else
-                {
-                    return null;
-                }
-                
+                return new Tuple<IEnumerable<PersonVisa>, int>(personVisas, totalCount);
             }
+
+            subList = keyCache.Sublist.ToArray();
+
+            totalCount = keyCache.TotalCount.Value;
             
-            if (!string.IsNullOrEmpty(visaTypeDetail))
-            {
-                var entity = await this.GetRecordInfoFromGuidAsync(visaTypeDetail);
-                //if (entity == null || entity.PrimaryKey != "VISA.TYPES")
-                //{
-                //    throw new KeyNotFoundException(string.Format("No person visa information for id {0} Key not found.", visaTypeDetail));
-                //}
-                //var personCriteria = string.Format(" AND WITH VISA.TYPE EQ '{0}'", entity.SecondaryKey);
-                //criteria = string.Concat(criteria, personCriteria);
-
-                if (entity != null && entity.PrimaryKey == "VISA.TYPES")
-                {
-                    var personCriteria = string.Format(" AND WITH VISA.TYPE EQ '{0}'", entity.SecondaryKey);
-                    criteria = string.Concat(criteria, personCriteria);
-                }
-                else
-                {
-                    return null;
-                }
-            }
-            if (visaTypeCategories != null && visaTypeCategories.Any() && visaTypeCategories.Count > 0)
-            {
-                criteria = string.Concat(criteria, " AND WITH VISA.TYPE EQ '?'");
-            }
-
-            var personIds = await DataReader.SelectAsync("PERSON", criteria, visaTypeCategories != null ? visaTypeCategories.ToArray() : null);
-            if (!personIds.Any() && personIds.Count() == 0)
-            {
-                return null;
-            }
-            var foreignPersonIds = await DataReader.SelectAsync("FOREIGN.PERSON", personIds, "");
-            //var personIds = new List<string>();
-
-            //if (!string.IsNullOrEmpty(visaTypeDetail))
-            //{
-            //    personIds = await DataReader.SelectAsync("PERSON", criteria);
-            //}
-            //else if (visaTypeCategories.Any() && visaTypeCategories.Count > 0)
-            //{
-            //    personIds = await DataReader.SelectAsync("PERSON", criteria, visaTypeCategories.ToArray());
-            //}
-            //else
-            //{
-            //    personIds = await DataReader.SelectAsync("PERSON", criteria);
-            //}
-            int totalCount = foreignPersonIds.Count();
-
-            Array.Sort(foreignPersonIds);
-
-            var subList = foreignPersonIds.Skip(offset).Take(limit).ToArray();
-
             var personContracts = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", subList);
+
+            if (personContracts == null)
+            {
+                return new Tuple<IEnumerable<PersonVisa>, int>(personVisas, totalCount);
+            }
 
             var foreignPersonContracts = await DataReader.BulkReadRecordAsync<ForeignPerson>("FOREIGN.PERSON", subList);
 
-            List<PersonVisa> personVisas = new List<PersonVisa>();
 
             foreach (var personContract in personContracts)
             {
-                var foreignPersonContract = foreignPersonContracts.FirstOrDefault(i => i.Recordkey.Equals(personContract.Recordkey));
-                PersonVisa personVisa = BuildPersonVisa(foreignPersonContract, personContract);
-                personVisas.Add(personVisa);
+                try
+                {
+                    ForeignPerson foreignPersonContract = null;
+                    if (foreignPersonContracts != null)
+                    {
+                        foreignPersonContract = foreignPersonContracts.FirstOrDefault(i => i.Recordkey.Equals(personContract.Recordkey));
+                    }
+                    personVisas.Add(BuildPersonVisa(foreignPersonContract, personContract));
+                }
+                catch (Exception ex)
+                {
+                    if (exception == null)
+                        exception = new RepositoryException();
+                    exception.AddError(new RepositoryError("Bad.Data", ex.Message)
+                    {
+                        SourceId = personContract.Recordkey,
+                        Id = personContract.RecordGuid
+                    });
+                }
+            }
+
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
             }
 
             return personVisas.Any() ? new Tuple<IEnumerable<PersonVisa>, int>(personVisas, totalCount) : null;
         }
 
         /// <summary>
-        /// Gets person visa record by Id
+        /// Gets PersonVisa domain entity record by Id
         /// </summary>
         /// <param name="id">id</param>
         /// <returns>PersonVisa</returns>
@@ -189,52 +237,62 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         {
             if (string.IsNullOrEmpty(id))
             {
-                throw new ArgumentNullException("id", "Must provide an id to get the person visa.");
+                throw new ArgumentNullException("id", "Must provide a GUID to get the person visa.");
             }
 
             var entity = await this.GetRecordInfoFromGuidAsync(id);
             if (entity == null || entity.Entity != "FOREIGN.PERSON")             
             {
-                throw new KeyNotFoundException("No person visa information for id " + id + ".  Key not found.");
+                throw new KeyNotFoundException("No person visa information for GUID " + id + ".");
             }
 
-            string personKey = entity.PrimaryKey;
+            var personKey = entity.PrimaryKey;
 
-            ForeignPerson foreignPersonContract = await DataReader.ReadRecordAsync<ForeignPerson>(personKey, false);
+            var foreignPersonContract = await DataReader.ReadRecordAsync<ForeignPerson>(personKey, false);
             if (foreignPersonContract == null)
             {
-                throw new KeyNotFoundException("No person visa information for id " + personKey + ". FOREIGN.PERSON not found.");
+                throw new RepositoryException("No FOREIGN.PERSON information found for PERSON id '" + personKey + "'.");
             }
 
-            Ellucian.Colleague.Data.Base.DataContracts.Person personContract = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>(personKey, false);
+            var personContract = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>(personKey, false);
             if (personContract == null)
             {
-                throw new KeyNotFoundException("No person visa information for id " + personKey + ". PERSON not found.");
+                throw new RepositoryException("No PERSON information for FOREIGN.PERSON id '" + personKey + "'.");
             }
 
-            PersonVisa personVisa = BuildPersonVisa(foreignPersonContract, personContract);
+            var personVisa = BuildPersonVisa(foreignPersonContract, personContract);
+
             return personVisa;
         }
         #endregion
 
         #region PUT & POST
+
         /// <summary>
-        /// Updates person visa information
+        /// Creates/Updates person visa information
         /// </summary>
-        /// <param name="personVisaRequest">Domain.Base.Entities.PersonVisaRequest</param>
-        /// <returns>Domain.Base.Entities.PersonVisaResponse</returns>
-        public async Task<Domain.Base.Entities.PersonVisaResponse> UpdatePersonVisaAsync(Domain.Base.Entities.PersonVisaRequest personVisaRequest)
+        /// <param name="personVisaRequest">Domain.Base.Entities.PersonVisaRequest doamin entity to be created/updated</param>
+        /// <returns>Domain.Base.Entities.PersonVisaResponse domain entity</returns>
+      
+        public async Task<Domain.Base.Entities.PersonVisa> UpdatePersonVisaAsync(Domain.Base.Entities.PersonVisaRequest personVisaRequest)
         {
-            UpdatePersonVisaRequest updateRequest = new UpdatePersonVisaRequest();
-            updateRequest.EntryDate = personVisaRequest.EntryDate;
-            updateRequest.ExpireDate = personVisaRequest.ExpireDate;
-            updateRequest.IssueDate = personVisaRequest.IssueDate;
-            updateRequest.PersonId = personVisaRequest.PersonId;
-            updateRequest.RequestDate = personVisaRequest.RequestDate;
-            updateRequest.Status = personVisaRequest.Status;
-            updateRequest.StrGuid = personVisaRequest.StrGuid;
-            updateRequest.VisaNo = personVisaRequest.VisaNo;
-            updateRequest.VisaType = personVisaRequest.VisaType;
+            if (personVisaRequest == null)
+            {
+                throw new ArgumentNullException("personVisaRequest", "personVisaRequest is a required parameter.");
+            }
+
+            var updateRequest = new UpdatePersonVisaRequest
+            {
+                EntryDate = personVisaRequest.EntryDate,
+                ExpireDate = personVisaRequest.ExpireDate,
+                IssueDate = personVisaRequest.IssueDate,
+                PersonId = personVisaRequest.PersonId,
+                RequestDate = personVisaRequest.RequestDate,
+                Status = personVisaRequest.Status,
+                StrGuid = personVisaRequest.StrGuid,
+                VisaNo = personVisaRequest.VisaNo,
+                VisaType = personVisaRequest.VisaType
+            };
 
             var extendedDataTuple = GetEthosExtendedDataLists();
 
@@ -244,27 +302,52 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 updateRequest.ExtendedValues = extendedDataTuple.Item2;
             }
 
-            UpdatePersonVisaResponse updateResponse = await transactionInvoker.ExecuteAsync<UpdatePersonVisaRequest, UpdatePersonVisaResponse>(updateRequest);
+            var updateResponse = await transactionInvoker.ExecuteAsync<UpdatePersonVisaRequest, UpdatePersonVisaResponse>(updateRequest);
 
-            if (updateResponse.VisaErrorMessages.Any())
-            {
-                var errorMessage = string.Empty;
-                foreach (var message in updateResponse.VisaErrorMessages)
+            if (updateResponse == null)
+            {               
+                var exception = new RepositoryException();
+                exception.AddError(new RepositoryError("Create.Update.Exception", "An unexpected error occurred creating/updating person visa")
                 {
-                    errorMessage = string.Format("Error occurred updating person visa '{0} {1}'", personVisaRequest.StrGuid, personVisaRequest.PersonId);
-                    errorMessage += string.Join(Environment.NewLine, message.ErrorMsg);
-                    logger.Error(errorMessage.ToString());
-                }
-                throw new InvalidOperationException(errorMessage);
+                    SourceId = personVisaRequest.PersonId,
+                    Id = personVisaRequest.StrGuid
+                });
+
+                throw exception;
             }
 
-            Domain.Base.Entities.PersonVisaResponse personVisaResponse = new Domain.Base.Entities.PersonVisaResponse();
-            personVisaResponse.PersonId = updateResponse.PersonId;
-            personVisaResponse.StrGuid = updateResponse.StrGuid;
+            if (updateResponse.VisaErrorMessages.Any())
+            {               
+                var exception = new RepositoryException();
+                foreach (var error in updateResponse.VisaErrorMessages)
+                {
+                    exception.AddError(new RepositoryError("Create.Update.Exception", string.Concat(error.ErrorCode, " - ", error.ErrorMsg))
+                    {
+                        SourceId = personVisaRequest.PersonId,
+                        Id = personVisaRequest.StrGuid
+                    });
+                }
+                throw exception;
+            }    
 
-            return personVisaResponse;
+            var foreignPersonContract = await DataReader.ReadRecordAsync<ForeignPerson>(updateResponse.PersonId, false);
+            if (foreignPersonContract == null)
+            {
+                throw new RepositoryException("No FOREIGN.PERSON information found for PERSON id '" + updateResponse.PersonId + "'.");
+            }
+
+            var personContract = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>(updateResponse.PersonId, false);
+            if (personContract == null)
+            {
+                throw new RepositoryException("No PERSON information for FOREIGN.PERSON id '" + updateResponse.PersonId + "'.");
+            }
+
+            var personVisa = BuildPersonVisa(foreignPersonContract, personContract);
+
+            return personVisa;
 
         }
+
         #endregion
 
         #region DELETE
@@ -288,37 +371,48 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             if (response.DeleteVisaErrors.Any())
             {
                 var exception = new RepositoryException("Errors encountered while deleting person visa: " + id);
-                response.DeleteVisaErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCode, e.ErrorMsg)));
+                response.DeleteVisaErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCode) ? "" : e.ErrorCode, e.ErrorMsg)));
                 throw exception;
             }
         }
         #endregion
 
         #region Other methods
+
         /// <summary>
-        /// Builds PersonVisa entity
+        /// Builds PersonVisa domain entity
         /// </summary>
         /// <param name="foreignPersonContract">ForeignPerson</param>
         /// <param name="personContract">Ellucian.Colleague.Data.Base.DataContracts.Person</param>
         /// <returns>PersonVisa</returns>
         private PersonVisa BuildPersonVisa(ForeignPerson foreignPersonContract, Ellucian.Colleague.Data.Base.DataContracts.Person personContract)
         {
+            if (foreignPersonContract == null)
+            {
+                throw new RepositoryException("No FOREIGN.PERSON information found for PERSON id '" + personContract != null ? personContract.Recordkey : "" + "'.");
+            }
+            if (personContract == null)
+            {
+                throw new RepositoryException("No PERSON information for FOREIGN.PERSON id '" + foreignPersonContract != null ? foreignPersonContract.Recordkey : "" + "'.");
+            }
+
             try
             {
-                PersonVisa personVisa = new PersonVisa(personContract.Recordkey, personContract.VisaType);
-
-                personVisa.Guid = foreignPersonContract.RecordGuid;
-                personVisa.PersonGuid = personContract.RecordGuid;
-                personVisa.VisaNumber = foreignPersonContract.FperVisaNo;
-                personVisa.RequestDate = foreignPersonContract.FperVisaRequestDate;
-                personVisa.IssueDate = personContract.VisaIssuedDate;
-                personVisa.ExpireDate = personContract.VisaExpDate;
-                personVisa.EntryDate = personContract.PersonCountryEntryDate;
-                return personVisa;
+                return new PersonVisa(personContract.Recordkey, personContract.VisaType)
+                {
+                    Guid = foreignPersonContract.RecordGuid,
+                    PersonGuid = personContract.RecordGuid,
+                    VisaNumber = foreignPersonContract.FperVisaNo,
+                    RequestDate = foreignPersonContract.FperVisaRequestDate,
+                    IssueDate = personContract.VisaIssuedDate,
+                    ExpireDate = personContract.VisaExpDate,
+                    EntryDate = personContract.PersonCountryEntryDate
+                };             
             }
             catch
             {
-                throw new KeyNotFoundException("No person visa information for id " + personContract.Recordkey + ". Visa Type not defined.");
+                throw new RepositoryException(string.Concat("Error retieving person visa information for id '", 
+                    personContract != null ? personContract.Recordkey  : "", "'.  Details: " , exception.Message));
             }
         }
         #endregion

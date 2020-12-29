@@ -1,4 +1,4 @@
-﻿/*Copyright 2014-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2014-2019 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -714,8 +714,12 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 throw new InvalidOperationException(message);
             }
 
-            var awardLetterEntity = await awardLetterHistoryRepository.GetAwardLetterByIdAsync(studentId, recordId,
-                                    studentAwardYears, allAwards);
+            var awardLetterEntity = await awardLetterHistoryRepository.GetAwardLetterByIdAsync(recordId, studentAwardYears, allAwards);
+            //Validate the award letter history record belongs to the student
+            if (awardLetterEntity != null && !string.IsNullOrEmpty(awardLetterEntity.StudentId) && awardLetterEntity.StudentId != studentId)
+            {
+                throw new PermissionsException("Insufficient access to award letter record with the provided id.");
+            }
 
 
             var awardLetterEntityAdapter = new AwardLetter2EntityToDtoAdapter(_adapterRegistry, logger);
@@ -1063,8 +1067,13 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 throw new InvalidOperationException(message);
             }
 
-            var awardLetterEntity = await awardLetterHistoryRepository.GetAwardLetterById2Async(studentId, recordId,
-                                    studentAwardYears, allAwards);
+            var awardLetterEntity = await awardLetterHistoryRepository.GetAwardLetterById2Async(recordId, studentAwardYears,
+                allAwards);
+            //Validate the award letter history record belongs to the student
+            if (awardLetterEntity != null && !string.IsNullOrEmpty(awardLetterEntity.StudentId) && awardLetterEntity.StudentId != studentId)
+            {
+                throw new PermissionsException("Insufficient access to award letter record with the provided id.");
+            }
 
 
             var awardLetterEntityAdapter = new AwardLetter3EntityToDtoAdapter(_adapterRegistry, logger);
@@ -1148,6 +1157,66 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 parameters.Add(new ReportParameter("AreAwardPeriodsPresent", (awardLetterAwardPeriods.Any()).ToString()));
                 parameters.Add(new ReportParameter("AreAnnualAwardsAbsent", (!awardLetterDto.AwardLetterAnnualAwards.Any()).ToString()));
                 parameters.Add(new ReportParameter("NumAwardPeriodColumns", distinctAwardPeriodsCount.ToString()));
+                if (awardLetterDto.AwardLetterHistoryType == "OLTR")
+                {
+
+                    // Remove the work study group from the list of award letter periods to properly sum award amounts.
+                    var updatedAwardLetterPeriodsForYear = new List<AwardLetterAwardPeriod>();
+
+                    foreach (var awardPeriod in awardLetterAwardPeriods)
+                    {
+                        if (awardPeriod.GroupNumber != 4)
+                        {
+                            updatedAwardLetterPeriodsForYear.Add(awardPeriod);
+                        }
+                    }
+
+                    // Remove the work study group from the list of annual awards to properly sum award amounts.
+                    var updatedAwardLetterAnnualAwards = new List<AwardLetterAnnualAward>();
+
+                    foreach (var annualAwards in awardLetterDto.AwardLetterAnnualAwards)
+                    {
+                        if (annualAwards.GroupNumber != 4)
+                        {
+                            updatedAwardLetterAnnualAwards.Add(annualAwards);
+                        }
+                    }
+
+                    var AwardLetterAwardsTotal = updatedAwardLetterPeriodsForYear.Any() ? updatedAwardLetterPeriodsForYear.Sum(ap => ap.AwardPeriodAmount)
+                : updatedAwardLetterAnnualAwards.Sum(a => a.AnnualAwardAmount);
+
+                    parameters.Add(new ReportParameter("AwardLetterAwardsTotal", AwardLetterAwardsTotal.ToString()));
+                    parameters.Add(new ReportParameter("LabelPell", "Pell Entitlement"));
+                    parameters.Add(new ReportParameter("LabelDirectCosts", "Direct Costs"));
+                    parameters.Add(new ReportParameter("LabelIndirectCosts", "Indirect Costs"));
+                    parameters.Add(new ReportParameter("LabelPellHeader1", "Full-Time"));
+                    parameters.Add(new ReportParameter("LabelPellHeader2", "Three-Quarter-Time"));
+                    parameters.Add(new ReportParameter("LabelPellHeader3", "Half-Time"));
+                    parameters.Add(new ReportParameter("LabelPellHeader4", "Less Than Half-Time"));
+                    parameters.Add(new ReportParameter("IsPellEntitlementActive", awardLetterConfigurationDto.IsPellEntitlementActive.ToString()));
+                    parameters.Add(new ReportParameter("IsRenewableTextActive", awardLetterConfigurationDto.IsRenewalActive.ToString()));
+                    parameters.Add(new ReportParameter("IsBudgetActive", awardLetterConfigurationDto.IsBudgetActive.ToString()));
+                    parameters.Add(new ReportParameter("IsEFCActive", awardLetterConfigurationDto.IsEfcActive.ToString()));
+                    parameters.Add(new ReportParameter("IsALHCostActive", awardLetterConfigurationDto.IsDirectCostActive.ToString()));
+                    parameters.Add(new ReportParameter("IsEnrollmentActive", awardLetterConfigurationDto.IsEnrollmentActive.ToString()));
+                    if (awardLetterConfigurationDto.IsPellEntitlementActive && awardLetterDto.AlhPellEntitlementList.Any())
+                    {
+                        parameters.Add(new ReportParameter("PellEntitlementFull", awardLetterDto.AlhPellEntitlementList[0]));
+                        parameters.Add(new ReportParameter("PellEntitlement3Quarter", awardLetterDto.AlhPellEntitlementList[1]));
+                        parameters.Add(new ReportParameter("PellEntitlementHalf", awardLetterDto.AlhPellEntitlementList[2]));
+                        parameters.Add(new ReportParameter("PellEntitlementLessThanHalf", awardLetterDto.AlhPellEntitlementList[3]));
+                    }
+                    else
+                    {
+                        parameters.Add(new ReportParameter("PellEntitlementFull", " "));
+                        parameters.Add(new ReportParameter("PellEntitlement3Quarter", " "));
+                        parameters.Add(new ReportParameter("PellEntitlementHalf", " "));
+                        parameters.Add(new ReportParameter("PellEntitlementLessThanHalf", " "));
+                    }
+                    report.DataSources.Add(new ReportDataSource("AwardLetterHistoryCost", awardLetterDto.AwardLetterHistoryCosts));
+                    report.DataSources.Add(new ReportDataSource("OfferLetterHousingEnrollmentItem", awardLetterDto.OfferLetterHousingEnrollmentItem));
+                    report.DataSources.Add(new ReportDataSource("AwardTotalAmounts", awardLetterDto.AwardPeriodTotals));
+                }
                 report.SetParameters(parameters);
 
                 report.DataSources.Add(new ReportDataSource("AwardLetter3", new List<Dtos.FinancialAid.AwardLetter3>() { awardLetterDto }));

@@ -74,7 +74,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             // Set up current user
             _currentUserFactory = new PersonServiceTests.CurrentUserSetup.PersonUserFactory();
-            _addressTypesService = new AddressTypeService(_adapterRegistry, _refRepo, _currentUserFactory, _roleRepo, _logger);
+            _addressTypesService = new AddressTypeService(_adapterRegistry, _refRepo, _currentUserFactory, _configurationRepository, _roleRepo, _logger);
 
             allAddressTypes = new TestAddressTypeRepository().Get();
             _refRepoMock.Setup(repo => repo.GetAddressTypes2Async(It.IsAny<bool>())).ReturnsAsync(allAddressTypes);

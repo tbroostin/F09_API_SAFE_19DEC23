@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Dtos.ColleagueFinance;
 using Ellucian.Rest.Client.Exceptions;
@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Api.Client
@@ -395,6 +396,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <returns>A list of cost centers.</returns>
         /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
         /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        [Obsolete("Obsolete as of API 1.29. Use QueryCostCentersAsync.")]
         public async Task<IEnumerable<CostCenter>> GetCostCentersAsync(string fiscalYear)
         {
             try
@@ -504,7 +506,37 @@ namespace Ellucian.Colleague.Api.Client
 
         #endregion
 
-        #region General Ledger Account
+        #region General Ledger Accounts
+
+        /// <summary>
+        /// Get the user GL accounts.
+        /// If there is a fiscal year, it will also validate it for that year.
+        /// </summary>
+        /// <param name="glClass">Optional: null for all the user GL accounts, expense for only the expense type GL accounts.</param>
+        /// <returns>Success: List of GL accounts fpr the user.</returns>
+        public async Task<IEnumerable<GlAccount>> GetUserGeneralLedgerAccountsAsync(string glClass = null)
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_generalLedgerAccountsPath);
+
+                IDictionary<string, string> parameters = new Dictionary<string, string>();
+                parameters.Add("glClass", glClass);
+                urlPath = UrlUtility.CombineEncodedUrlPathAndArguments(urlPath, parameters);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<IEnumerable<GlAccount>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to retrieve the GL accounts.");
+                throw;
+            }
+        }
 
         /// <summary>
         /// Validate a GL account. 
@@ -593,6 +625,7 @@ namespace Ellucian.Colleague.Api.Client
 
         #endregion
 
+        #region Next Approvers
         /// <summary>
         /// Validate a next approver ID.
         /// </summary>
@@ -633,6 +666,50 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+        /// <summary>
+        /// Get the list of approver based on keyword search.
+        /// </summary>
+        /// <param name="queryKeyword"> The search criteria get list of next Approver.</param>
+        /// <returns> The approver search results</returns>
+        /// <exception cref="ResourceNotFoundException">Unable to perform next approver search.</exception>
+        /// <exception cref="Exception">Unable to perform next approver search.</exception>
+        public async Task<IEnumerable<NextApprover>> GetNextApproverByKeywordAsync(string queryKeyword)
+        {
+            if (string.IsNullOrEmpty(queryKeyword))
+            {
+                throw new ArgumentNullException("criteria", "next approver query criteria cannot be empty.");
+            }
+            try
+            {
+                // Create and execute a request to get the search next approver by keyword.
+                string[] pathStrings = new string[] { _searchNextApproversPath, queryKeyword };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                // Add version header
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                // Use URL path and request data to call the web api method (including query string)
+                var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<NextApprover>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let the calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to perform next approver search.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to perform next approver search.");
+                throw;
+            }
+        }
+
+        #endregion
+        
         #region General Ledger Configuration
 
         /// <summary>
@@ -667,6 +744,41 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
+        /// <summary>
+        /// Get the General Ledger Fiscal year configuration.
+        /// </summary>
+        /// <returns>General Ledger Fiscal year Configuration parameters.</returns>
+        /// <exception cref="ResourceNotFoundException">Unable to get the General Ledger Fiscal year configuration.</exception>
+        /// <exception cref="Exception">Unable to get the General Ledger Fiscal year configuration.</exception>
+        public async Task<GlFiscalYearConfiguration> GetGlFiscalYearConfigurationAsync()
+        {
+            try
+            {
+                // Create and execute a request to get the GL fiscal year configuration.
+                string urlPath = UrlUtility.CombineUrlPath(_glFiscalYearConfigurationPath);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<GlFiscalYearConfiguration>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get the General Ledger fiscal year configuration.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get the General Ledger fiscal year configuration.");
+                throw;
+            }
+        }
+
+
 
         #endregion
 
@@ -1393,5 +1505,1137 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
+        #region Finance Query
+        /// <summary>
+        /// Get the GL accounts based on filter criteria.
+        /// </summary>
+        /// <param name="criteria">The <see cref="Dtos.ColleagueFinance.FinanceQueryCriteria"> criteria</see> to query by.</param>
+        /// <returns>GL accounts that match the query criteria.</returns>
+        public async Task<IEnumerable<FinanceQuery>> QueryFinanceQuerySelectionByPostAsync(FinanceQueryCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria", "Finance query criteria cannot be null.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _financeQueryPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                // Add version header
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                // Use URL path and request data to call web api method (including query string)
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<FinanceQuery>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get filtered finance query criteria results.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get filtered finance query criteria results.");
+                throw;
+            }
+        }
+        #endregion
+
+        /// <summary>
+        /// Get a list of requisition summary.
+        /// </summary>
+        /// <param name="personId">Person ID</param>
+        /// <returns>list of requisition summary.</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<RequisitionSummary>> GetRequisitionsSummaryByPersonIdAsync(string personId)
+        {
+            try
+            {
+                // Create and execute a request to a specified requisition
+                string[] pathStrings = new string[] { _requisitionsSummaryPath, personId };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<RequisitionSummary>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get requisition summary list  {0}.", personId);
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get requisition summary list.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get Ship To Codes with descriptions
+        /// </summary>
+        /// <returns>Returns List of ShipToCodes</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<ShipToCode>> GetShipToCodesAsync()
+        {
+            try
+            {
+                // Create and execute a request to get the list of fiscal years
+                string[] pathStrings = new string[] { _shipToCodesPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<List<ShipToCode>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get ship to codes.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get ship to codes.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get Commodity Codes with descriptions
+        /// </summary>
+        /// <returns>Returns List of Commodity Codes</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode>> GetAllCommodityCodesAsync()
+        {
+            try
+            {
+                // Create and execute a request to get the list of fiscal years
+                string[] pathStrings = new string[] { _commodityCodesPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<List<Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get commodity codes.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get commodity codes.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get CF Web configurations
+        /// </summary>
+        /// <returns>Returns CF Web configurations.</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<ColleagueFinanceWebConfiguration> GetColleagueFinanceWebConfigurationsAsync()
+        {
+            try
+            {
+                // Create and execute a request to fetch CF Web configurations
+                string[] pathStrings = new string[] { _cfWebConfigurationsPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<ColleagueFinanceWebConfiguration>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get CF Web configurations.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get CF Web configurations.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Create / Update a requisition.
+        /// </summary>
+        /// <param name="requisitionCreateUpdateRequest">The requisition create update request DTO.</param>        
+        /// <returns>The requisition create update response DTO.</returns>
+        public async Task<RequisitionCreateUpdateResponse> CreateUpdateRequisitionAsync(RequisitionCreateUpdateRequest requisitionCreateUpdateRequest)
+        {
+
+            if (requisitionCreateUpdateRequest == null)
+            {
+                throw new ArgumentNullException("requisitionCreateUpdateRequest", "The requisition create update request cannot be empty/null when posting a requisition.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _requisitionsPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(requisitionCreateUpdateRequest, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<RequisitionCreateUpdateResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException exnf)
+            {
+                logger.Error(exnf, "Unable to create requisition.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to to create requisition.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// delete a requisition.
+        /// </summary>
+        /// <param name="requisitionDeleteRequest">The requisition delete request DTO.</param>        
+        /// <returns>The requisition delete response DTO.</returns>
+        public async Task<RequisitionDeleteResponse> DeleteRequisitionAsync(RequisitionDeleteRequest requisitionDeleteRequest)
+        {
+
+            if (requisitionDeleteRequest == null)
+            {
+                throw new ArgumentNullException("requisitionDeleteRequest", "The requisition delete request cannot be empty/null when deleting a requisition.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _requisitionsDeletePath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(requisitionDeleteRequest, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<RequisitionDeleteResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException exnf)
+            {
+                logger.Error(exnf, "Unable to delete requisition.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to to delete requisition.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Create / Update a PurchaseOrder.
+        /// </summary>
+        /// <param name="purchaseOrderCreateUpdateRequest">The PurchaseOrder create  request DTO.</param>        
+        /// <returns>The PurchaseOrder create response DTO.</returns>
+        public async Task<PurchaseOrderCreateUpdateResponse> CreateUpdatePurchaseOrderAsync(PurchaseOrderCreateUpdateRequest purchaseOrderCreateUpdateRequest)
+        {
+
+            if (purchaseOrderCreateUpdateRequest == null)
+            {
+                throw new ArgumentNullException("purchaseOrderCreateUpdateRequest", "The purchase Order create request cannot be empty/null when posting a purchaseorder.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _purchaseOrderPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(purchaseOrderCreateUpdateRequest, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<PurchaseOrderCreateUpdateResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException exnf)
+            {
+                logger.Error(exnf, "Unable to create Purchase Order.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to to create Purchase Order.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Void a PurchaseOrder.
+        /// </summary>
+        /// <param name="purchaseOrderVoidRequest">The PurchaseOrder void  request DTO.</param>        
+        /// <returns>The PurchaseOrder void response DTO.</returns>
+        public async Task<PurchaseOrderVoidResponse> VoidPurchaseOrderAsync(PurchaseOrderVoidRequest purchaseOrderVoidRequest)
+        {
+
+            if (purchaseOrderVoidRequest == null)
+            {
+                throw new ArgumentNullException("purchaseOrderVoidRequest", "The purchase order void request cannot be empty/null when voiding a purchaseorder.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _purchaseOrderVoidPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(purchaseOrderVoidRequest, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<PurchaseOrderVoidResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException exnf)
+            {
+                logger.Error(exnf, "Unable to void Purchase Order.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to to void Purchase Order.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a list of Purchase Order summary.
+        /// </summary>
+        /// <param name="personId">person id</param>
+        /// <returns>list of purchase order summary.</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<PurchaseOrderSummary>> GetPurchaseOrderSummaryByPersonIdAsync(string personId)
+        {
+            try
+            {
+                // Create and execute a request to a specified purchase order
+                string[] pathStrings = new string[] { _purchaseOrdersSummaryPath, personId };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<PurchaseOrderSummary>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get purchase order {0}.", personId);
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get purchase order.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the list of vendors based on keyword search.
+        /// </summary>
+        /// <param name="criteria"> The search criteria get list of vendors.</param>
+        /// <returns> The vendor search results</returns>
+        /// <exception cref="ResourceNotFoundException">Unable to perform vendor search.</exception>
+        /// <exception cref="Exception">Unable to perform vendor search.</exception>
+        public async Task<IEnumerable<VendorSearchResult>> QueryVendorsByPostAsync(VendorSearchCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria", "vendor query criteria cannot be null.");
+            }
+            try
+            {
+                // Create and execute a request to get the search vendors by keyword.
+                string[] pathStrings = new string[] { _qapiPath, _vendorsPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                // Add version header
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                // Use URL path and request data to call the web api method (including query string)
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<VendorSearchResult>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let the calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to perform vendor search.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to perform vendor search.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the list of Voucher - vendors based on keyword search.
+        /// </summary>
+        /// <param name="criteria"> The search criteria get list of vendors.</param>
+        /// <returns> The vendor search results</returns>
+        /// <exception cref="ResourceNotFoundException">Unable to perform vendor search.</exception>
+        /// <exception cref="Exception">Unable to perform vendor search.</exception>
+        public async Task<IEnumerable<VendorsVoucherSearchResult>> QueryVendorForVoucherAsync(VendorSearchCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria", "vendor query criteria cannot be null.");
+            }
+            try
+            {
+                // Create and execute a request to get the search vendors by keyword.
+                string[] pathStrings = new string[] { _qapiPath, _vendorsForVoucherPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                // Add version header
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                // Use URL path and request data to call the web api method (including query string)
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<VendorsVoucherSearchResult>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let the calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to perform vendor search.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to perform vendor search.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Create / Update a Voucher.
+        /// </summary>
+        /// <param name="voucherCreateUpdateRequest">The Voucher create  request DTO.</param>        
+        /// <returns>The Voucher create response DTO.</returns>
+        public async Task<VoucherCreateUpdateResponse> CreateUpdatevoucherAsync(VoucherCreateUpdateRequest voucherCreateUpdateRequest)
+        {
+
+            if (voucherCreateUpdateRequest == null)
+            {
+                throw new ArgumentNullException("voucherCreateUpdateRequest", "The Voucher create request cannot be empty/null when posting a voucher.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _vouchersPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(voucherCreateUpdateRequest, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<VoucherCreateUpdateResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException exnf)
+            {
+                logger.Error(exnf, "Unable to create voucher.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to to create voucher.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets person addreess for voucher.
+        /// </summary>
+        /// <returns>The Reimburse person address response DTO.</returns>
+        public async Task<VendorsVoucherSearchResult> GetReimbursePersonAddressForVoucherAsync()
+        {
+            try
+            {
+                // Create and execute a request to a specified purchase order
+                string[] pathStrings = new string[] {_reimbursePersonAddressPath};
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<VendorsVoucherSearchResult>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException exnf)
+            {
+                logger.Error(exnf, "Unable to get the reimburse person address.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the reimburse person address.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Void a Voucher.
+        /// </summary>
+        /// <param name="voucherVoidRequest">The voucher void  request DTO.</param>        
+        /// <returns>The Voucher void response DTO.</returns>
+        public async Task<VoucherVoidResponse> VoidVoucherAsync(VoucherVoidRequest voucherVoidRequest)
+        {
+
+            if (voucherVoidRequest == null)
+            {
+                throw new ArgumentNullException("voucherVoidRequest", "The voucher void request cannot be empty/null when voiding a voucher.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _vouchersVoidPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(voucherVoidRequest, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<VoucherVoidResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException exnf)
+            {
+                logger.Error(exnf, "Unable to void Voucher.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to to void Voucher.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get commodity unit types for line items.
+        /// </summary>
+        /// <returns>Success: List of unit type objects.</returns>
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.CommodityUnitType>> GetAllCommodityUnitTypesAsync()
+        {
+            try
+            {
+                // Create and execute a request to get the list of unit types.
+                string[] pathStrings = new string[] { _commodityUnitTypesPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<List<Ellucian.Colleague.Dtos.CommodityUnitType>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get unit types.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get unit types.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get fixed assets transfer flags with descriptions
+        /// </summary>
+        /// <returns>Returns list of fixed assets transfer flags</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<FixedAssetsFlag>> GetFixedAssetTransferFlagsAsync()
+        {
+            try
+            {
+                // Create and execute a request to get the list of fiscal years
+                string[] pathStrings = new string[] { _fixedAssetTransferFlagsPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<List<FixedAssetsFlag>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get fixed asset transfer flags.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get fixed asset transfer flags.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get tax forms with descriptions
+        /// </summary>
+        /// <returns>Returns list of tax forms</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<TaxForm>> GetTaxFormsAsync()
+        {
+            try
+            {
+                // Create and execute a request to get the list of fiscal years
+                string[] pathStrings = new string[] { _taxFormCodesPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<List<TaxForm>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get tax form codes.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get tax form codes.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get requisition selected by user and line item default information.
+        /// </summary>
+        /// <param name="requisitionId">Requisition ID</param>
+        /// <returns>Modify requisition dto.</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        [Obsolete("Obsolete as of Colleague Web API 1.28. Use GetRequisitionAsync instead.")]
+        public async Task<ModifyRequisition> GetRequisitionForModifyWithLineItemDefaultsAsync(string requisitionId)
+        {
+            try
+            {
+                // Create and execute a request to a specified requisition
+                string[] pathStrings = new string[] { _requisitionModifyPath, requisitionId };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<ModifyRequisition>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get requisition for modify {0}.", requisitionId);
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get requisition  for modify.");
+                throw;
+            }
+        }
+                
+        /// <summary>
+        /// Get a list of procurement receiving items summary.
+        /// </summary>
+        /// <param name="personId">Person ID</param>
+        /// <returns>list of procurement receiving summary.</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<ReceiveProcurementSummary>> GetReceiveProcurementsByPersonIdAsync(string personId)
+        {
+            try
+            {
+                // Create and execute a request to a specified requisition
+                string[] pathStrings = new string[] { _receiveProcurementsPath, personId };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<ReceiveProcurementSummary>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get purchase orders for receiving {0}.", personId);
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get purchase orders for receiving.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Receive / Return Procurement Items.
+        /// </summary>
+        /// <param name="procurementAcceptReturnItemInformationRequest">The procurement receive return request DTO.</param>        
+        /// <returns>The procurement receive return response DTO.</returns>
+        public async Task<ProcurementAcceptReturnItemInformationResponse> AcceptOrReturnProcurementItemsAsync(ProcurementAcceptReturnItemInformationRequest procurementAcceptReturnItemInformationRequest)
+        {
+
+            if (procurementAcceptReturnItemInformationRequest == null)
+            {
+                throw new ArgumentNullException("procurementAcceptReturnItemInformationRequest", "The procurement receive return request cannot be empty/null when updating a procurement items.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _receiveProcurementsPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(procurementAcceptReturnItemInformationRequest, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<ProcurementAcceptReturnItemInformationResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException exnf)
+            {
+                logger.Error(exnf, "Unable to receive/return procurement items.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to receive/return procurement items.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get Ship To Codes with descriptions
+        /// </summary>
+        /// <returns>Returns List of ShipToCodes</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<ShipViaCode>> GetShipViaCodesAsync()
+        {
+            try
+            {
+                // Create and execute a request to get the list ship via codes
+                string[] pathStrings = new string[] { _shipViaCodesPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<List<ShipViaCode>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get ship via codes.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get ship via codes.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get Return Reason Codes with descriptions
+        /// </summary>
+        /// <returns>Returns List of ReturnReasonCodes</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<ProcurementReturnReason>> GetProcurementReturnReasonsAsync()
+        {
+            try
+            {
+                // Create and execute a request to get the list return reason codes
+                string[] pathStrings = new string[] { _returnReasonCodesPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<List<ProcurementReturnReason>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get return reason codes.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get return reason codes.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get document approvals.
+        /// </summary>
+        /// <returns>Document approval information.</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<DocumentApproval> GetDocumentApprovalAsync()
+        {
+            try
+            {
+                // Create and execute a request to get a document approval
+                string[] pathStrings = new string[] { _documentApprovalPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<DocumentApproval>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get document approval.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get document approval.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Update document approvals.
+        /// </summary>
+        /// <param name="documentApprovalUpdateRequest">The document approval request DTO.</param>        
+        /// <returns>The document approval response DTO.</returns>
+        public async Task<DocumentApprovalResponse> PostDocumentApprovalAsync(DocumentApprovalRequest documentApprovalUpdateRequest)
+        {
+
+            if (documentApprovalUpdateRequest == null)
+            {
+                throw new ArgumentNullException("documentApprovalUpdateRequest", "The document approval request cannot be empty/null.");
+            }
+            if (documentApprovalUpdateRequest.ApprovalDocumentRequests == null || !(documentApprovalUpdateRequest.ApprovalDocumentRequests.Any()))
+            {
+                throw new ArgumentNullException("documentApprovalUpdateRequest", "The document approval request must have documents to approve.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _documentApprovalPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(documentApprovalUpdateRequest, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<DocumentApprovalResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException exnf)
+            {
+                logger.Error(exnf, "Unable to update document approvals.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to update document approvals.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a list of voucher summary for the given user
+        /// </summary>
+        /// <returns>list of voucher summary.</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<VoucherSummary>> GetVoucherSummariesAsync(string personId)
+        {
+            try
+            {
+                string query = UrlUtility.BuildEncodedQueryString("personId", personId);
+                string urlPath = UrlUtility.CombineUrlPathAndArguments(_voucherSummariesPath, query);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<List<VoucherSummary>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get voucher summary list  {0}.", personId);
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get voucher summary list.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves commodity code.
+        /// </summary>        
+        /// <param name="commodityCode">commodity code.</param>        
+        /// <returns>ProcurementCommodityCode DTO.</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<ProcurementCommodityCode> GetCommodityCodeAsync(string commodityCode)
+        {
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(new[] { _commodityCodesPath, commodityCode });
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);                
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<ProcurementCommodityCode>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get commodity code.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get commodity code.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves vendors default taxform info while adding new line item to procurement document.
+        /// </summary>        
+        /// <param name="vendorId">vendor id.</param>
+        /// <param name="apType">ap type.</param>
+        /// <returns>VendorDefaultTaxFormInfo DTO.</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<VendorDefaultTaxFormInfo> GetVendorDefaultTaxFormInfoAsync(string vendorId, string apType)
+        {
+            try
+            {   
+                var query = UrlUtility.BuildEncodedQueryString(new[] { "apType", apType });
+                var urlPath = UrlUtility.CombineUrlPath(new[] { _vendorsPath, vendorId, "default-taxform-info" });
+                urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, query);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<VendorDefaultTaxFormInfo>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get vendors default tax form info.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get vendors default tax form info.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves vendor commodity code association details.
+        /// </summary>        
+        /// <param name="vendorId">vendor id.</param>
+        /// <param name="commodityCode">commodity code.</param>
+        /// <returns>VendorCommodity DTO.</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<VendorCommodity> GetVendorCommodityAsync(string vendorId, string commodityCode)
+        {
+            try
+            {
+                var query = UrlUtility.BuildEncodedQueryString(new[] { "vendorId", vendorId, "commodityCode", commodityCode });
+                string urlPath = UrlUtility.CombineUrlPathAndArguments(_vendorCommoditiesPath, query);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<VendorCommodity>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get vendor commodities.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get vendor commodities.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the list of initiator based on keyword search.
+        /// </summary>
+        /// <param name="queryKeyword"> The search criteria get list of initiator.</param>
+        /// <returns> The initiator search results</returns>
+        /// <exception cref="ResourceNotFoundException">Unable to perform staff search.</exception>
+        /// <exception cref="Exception">Unable to perform staff search.</exception>
+        public async Task<IEnumerable<Initiator>> GetInitiatorByKeywordAsync(string queryKeyword)
+        {
+            if (string.IsNullOrEmpty(queryKeyword))
+            {
+                throw new ArgumentNullException("criteria", "initiator query criteria cannot be empty.");
+            }
+            try
+            {
+                // Create and execute a request to get the search initiator by keyword.
+                string[] pathStrings = new string[] { _initiatorPath, queryKeyword };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                // Add version header
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                // Use URL path and request data to call the web api method (including query string)
+                var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<Initiator>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let the calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to perform initiator search.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to perform initiator search.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the projects based on filter criteria.
+        /// </summary>
+        /// <param name="criteria">The <see cref="Dtos.ColleagueFinance.ProjectQueryCriteria"> criteria</see> to query by.</param>
+        /// <returns>Projects that match the query criteria.</returns>
+        public async Task<IEnumerable<Project>> QueryProjectsAsync(ProjectQueryCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria", "Project query criteria cannot be null.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _projectsPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                // Add version header
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                // Use URL path and request data to call web api method (including query string)
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<Project>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get filtered projects.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get filtered projects.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves list of vouchers by vendor id and invoice number
+        /// </summary>
+        /// <param name="vendorId">Vendor id</param>
+        /// <param name="invoiceNo">Invoice number</param>
+        /// <returns>list of Vouchers</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<Voucher2>> GetVouchersByVendorAndInvoiceNoAsync(string vendorId, string invoiceNo)
+        {           
+            try
+            {
+                var query = UrlUtility.BuildEncodedQueryString(new[] { "vendorId", vendorId, "invoiceNo", invoiceNo });
+                string urlPath = UrlUtility.CombineUrlPathAndArguments(_vouchersPath, query);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<Voucher2>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get voucher's.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get voucher's.");
+                throw;
+            }
+        }
+
+
     }
 }
+

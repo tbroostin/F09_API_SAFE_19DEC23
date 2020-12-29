@@ -1,4 +1,4 @@
-﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -33,6 +33,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         private Mock<ILogger> loggerMock;
         private FixedAssetsController fixedAssetsController;
         private List<Dtos.FixedAssets> fixedAssetsCollection;
+        private List<Colleague.Dtos.ColleagueFinance.FixedAssetsFlag> fixedAssetFlags;
         private Tuple<IEnumerable<Dtos.FixedAssets>, int> fixedAssetsCollectionTuple;
         private string expectedGuid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc";
         int offset = 0;
@@ -135,10 +136,18 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                     },
                 }
             };
+
+            fixedAssetFlags = new List<Dtos.ColleagueFinance.FixedAssetsFlag>()
+            {
+                new Dtos.ColleagueFinance.FixedAssetsFlag { Code = "S", Description = "Single" }, new Dtos.ColleagueFinance.FixedAssetsFlag { Code = "M", Description = "Multi-valued" }
+            };
+
             fixedAssetsCollectionTuple = new Tuple<IEnumerable<FixedAssets>, int>(fixedAssetsCollection, fixedAssetsCollection.Count);
             fixedAssetsServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
             //fixedAssetsServiceMock.Setup(s => s.DoesUpdateViolateDataPrivacySettings(It.IsAny<string>(), It.IsAny<object>(), It.IsAny<bool>())).ReturnsAsync(true);
             fixedAssetsServiceMock.Setup(s => s.GetFixedAssetsByGuidAsync(It.IsAny<string>(), true)).ReturnsAsync(fixedAssetsCollection.FirstOrDefault());
+            fixedAssetsServiceMock.Setup(s => s.GetFixedAssetTransferFlagsAsync()).ReturnsAsync(fixedAssetFlags);
+
         }
 
         [TestCleanup]
@@ -378,6 +387,45 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             await fixedAssetsController.GetFixedAssetsAsync(null);
         }
 
+
+        [TestMethod]
+        public async Task FixedAssetsController_GetFixedAssetTransferFlagsAsync()
+        {
+
+            fixedAssetsServiceMock.Setup(x => x.GetFixedAssetTransferFlagsAsync()).ReturnsAsync(fixedAssetFlags);
+
+            var fxaFlags = (await fixedAssetsController.GetFixedAssetTransferFlagsAsync()).ToList();
+            Assert.AreEqual(fixedAssetFlags.Count, fxaFlags.Count);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task FixedAssetsController_GetFixedAssetTransferFlagsAsync_KeyNotFoundException()
+        {
+            fixedAssetsServiceMock.Setup(x => x.GetFixedAssetTransferFlagsAsync())
+                .Throws<KeyNotFoundException>();
+            await fixedAssetsController.GetFixedAssetTransferFlagsAsync();
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task FixedAssetsController_GetFixedAssetTransferFlagsAsync_PermissionsException()
+        {
+            fixedAssetsServiceMock.Setup(x => x.GetFixedAssetsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
+                .Throws<PermissionsException>();
+            await fixedAssetsController.GetFixedAssetsAsync(It.IsAny<Web.Http.Models.Paging>());
+        }
+
+        
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task FixedAssetsController_GetFixedAssetTransferFlagsAsync_Exception()
+        {
+            fixedAssetsServiceMock.Setup(x => x.GetFixedAssetTransferFlagsAsync())
+                .Throws<Exception>();
+
+            await fixedAssetsController.GetFixedAssetTransferFlagsAsync();
+        }
         #endregion
 
     }

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -162,6 +162,30 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         public async Task GradeSchemeController_DeleteGradeSchemesAsync_Exception()
         {
             await gradeSchemesController.DeleteGradeSchemeAsync(gradeSchemeCollection.FirstOrDefault().Id);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task GradeSchemesController_GetNonEthosGradeSchemeByIdAsync_KeyNotFoundException()
+        {
+            gradeSchemeServiceMock.Setup(x => x.GetNonEthosGradeSchemeByIdAsync(It.IsAny<string>())).Throws<KeyNotFoundException>();
+            await gradeSchemesController.GetNonEthosGradeSchemeByIdAsync("UG");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task GradeSchemesController_GetNonEthosGradeSchemeByIdAsync_GenericException()
+        {
+            gradeSchemeServiceMock.Setup(x => x.GetNonEthosGradeSchemeByIdAsync(It.IsAny<string>())).Throws<ArgumentNullException>();
+            await gradeSchemesController.GetNonEthosGradeSchemeByIdAsync("UG");
+        }
+
+        [TestMethod]
+        public async Task GradeSchemesController_GetNonEthosGradeSchemeByIdAsync_Valid()
+        {
+            gradeSchemeServiceMock.Setup(x => x.GetNonEthosGradeSchemeByIdAsync("UG")).ReturnsAsync(new Dtos.Student.GradeScheme() { Code = "UG", Description = "Undergraduate", GradeCodes = new List<string>() { "A", "B" } });
+            var scheme = await gradeSchemesController.GetNonEthosGradeSchemeByIdAsync("UG");
+            Assert.AreEqual("UG", scheme.Code);
         }
     }
 }

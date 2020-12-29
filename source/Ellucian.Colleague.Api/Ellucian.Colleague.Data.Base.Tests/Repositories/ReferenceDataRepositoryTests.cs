@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -40,6 +40,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             IEnumerable<AddressType2> allAddressTypes;
             ApplValcodes addressTypeValcodeResponse;
             string valcodeName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -55,6 +56,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build addressType repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 valcodeName = referenceDataRepo.BuildFullCacheKey("CORE_ADREL.TYPES_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -180,7 +183,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -262,6 +265,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<ILogger> loggerMock;
             IEnumerable<Building> allBuildings;
             string codeItemName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -276,6 +280,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllBuildings");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -369,7 +375,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -388,6 +394,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             IEnumerable<Race> allRaces;
             ApplValcodes raceValcodeResponse;
             string valcodeName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -403,6 +410,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build race repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 valcodeName = referenceDataRepo.BuildFullCacheKey("CORE_PERSON.RACES_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -528,7 +537,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -576,6 +585,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<ILogger> loggerMock;
             IEnumerable<Chapter> allChapters;
             string codeItemName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -590,6 +600,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllChapters");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -669,7 +681,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -688,6 +700,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             IEnumerable<CitizenshipStatus> allCitizenshipStatuses;
             ApplValcodes citizenshipStatusValcodeResponse;
             string valcodeName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -703,6 +716,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build race repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 valcodeName = referenceDataRepo.BuildFullCacheKey("CORE_ALIEN.STATUSES_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -817,7 +832,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -858,7 +873,16 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<IColleagueDataReader> dataAccessorMock;
             Mock<ILogger> loggerMock;
             IEnumerable<CommerceTaxCode> allCommerceTaxCodes;
+
             string codeItemName;
+            private ApiSettings apiSettings;
+            string[] guids = new string[]
+            {
+                "625c69ff-280b-4ed3-9474-662a43616a8a",
+                "bfea651b-8e27-4fcd-abe3-04573443c04c",
+                "9ae3a175-1dfd-4937-b97b-3c9ad596e023",
+                "e9e6837f-2c51-431b-9069-4ac4c0da3041"
+            };
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -866,13 +890,14 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             public void Initialize()
             {
                 loggerMock = new Mock<ILogger>();
-
                 // Build responses used for mocking
                 allCommerceTaxCodes = new TestCommerceTaxCodesRepository().GetCommerceTaxCodes();
 
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllCommerceTaxCodes");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -892,24 +917,41 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
                 for (int i = 0; i < allCommerceTaxCodes.Count(); i++)
                 {
-                    Assert.AreEqual(allCommerceTaxCodes.ElementAt(i).Guid, commerceTaxCodes.ElementAt(i).Guid);
-                    Assert.AreEqual(allCommerceTaxCodes.ElementAt(i).Code, commerceTaxCodes.ElementAt(i).Code);
-                    Assert.AreEqual(allCommerceTaxCodes.ElementAt(i).Description, commerceTaxCodes.ElementAt(i).Description);
+                    var expected = allCommerceTaxCodes.FirstOrDefault(r => r.Guid.Equals(commerceTaxCodes.ElementAt(i).Guid, StringComparison.OrdinalIgnoreCase));
+
+                    Assert.AreEqual(expected.Guid, commerceTaxCodes.ElementAt(i).Guid);
+                    Assert.AreEqual(expected.Code, commerceTaxCodes.ElementAt(i).Code);
+                    Assert.AreEqual(expected.Description, commerceTaxCodes.ElementAt(i).Description);
+                    Assert.AreEqual(expected.ApTaxEffectiveDates.Count(), commerceTaxCodes.ElementAt(i).ApTaxEffectiveDates.Count());
                 }
             }
 
             [TestMethod]
             public async Task GetsCommerceTaxCodesNonCacheAsync()
             {
-                var commerceTaxCodes = await referenceDataRepo.GetCommerceTaxCodesAsync(true);
+                var commerceTaxCodes = await referenceDataRepo.GetCommerceTaxCodesAsync(It.IsAny<bool>());
 
                 for (int i = 0; i < allCommerceTaxCodes.Count(); i++)
                 {
-                    Assert.AreEqual(allCommerceTaxCodes.ElementAt(i).Guid, commerceTaxCodes.ElementAt(i).Guid);
-                    Assert.AreEqual(allCommerceTaxCodes.ElementAt(i).Code, commerceTaxCodes.ElementAt(i).Code);
-                    Assert.AreEqual(allCommerceTaxCodes.ElementAt(i).Description, commerceTaxCodes.ElementAt(i).Description);
+                    var expected = allCommerceTaxCodes.FirstOrDefault(r => r.Guid.Equals(commerceTaxCodes.ElementAt(i).Guid, StringComparison.OrdinalIgnoreCase));
+                    Assert.AreEqual(expected.Guid, commerceTaxCodes.ElementAt(i).Guid);
+                    Assert.AreEqual(expected.Code, commerceTaxCodes.ElementAt(i).Code);
+                    Assert.AreEqual(expected.Description, commerceTaxCodes.ElementAt(i).Description);
                 }
             }
+
+            [TestMethod]
+            public async Task GetsCommerceTaxCodeGuidAsync()
+            {
+                var commerceTaxCodes = await referenceDataRepo.GetCommerceTaxCodesAsync(It.IsAny<bool>());
+                for (int i = 0; i < allCommerceTaxCodes.Count(); i++)
+                {
+                    var commerceTaxCodeGuid = await referenceDataRepo.GetCommerceTaxCodeGuidAsync(commerceTaxCodes.ElementAt(i).Code);
+                    Assert.AreEqual(allCommerceTaxCodes.ElementAt(i).Guid, commerceTaxCodeGuid);                    
+                }
+            }
+
+
 
             private ReferenceDataRepository BuildValidReferenceDataRepository()
             {
@@ -929,15 +971,42 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     {
                         Recordkey = record.Code,
                         ApTaxDesc = record.Description,
-                        RecordGuid = record.Guid
+                        RecordGuid = record.Guid,
+                        ApTaxEffectiveDate = record.ApTaxEffectiveDates
                     }).ToList());
+
+                //Guids
+                dataAccessorMock.Setup(repo => repo.SelectAsync("LDM.GUID", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(),
+                    It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(guids);
+                //Ids
+                dataAccessorMock.Setup(repo => repo.SelectAsync("LDM.GUID", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(guids);
+
+                var ldmRecords = new Collection<LdmGuid>()
+                {
+                    new LdmGuid()
+                    {
+                        Recordkey = "625c69ff-280b-4ed3-9474-662a43616a8a", LdmGuidEntity = "AP.TAXES", LdmGuidPrimaryKey = "BA"                                                                                             
+                    },
+                    new LdmGuid()
+                    {
+                        Recordkey = "bfea651b-8e27-4fcd-abe3-04573443c04c", LdmGuidEntity = "AP.TAXES", LdmGuidPrimaryKey = "CA"
+                    },
+                    new LdmGuid()
+                    {
+                        Recordkey = "9ae3a175-1dfd-4937-b97b-3c9ad596e023", LdmGuidEntity = "AP.TAXES", LdmGuidPrimaryKey = "CC"
+                    },
+                    new LdmGuid()
+                    {
+                        Recordkey = "e9e6837f-2c51-431b-9069-4ac4c0da3041", LdmGuidEntity = "AP.TAXES", LdmGuidPrimaryKey = "EP"
+                    }
+                };
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<LdmGuid>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(ldmRecords);
 
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<ApTaxes>("AP.TAXES", "", true))
                     .ReturnsAsync(taxesCollection);
-
+                
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
                     .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
-
 
                 dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
                 {
@@ -952,7 +1021,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -971,7 +1040,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<ILogger> loggerMock;
             IEnumerable<County> allCounties;
             string codeItemName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
@@ -985,6 +1054,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllCounties");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -1064,7 +1135,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -1082,7 +1153,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<ILogger> loggerMock;
             IEnumerable<Denomination> allDenominations;
             string codeItemName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
@@ -1096,6 +1167,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllDenominations");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -1175,7 +1248,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -1194,7 +1267,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             string _cacheKey;            
             IEnumerable<Department> _allDepartments;         
             private ReferenceDataRepository _referenceDataRepo;
-           
+            private ApiSettings apiSettings;
+
             [TestInitialize]
             public void Initialize()
             {
@@ -1203,6 +1277,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
                 _referenceDataRepo = BuildValidReferenceDataRepository();
                 _cacheKey = _referenceDataRepo.BuildFullCacheKey("AllBaseDepartments");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -1268,6 +1344,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 }
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<Depts>("DEPTS", It.IsAny<GuidLookup[]>(), It.IsAny<bool>())).ReturnsAsync(records);
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<Depts>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(records);
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<Depts>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(records);
 
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                  x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
@@ -1301,7 +1378,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 return new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object,
-                     loggerMock.Object);
+                     loggerMock.Object, apiSettings);
 
             }
         }
@@ -1319,6 +1396,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             IEnumerable<EmailType> allEmailTypes;
             ApplValcodes emailTypeValcodeResponse;
             string valcodeName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -1335,6 +1413,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build emailType repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 valcodeName = referenceDataRepo.BuildFullCacheKey("CORE_PERSON.EMAIL.TYPES_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -1454,7 +1534,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -1517,11 +1597,355 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 return emailTypesResponse;
             }
         }
+               
 
-        /// <summary>
-        /// Test class for Ethnicity codes
-        /// </summary>
         [TestClass]
+        public class IntgPersonEmerPhoneTypesTests
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ILogger> loggerMock;
+            IEnumerable<IntgPersonEmerPhoneTypes> allIntgPersonEmerPhoneTypes;
+            ApplValcodes emergencyContactPhoneAvailabilitiesValcodeResponse;
+            string domainEntityNameName;
+            ApiSettings apiSettings;
+
+            Mock<IReferenceDataRepository> referenceDataRepositoryMock;
+            IReferenceDataRepository referenceDataRepository;
+            ReferenceDataRepository referenceDataRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+                apiSettings = new ApiSettings("TEST");
+
+                allIntgPersonEmerPhoneTypes = new TestPersonEmerPhoneTypesRepository().GetIntgPersonEmerPhoneTypesAsync();
+                emergencyContactPhoneAvailabilitiesValcodeResponse = BuildValcodeResponse(allIntgPersonEmerPhoneTypes);
+                var emergencyContactPhoneAvailabilitiesValResponse = new List<string>() { "2" };
+                emergencyContactPhoneAvailabilitiesValcodeResponse.ValActionCode1 = emergencyContactPhoneAvailabilitiesValResponse;
+
+                referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                referenceDataRepository = referenceDataRepositoryMock.Object;
+
+                referenceDataRepo = BuildValidReferenceDataRepository();
+                domainEntityNameName = referenceDataRepo.BuildFullCacheKey("CORE_INTG.PERSON.EMER.PHONE.TYPES_GUID");
+
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                   x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                   .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                emergencyContactPhoneAvailabilitiesValcodeResponse = null;
+                allIntgPersonEmerPhoneTypes = null;
+                referenceDataRepo = null;
+            }
+
+
+            [TestMethod]
+            public async Task BaseReferenceDataRepo_GetsIntgPersonEmerPhoneTypesCacheAsync()
+            {
+                var emergencyContactPhoneAvailabilities = await referenceDataRepo.GetIntgPersonEmerPhoneTypesAsync(false);
+
+                for (int i = 0; i < allIntgPersonEmerPhoneTypes.Count(); i++)
+                {
+                    Assert.AreEqual(allIntgPersonEmerPhoneTypes.ElementAt(i).Code, emergencyContactPhoneAvailabilities.ElementAt(i).Code);
+                    Assert.AreEqual(allIntgPersonEmerPhoneTypes.ElementAt(i).Description, emergencyContactPhoneAvailabilities.ElementAt(i).Description);
+                }
+            }
+
+            [TestMethod]
+            public async Task BaseReferenceDataRepo_GetsIntgPersonEmerPhoneTypesNonCacheAsync()
+            {
+                var statuses = await referenceDataRepo.GetIntgPersonEmerPhoneTypesAsync(true);
+
+                for (int i = 0; i < allIntgPersonEmerPhoneTypes.Count(); i++)
+                {
+                    Assert.AreEqual(allIntgPersonEmerPhoneTypes.ElementAt(i).Code, statuses.ElementAt(i).Code);
+                    Assert.AreEqual(allIntgPersonEmerPhoneTypes.ElementAt(i).Description, statuses.ElementAt(i).Description);
+                }
+            }
+
+            [TestMethod]
+            public async Task BaseReferenceDataRepo_GetIntgPersonEmerPhoneTypes_WritesToCacheAsync()
+            {
+
+                // Set up local cache mock to respond to cache request:
+                //  -to "Contains" request, return "false" to indicate item is not in cache
+                //  -to cache "Get" request, return null so we know it's reading from the "repository"
+                cacheProviderMock.Setup(x => x.Contains(domainEntityNameName, null)).Returns(false);
+                cacheProviderMock.Setup(x => x.Get(domainEntityNameName, null)).Returns(null);
+
+                // return a valid response to the data accessor request
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "INTG.PERSON.EMER.PHONE.TYPES", It.IsAny<bool>())).ReturnsAsync(emergencyContactPhoneAvailabilitiesValcodeResponse);
+
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                 x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                 .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                // But after data accessor read, set up mocking so we can verify the list of emergencyContactPhoneAvailabilities was written to the cache
+                cacheProviderMock.Setup(x => x.Add(It.IsAny<string>(), It.IsAny<Task<List<IntgPersonEmerPhoneTypes>>>(), It.IsAny<CacheItemPolicy>(), null)).Verifiable();
+
+                cacheProviderMock.Setup(x => x.Contains(referenceDataRepo.BuildFullCacheKey("CORE_INTG.PERSON.EMER.PHONE.TYPES"), null)).Returns(true);
+                var emergencyContactPhoneAvailabilities = await referenceDataRepo.GetIntgPersonEmerPhoneTypesAsync(false);
+                cacheProviderMock.Setup(x => x.Get(referenceDataRepo.BuildFullCacheKey("CORE_INTG.PERSON.EMER.PHONE.TYPES"), null)).Returns(emergencyContactPhoneAvailabilities);
+                // Verify that emergencyContactPhoneAvailabilities were returned, which means they came from the "repository".
+                Assert.IsTrue(emergencyContactPhoneAvailabilities.Count() == 3);
+
+                // Verify that the emergencyContactPhoneAvailabilities item was added to the cache after it was read from the repository
+                cacheProviderMock.Verify(m => m.Add(It.IsAny<string>(), It.IsAny<Task<List<IntgPersonEmerPhoneTypes>>>(), It.IsAny<CacheItemPolicy>(), null), Times.Never);
+
+            }
+
+            [TestMethod]
+            public async Task BaseReferenceDataRepo_GetIntgPersonEmerPhoneTypes_GetsCachedIntgPersonEmerPhoneTypesAsync()
+            {
+                // Set up local cache mock to respond to cache request:
+                //  -to "Contains" request, return "true" to indicate item is in cache
+                //  -to "Get" request, return the cache item (in this case the "INTG.PERSON.EMER.PHONE.TYPES" cache item)
+                cacheProviderMock.Setup(x => x.Contains(domainEntityNameName, null)).Returns(true);
+                cacheProviderMock.Setup(x => x.Get(domainEntityNameName, null)).Returns(allIntgPersonEmerPhoneTypes).Verifiable();
+
+                // return null for request, so that if we have a result, it wasn't the data accessor that returned it.
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "INTG.PERSON.EMER.PHONE.TYPES", true)).ReturnsAsync(new ApplValcodes());
+
+                // Assert the emergencyContactPhoneAvailabilities are returned
+                Assert.IsTrue((await referenceDataRepo.GetIntgPersonEmerPhoneTypesAsync(false)).Count() == 3);
+                // Verify that the semergencyContactPhoneAvailabilities were retrieved from cache
+                cacheProviderMock.Verify(m => m.Get(domainEntityNameName, null));
+            }
+
+            private ReferenceDataRepository BuildValidReferenceDataRepository()
+            {
+                // transaction factory mock
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                // Cache Provider Mock
+                cacheProviderMock = new Mock<ICacheProvider>();
+                // Set up data accessor for mocking 
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+
+                // Set up dataAccessorMock as the object for the DataAccessor
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                // Setup response to emergencyContactPhoneAvailabilities domainEntityName read
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "INTG.PERSON.EMER.PHONE.TYPES", It.IsAny<bool>())).ReturnsAsync(emergencyContactPhoneAvailabilitiesValcodeResponse);
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
+                {
+                    var result = new Dictionary<string, RecordKeyLookupResult>();
+                    foreach (var recordKeyLookup in recordKeyLookups)
+                    {
+                        var emergencyContactPhoneAvailabilities = allIntgPersonEmerPhoneTypes.Where(e => e.Code == recordKeyLookup.SecondaryKey).FirstOrDefault();
+                        result.Add(string.Join("+", new string[] { "CORE.VALCODES", "INTG.PERSON.EMER.PHONE.TYPES", emergencyContactPhoneAvailabilities.Code }),
+                            new RecordKeyLookupResult() { Guid = emergencyContactPhoneAvailabilities.Guid });
+                    }
+                    return Task.FromResult(result);
+                });
+
+                // Construct repository
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+                return referenceDataRepo;
+            }
+
+            private ApplValcodes BuildValcodeResponse(IEnumerable<IntgPersonEmerPhoneTypes> emergencyContactPhoneAvailabilities)
+            {
+                ApplValcodes emergencyContactPhoneAvailabilitiesResponse = new ApplValcodes();
+                emergencyContactPhoneAvailabilitiesResponse.ValsEntityAssociation = new List<ApplValcodesVals>();
+                foreach (var item in emergencyContactPhoneAvailabilities)
+                {
+                    emergencyContactPhoneAvailabilitiesResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, "2", item.Code, "3", "", ""));
+                }
+                return emergencyContactPhoneAvailabilitiesResponse;
+            }
+        }
+
+        [TestClass]
+        public class IntgPersonEmerTypesTests
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ILogger> loggerMock;
+            IEnumerable<IntgPersonEmerTypes> allIntgPersonEmerTypes;
+            ApplValcodes emergencyContactTypesValcodeResponse;
+            string domainEntityNameName;
+            ApiSettings apiSettings;
+
+            Mock<IReferenceDataRepository> referenceDataRepositoryMock;
+            IReferenceDataRepository referenceDataRepository;
+            ReferenceDataRepository referenceDataRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+                apiSettings = new ApiSettings("TEST");
+
+                allIntgPersonEmerTypes = new TestPersonEmerTypesRepository().GetIntgPersonEmerTypesAsync();
+                emergencyContactTypesValcodeResponse = BuildValcodeResponse(allIntgPersonEmerTypes);
+                var emergencyContactTypesValResponse = new List<string>() { "2" };
+                emergencyContactTypesValcodeResponse.ValActionCode1 = emergencyContactTypesValResponse;
+
+                referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                referenceDataRepository = referenceDataRepositoryMock.Object;
+
+                referenceDataRepo = BuildValidReferenceDataRepository();
+                domainEntityNameName = referenceDataRepo.BuildFullCacheKey("CORE_INTG.PERSON.EMER.TYPES_GUID");
+
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                   x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                   .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                emergencyContactTypesValcodeResponse = null;
+                allIntgPersonEmerTypes = null;
+                referenceDataRepo = null;
+            }
+
+
+            [TestMethod]
+            public async Task BaseReferenceDataRepo_GetsIntgPersonEmerTypesCacheAsync()
+            {
+                var emergencyContactTypes = await referenceDataRepo.GetIntgPersonEmerTypesAsync(false);
+
+                for (int i = 0; i < allIntgPersonEmerTypes.Count(); i++)
+                {
+                    Assert.AreEqual(allIntgPersonEmerTypes.ElementAt(i).Code, emergencyContactTypes.ElementAt(i).Code);
+                    Assert.AreEqual(allIntgPersonEmerTypes.ElementAt(i).Description, emergencyContactTypes.ElementAt(i).Description);
+                }
+            }
+
+            [TestMethod]
+            public async Task BaseReferenceDataRepo_GetsIntgPersonEmerTypesNonCacheAsync()
+            {
+                var statuses = await referenceDataRepo.GetIntgPersonEmerTypesAsync(true);
+
+                for (int i = 0; i < allIntgPersonEmerTypes.Count(); i++)
+                {
+                    Assert.AreEqual(allIntgPersonEmerTypes.ElementAt(i).Code, statuses.ElementAt(i).Code);
+                    Assert.AreEqual(allIntgPersonEmerTypes.ElementAt(i).Description, statuses.ElementAt(i).Description);
+                }
+            }
+
+            [TestMethod]
+            public async Task BaseReferenceDataRepo_GetIntgPersonEmerTypes_WritesToCacheAsync()
+            {
+
+                // Set up local cache mock to respond to cache request:
+                //  -to "Contains" request, return "false" to indicate item is not in cache
+                //  -to cache "Get" request, return null so we know it's reading from the "repository"
+                cacheProviderMock.Setup(x => x.Contains(domainEntityNameName, null)).Returns(false);
+                cacheProviderMock.Setup(x => x.Get(domainEntityNameName, null)).Returns(null);
+
+                // return a valid response to the data accessor request
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "INTG.PERSON.EMER.TYPES", It.IsAny<bool>())).ReturnsAsync(emergencyContactTypesValcodeResponse);
+
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                 x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                 .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                // But after data accessor read, set up mocking so we can verify the list of emergencyContactTypes was written to the cache
+                cacheProviderMock.Setup(x => x.Add(It.IsAny<string>(), It.IsAny<Task<List<IntgPersonEmerTypes>>>(), It.IsAny<CacheItemPolicy>(), null)).Verifiable();
+
+                cacheProviderMock.Setup(x => x.Contains(referenceDataRepo.BuildFullCacheKey("CORE_INTG.PERSON.EMER.TYPES"), null)).Returns(true);
+                var emergencyContactTypes = await referenceDataRepo.GetIntgPersonEmerTypesAsync(false);
+                cacheProviderMock.Setup(x => x.Get(referenceDataRepo.BuildFullCacheKey("CORE_INTG.PERSON.EMER.TYPES"), null)).Returns(emergencyContactTypes);
+                // Verify that emergencyContactTypes were returned, which means they came from the "repository".
+                Assert.IsTrue(emergencyContactTypes.Count() == 3);
+
+                // Verify that the emergencyContactTypes item was added to the cache after it was read from the repository
+                cacheProviderMock.Verify(m => m.Add(It.IsAny<string>(), It.IsAny<Task<List<IntgPersonEmerTypes>>>(), It.IsAny<CacheItemPolicy>(), null), Times.Never);
+
+            }
+
+            [TestMethod]
+            public async Task BaseReferenceDataRepo_GetIntgPersonEmerTypes_GetsCachedIntgPersonEmerTypesAsync()
+            {
+                // Set up local cache mock to respond to cache request:
+                //  -to "Contains" request, return "true" to indicate item is in cache
+                //  -to "Get" request, return the cache item (in this case the "INTG.PERSON.EMER.TYPES" cache item)
+                cacheProviderMock.Setup(x => x.Contains(domainEntityNameName, null)).Returns(true);
+                cacheProviderMock.Setup(x => x.Get(domainEntityNameName, null)).Returns(allIntgPersonEmerTypes).Verifiable();
+
+                // return null for request, so that if we have a result, it wasn't the data accessor that returned it.
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "INTG.PERSON.EMER.TYPES", true)).ReturnsAsync(new ApplValcodes());
+
+                // Assert the emergencyContactTypes are returned
+                Assert.IsTrue((await referenceDataRepo.GetIntgPersonEmerTypesAsync(false)).Count() == 3);
+                // Verify that the semergencyContactTypes were retrieved from cache
+                cacheProviderMock.Verify(m => m.Get(domainEntityNameName, null));
+            }
+
+            private ReferenceDataRepository BuildValidReferenceDataRepository()
+            {
+                // transaction factory mock
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                // Cache Provider Mock
+                cacheProviderMock = new Mock<ICacheProvider>();
+                // Set up data accessor for mocking 
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+
+                // Set up dataAccessorMock as the object for the DataAccessor
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                // Setup response to emergencyContactTypes domainEntityName read
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "INTG.PERSON.EMER.TYPES", It.IsAny<bool>())).ReturnsAsync(emergencyContactTypesValcodeResponse);
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
+                {
+                    var result = new Dictionary<string, RecordKeyLookupResult>();
+                    foreach (var recordKeyLookup in recordKeyLookups)
+                    {
+                        var emergencyContactTypes = allIntgPersonEmerTypes.Where(e => e.Code == recordKeyLookup.SecondaryKey).FirstOrDefault();
+                        result.Add(string.Join("+", new string[] { "CORE.VALCODES", "INTG.PERSON.EMER.TYPES", emergencyContactTypes.Code }),
+                            new RecordKeyLookupResult() { Guid = emergencyContactTypes.Guid });
+                    }
+                    return Task.FromResult(result);
+                });
+
+                // Construct repository
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+                return referenceDataRepo;
+            }
+
+            private ApplValcodes BuildValcodeResponse(IEnumerable<IntgPersonEmerTypes> emergencyContactTypes)
+            {
+                ApplValcodes emergencyContactTypesResponse = new ApplValcodes();
+                emergencyContactTypesResponse.ValsEntityAssociation = new List<ApplValcodesVals>();
+                foreach (var item in emergencyContactTypes)
+                {
+                    emergencyContactTypesResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, "2", item.Code, "3", "", ""));
+                }
+                return emergencyContactTypesResponse;
+            }
+        }
+
+    
+
+
+    /// <summary>
+    /// Test class for Ethnicity codes
+    /// </summary>
+    [TestClass]
         public class Ethnicities
         {
             Mock<IColleagueTransactionFactory> transFactoryMock;
@@ -1531,6 +1955,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             IEnumerable<Ethnicity> allEthnicity;
             ApplValcodes ethnicityValcodeResponse;
             string valcodeName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -1547,6 +1972,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build ethnicities repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 valcodeName = referenceDataRepo.BuildFullCacheKey("CORE_PERSON.ETHNICS_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -1660,7 +2087,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -1690,6 +2117,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             IEnumerable<GeographicAreaType> allGeographicAreaTypes;
             ApplValcodes geographicAreaTypeValcodeResponse;
             string valcodeName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -1705,6 +2133,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build geographic area types repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 valcodeName = referenceDataRepo.BuildFullCacheKey("CORE_INTG.GEO.AREA.TYPES_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -1819,7 +2249,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -1849,6 +2279,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             IEnumerable<IdentityDocumentType> allIdentityDocumentTypes;
             ApplValcodes identityDocumentTypeValcodeResponse;
             string valcodeName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -1864,6 +2295,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build identity document type repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 valcodeName = referenceDataRepo.BuildFullCacheKey("CORE_INTG.IDENTITY.DOC.TYPES_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -1978,7 +2411,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -2025,7 +2458,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             List<InstructionalPlatform> _allInstructionalPlatform;
             ApplValcodes _instructionalPlatformValcodeResponse;
             string _valcodeName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository _referenceDataRepo;
 
             [TestInitialize]
@@ -2047,6 +2480,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build instructional platforms repository
                 _referenceDataRepo = BuildValidReferenceDataRepository();
                 _valcodeName = _referenceDataRepo.BuildFullCacheKey("UT_PORTAL.LEARN.TARGETS_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -2158,7 +2593,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                _referenceDataRepo = new ReferenceDataRepository(_cacheProviderMock.Object, _transFactoryMock.Object, _loggerMock.Object);
+                _referenceDataRepo = new ReferenceDataRepository(_cacheProviderMock.Object, _transFactoryMock.Object, _loggerMock.Object, apiSettings);
 
                 return _referenceDataRepo;
             }
@@ -2189,7 +2624,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<ILogger> loggerMock;
             IEnumerable<Interest> allInterests;
             string codeItemName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
@@ -2203,6 +2638,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllHedmInterests");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -2287,7 +2724,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -2306,6 +2743,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             IEnumerable<InterestType> allInterestTypes;
             ApplValcodes interestTypeValcodeResponse;
             string valcodeName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -2442,7 +2880,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -2471,7 +2909,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<ILogger> loggerMock;
             IEnumerable<Location> allLocations;
             string codeItemName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
@@ -2485,6 +2923,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllLocations");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -2563,7 +3003,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -2582,6 +3022,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             IEnumerable<LocationTypeItem> allLocationTypes;
             ApplValcodes locationTypeValcodeResponse;
             string valcodeName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -2597,6 +3038,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build locationType repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 valcodeName = referenceDataRepo.BuildFullCacheKey("CORE_ADREL.TYPES_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -2722,7 +3165,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -2817,6 +3260,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             IEnumerable<MaritalStatus> allMaritalStatuses;
             ApplValcodes maritalStatusValcodeResponse;
             string valcodeName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -2832,6 +3276,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build marital statuses repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 valcodeName = referenceDataRepo.BuildFullCacheKey("CORE_MARITAL.STATUSES_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -2957,7 +3403,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -2992,6 +3438,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
             public ReferenceDataRepository actualReferenceDataRepository;
             public TestCommunicationCodesRepository expectedCommunicationCodesRepository;
+            private ApiSettings apiSettings;
 
             [TestInitialize]
             public void TestInitialize()
@@ -3001,6 +3448,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 expectedCommunicationCodesRepository = new TestCommunicationCodesRepository();
   
                 actualReferenceDataRepository = BuildReferenceDataRepository();
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestMethod]
@@ -3091,6 +3540,48 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             }
 
             [TestMethod]
+            public void AllowAttachments_IsTrueWhenY_Test()
+            {
+                expectedCommunicationCodesRepository.communicationCodeData.Add(new TestCommunicationCodesRepository.CommunicationCodeRecord()
+                {
+                    Guid = "5bce3016-b7de-4e7e-ac7f-b53714a15f1c",
+                    RecordKey = "FOOBAR",
+                    CcDescription = "description",
+                    CcAllowsAttachments = "y"
+                });
+
+                CollectionAssert.AreEqual(expectedCommunicationCodes, actualCommunicationCodes);
+
+                var actual = actualCommunicationCodes.First(c => c.Code == "FOOBAR");
+                Assert.IsTrue(actual.AllowsAttachments);
+            }
+
+            [TestMethod]
+            public void AllowAttachments_IsFalseWhenN_Test()
+            {
+                expectedCommunicationCodesRepository.communicationCodeData.Add(new TestCommunicationCodesRepository.CommunicationCodeRecord()
+                {
+                    Guid = "5bce3016-b7de-4e7e-ac7f-b53714a15f1c",
+                    RecordKey = "FOOBAR",
+                    CcDescription = "description",
+                    CcAllowsAttachments = "n"
+                });
+
+                CollectionAssert.AreEqual(expectedCommunicationCodes, actualCommunicationCodes);
+
+                var actual = actualCommunicationCodes.First(c => c.Code == "FOOBAR");
+                Assert.IsFalse(actual.AllowsAttachments);
+            }
+            [TestMethod]
+            public void AllowAttachments_IsFalseWhenNull_Test()
+            {
+                CollectionAssert.AreEqual(expectedCommunicationCodes, actualCommunicationCodes);
+
+                var actual = actualCommunicationCodes.First(c => c.Code == "CcCode1");
+                Assert.IsFalse(actual.AllowsAttachments);
+            }
+
+            [TestMethod]
             public void NullUrlsInRecord_EmptyHyperlinksList()
             {
                 expectedCommunicationCodesRepository.communicationCodeData.ForEach(cc => cc.CcUrls = null);
@@ -3137,6 +3628,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                                 CcExplanation = record.CcExplanation,
                                 CcFaYear = record.CcFaYear,
                                 CcOffice = record.CcOffice,
+                                CcAllowAttachments = record.CcAllowsAttachments,
                                 CcUrlsEntityAssociation = record.CcUrls == null ? null : record.CcUrls.Select(url =>
                                     new CcCodesCcUrls()
                                     {
@@ -3149,7 +3641,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 loggerMock.Setup(l => l.IsWarnEnabled).Returns(true);
                 loggerMock.Setup(l => l.IsInfoEnabled).Returns(true);
 
-                return new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);           
+                return new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);           
             }
         }
 
@@ -3164,6 +3656,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             IEnumerable<CommunicationCode> allAdmissionApplicationSupportingItemTypes;
             string codeItemName;
             ReferenceDataRepository referenceDataRepo;
+            private ApiSettings apiSettings;
 
             [TestInitialize]
             public void Initialize()
@@ -3176,6 +3669,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllCommunicationCodesHedm");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -3268,7 +3763,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 dataAccessorMock.Setup(i => i.ReadRecord<LdmDefaults>(fileName, field, It.IsAny<bool>())).Returns(ldmDefaults);
                 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -3283,7 +3778,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<ILogger> loggerMock;
             IEnumerable<Location> allLocations;
             string codeItemName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
@@ -3297,6 +3792,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllLocations");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -3401,7 +3898,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -3416,7 +3913,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<ILogger> loggerMock;
             IEnumerable<Location> allLocations;
             string codeItemName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
@@ -3430,6 +3927,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllLocations");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -3538,7 +4037,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -3558,6 +4057,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             IEnumerable<Ellucian.Colleague.Domain.Base.Entities.MilStatuses> allMilStatuses;
             ApplValcodes milStatusValcodeResponse;
             string valcodeName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -3573,6 +4073,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build race repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 valcodeName = referenceDataRepo.BuildFullCacheKey("CORE_MIL.STATUSES_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -3688,7 +4190,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -3733,7 +4235,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<ILogger> loggerMock;
             IEnumerable<OtherCcd> allOtherCcds;
             string codeItemName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
@@ -3747,6 +4249,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("BaseAllOtherCcds");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -3818,7 +4322,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -3833,7 +4337,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<ILogger> loggerMock;
             IEnumerable<OtherDegree> allOtherDegrees;
             string codeItemName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
@@ -3847,6 +4351,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("BaseAllOtherDegrees");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -3918,7 +4424,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -3936,7 +4442,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<ILogger> loggerMock;
             IEnumerable<OtherHonor> allOtherHonors;
             string codeItemName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
@@ -3950,6 +4456,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("BaseAllOtherHonors");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -4029,7 +4537,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -4044,7 +4552,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<ILogger> loggerMock;
             IEnumerable<OtherMajor> allOtherMajors;
             string codeItemName;
-
+            private ApiSettings apiSettings;
+            
             ReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
@@ -4058,6 +4567,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllOtherMajors");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -4138,7 +4649,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -4153,7 +4664,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<ILogger> loggerMock;
             IEnumerable<OtherMinor> allOtherMinors;
             string codeItemName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
@@ -4167,6 +4678,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllOtherMinors");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -4246,7 +4759,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -4261,7 +4774,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<ILogger> loggerMock;
             IEnumerable<OtherSpecial> allOtherSpecials;
             string codeItemName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
@@ -4275,6 +4788,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllOtherSpecials");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -4354,7 +4869,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -4369,7 +4884,9 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             public void TestInitialize()
             {
                 MockInitialize();
-                actualReferenceDataRepository = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                actualReferenceDataRepository = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -4448,6 +4965,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             IEnumerable<PersonalPronounType> allPersonalPronounTypes;
             ApplValcodes personalPronounTypeValcodeResponse;
             string valcodeName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -4468,6 +4986,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build personalPronounType repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 valcodeName = referenceDataRepo.BuildFullCacheKey("CORE_PERSONAL.PRONOUNS_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -4590,7 +5110,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -4618,6 +5138,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             IEnumerable<GenderIdentityType> allGenderIdentityTypes;
             ApplValcodes genderIdentityTypeValcodeResponse;
             string valcodeName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -4638,6 +5159,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build genderIdentityType repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 valcodeName = referenceDataRepo.BuildFullCacheKey("CORE_GENDER.IDENTITIES_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -4760,7 +5283,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -4777,165 +5300,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             }
 
         }
-
-        /// <summary>
-        /// Test class for PersonalRelationshipStatuses codes
-        /// </summary>
-        [TestClass]
-        public class PersonalRelationshipStatusesTests
-        {
-            Mock<IColleagueTransactionFactory> transFactoryMock;
-            Mock<ICacheProvider> cacheProviderMock;
-            Mock<IColleagueDataReader> dataAccessorMock;
-            Mock<ILogger> loggerMock;
-            IEnumerable<PersonalRelationshipStatus> allPersonalRelationshipStatuses;
-            ApplValcodes PersonalRelationshipStatusValcodeResponse;
-            string valcodeName;
-
-            ReferenceDataRepository referenceDataRepo;
-
-            [TestInitialize]
-            public void Initialize()
-            {
-                loggerMock = new Mock<ILogger>();
-
-                // Build personal relationship statuses responses used for mocking
-                allPersonalRelationshipStatuses = new TestPersonalRelationshipStatusRepository().GetPersonalRelationshipStatuses();
-                PersonalRelationshipStatusValcodeResponse = BuildValcodeResponse(allPersonalRelationshipStatuses);
-
-                // Build personal relationship statuses repository
-                referenceDataRepo = BuildValidReferenceDataRepository();
-                valcodeName = referenceDataRepo.BuildFullCacheKey("CORE_RELATION.STATUSES_GUID");
-            }
-
-            [TestCleanup]
-            public void Cleanup()
-            {
-                transFactoryMock = null;
-                dataAccessorMock = null;
-                cacheProviderMock = null;
-                PersonalRelationshipStatusValcodeResponse = null;
-                allPersonalRelationshipStatuses = null;
-                referenceDataRepo = null;
-            }
-
-            [TestMethod]
-            public async Task GetsPersonalRelationshipStatusesCacheAsync()
-            {
-                var personalRelationshipStatuses = await referenceDataRepo.GetPersonalRelationshipStatusesAsync(false);
-                for (int i = 0; i < personalRelationshipStatuses.Count(); i++)
-                {
-                    Assert.AreEqual(allPersonalRelationshipStatuses.ElementAt(i).Code, personalRelationshipStatuses.ElementAt(i).Code);
-                    Assert.AreEqual(allPersonalRelationshipStatuses.ElementAt(i).Description, personalRelationshipStatuses.ElementAt(i).Description);
-                }
-            }
-
-            [TestMethod]
-            public async Task GetsPersonalRelationshipStatusesNonCacheAsync()
-            {
-                var personalRelationshipStatuses = await referenceDataRepo.GetPersonalRelationshipStatusesAsync(true);
-                for (int i = 0; i < personalRelationshipStatuses.Count(); i++)
-                {
-                    Assert.AreEqual(allPersonalRelationshipStatuses.ElementAt(i).Code, personalRelationshipStatuses.ElementAt(i).Code);
-                    Assert.AreEqual(allPersonalRelationshipStatuses.ElementAt(i).Description, personalRelationshipStatuses.ElementAt(i).Description);
-                }
-            }
-
-            [TestMethod]
-            public async Task GetPersonalRelationshipStatuses_WritesToCacheAsync()
-            {
-
-                // Set up local cache mock to respond to cache request:
-                //  -to "Contains" request, return "false" to indicate item is not in cache
-                //  -to cache "Get" request, return null so we know it's reading from the "repository"
-                cacheProviderMock.Setup(x => x.Contains(valcodeName, null)).Returns(false);
-                cacheProviderMock.Setup(x => x.Get(valcodeName, null)).Returns(null);
-
-                // return a valid response to the data accessor request
-                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(PersonalRelationshipStatusValcodeResponse);
-
-                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
-                 x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
-                 .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
-
-                // But after data accessor read, set up mocking so we can verify the list of personal relationship statuses was written to the cache
-                cacheProviderMock.Setup(x => x.Add(It.IsAny<string>(), It.IsAny<Task<IEnumerable<PersonalRelationshipStatus>>>(), It.IsAny<CacheItemPolicy>(), null)).Verifiable();
-
-                cacheProviderMock.Setup(x => x.Contains(referenceDataRepo.BuildFullCacheKey("CORE_RELATION.STATUSES"), null)).Returns(true);
-                var personalRelationshipStatuses = await referenceDataRepo.GetPersonalRelationshipStatusesAsync(false);
-                cacheProviderMock.Setup(x => x.Get(referenceDataRepo.BuildFullCacheKey("CORE_RELATION.STATUSES"), null)).Returns(personalRelationshipStatuses);
-                // Verify that personal relationship statuses were returned, which means they came from the "repository".
-                Assert.IsTrue(personalRelationshipStatuses.Count() == 4);
-
-                // Verify that the personal relationship status item was added to the cache after it was read from the repository
-                cacheProviderMock.Verify(m => m.Add(It.IsAny<string>(), It.IsAny<Task<IEnumerable<MaritalStatus>>>(), It.IsAny<CacheItemPolicy>(), null), Times.Never);
-
-            }
-
-            [TestMethod]
-            public async Task GetPersonalRelationshipStatuses_GetsCachedPersonalRelationshipStatusesAsync()
-            {
-                // Set up local cache mock to respond to cache request:
-                //  -to "Contains" request, return "true" to indicate item is in cache
-                //  -to "Get" request, return the cache item (in this case the "RELATION.STATUSES" cache item)
-                cacheProviderMock.Setup(x => x.Contains(valcodeName, null)).Returns(true);
-                cacheProviderMock.Setup(x => x.Get(valcodeName, null)).Returns(allPersonalRelationshipStatuses).Verifiable();
-
-                // return null for request, so that if we have a result, it wasn't the data accessor that returned it.
-                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "RELATION.STATUSES", true)).ReturnsAsync(new ApplValcodes());
-
-                // Assert the personal relationship statuses are returned
-                Assert.IsTrue((await referenceDataRepo.GetPersonalRelationshipStatusesAsync(false)).Count() == 4);
-                // Verify that the personal relationship statuses were retrieved from cache
-                cacheProviderMock.Verify(m => m.Get(valcodeName, null));
-            }
-
-            private ReferenceDataRepository BuildValidReferenceDataRepository()
-            {
-                // transaction factory mock
-                transFactoryMock = new Mock<IColleagueTransactionFactory>();
-                // Cache Provider Mock
-                cacheProviderMock = new Mock<ICacheProvider>();
-                // Set up data accessor for mocking 
-                dataAccessorMock = new Mock<IColleagueDataReader>();
-
-                // Set up dataAccessorMock as the object for the DataAccessor
-                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
-
-                // Setup response to pesonal relationship status valcode read
-                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "RELATION.STATUSES", It.IsAny<bool>())).ReturnsAsync(PersonalRelationshipStatusValcodeResponse);
-                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
-                .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
-
-                dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
-                {
-                    var result = new Dictionary<string, RecordKeyLookupResult>();
-                    foreach (var recordKeyLookup in recordKeyLookups)
-                    {
-                        var maritalStatus = allPersonalRelationshipStatuses.Where(e => e.Code == recordKeyLookup.SecondaryKey).FirstOrDefault();
-                        result.Add(string.Join("+", new string[] { "CORE.VALCODES", "RELATION.STATUSES", maritalStatus.Code }),
-                            new RecordKeyLookupResult() { Guid = maritalStatus.Guid });
-                    }
-                    return Task.FromResult(result);
-                });
-
-                // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
-
-                return referenceDataRepo;
-            }
-
-            private ApplValcodes BuildValcodeResponse(IEnumerable<PersonalRelationshipStatus> personalRelationshipStatuses)
-            {
-                ApplValcodes valcodeResponse = new ApplValcodes();
-                valcodeResponse.ValsEntityAssociation = new List<ApplValcodesVals>();
-                foreach (var item in personalRelationshipStatuses)
-                {
-                    valcodeResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, "", item.Code, "", "", ""));
-                }
-                return valcodeResponse;
-            }
-        }
+        
 
         /// <summary>
         /// Test class for Person Filters codes
@@ -4949,7 +5314,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<ILogger> loggerMock;
             IEnumerable<PersonFilter> allPersonFilters;
             string codeItemName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
@@ -4963,6 +5328,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllPersonFilters");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -5042,7 +5409,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -5061,6 +5428,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             IEnumerable<PersonNameTypeItem> allPersonNameTypes;
             ApplValcodes personNameTypeValcodeResponse;
             string valcodeName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -5077,6 +5445,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build personNameType repository
                 referenceDataRepo = BuildPersonNameTypesValidReferenceDataRepository();
                 valcodeName = referenceDataRepo.BuildFullCacheKey("CORE_INTG.PERSON.NAME.TYPES_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -5192,7 +5562,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -5210,6 +5580,179 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         }
 
         [TestClass]
+        public class PersonOriginCodesTests
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ILogger> loggerMock;
+            IEnumerable<PersonOriginCodes> allPersonOriginCodes;
+            ApplValcodes PersonOriginCodesValcodeResponse;
+            string valcodeName;
+            private ApiSettings apiSettings;
+
+            ReferenceDataRepository referenceDataRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+
+                // Build personal pronoun type responses used for mocking
+                allPersonOriginCodes = new List<PersonOriginCodes>
+                {
+                    new PersonOriginCodes("1", "R", "Recruitment Activities"),
+                    new PersonOriginCodes("2", "CC", "Corporate Contact"),
+                    new PersonOriginCodes("3", "ML", "Mailing List"),
+                };
+                PersonOriginCodesValcodeResponse = BuildValcodeResponse(allPersonOriginCodes);
+
+                // Build PersonOriginCodes repository
+                referenceDataRepo = BuildValidReferenceDataRepository();
+                valcodeName = referenceDataRepo.BuildFullCacheKey("CORE_PERSON.ORIGIN.CODES_GUID");
+
+                apiSettings = new ApiSettings("TEST");
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                //localCacheMock = null;
+                PersonOriginCodesValcodeResponse = null;
+                allPersonOriginCodes = null;
+                referenceDataRepo = null;
+            }
+
+            [TestMethod]
+            public async Task GetsPersonOriginCodesCache()
+            {
+                var actualPersonOriginCodes = await referenceDataRepo.GetPersonOriginCodesAsync(false);
+                for (int i = 0; i < allPersonOriginCodes.Count(); i++)
+                {
+                    Assert.AreEqual(allPersonOriginCodes.ElementAt(i).Code, actualPersonOriginCodes.ElementAt(i).Code);
+                    Assert.AreEqual(allPersonOriginCodes.ElementAt(i).Description, actualPersonOriginCodes.ElementAt(i).Description);
+
+                }
+            }
+
+            [TestMethod]
+            public async Task GetsPersonOriginCodesNonCache()
+            {
+
+                for (int i = 0; i < allPersonOriginCodes.Count(); i++)
+                {
+                    Assert.AreEqual(allPersonOriginCodes.ElementAt(i).Code, (await referenceDataRepo.GetPersonOriginCodesAsync(true)).ElementAt(i).Code);
+                    Assert.AreEqual(allPersonOriginCodes.ElementAt(i).Description, (await referenceDataRepo.GetPersonOriginCodesAsync(true)).ElementAt(i).Description);
+
+                }
+            }
+
+            [TestMethod]
+            public async Task GetPersonOriginCodes_WritesToCache()
+            {
+                // Set up local cache mock to respond to cache request:
+                //  -to "Contains" request, return "false" to indicate item is not in cache
+                //  -to cache "Get" request, return null so we know it's reading from the "repository"
+                cacheProviderMock.Setup(x => x.Contains(valcodeName, null)).Returns(false);
+                cacheProviderMock.Setup(x => x.Get(valcodeName, null)).Returns(null);
+
+                // return a valid response to the data accessor request
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "PERSON.ORIGIN.CODES", It.IsAny<bool>())).ReturnsAsync(PersonOriginCodesValcodeResponse);
+
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                 x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                 .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+
+                // But after data accessor read, set up mocking so we can verify the list of PersonOriginCodes was written to the cache
+                cacheProviderMock.Setup(x => x.Add(It.IsAny<string>(), It.IsAny<Task<List<PersonOriginCodes>>>(), It.IsAny<CacheItemPolicy>(), null)).Verifiable();
+
+                cacheProviderMock.Setup(x => x.Contains(referenceDataRepo.BuildFullCacheKey("CORE_PERSON.ORIGIN.CODES"), null)).Returns(true);
+                var PersonOriginCodes = await referenceDataRepo.GetPersonOriginCodesAsync(false);
+                cacheProviderMock.Setup(x => x.Get(referenceDataRepo.BuildFullCacheKey("CORE_PERSON.ORIGIN.CODES"), null)).Returns(PersonOriginCodes);
+
+                // Verify that PersonOriginCodes were returned, which means they came from the "repository".
+                Assert.IsTrue(PersonOriginCodes.Count() == 3);
+
+                // Verify that the PersonOriginCodes item was added to the cache after it was read from the repository
+                cacheProviderMock.Verify(m => m.Add(It.IsAny<string>(), It.IsAny<Task<List<PersonOriginCodes>>>(), It.IsAny<CacheItemPolicy>(), null), Times.Never);
+            }
+
+            [TestMethod]
+            public async Task GetPersonOriginCodes_GetsCachedPersonOriginCodes()
+            {
+                // Set up local cache mock to respond to cache request:
+                //  -to "Contains" request, return "true" to indicate item is in cache
+                //  -to "Get" request, return the cache item (in this case the "PERSONAL.PRONOUNS" cache item)
+                cacheProviderMock.Setup(x => x.Contains(valcodeName, null)).Returns(true);
+                cacheProviderMock.Setup(x => x.Get(valcodeName, null)).Returns(allPersonOriginCodes).Verifiable();
+
+                // return null for request, so that if we have a result, it wasn't the data accessor that returned it.
+                dataAccessorMock.Setup<ApplValcodes>(acc => acc.ReadRecord<ApplValcodes>("CORE.VALCODES", "PERSON.ORIGIN.CODES", true)).Returns(new ApplValcodes());
+
+                // Assert the PersonOriginCodes are returned
+                Assert.IsTrue((await referenceDataRepo.GetPersonOriginCodesAsync(false)).Count() == 3);
+                // Verify that the PersonOriginCodes were retrieved from cache
+                cacheProviderMock.Verify(m => m.Get(valcodeName, null));
+            }
+
+            private ReferenceDataRepository BuildValidReferenceDataRepository()
+            {
+                // transaction factory mock
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                // Cache Mock
+                //localCacheMock = new Mock<ObjectCache>();
+                // Cache Provider Mock
+                cacheProviderMock = new Mock<ICacheProvider>();
+                // Set up data accessor for mocking 
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+
+                // Set up dataAccessorMock as the object for the DataAccessor
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                // Setup response to personal pronoun types valcode read
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "PERSON.ORIGIN.CODES", It.IsAny<bool>())).ReturnsAsync(PersonOriginCodesValcodeResponse);
+
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                 x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                 .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
+                {
+                    var result = new Dictionary<string, RecordKeyLookupResult>();
+                    foreach (var recordKeyLookup in recordKeyLookups)
+                    {
+                        var addressType = allPersonOriginCodes.Where(e => e.Code == recordKeyLookup.SecondaryKey).FirstOrDefault();
+                        result.Add(string.Join("+", new string[] { "CORE.VALCODES", "PERSON.ORIGIN.CODES", addressType.Code }),
+                            new RecordKeyLookupResult() { Guid = addressType.Guid });
+                    }
+                    return Task.FromResult(result);
+                });
+
+
+                // Construct repository
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+                return referenceDataRepo;
+            }
+
+            private ApplValcodes BuildValcodeResponse(IEnumerable<PersonOriginCodes> PersonOriginCodes)
+            {
+                ApplValcodes PersonOriginCodesResponse = new ApplValcodes();
+                PersonOriginCodesResponse.ValsEntityAssociation = new List<ApplValcodesVals>();
+                foreach (var item in PersonOriginCodes)
+                {
+                    PersonOriginCodesResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, "", item.Code, "", "", ""));
+                }
+                return PersonOriginCodesResponse;
+            }
+
+        }
+        
+        [TestClass]
         public class PrefixesTests : BaseRepositorySetup
         {
             public ReferenceDataRepository actualReferenceDataRepository;
@@ -5218,7 +5761,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             public void TestInitialize()
             {
                 MockInitialize();
-                actualReferenceDataRepository = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                actualReferenceDataRepository = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
             }
 
             [TestCleanup]
@@ -5735,6 +6278,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             IEnumerable<PrivacyStatus> allPrivacyStatuses;
             ApplValcodes privacyStatusValcodeResponse;
             string valcodeName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -5750,6 +6294,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build privacy statuses repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 valcodeName = referenceDataRepo.BuildFullCacheKey("CORE_PRIVACY.CODES_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -5864,7 +6410,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -5894,6 +6440,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Dictionary<string, string> allPrivacyMessages;
             Dflts dfltsResponse;
             string valcodeName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -5912,6 +6459,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
                 // Build privacy statuses repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -5957,7 +6506,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -5987,7 +6536,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             List<Ellucian.Colleague.Domain.Base.Entities.RelationshipStatus> _allRelationshipStatuses;
             ApplValcodes _relationshipStatusValcodeResponse;
             string _valcodeName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository _referenceDataRepo;
 
             [TestInitialize]
@@ -6003,6 +6552,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build RELATION.STATUSES repository
                 _referenceDataRepo = BuildValidReferenceDataRepository();
                 _valcodeName = _referenceDataRepo.BuildFullCacheKey("CORE_RELATION.STATUSES_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -6109,7 +6660,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                _referenceDataRepo = new ReferenceDataRepository(_cacheProviderMock.Object, _transFactoryMock.Object, _loggerMock.Object);
+                _referenceDataRepo = new ReferenceDataRepository(_cacheProviderMock.Object, _transFactoryMock.Object, _loggerMock.Object, apiSettings);
 
                 return _referenceDataRepo;
             }
@@ -6137,7 +6688,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<ILogger> loggerMock;
             IEnumerable<RelationType> allRelationTypes;
             string codeItemName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
@@ -6151,6 +6702,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllRelationTypes");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -6229,7 +6782,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Build  repository
-                return new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                return new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
             }
         }
 
@@ -6244,7 +6797,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<IColleagueDataReader> dataReaderMock;
             Mock<ILogger> loggerMock;
             ReferenceDataRepository referenceDataRepo;
- 
+            private ApiSettings apiSettings;
+
             [TestInitialize]
             public void Initialize()
             {
@@ -6261,8 +6815,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 dataReaderMock.Setup<Task<Collection<Data.Base.DataContracts.RelationTypes>>>(dr => dr.BulkReadRecordAsync<Data.Base.DataContracts.RelationTypes>(It.IsAny<string>(), "", true)).Returns(Task.FromResult(dataFromDataReader()));
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataReaderMock.Object);
 
+                apiSettings = new ApiSettings("TEST");
+
                 // Build  repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
             }
 
             [TestCleanup]
@@ -6310,6 +6866,129 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         }
 
         /// <summary>
+        /// Test class for EEDM RelationTypes codes
+        /// </summary>
+        [TestClass]
+        public class RelationTypesTests
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ILogger> loggerMock;
+            IEnumerable<Data.Base.DataContracts.RelationTypes> _relationshipTypesCollection;
+            string codeItemName;
+            private ApiSettings apiSettings;
+
+            ReferenceDataRepository referenceDataRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+
+                // Build responses used for mocking
+                _relationshipTypesCollection = new List<Data.Base.DataContracts.RelationTypes>()
+                {
+                    new Data.Base.DataContracts.RelationTypes(){RecordGuid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", Recordkey = "P", ReltyDesc="Parent", ReltyInverseRelationType = "C"},
+                    new Data.Base.DataContracts.RelationTypes(){RecordGuid = "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", Recordkey = "C", ReltyDesc="Child", ReltyInverseRelationType = "P"},
+                    new Data.Base.DataContracts.RelationTypes(){RecordGuid = "d2253ac7-9931-4560-b42f-1fccd43c952e", Recordkey = "CZ", ReltyDesc="Contact", ReltyInverseRelationType = "CZ"},
+                    new Data.Base.DataContracts.RelationTypes(){RecordGuid = "d2253ac7-9931-4560-b42f-1fccd43c9abc", Recordkey = "O", ReltyDesc="Other", ReltyInverseRelationType = ""},
+                };
+
+                // Build repository
+                referenceDataRepo = BuildValidReferenceDataRepository();
+                codeItemName = referenceDataRepo.BuildFullCacheKey("AllRelationTypes2");
+
+                apiSettings = new ApiSettings("TEST");
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                _relationshipTypesCollection = null;
+                referenceDataRepo = null;
+            }
+
+            [TestMethod]
+            public async Task GetsRelationTypesCacheAsync()
+            {
+                var result = await referenceDataRepo.GetRelationTypes2Async(false);
+
+                for (int i = 0; i < _relationshipTypesCollection.Count(); i++)
+                {
+                    Assert.AreEqual(_relationshipTypesCollection.ElementAt(i).RecordGuid, result.ElementAt(i).Guid);
+                    Assert.AreEqual(_relationshipTypesCollection.ElementAt(i).Recordkey, result.ElementAt(i).Code);
+                    Assert.AreEqual(_relationshipTypesCollection.ElementAt(i).ReltyDesc, result.ElementAt(i).Description);
+                    Assert.AreEqual(_relationshipTypesCollection.ElementAt(i).ReltyInverseRelationType, result.ElementAt(i).InverseRelType);
+                }
+            }
+
+            [TestMethod]
+            public async Task GetsRelationTypesNonCacheAsync()
+            {
+                var result = await referenceDataRepo.GetRelationTypes2Async(true);
+
+                for (int i = 0; i < _relationshipTypesCollection.Count(); i++)
+                {
+                    Assert.AreEqual(_relationshipTypesCollection.ElementAt(i).RecordGuid, result.ElementAt(i).Guid);
+                    Assert.AreEqual(_relationshipTypesCollection.ElementAt(i).Recordkey, result.ElementAt(i).Code);
+                    Assert.AreEqual(_relationshipTypesCollection.ElementAt(i).ReltyDesc, result.ElementAt(i).Description);
+                    Assert.AreEqual(_relationshipTypesCollection.ElementAt(i).ReltyInverseRelationType, result.ElementAt(i).InverseRelType);
+                }
+            }
+
+            private ReferenceDataRepository BuildValidReferenceDataRepository()
+            {
+                // transaction factory mock
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                // Cache Provider Mock
+                cacheProviderMock = new Mock<ICacheProvider>();
+                // Set up data accessor for mocking 
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+
+                // Set up dataAccessorMock as the object for the DataAccessor
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                // Setup response to RelationTypes read
+                var entityCollection = new Collection<Data.Base.DataContracts.RelationTypes>(_relationshipTypesCollection.Select(record =>
+                    new Data.Base.DataContracts.RelationTypes()
+                    {
+                        Recordkey = record.Recordkey,
+                        ReltyDesc = record.ReltyDesc,
+                        RecordGuid = record.RecordGuid,
+                        ReltyInverseRelationType = record.ReltyInverseRelationType
+                    }).ToList());
+
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<Data.Base.DataContracts.RelationTypes>("RELATION.TYPES", "", true))
+                    .ReturnsAsync(entityCollection);
+
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                    .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+
+                dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
+                {
+                    var result = new Dictionary<string, RecordKeyLookupResult>();
+                    foreach (var recordKeyLookup in recordKeyLookups)
+                    {
+                        var entity = _relationshipTypesCollection.Where(e => e.Recordkey == recordKeyLookup.PrimaryKey).FirstOrDefault();
+                        result.Add(string.Join("+", new string[] { "RELATIONTYPES", entity.Recordkey }),
+                            new RecordKeyLookupResult() { Guid = entity.RecordGuid });
+                    }
+                    return Task.FromResult(result);
+                });
+
+                // Construct repository
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+                return referenceDataRepo;
+            }
+        }
+
+        /// <summary>
         /// Test class for Remark Codes codes
         /// </summary>
         [TestClass]
@@ -6322,7 +7001,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             List<Ellucian.Colleague.Domain.Base.Entities.RemarkCode> _allRemarkCodes;
             ApplValcodes _remarkCodeValcodeResponse;
             string _valcodeName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository _referenceDataRepo;
 
             [TestInitialize]
@@ -6338,6 +7017,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build REMARK.CODES repository
                 _referenceDataRepo = BuildValidReferenceDataRepository();
                 _valcodeName = _referenceDataRepo.BuildFullCacheKey("CORE_REMARK.CODES_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -6368,6 +7049,17 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 {
                     Assert.AreEqual(_allRemarkCodes.ElementAt(i).Code, (await _referenceDataRepo.GetRemarkCodesAsync(true)).ElementAt(i).Code);
                     Assert.AreEqual(_allRemarkCodes.ElementAt(i).Description, (await _referenceDataRepo.GetRemarkCodesAsync(true)).ElementAt(i).Description);
+                }
+            }
+
+            [TestMethod]
+            public async Task ReferenceDataRepository_GetsRemarkCodesGuidAsync()
+            {
+                var remarkCodes = await _referenceDataRepo.GetRemarkCodesAsync(It.IsAny<bool>());
+                for (int i = 0; i < _allRemarkCodes.Count(); i++)
+                {
+                    var remarkCodeGuid = await _referenceDataRepo.GetRemarkCodesGuidAsync(remarkCodes.ElementAt(i).Code);
+                    Assert.AreEqual(_allRemarkCodes.ElementAt(i).Guid, remarkCodeGuid);
                 }
             }
 
@@ -6444,7 +7136,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                _referenceDataRepo = new ReferenceDataRepository(_cacheProviderMock.Object, _transFactoryMock.Object, _loggerMock.Object);
+                _referenceDataRepo = new ReferenceDataRepository(_cacheProviderMock.Object, _transFactoryMock.Object, _loggerMock.Object, apiSettings);
 
                 return _referenceDataRepo;
             }
@@ -6464,7 +7156,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         }
 
         /// <summary>
-        /// Test class for Remark Codes codes
+        /// Test class for Remark Types codes
         /// </summary>
         [TestClass]
         public class RemarkTypes
@@ -6476,7 +7168,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             List<Ellucian.Colleague.Domain.Base.Entities.RemarkType> _allRemarkTypes;
             ApplValcodes _remarkTypeValcodeResponse;
             string _valcodeName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository _referenceDataRepo;
 
             [TestInitialize]
@@ -6492,6 +7184,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build REMARK.TYPES repository
                 _referenceDataRepo = BuildValidReferenceDataRepository();
                 _valcodeName = _referenceDataRepo.BuildFullCacheKey("CORE_REMARK.TYPES_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -6524,6 +7218,19 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Assert.AreEqual(_allRemarkTypes.ElementAt(i).Description, (await _referenceDataRepo.GetRemarkTypesAsync(true)).ElementAt(i).Description);
                 }
             }
+
+
+            [TestMethod]
+            public async Task ReferenceDataRepository_GetsRemarkTypesGuidAsync()
+            {
+                var remarkTypes = await _referenceDataRepo.GetRemarkTypesAsync(It.IsAny<bool>());
+                for (int i = 0; i < _allRemarkTypes.Count(); i++)
+                {
+                    var remarkTypeGuid = await _referenceDataRepo.GetRemarkTypesGuidAsync(remarkTypes.ElementAt(i).Code);
+                    Assert.AreEqual(_allRemarkTypes.ElementAt(i).Guid, remarkTypeGuid);
+                }
+            }
+
 
             [TestMethod]
             public async Task ReferenceDataRepository_GetRemarkType_WritesToCache()
@@ -6603,7 +7310,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                _referenceDataRepo = new ReferenceDataRepository(_cacheProviderMock.Object, _transFactoryMock.Object, _loggerMock.Object);
+                _referenceDataRepo = new ReferenceDataRepository(_cacheProviderMock.Object, _transFactoryMock.Object, _loggerMock.Object, apiSettings);
 
                 return _referenceDataRepo;
             }
@@ -6636,6 +7343,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
             Mock<IColleagueTransactionInvoker> transManagerMock;
             IColleagueTransactionInvoker transManager;
+            private ApiSettings apiSettings;
 
             [TestInitialize]
             public void Initialize()
@@ -6650,6 +7358,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllRestrictions");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -6762,7 +7472,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -6777,7 +7487,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<ILogger> loggerMock;
             IEnumerable<Ellucian.Colleague.Domain.Base.Entities.RoomCharacteristic> roomCharacteristicEntities;
             ApplValcodes _roomCharacteristicValcodeResponse;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
@@ -6791,6 +7501,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 //codeItemName = referenceDataRepo.BuildFullCacheKey("AllRelationTypes");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             private void BuildData()
@@ -6868,7 +7580,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -6896,7 +7608,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<ILogger> loggerMock;
             IEnumerable<Ellucian.Colleague.Domain.Base.Entities.RoomTypes> allRoomTypes;
             string codeItemName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
@@ -6910,6 +7622,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllRelationTypes");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -7001,7 +7715,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -7020,7 +7734,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             IEnumerable<RoomWing> _allRoomWings;
             ApplValcodes _roomWingsValcodeResponse;
             string _valcodeName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository _referenceDataRepo;
 
             [TestInitialize]
@@ -7033,6 +7747,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
                 _referenceDataRepo = BuildValidReferenceDataRepository();
                 _valcodeName = _referenceDataRepo.BuildFullCacheKey("CORE_ROOM.WINGS_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -7146,7 +7862,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                _referenceDataRepo = new ReferenceDataRepository(_cacheProviderMock.Object, _transFactoryMock.Object, _loggerMock.Object);
+                _referenceDataRepo = new ReferenceDataRepository(_cacheProviderMock.Object, _transFactoryMock.Object, _loggerMock.Object, apiSettings);
 
                 return _referenceDataRepo;
             }
@@ -7174,7 +7890,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<ILogger> loggerMock;
             IEnumerable<ZipcodeXlat> allZipCodeXlats;
             string codeItemName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
@@ -7188,6 +7904,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllZipxlat");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -7266,7 +7984,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -7285,6 +8003,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             IEnumerable<SocialMediaType> allSocialMediaTypes;
             ApplValcodes socialMediaTypeValcodeResponse;
             string valcodeName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -7300,6 +8019,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build social media types repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 valcodeName = referenceDataRepo.BuildFullCacheKey("CORE_SOCIAL.MEDIA.NETWORKS_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -7415,7 +8136,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -7445,7 +8166,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             List<Ellucian.Colleague.Domain.Base.Entities.SourceContext> _allSourceContexts;
             ApplValcodes _sourceContextValcodeResponse;
             string _valcodeName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository _referenceDataRepo;
 
             [TestInitialize]
@@ -7461,6 +8182,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build INTG.SOURCE.CONTEXTS repository
                 _referenceDataRepo = BuildValidReferenceDataRepository();
                 _valcodeName = _referenceDataRepo.BuildFullCacheKey("CORE_INTG.SOURCE.CONTEXTS_GUID");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -7574,7 +8297,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                _referenceDataRepo = new ReferenceDataRepository(_cacheProviderMock.Object, _transFactoryMock.Object, _loggerMock.Object);
+                _referenceDataRepo = new ReferenceDataRepository(_cacheProviderMock.Object, _transFactoryMock.Object, _loggerMock.Object, apiSettings);
 
                 return _referenceDataRepo;
             }
@@ -7603,6 +8326,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             IEnumerable<Ellucian.Colleague.Domain.Base.Entities.GradeChangeReason> allGradeChangeReasonsTypes;
             ApplValcodes gradeChangeReasonTypeValcodeResponse;
             string valcodeName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -7619,6 +8343,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build emailType repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 valcodeName = referenceDataRepo.BuildFullCacheKey("INTG.GRADE.CHANGE.REASONS");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -7689,7 +8415,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -7719,6 +8445,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             IEnumerable<GeographicAreaType> allGeographicAreaTypes;
             ApplValcodes geographicAreaTypeValcodeResponse;
             string valcodeName;
+            private ApiSettings apiSettings;
 
             ReferenceDataRepository referenceDataRepo;
 
@@ -7735,6 +8462,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build emailType repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 valcodeName = referenceDataRepo.BuildFullCacheKey("INTG.GEO.AREA.TYPES");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -7807,7 +8536,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -7836,7 +8565,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             Mock<ILogger> loggerMock;
             IEnumerable<Vocation> allVocations;
             string codeItemName;
-
+            private ApiSettings apiSettings;
             ReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
@@ -7850,6 +8579,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllVocations");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             private void BuildData()
@@ -7939,7 +8670,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -7957,7 +8688,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             ApplValcodes admissionApplicationSupportingItemStatusesValcodeResponse;
             string domainEntityNameName;
             ReferenceDataRepository referenceDataRepo;
-
+            private ApiSettings apiSettings;
             [TestInitialize]
             public void Initialize()
             {
@@ -7973,7 +8704,9 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 admissionApplicationSupportingItemStatusesValcodeResponse = BuildValcodeResponse(allCorrStatuses);
                 //var admissionApplicationSupportingItemStatusesValResponse = new List<string>() { "2" };
                 //admissionApplicationSupportingItemStatusesValcodeResponse.ValActionCode1 = admissionApplicationSupportingItemStatusesValResponse;
-                
+
+                apiSettings = new ApiSettings("TEST");
+
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 domainEntityNameName = referenceDataRepo.BuildFullCacheKey("CORE_CORR.STATUSES_GUID"); 
 
@@ -8097,7 +8830,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }
@@ -8129,7 +8862,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             ApplValcodes altIdTypesValcodeResponse;
 
             ReferenceDataRepository referenceDataRepo;
-
+            private ApiSettings apiSettings;
             [TestInitialize]
             public void Initialize()
             {
@@ -8147,6 +8880,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllAltIdTypes");
+
+                apiSettings = new ApiSettings("TEST");
             }
 
             [TestCleanup]
@@ -8224,7 +8959,307 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
                 // Construct repository
-                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+                return referenceDataRepo;
+            }
+        }
+
+        [TestClass]
+        public class TaxFormsTests
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ILogger> loggerMock;
+            IEnumerable<TaxForms2> allTaxForms;
+            ApplValcodes taxFormsValcodeResponse;
+            string domainEntityNameName;
+            ApiSettings apiSettings;
+
+            Mock<IReferenceDataRepository> referenceDataRepositoryMock;
+            IReferenceDataRepository referenceDataRepository;
+           ReferenceDataRepository referenceDataRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+                apiSettings = new ApiSettings("TEST");
+
+                allTaxForms = new List<TaxForms2>()
+                {
+                    new TaxForms2("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "AT", "Athletic", "A1"),
+                    new TaxForms2("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "AC", "Academic", "A2"),
+                    new TaxForms2("d2253ac7-9931-4560-b42f-1fccd43c952e", "CU", "Cultural", "A3")
+                };
+                taxFormsValcodeResponse = BuildValcodeResponse(allTaxForms);
+                var taxFormsValResponse = new List<string>() { "2" };
+                taxFormsValcodeResponse.ValActionCode1 = taxFormsValResponse;
+
+                referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                referenceDataRepository = referenceDataRepositoryMock.Object;
+
+                referenceDataRepo = BuildValidReferenceDataRepository();
+                domainEntityNameName = referenceDataRepo.BuildFullCacheKey("CORE_TAX.FORMS");
+
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                   x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                   .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                taxFormsValcodeResponse = null;
+                allTaxForms = null;
+                referenceDataRepo = null;
+            }
+
+
+            [TestMethod]
+            public async Task BaseReferenceDataRepo_GetsTaxFormsCacheAsync()
+            {
+                var taxForms = await referenceDataRepo.GetTaxFormsBaseAsync(It.IsAny<bool>());
+
+                for (int i = 0; i < allTaxForms.Count(); i++)
+                {
+                    Assert.AreEqual(allTaxForms.ElementAt(i).Code, taxForms.ElementAt(i).Code);
+                    Assert.AreEqual(allTaxForms.ElementAt(i).Description, taxForms.ElementAt(i).Description);
+                }
+            }
+
+            [TestMethod]
+            public async Task BaseReferenceDataRepo_GetsTaxFormsNonCacheAsync()
+            {
+                var statuses = await referenceDataRepo.GetTaxFormsBaseAsync(true);
+
+                for (int i = 0; i < allTaxForms.Count(); i++)
+                {
+                    Assert.AreEqual(allTaxForms.ElementAt(i).Code, statuses.ElementAt(i).Code);
+                    Assert.AreEqual(allTaxForms.ElementAt(i).Description, statuses.ElementAt(i).Description);
+                }
+            }
+
+            [TestMethod]
+            public async Task BaseReferenceDataRepo_GetTaxForms_WritesToCacheAsync()
+            {
+
+                // Set up local cache mock to respond to cache request:
+                //  -to "Contains" request, return "false" to indicate item is not in cache
+                //  -to cache "Get" request, return null so we know it's reading from the "repository"
+                cacheProviderMock.Setup(x => x.Contains(domainEntityNameName, null)).Returns(false);
+                cacheProviderMock.Setup(x => x.Get(domainEntityNameName, null)).Returns(null);
+
+                // return a valid response to the data accessor request
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE", "TAX.FORMS", It.IsAny<bool>())).ReturnsAsync(taxFormsValcodeResponse);
+
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                 x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                 .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                // But after data accessor read, set up mocking so we can verify the list of taxForms was written to the cache
+                cacheProviderMock.Setup(x => x.Add(It.IsAny<string>(), It.IsAny<Task<List<TaxForms>>>(), It.IsAny<CacheItemPolicy>(), null)).Verifiable();
+
+                cacheProviderMock.Setup(x => x.Contains(referenceDataRepo.BuildFullCacheKey("CORE_TAX.FORMS"), null)).Returns(true);
+                var taxForms = await referenceDataRepo.GetTaxFormsBaseAsync(It.IsAny<bool>());
+                cacheProviderMock.Setup(x => x.Get(referenceDataRepo.BuildFullCacheKey("CORE_TAX.FORMS"), null)).Returns(taxForms);
+                // Verify that taxForms were returned, which means they came from the "repository".
+                Assert.IsTrue(taxForms.Count() == 3);
+
+                // Verify that the taxForms item was added to the cache after it was read from the repository
+                cacheProviderMock.Verify(m => m.Add(It.IsAny<string>(), It.IsAny<Task<List<TaxForms>>>(), It.IsAny<CacheItemPolicy>(), null), Times.Never);
+
+            }
+
+            [TestMethod]
+            public async Task BaseReferenceDataRepo_GetTaxForms_GetsCachedTaxFormsAsync()
+            {
+                // Set up local cache mock to respond to cache request:
+                //  -to "Contains" request, return "true" to indicate item is in cache
+                //  -to "Get" request, return the cache item (in this case the "TAX.FORMS" cache item)
+                cacheProviderMock.Setup(x => x.Contains(domainEntityNameName, null)).Returns(true);
+                cacheProviderMock.Setup(x => x.Get(domainEntityNameName, null)).Returns(allTaxForms).Verifiable();
+
+                // return null for request, so that if we have a result, it wasn't the data accessor that returned it.
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE", "TAX.FORMS", true)).ReturnsAsync(new ApplValcodes());
+
+                // Assert the taxForms are returned
+                var results = await referenceDataRepo.GetTaxFormsBaseAsync(It.IsAny<bool>());
+                Assert.IsTrue(results.Count() == 3);
+                // Verify that the staxForms were retrieved from cache
+                //cacheProviderMock.Verify(m => m.Get(domainEntityNameName, null));
+            }
+
+            private ReferenceDataRepository BuildValidReferenceDataRepository()
+            {
+                // transaction factory mock
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                // Cache Provider Mock
+                cacheProviderMock = new Mock<ICacheProvider>();
+                // Set up data accessor for mocking 
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+
+                // Set up dataAccessorMock as the object for the DataAccessor
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                // Setup response to taxForms domainEntityName read
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "TAX.FORMS", It.IsAny<bool>())).ReturnsAsync(taxFormsValcodeResponse);
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
+                {
+                    var result = new Dictionary<string, RecordKeyLookupResult>();
+                    foreach (var recordKeyLookup in recordKeyLookups)
+                    {
+                        var taxForms = allTaxForms.Where(e => e.Code == recordKeyLookup.SecondaryKey).FirstOrDefault();
+                        result.Add(string.Join("+", new string[] { "CORE.VALCODES", "TAX.FORMS", taxForms.Code }),
+                            new RecordKeyLookupResult() { Guid = taxForms.Guid });
+                    }
+                    return Task.FromResult(result);
+                });
+
+                // Construct repository
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+                return referenceDataRepo;
+            }
+
+            private ApplValcodes BuildValcodeResponse(IEnumerable<TaxForms2> taxForms)
+            {
+                ApplValcodes taxFormsResponse = new ApplValcodes();
+                taxFormsResponse.ValsEntityAssociation = new List<ApplValcodesVals>();
+                foreach (var item in taxForms)
+                {
+                    taxFormsResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, "2", item.Code, "3", "", ""));
+                }
+                return taxFormsResponse;
+            }
+        }
+
+        /// <summary>
+        /// Test class for ZipCodeXlats codes
+        /// </summary>
+        [TestClass]
+        public class BoxCodesTests
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ILogger> loggerMock;
+            IEnumerable<Domain.Base.Entities.BoxCodes> allBoxCodes;
+            string codeItemName;
+            private ApiSettings apiSettings;
+            ReferenceDataRepository referenceDataRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+
+                // Build responses used for mocking
+                BuildData();
+
+                // Build repository
+                referenceDataRepo = BuildValidReferenceDataRepository();
+                codeItemName = referenceDataRepo.BuildFullCacheKey("AllBoxCodes");
+
+                apiSettings = new ApiSettings("TEST");
+            }
+
+            private void BuildData()
+            {
+                allBoxCodes = new List<Domain.Base.Entities.BoxCodes>()
+                {
+                    new Domain.Base.Entities.BoxCodes("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "AT", "Athletic", "W2"),
+                    new Domain.Base.Entities.BoxCodes("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "AC", "Academic", "W2"),
+                    new Domain.Base.Entities.BoxCodes("d2253ac7-9931-4560-b42f-1fccd43c952e", "CU", "Test", "W2")
+                };
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                allBoxCodes = null;
+                referenceDataRepo = null;
+            }
+
+            [TestMethod]
+            public async Task GetsBoxCodesCacheAsync()
+            {
+                var boxCodes = await referenceDataRepo.GetAllBoxCodesAsync(false);
+
+                for (int i = 0; i < allBoxCodes.Count(); i++)
+                {
+                    Assert.AreEqual(allBoxCodes.ElementAt(i).Guid, boxCodes.ElementAt(i).Guid);
+                    Assert.AreEqual(allBoxCodes.ElementAt(i).Code, boxCodes.ElementAt(i).Code);
+                    Assert.AreEqual(allBoxCodes.ElementAt(i).Description, boxCodes.ElementAt(i).Description);
+                }
+            }
+
+            [TestMethod]
+            public async Task GetsBoxCodessNonCacheAsync()
+            {
+                var boxCodes = await referenceDataRepo.GetAllBoxCodesAsync(true);
+
+                for (int i = 0; i < allBoxCodes.Count(); i++)
+                {
+                    Assert.AreEqual(allBoxCodes.ElementAt(i).Guid, boxCodes.ElementAt(i).Guid);
+                    Assert.AreEqual(allBoxCodes.ElementAt(i).Code, boxCodes.ElementAt(i).Code);
+                    Assert.AreEqual(allBoxCodes.ElementAt(i).Description, boxCodes.ElementAt(i).Description);
+                }
+            }
+
+            private ReferenceDataRepository BuildValidReferenceDataRepository()
+            {
+                // transaction factory mock
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                // Cache Provider Mock
+                cacheProviderMock = new Mock<ICacheProvider>();
+                // Set up data accessor for mocking 
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+
+                // Set up dataAccessorMock as the object for the DataAccessor
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                // Setup response to Chapters read
+                var boxCodesCollection = new Collection<Data.Base.DataContracts.BoxCodes>(allBoxCodes.Select(record =>
+                    new Data.Base.DataContracts.BoxCodes()
+                    {
+                        BxcBoxNumber = record.Code,
+                        Recordkey = record.Code,
+                        RecordGuid = record.Guid,
+                        BxcDesc = record.Description
+                    }).ToList());
+
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<Data.Base.DataContracts.BoxCodes>("BOX.CODES", "", true))
+                    .ReturnsAsync(boxCodesCollection);
+
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                    .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+
+                dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
+                {
+                    var result = new Dictionary<string, RecordKeyLookupResult>();
+                    foreach (var recordKeyLookup in recordKeyLookups)
+                    {
+                        var vocation = allBoxCodes.Where(e => e.Code == recordKeyLookup.PrimaryKey).FirstOrDefault();
+                        result.Add(string.Join("+", new string[] { "BOX.CODES", vocation.Code }),
+                            new RecordKeyLookupResult() { Guid = vocation.Guid });
+                    }
+                    return Task.FromResult(result);
+                });
+
+                // Construct repository
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return referenceDataRepo;
             }

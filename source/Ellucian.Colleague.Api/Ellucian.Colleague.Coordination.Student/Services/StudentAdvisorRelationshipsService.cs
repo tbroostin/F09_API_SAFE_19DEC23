@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -17,6 +17,7 @@ using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Student;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -77,9 +78,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (!string.IsNullOrEmpty(student))
             {
-                studentId = await _personRepository.GetPersonIdFromGuidAsync(student); 
-                // if null then send empty set.
-                if (string.IsNullOrWhiteSpace(studentId))
+                try
+                {
+                    studentId = await _personRepository.GetPersonIdFromGuidAsync(student);
+                    // if null then send empty set.
+                    if (string.IsNullOrWhiteSpace(studentId))
+                    {
+                        return new Tuple<IEnumerable<Dtos.StudentAdvisorRelationships>, int>(studentAdvisorRelationshipsCollection, 0);
+                    }
+                }
+                catch (Exception)
                 {
                     return new Tuple<IEnumerable<Dtos.StudentAdvisorRelationships>, int>(studentAdvisorRelationshipsCollection, 0);
                 }
@@ -87,9 +95,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (!string.IsNullOrEmpty(advisor))
             {
-                advisorId = await _personRepository.GetPersonIdFromGuidAsync(advisor);
-                // if null then send empty set.
-                if (string.IsNullOrWhiteSpace(advisorId))
+                try
+                {
+                    advisorId = await _personRepository.GetPersonIdFromGuidAsync(advisor);
+                    // if null then send empty set.
+                    if (string.IsNullOrWhiteSpace(advisorId))
+                    {
+                        return new Tuple<IEnumerable<Dtos.StudentAdvisorRelationships>, int>(studentAdvisorRelationshipsCollection, 0);
+                    }
+                }
+                catch (Exception)
                 {
                     return new Tuple<IEnumerable<Dtos.StudentAdvisorRelationships>, int>(studentAdvisorRelationshipsCollection, 0);
                 }
@@ -97,10 +112,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (!string.IsNullOrEmpty(advisorType))
             {
-                var advisorTypes = await _referenceDataRepository.GetAdvisorTypesAsync(false);
                 try
                 {
-                    advisorTypeCode = advisorTypes.FirstOrDefault(x=> x.Guid == advisorType).Code;
+                    var advisorTypes = await _referenceDataRepository.GetAdvisorTypesAsync(false);
+                    advisorTypeCode = advisorTypes.FirstOrDefault(x => x.Guid == advisorType).Code;
                 }
                 catch (Exception e)
                 {
@@ -109,13 +124,26 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             }
 
-            var studentAdvisorRelationshipsEntities = await _studentAdvisorRelationshipsRepository.GetStudentAdvisorRelationshipsAsync(offset, limit,bypassCache,
+            var studentAdvisorRelationshipsEntities = await _studentAdvisorRelationshipsRepository.GetStudentAdvisorRelationshipsAsync(offset, limit, bypassCache,
                 studentId, advisorId, advisorTypeCode);
             int totalRecords = studentAdvisorRelationshipsEntities.Item2;
 
+            if(studentAdvisorRelationshipsEntities != null && studentAdvisorRelationshipsEntities.Item1 != null && !studentAdvisorRelationshipsEntities.Item1.Any())
+            {
+                return new Tuple<IEnumerable<Dtos.StudentAdvisorRelationships>, int>(studentAdvisorRelationshipsCollection, 0);
+            }
+
+            List<string> personIds = new List<string>();
+            var advisorIds = studentAdvisorRelationshipsEntities.Item1.Where(i => !string.IsNullOrWhiteSpace(i.Advisor)).Select(a => a.Advisor);
+            var studentIds = studentAdvisorRelationshipsEntities.Item1.Where(i => !string.IsNullOrWhiteSpace(i.Student)).Select(a => a.Student);
+
+            if (advisorIds != null && advisorIds.Any()) personIds.AddRange(advisorIds);
+            if (studentIds != null && studentIds.Any()) personIds.AddRange(studentIds);
+
             foreach (var studentAdvisorRelationships in studentAdvisorRelationshipsEntities.Item1)
             {
-                Dtos.StudentAdvisorRelationships studentAdvisorRelationshipsDto = await ConvertStudentAdvisorRelationshipsEntityToDto(studentAdvisorRelationships);
+                Dtos.StudentAdvisorRelationships studentAdvisorRelationshipsDto = 
+                    await ConvertStudentAdvisorRelationshipsEntityToDto(studentAdvisorRelationships, await _personRepository.GetPersonGuidsCollectionAsync(personIds.Distinct().ToList()));
                 studentAdvisorRelationshipsCollection.Add(studentAdvisorRelationshipsDto);
             }
 
@@ -136,7 +164,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             try
             {
-                return await ConvertStudentAdvisorRelationshipsEntityToDto((await _studentAdvisorRelationshipsRepository.GetStudentAdvisorRelationshipsByGuidAsync(guid)));
+                var entity = await _studentAdvisorRelationshipsRepository.GetStudentAdvisorRelationshipsByGuidAsync(guid);
+                List<string> personIds = new List<string>();
+
+                if (!string.IsNullOrWhiteSpace(entity.Advisor)) personIds.Add(entity.Advisor);
+                if (!string.IsNullOrWhiteSpace(entity.Student)) personIds.Add(entity.Student);
+
+                return await ConvertStudentAdvisorRelationshipsEntityToDto(entity, await _personRepository.GetPersonGuidsCollectionAsync(personIds.Distinct().ToList()));
             }
             catch (KeyNotFoundException ex)
             {
@@ -155,91 +189,92 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="source">StudentAdvisorRelationships domain entity</param>
         /// <returns>StudentAdvisorRelationships DTO</returns>
-        private async Task<Dtos.StudentAdvisorRelationships> ConvertStudentAdvisorRelationshipsEntityToDto(Domain.Student.Entities.StudentAdvisorRelationship source)
+        private async Task<Dtos.StudentAdvisorRelationships> ConvertStudentAdvisorRelationshipsEntityToDto(Domain.Student.Entities.StudentAdvisorRelationship source, Dictionary<string, string> personIdsDictionary)
         {
             var studentAdvisorRelationships = new Dtos.StudentAdvisorRelationships();
 
             //validate that the source data coming in contains the required data needed for the API response
-            if (string.IsNullOrWhiteSpace(source.guid))
+            if (string.IsNullOrWhiteSpace(source.Guid))
             {
-                throw new Exception("Record does not contain a valid GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.guid + "'");
+                throw new Exception("Record does not contain a valid GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Guid + "'");
             }
-            studentAdvisorRelationships.Id = source.guid;
+            studentAdvisorRelationships.Id = source.Guid;
 
-            if (string.IsNullOrWhiteSpace(source.advisor))
+            if (string.IsNullOrWhiteSpace(source.Advisor))
             {
-                throw new Exception("Record does not contain a advisor ID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.guid + "'");
+                throw new Exception("Record does not contain a advisor ID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Guid + "'");
             }
             
-            if (string.IsNullOrWhiteSpace(source.student))
+            if (string.IsNullOrWhiteSpace(source.Student))
             {
-                throw new Exception("Record does not contain a student ID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.guid + "'");
+                throw new Exception("Record does not contain a student ID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Guid + "'");
             }
 
-            if (source.startOn == null)
+            if (source.StartOn == null)
             {
-                throw new Exception("Record does not contain a start date. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.guid + "'");
+                throw new Exception("Record does not contain a start date. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Guid + "'");
             }
 
             //Get the advisor GUID
-            var personGuid = await _personRepository.GetPersonGuidFromIdAsync(source.advisor);
-            if (!string.IsNullOrEmpty(personGuid))
+            var advisorGuid = string.Empty;
+            if(!string.IsNullOrEmpty(source.Advisor) && personIdsDictionary != null && personIdsDictionary.Any() && personIdsDictionary.TryGetValue(source.Advisor, out advisorGuid))
             {
-                studentAdvisorRelationships.Advisor = new GuidObject2(personGuid);
-            } else
-            {
-                throw new Exception("We could not retrive the advisor's GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.guid + "'");
-            }
-
-            //get the student GUID
-            personGuid = await _personRepository.GetPersonGuidFromIdAsync(source.student);
-            if (!string.IsNullOrEmpty(personGuid))
-            {
-                studentAdvisorRelationships.Student = new GuidObject2(personGuid);
+                studentAdvisorRelationships.Advisor = new GuidObject2(advisorGuid);
             }
             else
             {
-                throw new Exception("We could not retrive the student's GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.guid + "'");
+                throw new Exception("We could not retrive the advisor's GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Guid + "'");
+            }
+
+            //get the student GUID
+            var studentGuid = string.Empty;
+            if (!string.IsNullOrEmpty(source.Student) && personIdsDictionary != null && personIdsDictionary.Any() && personIdsDictionary.TryGetValue(source.Student, out studentGuid))
+            {
+                studentAdvisorRelationships.Student = new GuidObject2(studentGuid);
+            }
+            else
+            {
+                throw new Exception("We could not retrive the student's GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Guid + "'");
             }
 
             //Get the AdvisorType GUID
-            if (!string.IsNullOrWhiteSpace(source.advisorType)){
-                var advisorTypes = await this.GetAdvisorTypes();
-                if (advisorTypes == null)
+            if (!string.IsNullOrWhiteSpace(source.AdvisorType))
+            {
+                try
                 {
-                    throw new Exception("Advisor types could not be loaded.");
+                    var advisorTypeGuid = await _referenceDataRepository.GetAdvisorTypeGuidAsync(source.AdvisorType);
+                    if (string.IsNullOrEmpty(advisorTypeGuid))
+                    {
+                        throw new Exception("The record's field STAD.TYPE could not be matched with Advisor types or missing a GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Id + "'");
+                    }
+                    studentAdvisorRelationships.AdvisorType = new GuidObject2(advisorTypeGuid);
                 }
-                var advisorTypeGuid = advisorTypes.FirstOrDefault(x => x.Code == source.advisorType);
-                if (advisorTypeGuid == null || (advisorTypeGuid != null && string.IsNullOrEmpty(advisorTypeGuid.Guid)))
+                catch(RepositoryException ex)
                 {
-                    throw new Exception("The record's field STAD.TYPE could not be matched with Advisor types or missing a GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.id + "'");
+                    throw new Exception("The record's field STAD.TYPE could not be matched with Advisor types or missing a GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Id + "'");
                 }
-                studentAdvisorRelationships.AdvisorType = new GuidObject2(advisorTypeGuid.Guid);
             }
 
             //Get the programs GUID
-            if (!string.IsNullOrEmpty(source.program))
+            if (!string.IsNullOrEmpty(source.Program))
             {
-                var acadPrograms = await this.GetAcadPrograms();
-                if (acadPrograms == null)
+                try
                 {
-                    throw new Exception("Acad programs could not be retrieved");
+                    var programGuid = await _referenceDataRepository.GetAcademicProgramsGuidAsync(source.Program);
+                    if (string.IsNullOrEmpty(programGuid))
+                    {
+                        throw new Exception("The record's field STAD.ACAD.PROGRAM could not be matched with Acad programs list or it is missing a GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Id + "'");
+                    }
+                    studentAdvisorRelationships.Program = new GuidObject2(programGuid);
                 }
-                var programGuid = acadPrograms.FirstOrDefault(x => x.Code == source.program);
-                if (programGuid == null)
+                catch(RepositoryException ex)
                 {
-                    throw new Exception("The record's field STAD.ACAD.PROGRAM could not be matched with Acad programs list or it is missing a GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.id + "'");
+                    throw new Exception("The record's field STAD.ACAD.PROGRAM could not be matched with Acad programs list or it is missing a GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Id + "'");
                 }
-                if (string.IsNullOrEmpty(programGuid.Guid))
-                {
-                    throw new Exception("The record's field STAD.ACAD.PROGRAM could not be matched with Acad programs list or it is missing a GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.id + "'");
-                }
-                studentAdvisorRelationships.Program = new GuidObject2(programGuid.Guid);
             }
 
-            studentAdvisorRelationships.StartOn = source.startOn;
-            studentAdvisorRelationships.EndOn = source.endOn;
-
+            studentAdvisorRelationships.StartOn = source.StartOn;
+            studentAdvisorRelationships.EndOn = source.EndOn;
 
             return studentAdvisorRelationships;
         }

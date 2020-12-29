@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates
 
 using System;
 using System.Collections.Generic;
@@ -17,6 +17,8 @@ using Moq;
 using slf4net;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Domain.Exceptions;
+using System.Threading;
+using Ellucian.Colleague.Domain.Base.Transactions;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 {
@@ -24,8 +26,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
     public class PurchaseOrderRepositoryTests : BaseRepositorySetup
     {
         #region Initialize and Cleanup
-        // private Mock<IColleagueDataReader> dataReader = null;
-        private Mock<IColleagueTransactionInvoker> transactionInvoker = null;
+      
         private PurchaseOrderRepository purchaseOrderRepository;
         private TestPurchaseOrderRepository testPurchaseOrderRepository;
         private PurchaseOrder purchaseOrderDomainEntity;
@@ -50,8 +51,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         {
             MockInitialize();
 
-            // Set up a mock transaction invoker.
-            transactionInvoker = new Mock<IColleagueTransactionInvoker>();
 
             // Initialize the data contract object.
             purchaseOrderDataContract = new PurchaseOrders();
@@ -67,8 +66,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         [TestCleanup]
         public void Cleanup()
         {
-            dataReader = null;
-            transactionInvoker = null;
+            MockCleanup();
             purchaseOrderDataContract = null;
             shipToCodesDataContract = null;
             opersDataContracts = null;
@@ -133,7 +131,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             ConvertDomainEntitiesIntoDataContracts();
             InitializeMockMethods();
 
-            var purchaseOrders = await purchaseOrderRepository.GetPurchaseOrdersAsync(0, 1);
+            var purchaseOrders = await purchaseOrderRepository.GetPurchaseOrdersAsync(0, 1, string.Empty);
 
             var purchaseOrder = purchaseOrders.Item1.FirstOrDefault(x => x.Id == this.purchaseOrderDomainEntity.Id);
 
@@ -152,6 +150,45 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(this.purchaseOrderDomainEntity.Comments, purchaseOrder.Comments);
             Assert.AreEqual(this.purchaseOrderDomainEntity.InternalComments, purchaseOrder.InternalComments);
             Assert.AreEqual(this.purchaseOrderDomainEntity.CurrencyCode, purchaseOrder.CurrencyCode);
+        }
+
+        [TestMethod]
+        public async Task PurchaseOrderRepositoryTests_GetPurchaseOrdersAsync_With_OrderNumber()
+        {
+
+            string purchaseOrderId = "1";
+            var purchaseOrderGuid = Guid.NewGuid().ToString();
+            var testPurchaseOrderRepository = new TestPurchaseOrderRepository( purchaseOrderGuid );
+
+            this.purchaseOrderDomainEntity = await testPurchaseOrderRepository.GetPurchaseOrderAsync( purchaseOrderGuid, purchaseOrderId, personId, GlAccessLevel.Full_Access, null );
+
+            purchaseOrderDataContract.RecordGuid = purchaseOrderGuid;
+
+
+            var expenseAccounts = CalculateExpenseAccountsForUser( purchaseOrderId );
+
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+
+            var purchaseOrders = await purchaseOrderRepository.GetPurchaseOrdersAsync( 0, 1, "1" );
+
+            var purchaseOrder = purchaseOrders.Item1.FirstOrDefault( x => x.Id == this.purchaseOrderDomainEntity.Id );
+
+            // Confirm that the SV properties for the purchase order are the same
+            Assert.AreEqual( this.purchaseOrderDomainEntity.Id, purchaseOrder.Id );
+            Assert.AreEqual( this.purchaseOrderDomainEntity.VendorId, purchaseOrder.VendorId );
+
+            Assert.AreEqual( this.purchaseOrderDomainEntity.Status, purchaseOrder.Status );
+            Assert.AreEqual( this.purchaseOrderDomainEntity.StatusDate, purchaseOrder.StatusDate );
+            Assert.AreEqual( this.purchaseOrderDomainEntity.Amount, purchaseOrder.Amount );
+            Assert.AreEqual( this.purchaseOrderDomainEntity.ApType, purchaseOrder.ApType );
+            Assert.AreEqual( this.purchaseOrderDomainEntity.Date, purchaseOrder.Date );
+            Assert.AreEqual( this.purchaseOrderDomainEntity.MaintenanceDate, purchaseOrder.MaintenanceDate );
+            Assert.AreEqual( this.purchaseOrderDomainEntity.DeliveryDate, purchaseOrder.DeliveryDate );
+
+            Assert.AreEqual( this.purchaseOrderDomainEntity.Comments, purchaseOrder.Comments );
+            Assert.AreEqual( this.purchaseOrderDomainEntity.InternalComments, purchaseOrder.InternalComments );
+            Assert.AreEqual( this.purchaseOrderDomainEntity.CurrencyCode, purchaseOrder.CurrencyCode );
         }
 
         [TestMethod]
@@ -194,12 +231,61 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
         #endregion
 
-        #region Invalid data tests
+        #region Invalid data tests        
+
+        [TestMethod]
+        [ExpectedException( typeof( RepositoryException ) )]
+        public async Task PurchaseOrderRepositoryTests_GetPurchaseOrdersAsync_EntityBuild_RepositoryException()
+        {
+
+            string purchaseOrderId = "1";
+            var purchaseOrderGuid = Guid.NewGuid().ToString();
+            var testPurchaseOrderRepository = new TestPurchaseOrderRepository( purchaseOrderGuid );
+            dataReaderMock.Setup( repo => repo.ReadRecordAsync<Base.DataContracts.Person>( It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>() ) ).ThrowsAsync( new Exception() );
+            this.purchaseOrderDomainEntity = await testPurchaseOrderRepository.GetPurchaseOrderAsync( purchaseOrderGuid, purchaseOrderId, personId, GlAccessLevel.Full_Access, null );
+
+            purchaseOrderDataContract.RecordGuid = purchaseOrderGuid;
+
+
+            var expenseAccounts = CalculateExpenseAccountsForUser( purchaseOrderId );
+
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+
+            var purchaseOrders = await purchaseOrderRepository.GetPurchaseOrdersAsync( 0, 1, string.Empty );
+        }
+
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public async Task GetPurchaseOrder_NullId()
         {
             var purchaseOrder = await this.purchaseOrderRepository.GetPurchaseOrderAsync(null, personId, GlAccessLevel.Full_Access, null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(KeyNotFoundException))]
+        public async Task GetPurchaseOrdersByGuidAsync_ApplicationException_When_Status_Inprogress()
+        {
+            string purchaseOrderId = "1";
+            var purchaseOrderGuid = "d43c02c1-ce35-4090-a30b-4e4735670ccd";
+            var testPurchaseOrderRepository = new TestPurchaseOrderRepository(purchaseOrderGuid);
+
+            this.purchaseOrderDomainEntity = await testPurchaseOrderRepository.GetPurchaseOrderAsync(purchaseOrderGuid, purchaseOrderId, personId, GlAccessLevel.Full_Access, null);
+            purchaseOrderDataContract.RecordGuid = purchaseOrderGuid;
+            
+            var expenseAccounts = CalculateExpenseAccountsForUser(purchaseOrderId);
+
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+
+            GuidLookupResult result = new GuidLookupResult() { Entity = "PURCHASE.ORDERS", PrimaryKey = purchaseOrderId, SecondaryKey = "" };
+            Dictionary<string, GuidLookupResult> resultDict = new Dictionary<string, GuidLookupResult>();
+            resultDict.Add(purchaseOrderGuid, result);
+            dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(resultDict);
+            purchaseOrderDataContract.PoStatus = new List<string> { "U" };
+            dataReaderMock.Setup(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), It.IsAny<bool>()))
+            .ReturnsAsync(this.purchaseOrderDataContract);
+            await purchaseOrderRepository.GetPurchaseOrdersByGuidAsync(purchaseOrderGuid);
         }
 
         [TestMethod]
@@ -677,6 +763,21 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 Assert.AreEqual(0, lineItem.Price);
                 Assert.AreEqual(0, lineItem.ExtendedPrice);
             }
+        }
+
+        [TestMethod]
+        public async Task GetPurchaseOrder_LineItemStatusIs_Accepted_Invoiced()
+        {
+            string purchaseOrderId = "1";
+            this.purchaseOrderDomainEntity = await testPurchaseOrderRepository.GetPurchaseOrderAsync(purchaseOrderId, personId, GlAccessLevel.Possible_Access, null);
+            var expenseAccounts = CalculateExpenseAccountsForUser(purchaseOrderId);
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+           
+            var purchaseOrder = await purchaseOrderRepository.GetPurchaseOrderAsync(purchaseOrderId, personId, GlAccessLevel.Possible_Access, expenseAccounts);
+
+            Assert.AreEqual(LineItemStatus.Accepted, purchaseOrder.LineItems[0].LineItemStatus);
+            Assert.AreEqual(LineItemStatus.Invoiced, purchaseOrder.LineItems[1].LineItemStatus);
         }
 
         [TestMethod]
@@ -1346,7 +1447,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(this.purchaseOrderDomainEntity.LineItems.Count(), purchaseOrder.LineItems.Count(), "The purchase order should have all of its line items.");
 
             decimal glDistributionTotal = 0.00m;
-            decimal taxDistributionTotal = 0.00m;
+            decimal? taxDistributionTotal = 0.00m;
             foreach (var lineItem in purchaseOrder.LineItems)
             {
                 glDistributionTotal += lineItem.GlDistributions.Sum(x => x.Amount);
@@ -1437,6 +1538,610 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
         #endregion
 
+        #region Purchase Order Summary Test
+        [TestMethod]
+        public async Task GetPurchaseOrderSummaryByPersonIdAsync_Base()
+        {
+            string purchaseOrderId = "1";
+            InitDataForPurchaseOrderSummary();
+            this.purchaseOrderDomainEntity = await testPurchaseOrderRepository.GetPurchaseOrderAsync(purchaseOrderId, personId, GlAccessLevel.Full_Access, null);
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+
+            Collection<DataContracts.PurchaseOrders> purchaseOrderDataContractList = new Collection<DataContracts.PurchaseOrders>();
+            purchaseOrderDataContractList.Add(this.purchaseOrderDataContract);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(new Collection<Requisitions>());
+            var expectedPurchaseOrderSummaryList = await testPurchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+            var actual = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+            Assert.IsNotNull(actual);
+            Assert.IsTrue(actual.ToList().Count == 1);
+
+            var expectedPurchaseOrderSummary = expectedPurchaseOrderSummaryList.Where(x => x.Id == purchaseOrderId).FirstOrDefault();
+            var actualPurchaseOrderSummary = actual.FirstOrDefault();
+
+            //assert on entity properties
+            Assert.AreEqual(expectedPurchaseOrderSummary.Id, actualPurchaseOrderSummary.Id);
+            Assert.AreEqual(expectedPurchaseOrderSummary.Number, actualPurchaseOrderSummary.Number);
+            Assert.AreEqual(expectedPurchaseOrderSummary.Date, actualPurchaseOrderSummary.Date);
+            Assert.AreEqual(expectedPurchaseOrderSummary.Status, actualPurchaseOrderSummary.Status);
+            Assert.AreEqual(expectedPurchaseOrderSummary.InitiatorName, actualPurchaseOrderSummary.InitiatorName);
+            Assert.AreEqual(expectedPurchaseOrderSummary.RequestorName, actualPurchaseOrderSummary.RequestorName);
+            Assert.AreEqual(expectedPurchaseOrderSummary.VendorId, actualPurchaseOrderSummary.VendorId);
+            Assert.AreEqual(expectedPurchaseOrderSummary.VendorName, actualPurchaseOrderSummary.VendorName);
+            Assert.AreEqual(expectedPurchaseOrderSummary.Amount, actualPurchaseOrderSummary.Amount);
+
+            Assert.AreEqual(expectedPurchaseOrderSummary.Approvers.Count, actualPurchaseOrderSummary.Approvers.Count);
+            Assert.AreEqual(expectedPurchaseOrderSummary.Approvers.Where(a=>a.ApprovalDate == null).ToList().Count, actualPurchaseOrderSummary.Approvers.Where(a => a.ApprovalDate == null).ToList().Count);
+            Assert.AreEqual(expectedPurchaseOrderSummary.Approvers.Where(a => a.ApprovalDate != null).ToList().Count, actualPurchaseOrderSummary.Approvers.Where(a => a.ApprovalDate != null).ToList().Count);
+        }
+
+        [TestMethod]
+        public async Task GetPurchaseOrderSummaryByPersonIdAsync_With_CfwebDefaults()
+        {
+            string purchaseOrderId = "1";
+
+            InitDataForPurchaseOrderSummary();
+            this.purchaseOrderDomainEntity = await testPurchaseOrderRepository.GetPurchaseOrderAsync(purchaseOrderId, personId, GlAccessLevel.Full_Access, null);
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+
+            dataReaderMock.Setup<Task<CfwebDefaults>>(d => d.ReadRecordAsync<CfwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(new CfwebDefaults() { CfwebPoStatuses = new List<string> { "0" } });
+            });
+
+            Collection<DataContracts.PurchaseOrders> purchaseOrderDataContractList = new Collection<DataContracts.PurchaseOrders>();
+            purchaseOrderDataContractList.Add(this.purchaseOrderDataContract);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
+
+            var purchaseOrderSummaryList = await testPurchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+            var actual = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+            Assert.IsNotNull(actual);
+            Assert.IsTrue(actual.ToList().Count == 1);
+            dataReaderMock.Verify(x => x.SelectAsync("PURCHASE.ORDERS", It.IsAny<string[]>(), It.IsAny<string>()), Times.Once);
+            dataReaderMock.Verify(x => x.SelectAsync("PURCHASE.ORDERS", It.IsAny<string>()), Times.Once);
+
+            var actualPurchaseOrderSummary = purchaseOrderSummaryList.Where(x => x.Id == purchaseOrderId).FirstOrDefault();
+            var purchaseOrderSummary = actual.FirstOrDefault();
+
+            //assert on entity properties
+            Assert.AreEqual(actualPurchaseOrderSummary.Id, purchaseOrderSummary.Id);
+            Assert.AreEqual(actualPurchaseOrderSummary.Number, purchaseOrderSummary.Number);
+            Assert.AreEqual(actualPurchaseOrderSummary.Date, purchaseOrderSummary.Date);
+            Assert.AreEqual(actualPurchaseOrderSummary.Status, purchaseOrderSummary.Status);
+            //Assert.AreEqual(actualRequisitionSummary.StatusDate, requisitionSummary.StatusDate);
+            Assert.AreEqual(actualPurchaseOrderSummary.InitiatorName, purchaseOrderSummary.InitiatorName);
+            Assert.AreEqual(actualPurchaseOrderSummary.RequestorName, purchaseOrderSummary.RequestorName);
+            Assert.AreEqual(actualPurchaseOrderSummary.VendorId, purchaseOrderSummary.VendorId);
+            Assert.AreEqual(actualPurchaseOrderSummary.VendorName, purchaseOrderSummary.VendorName);
+            Assert.AreEqual(actualPurchaseOrderSummary.Amount, purchaseOrderSummary.Amount);
+        }
+
+        [TestMethod]
+        public async Task GetPurchaseOrderSummaryByPersonIdAsync_EmptyList()
+        {
+            var purchaseOrderSummaryList = await this.purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+            Assert.IsNull(purchaseOrderSummaryList);
+        }
+
+        [TestMethod]
+        public async Task GetPurchaseOrderSummaryByPersonIdAsync_CfwebDefaults_EmptyList()
+        {
+            string[] emptyArray = new string[0];
+            //mock SelectAsync to return empty array of string
+            dataReaderMock.Setup(dr => dr.SelectAsync("PURCHASE.ORDERS", It.IsAny<string>())).Returns(() =>
+            {
+                return Task.FromResult(emptyArray);
+            });
+            //mock SelectAsync to return empty array of string
+            dataReaderMock.Setup(dr => dr.SelectAsync("PURCHASE.ORDERS", It.IsAny<string[]>(), It.IsAny<string>())).Returns(() =>
+            {
+                return Task.FromResult(emptyArray);
+            });
+            dataReaderMock.Setup<Task<CfwebDefaults>>(d => d.ReadRecordAsync<CfwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(new CfwebDefaults() { CfwebReqStatuses = new List<string> { "0" } });
+            });
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(new Collection<PurchaseOrders>());
+            var purchaseOrderSummaryList = await this.purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+            Assert.IsNull(purchaseOrderSummaryList);
+            dataReaderMock.Verify(x => x.SelectAsync("PURCHASE.ORDERS", It.IsAny<string>()), Times.Exactly(1));
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetPurchaseOrderSummaryByPersonIdAsync_NullPersonId()
+        {
+            var purchaseOrderSummaryList = await this.purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(null);
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetPurchaseOrderSummaryByPersonIdAsync_NullStatus()
+        {
+            InitDataForPurchaseOrderSummary();
+
+            Collection<DataContracts.PurchaseOrders> purchaseOrderDataContractList = new Collection<DataContracts.PurchaseOrders>();
+
+            var purchaseOrderDataContract = new PurchaseOrders()
+            {
+                Recordkey = "10",
+                PoStatus= null,
+                PoReqIds = new List<string>{ "1" },
+                PoDefaultInitiator="ABC",
+                PoRequestor="MlOwks",
+                PoVendor="ABC Company",
+                PoMiscName=new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
+            };
+
+            purchaseOrderDataContractList.Add(purchaseOrderDataContract);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
+             dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(new Collection<Requisitions>());
+            var requisition = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetPurchaseOrderSummaryByPersonIdAsync_StatusListHasBlankValue()
+        {
+            InitDataForPurchaseOrderSummary();
+            Collection<DataContracts.PurchaseOrders> purchaseOrderDataContractList = new Collection<DataContracts.PurchaseOrders>();
+
+            var purchaseOrderDataContract = new PurchaseOrders()
+            {
+                Recordkey = "10",
+                PoStatus = new List<string>() { "" },
+                PoReqIds = new List<string> { "1" },
+                PoDefaultInitiator = "ABC",
+                PoRequestor = "MlOwks",
+                PoVendor = "ABC Company",
+                PoMiscName = new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
+            };
+
+            purchaseOrderDataContractList.Add(purchaseOrderDataContract);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
+            var requisition = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetPurchaseOrderSummaryByPersonIdAsync_StatusDateHasNullValue()
+        {
+            InitDataForPurchaseOrderSummary();
+            Collection<DataContracts.PurchaseOrders> purchaseOrderDataContractList = new Collection<DataContracts.PurchaseOrders>();
+
+            var purchaseOrderDataContract = new PurchaseOrders()
+            {
+                Recordkey = "10",
+                PoStatus = new List<string>() { "P" },
+                PoStatusDate = new List<DateTime?>() { null },
+                PoReqIds = new List<string> { "1" },
+                PoDefaultInitiator = "ABC",
+                PoRequestor = "MlOwks",
+                PoVendor = "ABC Company",
+                PoMiscName = new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
+            };
+
+            purchaseOrderDataContractList.Add(purchaseOrderDataContract);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
+            var purchaseOrderSummaryList = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetPurchaseOrderSummaryByPersonIdAsync_InvalidPurchaseOrderStatus()
+        {
+            string PurchaseOrderId = "1";
+
+            InitDataForPurchaseOrderSummary();
+            this.purchaseOrderDomainEntity = await testPurchaseOrderRepository.GetPurchaseOrderAsync(PurchaseOrderId, personId, GlAccessLevel.Full_Access, null);
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+
+            Collection<DataContracts.PurchaseOrders> purchaseOrderDataContractList = new Collection<DataContracts.PurchaseOrders>();
+
+            // Mock ReadRecord to return a pre-defined, null requisition data contract
+            var purchaseOrderDataContract = new PurchaseOrders()
+            {
+                Recordkey = "1",
+                PoStatus = new List<string>() { "Z" },
+                PoReqIds = new List<string> { "1" },
+                PoDefaultInitiator = "ABC",
+                PoRequestor = "MlOwks",
+                PoVendor = "ABC Company",
+                PoMiscName = new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
+            };
+            purchaseOrderDataContractList.Add(purchaseOrderDataContract);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
+            var purchaseOrderSummaryList = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetPurchaseOrderSummaryByPersonIdAsync_NullStatusDate()
+        {
+            InitDataForPurchaseOrderSummary();
+            Collection<DataContracts.PurchaseOrders> purchaseOrderDataContractList = new Collection<DataContracts.PurchaseOrders>();
+
+            var purchaseOrderDataContract = new PurchaseOrders()
+            {
+                Recordkey = "10",
+                PoStatus = new List<string>() { "P" },
+                PoStatusDate = null,
+                PoReqIds = new List<string> { "1" },
+                PoDefaultInitiator = "ABC",
+                PoRequestor = "MlOwks",
+                PoVendor = "ABC Company",
+                PoMiscName = new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
+            };
+
+            purchaseOrderDataContractList.Add(purchaseOrderDataContract);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
+            var purchaseOrderSummaryList = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetPurchaseOrderSummaryByPersonIdAsync_StatusDateListHasNullValue()
+        {
+            InitDataForPurchaseOrderSummary();
+            Collection<DataContracts.PurchaseOrders> purchaseOrderDataContractList = new Collection<DataContracts.PurchaseOrders>();
+
+            var purchaseOrderDataContract = new PurchaseOrders()
+            {
+                Recordkey = "10",
+                PoStatus = new List<string>() { "P" },
+                PoStatusDate = new List<DateTime?>() { null },
+                PoReqIds = new List<string> { "1" },
+                PoDefaultInitiator = "ABC",
+                PoRequestor = "MlOwks",
+                PoVendor = "ABC Company",
+                PoMiscName = new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
+            };
+
+
+            purchaseOrderDataContractList.Add(purchaseOrderDataContract);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
+            var purchaseOrderSummaryList = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetPurchaseOrderSummaryByPersonIdAsync_NullPODate()
+        {
+            InitDataForPurchaseOrderSummary();
+            Collection<DataContracts.PurchaseOrders> purchaseOrderDataContractList = new Collection<DataContracts.PurchaseOrders>();
+
+            var purchaseOrderDataContract = new PurchaseOrders()
+            {
+                Recordkey = "10",
+                PoStatus = new List<string>() { "P" },
+                PoStatusDate = new List<DateTime?>() { new DateTime(2015, 1, 1) },
+                PoDate = null,
+                PoReqIds = new List<string> { "1" },
+                PoDefaultInitiator = "ABC",
+                PoRequestor = "MlOwks",
+                PoVendor = "ABC Company",
+                PoMiscName = new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
+            };
+
+
+            purchaseOrderDataContractList.Add(purchaseOrderDataContract);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
+            var purchaseOrderSummaryList = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+        }
+        #endregion
+
+        #region Purchase Order Create Test
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task CreatePurchaseOrderAsync_NullcreateUpdateRequest()
+        {
+            var purchaseOrderCreate = await this.purchaseOrderRepository.CreatePurchaseOrderAsync(null);
+        }
+
+        [TestMethod]
+        public async Task CreatePurchaseOrderAsync_TransactionError()
+        {
+            PurchaseOrderCreateUpdateRequest createUpdateRequestEntity = new PurchaseOrderCreateUpdateRequest()
+            {
+                PersonId = "966",
+                ConfEmailAddresses = new List<string>() { "abc@ellucian.com" },
+                InitiatorInitials = "ANA",
+                IsPersonVendor = false,
+                PurchaseOrder = new PurchaseOrder("1", "P000001", "VendorName", PurchaseOrderStatus.InProgress, new DateTime(2017, 01, 01), new DateTime(2017, 01, 01))
+            };
+            // Mock Execute within the transaction invoker to return a TxCreateWebPOResponse object
+            TxCreateWebPOResponse createPurchaseOrderResponse = new TxCreateWebPOResponse();
+            createPurchaseOrderResponse.APurchaseOrderId = "1";
+            createPurchaseOrderResponse.APurchaseOrderNo = "P0001111";
+            createPurchaseOrderResponse.APoDate = new DateTime(2020, 02, 01);
+            createPurchaseOrderResponse.AError = "true";
+            createPurchaseOrderResponse.AlErrorMessages = new List<string>() { "Purchase Order locked" };
+
+            transManagerMock.Setup(tio => tio.ExecuteAsync<TxCreateWebPORequest, TxCreateWebPOResponse>(It.IsAny<TxCreateWebPORequest>())).ReturnsAsync(createPurchaseOrderResponse);
+
+            var purchaseOrderCreateUpdate = await this.purchaseOrderRepository.CreatePurchaseOrderAsync(createUpdateRequestEntity);
+            Assert.IsNotNull(purchaseOrderCreateUpdate);
+            Assert.AreEqual(createPurchaseOrderResponse.APurchaseOrderId, createUpdateRequestEntity.PurchaseOrder.Id);
+            Assert.IsTrue(purchaseOrderCreateUpdate.ErrorOccured);
+        }
+
+        [TestMethod]
+        [ExpectedException (typeof (Exception))]
+        public async Task CreatePurchaseOrderAsync_Transaction_ThrowException()
+        {
+            PurchaseOrderCreateUpdateRequest createUpdateRequestEntity = new PurchaseOrderCreateUpdateRequest()
+            {
+                PersonId = "966",
+                ConfEmailAddresses = new List<string>() { "abc@ellucian.com" },
+                InitiatorInitials = "ANA",
+                IsPersonVendor = false,
+                PurchaseOrder = new PurchaseOrder("1", "P000001", "VendorName", PurchaseOrderStatus.InProgress, new DateTime(2017, 01, 01), new DateTime(2017, 01, 01))
+            };
+            // Mock Execute within the transaction invoker to return a TxCreateWebPOResponse object
+            TxCreateWebPOResponse createPurchaseOrderResponse = new TxCreateWebPOResponse();
+            createPurchaseOrderResponse.APurchaseOrderId = "1";
+            createPurchaseOrderResponse.APurchaseOrderNo = "P0001111";
+            createPurchaseOrderResponse.APoDate = new DateTime(2020, 02, 01);
+            createPurchaseOrderResponse.AError = "true";
+            createPurchaseOrderResponse.AlErrorMessages = new List<string>() { "Purchase Order locked" };
+
+            transManagerMock.Setup(tio => tio.ExecuteAsync<TxCreateWebPORequest, TxCreateWebPOResponse>(It.IsAny<TxCreateWebPORequest>())).Throws(new Exception());
+
+            await this.purchaseOrderRepository.CreatePurchaseOrderAsync(createUpdateRequestEntity);
+            
+        }
+
+        [TestMethod]
+        public async Task CreatePurchaseOrderAsync_ValidCreateUpdateRequest()
+        {
+            PurchaseOrderCreateUpdateRequest createUpdateRequestEntity = new PurchaseOrderCreateUpdateRequest()
+            {
+                PersonId = "966",
+                ConfEmailAddresses = new List<string>() { "abc@ellucian.com" },
+                InitiatorInitials = "ANA",
+                IsPersonVendor = false,
+                PurchaseOrder = new PurchaseOrder("1", "P000001", "VendorName", PurchaseOrderStatus.Closed, new DateTime(2017, 01, 01), new DateTime(2017, 01, 01))
+            };
+            // Mock Execute within the transaction invoker to return a TxCreateWebPOResponse object
+            TxCreateWebPOResponse createPurchaseOrderResponse = new TxCreateWebPOResponse();
+            createPurchaseOrderResponse.APurchaseOrderId = "123";
+            createPurchaseOrderResponse.APurchaseOrderNo = "P0000123";
+            createPurchaseOrderResponse.APoDate = new DateTime(2020, 02, 01);
+            createPurchaseOrderResponse.AError = "";
+            createPurchaseOrderResponse.AlErrorMessages = new List<string>() { };
+
+            transManagerMock.Setup(tio => tio.ExecuteAsync<TxCreateWebPORequest, TxCreateWebPOResponse>(It.IsAny<TxCreateWebPORequest>())).ReturnsAsync(createPurchaseOrderResponse);
+
+            var purchaseOrderCreateUpdate = await this.purchaseOrderRepository.CreatePurchaseOrderAsync(createUpdateRequestEntity);
+            Assert.IsNotNull(purchaseOrderCreateUpdate);
+        }
+
+        #endregion
+
+        #region Purchase Order Update Test
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task UpdatePurchaseOrderAsync_NullcreateUpdateRequest()
+        {
+            var purchaseOrderCreate = await this.purchaseOrderRepository.UpdatePurchaseOrderAsync(null,null);
+        }
+
+        [TestMethod]
+        public async Task UpdatePurchaseOrderAsync_TransactionError()
+        {
+            PurchaseOrderCreateUpdateRequest createUpdateRequestEntity = new PurchaseOrderCreateUpdateRequest()
+            {
+                PersonId = "966",
+                ConfEmailAddresses = new List<string>() { "abc@ellucian.com" },
+                InitiatorInitials = "ANA",
+                IsPersonVendor = false,
+                PurchaseOrder = new PurchaseOrder("1", "P000001", "VendorName", PurchaseOrderStatus.Closed, new DateTime(2017, 01, 01), new DateTime(2017, 01, 01))
+            };
+            PurchaseOrder originalPo = new PurchaseOrder("1", "P0001111", "Ellucian Consulting, Inc.", PurchaseOrderStatus.InProgress, new DateTime(2017, 01, 01), new DateTime(2017, 01, 01))
+            {
+                DeliveryDate = new DateTime(2020, 05, 01),
+                Amount = 117,
+                CurrencyCode = "",
+                MaintenanceDate = null,
+                VendorId = "0009876",
+                InitiatorName = "Abc",
+                RequestorName = "Abc",
+                ApType = "AP",
+                ShipToCode = "MC",
+                ShipToCodeName = "MC Datatel - Main Campus",
+                DefaultCommodityCode = "",
+                Comments = "It is a PO for Pen",
+                InternalComments = "Pen is ordered",
+                CommodityCode = "00375",
+
+            };
+            // Mock Execute within the transaction invoker to return a TxUpdateWebPurchaseOrderResponse object
+
+            TxUpdateWebPurchaseOrderResponse updatePurchaseOrderResponse = new TxUpdateWebPurchaseOrderResponse();
+            updatePurchaseOrderResponse.APoId = "1";
+            updatePurchaseOrderResponse.AError = "true";
+            updatePurchaseOrderResponse.AlErrorMessages = new List<string>() { "Purchase Order locked" };
+
+            transManagerMock.Setup(tio => tio.ExecuteAsync<TxUpdateWebPurchaseOrderRequest, TxUpdateWebPurchaseOrderResponse>(It.IsAny<TxUpdateWebPurchaseOrderRequest>())).ReturnsAsync(updatePurchaseOrderResponse);
+
+            var purchaseOrderCreateUpdate = await this.purchaseOrderRepository.UpdatePurchaseOrderAsync(createUpdateRequestEntity, originalPo);
+            Assert.IsNotNull(purchaseOrderCreateUpdate);
+            Assert.AreEqual(updatePurchaseOrderResponse.APoId, createUpdateRequestEntity.PurchaseOrder.Id);
+            Assert.IsTrue(purchaseOrderCreateUpdate.ErrorOccured);
+        }
+
+        [TestMethod]
+        public async Task UpdatePurchaseOrderAsync_validCreateUpdateRequest_And_validOriginalPO()
+        {
+            PurchaseOrderCreateUpdateRequest createUpdateRequestEntity = new PurchaseOrderCreateUpdateRequest()
+            {
+                PersonId = "966",
+                ConfEmailAddresses = new List<string>() { "abc@ellucian.com" },
+                InitiatorInitials = "ANA",
+                IsPersonVendor = false,
+                PurchaseOrder = new PurchaseOrder("1", "P000001", "VendorName", PurchaseOrderStatus.Closed, new DateTime(2017, 01, 01), new DateTime(2017, 01, 01))
+            };
+            PurchaseOrder originalPo = new PurchaseOrder("1", "P0001111", "Ellucian Consulting, Inc.", PurchaseOrderStatus.InProgress, new DateTime(2017, 01, 01), new DateTime(2017, 01, 01))
+            {
+                DeliveryDate = new DateTime(2020, 05, 01),
+                Amount = 117,
+                CurrencyCode = "",
+                MaintenanceDate = null,
+                VendorId = "0009876",
+                InitiatorName = "Abc",
+                RequestorName = "Abc",
+                ApType = "AP",
+                ShipToCode = "MC",
+                ShipToCodeName = "MC Datatel - Main Campus",
+                DefaultCommodityCode = "",
+                Comments = "It is a PO for Pen",
+                InternalComments = "Pen is ordered",
+                CommodityCode = "00375"
+            };
+            // Mock Execute within the transaction invoker to return a TxUpdateWebPurchaseOrderResponse object
+
+            TxUpdateWebPurchaseOrderResponse updatePurchaseOrderResponse = new TxUpdateWebPurchaseOrderResponse();
+            updatePurchaseOrderResponse.APoId = "123";
+            //voidPurchaseOrderResponse.A = "P0000123";
+            updatePurchaseOrderResponse.AError = "false";
+            updatePurchaseOrderResponse.AlErrorMessages = new List<string>() { "Purchase Order locked" };
+
+            transManagerMock.Setup(tio => tio.ExecuteAsync<TxUpdateWebPurchaseOrderRequest, TxUpdateWebPurchaseOrderResponse>(It.IsAny<TxUpdateWebPurchaseOrderRequest>())).ReturnsAsync(updatePurchaseOrderResponse);
+
+            var purchaseOrderCreateUpdate = await this.purchaseOrderRepository.UpdatePurchaseOrderAsync(createUpdateRequestEntity, originalPo);
+            Assert.IsNotNull(purchaseOrderCreateUpdate);
+        }
+
+        #endregion
+
+        #region Void PurchaseOrder
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task PurchaseOrders_VoidPurchaseOrderAsync_ArgumentNullException_PurchaseOrder_Null()
+        {
+            await purchaseOrderRepository.VoidPurchaseOrderAsync(null);
+        }
+
+        [TestMethod]
+        public async Task PurchaseOrders_VoidPurchaseOrderAsync_Transaction_Error()
+        {
+            // Mock Execute within the transaction invoker to return a TxVoidPurchaseOrderResponse object
+
+            TxVoidPurchaseOrderResponse voidPurchaseOrderResponse = new TxVoidPurchaseOrderResponse();
+
+            voidPurchaseOrderResponse.APurchaseOrderId = "123";
+            voidPurchaseOrderResponse.APurchaseOrderNumber = "P0000123";
+            voidPurchaseOrderResponse.AErrorOccurred = true;
+            voidPurchaseOrderResponse.AlErrorMessages = new List<string>() { "Purchase Order locked" };
+
+            transManagerMock.Setup(tio => tio.ExecuteAsync<TxVoidPurchaseOrderRequest, TxVoidPurchaseOrderResponse>(It.IsAny<TxVoidPurchaseOrderRequest>())).ReturnsAsync(voidPurchaseOrderResponse);
+            
+            PurchaseOrderVoidRequest voidRequest = new PurchaseOrderVoidRequest();
+            voidRequest.PersonId = "0001234";
+            voidRequest.PurchaseOrderId = "123";
+            var result = await purchaseOrderRepository.VoidPurchaseOrderAsync(voidRequest);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(result.PurchaseOrderId, voidRequest.PurchaseOrderId);
+            Assert.IsTrue(result.ErrorOccured);
+        }
+
+        [TestMethod]
+        [ExpectedException (typeof(Exception))]
+        public async Task PurchaseOrders_VoidPurchaseOrderAsync_Transaction_ThrowsException()
+        {
+            // Mock Execute within the transaction invoker to return a TxVoidPurchaseOrderResponse object
+
+            TxVoidPurchaseOrderResponse voidPurchaseOrderResponse = new TxVoidPurchaseOrderResponse();
+
+            voidPurchaseOrderResponse.APurchaseOrderId = "123";
+            voidPurchaseOrderResponse.APurchaseOrderNumber = "P0000123";
+            voidPurchaseOrderResponse.AErrorOccurred = true;
+            voidPurchaseOrderResponse.AlErrorMessages = new List<string>() { "Purchase Order locked" };
+
+            transManagerMock.Setup(tio => tio.ExecuteAsync<TxVoidPurchaseOrderRequest, TxVoidPurchaseOrderResponse>(It.IsAny<TxVoidPurchaseOrderRequest>())).Throws(new Exception());
+
+            PurchaseOrderVoidRequest voidRequest = new PurchaseOrderVoidRequest();
+            voidRequest.PersonId = "0001234";
+            voidRequest.PurchaseOrderId = "123";
+            await purchaseOrderRepository.VoidPurchaseOrderAsync(voidRequest);
+            
+        }
+
+        [TestMethod]
+        public async Task PurchaseOrders_VoidPurchaseOrderAsync()
+        {
+            // Mock Execute within the transaction invoker to return a TxVoidPurchaseOrderResponse object
+
+            TxVoidPurchaseOrderResponse voidPurchaseOrderResponse = new TxVoidPurchaseOrderResponse();
+
+            voidPurchaseOrderResponse.APurchaseOrderId = "123";
+            voidPurchaseOrderResponse.APurchaseOrderNumber = "P0000123";
+            voidPurchaseOrderResponse.AErrorOccurred = false;
+            voidPurchaseOrderResponse.AlErrorMessages = null;
+            voidPurchaseOrderResponse.AWarningOccurred = true;
+            voidPurchaseOrderResponse.AlWarningMessages = new List<string>() { "Warning Occurred" };
+
+            transManagerMock.Setup(tio => tio.ExecuteAsync<TxVoidPurchaseOrderRequest, TxVoidPurchaseOrderResponse>(It.IsAny<TxVoidPurchaseOrderRequest>())).ReturnsAsync(voidPurchaseOrderResponse);
+
+            PurchaseOrderVoidRequest voidRequest = new PurchaseOrderVoidRequest();
+            voidRequest.PersonId = "0001234";
+            voidRequest.PurchaseOrderId = "123";
+            var result = await purchaseOrderRepository.VoidPurchaseOrderAsync(voidRequest);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(result.PurchaseOrderId, voidRequest.PurchaseOrderId);
+            Assert.IsFalse(result.ErrorOccured);
+        }
+
+        [TestMethod]
+        public async Task PurchaseOrders_VoidPurchaseOrderAsync_EmptyErrorMsg()
+        {
+            // Mock Execute within the transaction invoker to return a TxVoidPurchaseOrderResponse object
+
+            TxVoidPurchaseOrderResponse voidPurchaseOrderResponse = new TxVoidPurchaseOrderResponse();
+
+            voidPurchaseOrderResponse.APurchaseOrderId = "123";
+            voidPurchaseOrderResponse.APurchaseOrderNumber = "P0000123";
+            voidPurchaseOrderResponse.AErrorOccurred = false;
+            voidPurchaseOrderResponse.AlErrorMessages = new List<string>() { };
+            voidPurchaseOrderResponse.AWarningOccurred = true;
+            voidPurchaseOrderResponse.AlWarningMessages = new List<string>() { "Warning Occurred" };
+
+            transManagerMock.Setup(tio => tio.ExecuteAsync<TxVoidPurchaseOrderRequest, TxVoidPurchaseOrderResponse>(It.IsAny<TxVoidPurchaseOrderRequest>())).ReturnsAsync(voidPurchaseOrderResponse);
+
+            PurchaseOrderVoidRequest voidRequest = new PurchaseOrderVoidRequest();
+            voidRequest.PersonId = "0001234";
+            voidRequest.PurchaseOrderId = "123";
+            var result = await purchaseOrderRepository.VoidPurchaseOrderAsync(voidRequest);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(result.PurchaseOrderId, voidRequest.PurchaseOrderId);
+            Assert.IsFalse(result.ErrorOccured);
+        }
+
+        #endregion
+
         #region Private methods
         private PurchaseOrderRepository BuildPurchaseOrderRepository()
         {
@@ -1449,9 +2154,32 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             // The transaction factory has a method to get its data reader
             // Make sure that method returns our mock data reader
             transactionFactory.Setup(transFac => transFac.GetDataReader()).Returns(dataReaderMock.Object);
-            transactionFactory.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transactionInvoker.Object);
+            transactionFactory.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager);
 
             return new PurchaseOrderRepository(cacheProviderMock.Object, transactionFactoryObject, loggerObject);
+        }
+
+        private async void InitDataForPurchaseOrderSummary()
+        {
+            string purchaseOrderId = "1";
+            var purchaseOrdersFilename = "PURCHASE.ORDERS";
+            var purchaseOrderIds = new List<string>()
+            {
+                purchaseOrderId
+            };
+            dataReaderMock.Setup(dr => dr.SelectAsync(purchaseOrdersFilename, It.IsAny<string[]>(), It.IsAny<string>())).Returns(() =>
+            {
+                return Task.FromResult(purchaseOrderIds.ToArray());
+            });
+            dataReaderMock.Setup(dr => dr.SelectAsync(purchaseOrdersFilename, It.IsAny<string>())).Returns(() =>
+            {
+                return Task.FromResult(purchaseOrderIds.ToArray());
+            });
+
+            dataReaderMock.Setup<Task<CfwebDefaults>>(d => d.ReadRecordAsync<CfwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(new CfwebDefaults());
+            });
         }
 
         private List<string> CalculateExpenseAccountsForUser(string purchaseOrderId)
@@ -1493,6 +2221,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
         private void InitializeMockMethods()
         {
+          
+
             var intlParams = new Base.DataContracts.IntlParams()
             {
                 HostCountry = "USA",
@@ -1512,8 +2242,39 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
             dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<PurchaseOrders>("PURCHASE.ORDERS", It.IsAny<string[]>(), It.IsAny<bool>()))
                .ReturnsAsync(purchaseOrdersCollection);
+        
 
+            var purchaseOrdersCollectionIds = purchaseOrdersCollection.Select(x => x.Recordkey).ToList();
 
+            GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+            {
+                Offset = 0,
+                Limit = 100,
+                CacheName = "AllPurchaseOrders",
+                Entity = "PURCHASE.ORDERS",
+                Sublist = purchaseOrdersCollectionIds,
+                TotalCount = purchaseOrdersCollection.Count(),
+                KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 5905,
+                            KeyCacheMin = 1,
+                            KeyCachePart = "000",
+                            KeyCacheSize = 5905
+                        },
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 7625,
+                            KeyCacheMin = 5906,
+                            KeyCachePart = "001",
+                            KeyCacheSize = 1720
+                        }
+                    }
+            };
+            transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
+            transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                .ReturnsAsync(resp);
 
             // Mock ReadRecord to return a pre-defined Purchase Orders data contract.
             dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).Returns(Task.FromResult(this.purchaseOrderDataContract));
@@ -1568,10 +2329,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             });
 
             // Mock Execute within the transaction invoker to return a GetHierarchyNamesForIdsResponse object
-            transactionInvoker.Setup(tio => tio.Execute<GetHierarchyNamesForIdsRequest, GetHierarchyNamesForIdsResponse>(It.IsAny<GetHierarchyNamesForIdsRequest>())).Returns(() =>
+            transManagerMock.Setup(tio => tio.Execute<GetHierarchyNamesForIdsRequest, GetHierarchyNamesForIdsResponse>(It.IsAny<GetHierarchyNamesForIdsRequest>())).Returns(() =>
             {
                 return this.hierarchyNamesForIdsResponse;
             });
+
+
+            // Mock Execute within the transaction invoker to return a GetHierarchyNamesForIdsResponse object
+            transManagerMock.Setup(tio => tio.ExecuteAsync<GetHierarchyNamesForIdsRequest, GetHierarchyNamesForIdsResponse>(It.IsAny<GetHierarchyNamesForIdsRequest>())).Returns(Task.FromResult(this.hierarchyNamesForIdsResponse));
         }
 
         private void ConvertDomainEntitiesIntoDataContracts(bool ctxLongName = false)
@@ -1782,9 +2547,48 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     ItmComments = lineItem.Comments,
                     ItmExpectedDeliveryDate = lineItem.ExpectedDeliveryDate,
                     ItmVendorPart = lineItem.VendorPart,
+                    ItmFixedAssetsFlag = lineItem.FixedAssetsFlag,                  
                     ItemPoEntityAssociation = new List<ItemsItemPo>(),
-                    PoGlTaxesEntityAssociation = new List<ItemsPoGlTaxes>()
+                    PoGlTaxesEntityAssociation = new List<ItemsPoGlTaxes>(),
+                    ItemPoStatusEntityAssociation = new List<ItemsItemPoStatus>()
                 };
+
+                itemsDataContract.ItmPoStatus = new List<string>();
+                switch(lineItem.LineItemStatus)
+                {
+                    case LineItemStatus.Accepted:
+                        itemsDataContract.ItmPoStatus.Add("A");
+                        break;
+                    case LineItemStatus.Backordered:
+                        itemsDataContract.ItmPoStatus.Add("B");
+                        break;
+                    case LineItemStatus.Closed:
+                        itemsDataContract.ItmPoStatus.Add("C");
+                        break;
+                    case LineItemStatus.Hold:
+                        itemsDataContract.ItmPoStatus.Add("H");
+                        break;
+                    case LineItemStatus.Invoiced:
+                        itemsDataContract.ItmPoStatus.Add("I");
+                        break;
+                    case LineItemStatus.Outstanding:
+                        itemsDataContract.ItmPoStatus.Add("O");
+                        break;
+                    case LineItemStatus.Paid:
+                        itemsDataContract.ItmPoStatus.Add("P");
+                        break;
+                    case LineItemStatus.Reconciled:
+                        itemsDataContract.ItmPoStatus.Add("R");
+                        break;
+                    case LineItemStatus.Voided:
+                        itemsDataContract.ItmPoStatus.Add("V");
+                        break;                   
+                    default:
+                        itemsDataContract.ItmPoStatus.Add("None");
+                        break;
+                }
+
+                itemsDataContract.ItemPoStatusEntityAssociation.Add(new ItemsItemPoStatus(itemsDataContract.ItmPoStatus[0], null));
 
                 // Populate the GL Distributions
                 int counter = 0;
@@ -1892,7 +2696,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
     }
 
     [TestClass]
-    public class PurchaseOrderRepositoryTests_V10
+    public class PurchaseOrderRepositoryTests_V10 : BaseRepositorySetup
     {
         [TestClass]
         public class PurchaseOrderRepositoryTests_POST : BaseRepositorySetup
@@ -2056,8 +2860,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task PurchaseOrdersService_CreatePurchaseOrdersAsync_Get_BuildPurchaseOrder_ArgumentNullException_PurchaseOrder_Null()
+            [ExpectedException(typeof(KeyNotFoundException))]
+            public async Task PurchaseOrdersService_CreatePurchaseOrdersAsync_Get_BuildPurchaseOrder_Exception_PurchaseOrder_Null()
             {
                 dataReaderMock.Setup(r => r.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).ReturnsAsync(null);
 
@@ -2065,8 +2869,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task PurchaseOrdersService_CreatePurchaseOrdersAsync_Get_BuildPurchaseOrder_ArgumentNullException_PurchaseOrder_RecordKey_Null()
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task PurchaseOrdersService_CreatePurchaseOrdersAsync_Get_BuildPurchaseOrder_Exception_PurchaseOrder_RecordKey_Null()
             {
                 purchaseOrders.Recordkey = null;
 
@@ -2074,8 +2878,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task PurchaseOrdersService_CreatePurchaseOrdersAsync_Get_BuildPurchaseOrder_ArgumentNullException_PurchaseOrder_RecordGuid_Null()
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task PurchaseOrdersService_CreatePurchaseOrdersAsync_Get_BuildPurchaseOrder_Exception_PurchaseOrder_RecordGuid_Null()
             {
                 purchaseOrders.RecordGuid = null;
 
@@ -2083,8 +2887,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ApplicationException))]
-            public async Task PurchaseOrdersService_CreatePurchaseOrdersAsync_Get_BuildPurchaseOrder_ApplicationException_PurchaseOrder_PoStatus_Null()
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task PurchaseOrdersService_CreatePurchaseOrdersAsync_Get_BuildPurchaseOrder_Exception_PurchaseOrder_PoStatus_Null()
             {
                 purchaseOrders.PoStatus = new List<string>();
 
@@ -2092,8 +2896,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ApplicationException))]
-            public async Task PurchaseOrdersService_CreatePurchaseOrdersAsync_Get_BuildPurchaseOrder_ApplicationException_PurchaseOrder_PoStatusDate_Null()
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task PurchaseOrdersService_CreatePurchaseOrdersAsync_Get_BuildPurchaseOrder_Exception_PurchaseOrder_PoStatusDate_Null()
             {
                 purchaseOrders.PoStatusDate = null;
 
@@ -2101,8 +2905,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ApplicationException))]
-            public async Task PurchaseOrdersService_CreatePurchaseOrdersAsync_Get_BuildPurchaseOrder_ApplicationException_PurchaseOrder_PoDate_Null()
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task PurchaseOrdersService_CreatePurchaseOrdersAsync_Get_BuildPurchaseOrder_Exception_PurchaseOrder_PoDate_Null()
             {
                 purchaseOrders.PoDate = null;
 
@@ -2160,7 +2964,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
             private void InitializeTestData()
             {
-                lineItem = new LineItem("1", "desc", 10, 100, 110) { Status = PurchaseOrderStatus.Accepted };
+                lineItem = new LineItem("1", "desc", 10, 100, 110) { LineItemStatus = LineItemStatus.Accepted };
 
                 lineItem.AddTax(new LineItemTax("1", 100));
                 lineItem.AddGlDistribution(new LineItemGlDistribution("a", 10, 100) { });
@@ -2279,8 +3083,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task PurchaseOrdersService_UpdatePurchaseOrdersAsync_Get_BuildPurchaseOrder_ArgumentNullException_PurchaseOrder_Null()
+            [ExpectedException(typeof(KeyNotFoundException))]
+            public async Task PurchaseOrdersService_UpdatePurchaseOrdersAsync_Get_BuildPurchaseOrder_Exception_PurchaseOrder_Null()
             {
                 dataReaderMock.Setup(r => r.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).ReturnsAsync(null);
 
@@ -2288,8 +3092,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task PurchaseOrdersService_UpdatePurchaseOrdersAsync_Get_BuildPurchaseOrder_ArgumentNullException_PurchaseOrder_RecordKey_Null()
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task PurchaseOrdersService_UpdatePurchaseOrdersAsync_Get_BuildPurchaseOrder_Exception_PurchaseOrder_RecordKey_Null()
             {
                 purchaseOrders.Recordkey = null;
 
@@ -2297,8 +3101,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task PurchaseOrdersService_UpdatePurchaseOrdersAsync_Get_BuildPurchaseOrder_ArgumentNullException_PurchaseOrder_RecordGuid_Null()
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task PurchaseOrdersService_UpdatePurchaseOrdersAsync_Get_BuildPurchaseOrder_Exception_PurchaseOrder_RecordGuid_Null()
             {
                 purchaseOrders.RecordGuid = null;
 
@@ -2306,8 +3110,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ApplicationException))]
-            public async Task PurchaseOrdersService_UpdatePurchaseOrdersAsync_Get_BuildPurchaseOrder_ApplicationException_PurchaseOrder_PoStatus_Null()
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task PurchaseOrdersService_UpdatePurchaseOrdersAsync_Get_BuildPurchaseOrder_Exception_PurchaseOrder_PoStatus_Null()
             {
                 purchaseOrders.PoStatus = new List<string>();
 
@@ -2315,8 +3119,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ApplicationException))]
-            public async Task PurchaseOrdersService_UpdatePurchaseOrdersAsync_Get_BuildPurchaseOrder_ApplicationException_PurchaseOrder_PoStatusDate_Null()
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task PurchaseOrdersService_UpdatePurchaseOrdersAsync_Get_BuildPurchaseOrder_Exception_PurchaseOrder_PoStatusDate_Null()
             {
                 purchaseOrders.PoStatusDate = null;
 
@@ -2324,8 +3128,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ApplicationException))]
-            public async Task PurchaseOrdersService_UpdatePurchaseOrdersAsync_Get_BuildPurchaseOrder_ApplicationException_PurchaseOrder_PoDate_Null()
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task PurchaseOrdersService_UpdatePurchaseOrdersAsync_Get_BuildPurchaseOrder_Exception_PurchaseOrder_PoDate_Null()
             {
                 purchaseOrders.PoDate = null;
 

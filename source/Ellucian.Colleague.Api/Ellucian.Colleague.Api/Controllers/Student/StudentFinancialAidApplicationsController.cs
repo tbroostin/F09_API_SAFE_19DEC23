@@ -55,6 +55,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Return all financialAidApplications
         /// </summary>
         /// <returns>List of FinancialAidApplications <see cref="Dtos.FinancialAidApplication"/> objects representing matching financialAidApplications</returns>
+        [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
         [HttpGet]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         [ValidateQueryStringFilter()]
@@ -78,6 +79,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 var criteriaObject = GetFilterObject<Dtos.FinancialAidApplication>(logger, "criteria");
                 if (CheckForEmptyFilterParameters())
                     return new PagedHttpActionResult<IEnumerable<Dtos.FinancialAidApplication>>(new List<Dtos.FinancialAidApplication>(), page, 0, this.Request);
+
                 var pageOfItems = await studentFinancialAidApplicationService.GetAsync(page.Offset, page.Limit, criteriaObject, bypassCache);
                 AddEthosContextProperties(
                     await studentFinancialAidApplicationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -123,6 +125,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="id">GUID to desired financialAidApplications</param>
         /// <returns>A financialAidApplications object <see cref="Dtos.FinancialAidApplication"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
         [HttpGet, EedmResponseFilter]
         public async Task<Dtos.FinancialAidApplication> GetByIdAsync(string id)
         {

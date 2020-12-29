@@ -1,22 +1,21 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Coordination.Student.Services;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Colleague.Domain.Student.Tests;
+using Ellucian.Colleague.Dtos;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Security;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Coordination.Student.Services;
-using Ellucian.Colleague.Domain.Student.Repositories;
-using Ellucian.Colleague.Domain.Student.Tests;
-using Ellucian.Colleague.Dtos;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
-using slf4net;
 using GradeScheme = Ellucian.Colleague.Domain.Student.Entities.GradeScheme;
-using Ellucian.Web.Adapters;
-using Ellucian.Web.Security;
-using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Colleague.Domain.Base.Repositories;
-
+using GradeSubscheme = Ellucian.Colleague.Domain.Student.Entities.GradeSubscheme;
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
     [TestClass]
@@ -152,6 +151,200 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             Assert.IsNotNull(result.Title);
             Assert.IsNotNull(result.EffectiveStartDate);
             Assert.IsNotNull(result.EffectiveEndDate);
+        }
+    }
+
+    [TestClass]
+    public class GradeSchemeService_GetNonEthosGradeSchemeByIdAsync_Tests
+    {
+        private ICollection<GradeScheme> _gradeSchemeCollection;
+        private GradeSchemeService _gradeSchemeService;
+        private Mock<ILogger> _loggerMock;
+        private Mock<IStudentReferenceDataRepository> _studentReferenceRepositoryMock;
+        private Mock<IAdapterRegistry> _adapterRegistryMock;
+        private Mock<ICurrentUserFactory> _currentUserFactoryMock;
+        private Mock<IRoleRepository> _roleRepositoryMock;
+        private Mock<IConfigurationRepository> _configRepositoryMock;
+
+        [TestInitialize]
+        public async void Initialize()
+        {
+            _studentReferenceRepositoryMock = new Mock<IStudentReferenceDataRepository>();
+            _loggerMock = new Mock<ILogger>();
+
+            _gradeSchemeCollection = (await new TestStudentReferenceDataRepository().GetGradeSchemesAsync()).ToList();
+
+            _studentReferenceRepositoryMock.Setup(repo => repo.GetGradeSchemesAsync())
+                .ReturnsAsync(_gradeSchemeCollection);
+
+            _adapterRegistryMock = new Mock<IAdapterRegistry>();
+            _currentUserFactoryMock = new Mock<ICurrentUserFactory>();
+            _roleRepositoryMock = new Mock<IRoleRepository>();
+            _configRepositoryMock = new Mock<IConfigurationRepository>();
+
+            var gradeSchemeAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.GradeScheme, Ellucian.Colleague.Dtos.Student.GradeScheme>(_adapterRegistryMock.Object, _loggerMock.Object);
+            _adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.GradeScheme, Ellucian.Colleague.Dtos.Student.GradeScheme>()).Returns(gradeSchemeAdapter);
+
+            _gradeSchemeService = new GradeSchemeService(_studentReferenceRepositoryMock.Object, _loggerMock.Object, _configRepositoryMock.Object, _adapterRegistryMock.Object, _currentUserFactoryMock.Object, _roleRepositoryMock.Object);
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            _gradeSchemeService = null;
+            _gradeSchemeCollection = null;
+            _studentReferenceRepositoryMock = null;
+            _loggerMock = null;
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GradeSchemeService_GetNonEthosGradeSchemeByIdAsync_Null_Id()
+        {
+            var scheme = await _gradeSchemeService.GetNonEthosGradeSchemeByIdAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GradeSchemeService_GetNonEthosGradeSchemeByIdAsync_Empty_Id()
+        {
+            var scheme = await _gradeSchemeService.GetNonEthosGradeSchemeByIdAsync(string.Empty);
+        }
+
+        [TestMethod]
+        public async Task GradeSchemeService_GetNonEthosGradeSchemeByIdAsync_valid()
+        {
+            var scheme = await _gradeSchemeService.GetNonEthosGradeSchemeByIdAsync(_gradeSchemeCollection.First().Code);
+            Assert.AreEqual(_gradeSchemeCollection.First().Code, scheme.Code);
+            Assert.AreEqual(_gradeSchemeCollection.First().Description, scheme.Description);
+            CollectionAssert.AreEqual(_gradeSchemeCollection.First().GradeCodes.ToList(), scheme.GradeCodes.ToList());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(KeyNotFoundException))]
+        public async Task GradeSchemeService_GetNonEthosGradeSchemeByIdAsync_key_not_found()
+        {
+            _studentReferenceRepositoryMock.Setup(repo => repo.GetGradeSchemesAsync())
+                .ReturnsAsync(_gradeSchemeCollection);
+
+            var scheme = await _gradeSchemeService.GetNonEthosGradeSchemeByIdAsync("GARBAGE");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(KeyNotFoundException))]
+        public async Task GradeSchemeService_GetNonEthosGradeSchemeByIdAsync_Repo_returns_null()
+        {
+            _studentReferenceRepositoryMock.Setup(repo => repo.GetGradeSchemesAsync())
+                .ReturnsAsync(null);
+
+            var scheme = await _gradeSchemeService.GetNonEthosGradeSchemeByIdAsync("UG");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(KeyNotFoundException))]
+        public async Task GradeSchemeService_GetNonEthosGradeSchemeByIdAsync_Repo_returns_empty_list()
+        {
+            _studentReferenceRepositoryMock.Setup(repo => repo.GetGradeSchemesAsync())
+                .ReturnsAsync(new List<GradeScheme>());
+
+            var scheme = await _gradeSchemeService.GetNonEthosGradeSchemeByIdAsync("UG");
+        }
+    }
+
+    [TestClass]
+    public class GradeSchemeService_GetGradeSubschemeByIdAsync_Tests
+    {
+        private ICollection<GradeSubscheme> _gradeSubschemeCollection;
+        private GradeSchemeService _gradeSchemeService;
+        private Mock<ILogger> _loggerMock;
+        private Mock<IStudentReferenceDataRepository> _studentReferenceRepositoryMock;
+        private Mock<IAdapterRegistry> _adapterRegistryMock;
+        private Mock<ICurrentUserFactory> _currentUserFactoryMock;
+        private Mock<IRoleRepository> _roleRepositoryMock;
+        private Mock<IConfigurationRepository> _configRepositoryMock;
+
+        [TestInitialize]
+        public async void Initialize()
+        {
+            _studentReferenceRepositoryMock = new Mock<IStudentReferenceDataRepository>();
+            _loggerMock = new Mock<ILogger>();
+
+            _gradeSubschemeCollection = (await new TestStudentReferenceDataRepository().GetGradeSubschemesAsync()).ToList();
+
+            _studentReferenceRepositoryMock.Setup(repo => repo.GetGradeSubschemesAsync())
+                .ReturnsAsync(_gradeSubschemeCollection);
+
+            _adapterRegistryMock = new Mock<IAdapterRegistry>();
+            _currentUserFactoryMock = new Mock<ICurrentUserFactory>();
+            _roleRepositoryMock = new Mock<IRoleRepository>();
+            _configRepositoryMock = new Mock<IConfigurationRepository>();
+
+            var gradeSubschemeAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.GradeSubscheme, Ellucian.Colleague.Dtos.Student.GradeSubscheme>(_adapterRegistryMock.Object, _loggerMock.Object);
+            _adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.GradeSubscheme, Ellucian.Colleague.Dtos.Student.GradeSubscheme>()).Returns(gradeSubschemeAdapter);
+
+            _gradeSchemeService = new GradeSchemeService(_studentReferenceRepositoryMock.Object, _loggerMock.Object, _configRepositoryMock.Object, _adapterRegistryMock.Object, _currentUserFactoryMock.Object, _roleRepositoryMock.Object);
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            _gradeSchemeService = null;
+            _gradeSubschemeCollection = null;
+            _studentReferenceRepositoryMock = null;
+            _loggerMock = null;
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GradeSchemeService_GetGradeSubschemeByIdAsync_Null_Id()
+        {
+            var scheme = await _gradeSchemeService.GetGradeSubschemeByIdAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GradeSchemeService_GetGradeSubschemeByIdAsync_Empty_Id()
+        {
+            var scheme = await _gradeSchemeService.GetGradeSubschemeByIdAsync(string.Empty);
+        }
+
+        [TestMethod]
+        public async Task GradeSchemeService_GetGradeSubschemeByIdAsync_valid()
+        {
+            var scheme = await _gradeSchemeService.GetGradeSubschemeByIdAsync(_gradeSubschemeCollection.First().Code);
+            Assert.AreEqual(_gradeSubschemeCollection.First().Code, scheme.Code);
+            Assert.AreEqual(_gradeSubschemeCollection.First().Description, scheme.Description);
+            CollectionAssert.AreEqual(_gradeSubschemeCollection.First().GradeCodes.ToList(), scheme.GradeCodes.ToList());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(KeyNotFoundException))]
+        public async Task GradeSchemeService_GetGradeSubschemeByIdAsync_key_not_found()
+        {
+            _studentReferenceRepositoryMock.Setup(repo => repo.GetGradeSubschemesAsync())
+                .ReturnsAsync(_gradeSubschemeCollection);
+
+            var scheme = await _gradeSchemeService.GetGradeSubschemeByIdAsync("GARBAGE");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(KeyNotFoundException))]
+        public async Task GradeSchemeService_GetGradeSubschemeByIdAsync_Repo_returns_null()
+        {
+            _studentReferenceRepositoryMock.Setup(repo => repo.GetGradeSubschemesAsync())
+                .ReturnsAsync(null);
+
+            var scheme = await _gradeSchemeService.GetGradeSubschemeByIdAsync("UG");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(KeyNotFoundException))]
+        public async Task GradeSchemeService_GetGradeSubschemeByIdAsync_Repo_returns_empty_list()
+        {
+            _studentReferenceRepositoryMock.Setup(repo => repo.GetGradeSubschemesAsync())
+                .ReturnsAsync(new List<GradeSubscheme>());
+
+            var scheme = await _gradeSchemeService.GetGradeSubschemeByIdAsync("UG");
         }
     }
 

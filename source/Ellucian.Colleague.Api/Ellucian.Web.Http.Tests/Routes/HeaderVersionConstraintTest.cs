@@ -6,6 +6,7 @@ using System.Web.Routing;
 using Ellucian.Web.Http.Routes;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using System.Collections.Generic;
 
 namespace Ellucian.Web.Http.Tests.Routes
 {
@@ -649,7 +650,7 @@ namespace Ellucian.Web.Http.Tests.Routes
         /// Supported Versions: 16.0.0
         /// Requested Version:  16
         /// Payload Version:    16.0.0
-        /// Expected Response:  No Match
+        /// Expected Response:  Match
         /// </summary>
         [TestMethod]
         public void SemanticMatchOnCustomMediaTypesTest_3()
@@ -665,8 +666,8 @@ namespace Ellucian.Web.Http.Tests.Routes
 
             var acceptHeaders = new string[] { string.Format(CustomMediaTypeFormat, "16") };
             request.Setup(x => x.AcceptTypes).Returns(acceptHeaders);
-            Assert.IsFalse(customConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
-            Assert.IsFalse(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(customConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
             Assert.IsFalse(nonDefaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
         }
 
@@ -698,15 +699,15 @@ namespace Ellucian.Web.Http.Tests.Routes
         /// <summary>
         /// Supported Versions: 6, 6.1.0
         /// Requested Version:  6
-        /// Payload Version:    6
+        /// Payload Version:    6.1.0
         /// Expected Response:  correct
         /// </summary>
         [TestMethod]
         public void SemanticMatchOnCustomMediaTypesTest_5()
         {
             var defaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "6.1.0"), satisfyVersionlessRequest: true);
-            var nonDefaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "6"), satisfyVersionlessRequest: false);
-            var customConstraint = new HeaderVersionConstraint(new string[] { string.Format(CustomMediaTypeFormat, "6"), string.Format(CustomMediaTypeFormat, "6.1.0") });
+            var nonDefaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "6.1.0"), satisfyVersionlessRequest: false);
+            var customConstraint = new HeaderVersionConstraint(new string[] { string.Format(CustomMediaTypeFormat, "6.1.0"), string.Format(CustomMediaTypeFormat, "6.1.0") });
             var context = new Mock<HttpContextBase>();
             var request = new Mock<HttpRequestBase>();
             context.Setup(x => x.Request).Returns(request.Object);
@@ -717,32 +718,32 @@ namespace Ellucian.Web.Http.Tests.Routes
             request.Setup(x => x.AcceptTypes).Returns(acceptHeaders);
             Assert.IsTrue(customConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
             Assert.IsTrue(nonDefaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
-            Assert.IsFalse(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
         }
 
         /// <summary>
         /// Supported Versions: 6, 6.1.0
         /// Requested Version:  6.0.0
         /// Payload Version:    6
-        /// Expected Response:  No Match
+        /// Expected Response:  Match (6.1.0)
         /// </summary>
         [TestMethod]
         public void SemanticMatchOnCustomMediaTypesTest_6()
         {
             var defaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "6.1.0"), satisfyVersionlessRequest: true);
-            var nonDefaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "6"), satisfyVersionlessRequest: false);
-            var customConstraint = new HeaderVersionConstraint(new string[] { string.Format(CustomMediaTypeFormat, "6"), string.Format(CustomMediaTypeFormat, "6.1.0") });
+            var nonDefaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "6.1.0"), satisfyVersionlessRequest: false);
+            var customConstraint = new HeaderVersionConstraint(new string[] { string.Format(CustomMediaTypeFormat, "6.0.0"), string.Format(CustomMediaTypeFormat, "6.1.0") });
             var context = new Mock<HttpContextBase>();
             var request = new Mock<HttpRequestBase>();
             context.Setup(x => x.Request).Returns(request.Object);
             request.Setup(x => x.Headers).Returns(new NameValueCollection() { });
             Route fakeRoute = new Route("fakeroute", null);
 
-            var acceptHeaders = new string[] { string.Format(CustomMediaTypeFormat, "6.0.0") };
+            var acceptHeaders = new string[] { string.Format(CustomMediaTypeFormat, "6") };
             request.Setup(x => x.AcceptTypes).Returns(acceptHeaders);
-            Assert.IsFalse(customConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
-            Assert.IsFalse(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
-            Assert.IsFalse(nonDefaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(customConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
         }
 
         /// <summary>
@@ -774,7 +775,7 @@ namespace Ellucian.Web.Http.Tests.Routes
         /// Supported Versions: 16.0.0, 16.1.0
         /// Requested Version:  16
         /// Payload Version:    16.0.0
-        /// Expected Response:  No Match
+        /// Expected Response:  Match
         /// </summary>
         [TestMethod]
         public void SemanticMatchOnCustomMediaTypesTest_8()
@@ -790,23 +791,25 @@ namespace Ellucian.Web.Http.Tests.Routes
 
             var acceptHeaders = new string[] { string.Format(CustomMediaTypeFormat, "16") };
             request.Setup(x => x.AcceptTypes).Returns(acceptHeaders);
-            Assert.IsFalse(customConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
-            Assert.IsFalse(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
-            Assert.IsFalse(nonDefaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(customConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(nonDefaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
         }
 
         /// <summary>
         /// Supported Versions: 16.0.0, 16.1.0
         /// Requested Version:  16.0.0
         /// Payload Version:    16.0.0
-        /// Expected Response:  Match
+        /// Expected Response:  Match on 16.1.0
         /// </summary>
         [TestMethod]
         public void SemanticMatchOnCustomMediaTypesTest_9()
         {
             var defaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "16.1.0"), satisfyVersionlessRequest: true);
-            var nonDefaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "16.0.0"), satisfyVersionlessRequest: false);
-            var customConstraint = new HeaderVersionConstraint(new string[] { string.Format(CustomMediaTypeFormat, "16.0.0"), string.Format(CustomMediaTypeFormat, "16.1.0") });
+            var nonDefaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "16.1.0"), satisfyVersionlessRequest: false);
+            var customConstraint = new HeaderVersionConstraint(new string[] { string.Format(CustomMediaTypeFormat, "16.1.0"), string.Format(CustomMediaTypeFormat, "16.0.0") });
+            //inverted order of customMediaTypes
+            var customConstraint2 = new HeaderVersionConstraint(new string[] { string.Format(CustomMediaTypeFormat, "16.0.0"), string.Format(CustomMediaTypeFormat, "16.1.0") });
             var context = new Mock<HttpContextBase>();
             var request = new Mock<HttpRequestBase>();
             context.Setup(x => x.Request).Returns(request.Object);
@@ -816,7 +819,8 @@ namespace Ellucian.Web.Http.Tests.Routes
             var acceptHeaders = new string[] { string.Format(CustomMediaTypeFormat, "16.0.0") };
             request.Setup(x => x.AcceptTypes).Returns(acceptHeaders);
             Assert.IsTrue(customConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
-            Assert.IsFalse(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(customConstraint2.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
             Assert.IsTrue(nonDefaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
         }
 
@@ -843,6 +847,327 @@ namespace Ellucian.Web.Http.Tests.Routes
             Assert.IsTrue(customConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
             Assert.IsTrue(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
             Assert.IsFalse(nonDefaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+        }
+
+        /// <summary>
+        /// Supported Versions: 1.0.0,
+        /// Requested Version:  1.0.0
+        /// Expected Response:  Success 
+        /// Expected Version:   1.0.0
+        /// </summary>
+        [TestMethod]
+        public void SemanticMatchOnCustomMediaTypesTest_11()
+        {
+            var defaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "1.0.0"), satisfyVersionlessRequest: true);
+            var nonDefaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "1.0.0"), satisfyVersionlessRequest: false);
+            var customConstraint = new HeaderVersionConstraint(new string[] { string.Format(CustomMediaTypeFormat, "1.0.0") });
+            var context = new Mock<HttpContextBase>();
+            var request = new Mock<HttpRequestBase>();
+            context.Setup(x => x.Request).Returns(request.Object);
+            request.Setup(x => x.Headers).Returns(new NameValueCollection() { });
+            Route fakeRoute = new Route("fakeroute", null);
+
+            var acceptHeaders = new string[] { string.Format(CustomMediaTypeFormat, "1.0.0") };
+            request.Setup(x => x.AcceptTypes).Returns(acceptHeaders);
+            Assert.IsTrue(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(customConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(nonDefaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+        }
+
+        /// <summary>
+        /// Supported Versions: 1.0.0,
+        /// Requested Version:  1
+        /// Expected Response:  Success 
+        /// Expected Version:   1.0.0
+        /// </summary>
+        [TestMethod]
+        public void SemanticMatchOnCustomMediaTypesTest_12()
+        {
+            var defaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "1.0.0"), satisfyVersionlessRequest: true);
+            var nonDefaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "1.0.0"), satisfyVersionlessRequest: false);
+            var customConstraint = new HeaderVersionConstraint(new string[] { string.Format(CustomMediaTypeFormat, "1.0.0") });
+            var context = new Mock<HttpContextBase>();
+            var request = new Mock<HttpRequestBase>();
+            context.Setup(x => x.Request).Returns(request.Object);
+            request.Setup(x => x.Headers).Returns(new NameValueCollection() { });
+            Route fakeRoute = new Route("fakeroute", null);
+
+            var acceptHeaders = new string[] { string.Format(CustomMediaTypeFormat, "1") };
+            request.Setup(x => x.AcceptTypes).Returns(acceptHeaders);
+            Assert.IsTrue(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(customConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(nonDefaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+        }
+
+        /// <summary>
+        /// Supported Versions: 1.0.0,
+        /// Requested Version:  2
+        /// Expected Response:  Fail 
+        /// Expected Version:   
+        /// </summary>
+        [TestMethod]
+        public void SemanticMatchOnCustomMediaTypesTest_13()
+        {
+            var defaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "1.0.0"), satisfyVersionlessRequest: true);
+            var nonDefaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "1.0.0"), satisfyVersionlessRequest: false);
+            var customConstraint = new HeaderVersionConstraint(new string[] { string.Format(CustomMediaTypeFormat, "1.0.0") });
+            var context = new Mock<HttpContextBase>();
+            var request = new Mock<HttpRequestBase>();
+            context.Setup(x => x.Request).Returns(request.Object);
+            request.Setup(x => x.Headers).Returns(new NameValueCollection() { });
+            Route fakeRoute = new Route("fakeroute", null);
+
+            var acceptHeaders = new string[] { string.Format(CustomMediaTypeFormat, "2") };
+            request.Setup(x => x.AcceptTypes).Returns(acceptHeaders);
+            Assert.IsFalse(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsFalse(customConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsFalse(nonDefaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+        }
+
+        /// <summary>
+        /// Supported Versions: 1.0.0, 1.1.0
+        /// Requested Version:  1
+        /// Expected Response:  Success 
+        /// Expected Version:   1.1.0
+        /// </summary>
+        [TestMethod]
+        public void SemanticMatchOnCustomMediaTypesTest_14()
+        {
+            var defaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "1.1.0"), satisfyVersionlessRequest: true);
+            var nonDefaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "1.1.0"), satisfyVersionlessRequest: false);
+            var customConstraint = new HeaderVersionConstraint(new string[] { string.Format(CustomMediaTypeFormat, "1.0.0"), string.Format(CustomMediaTypeFormat, "1.1.0") });
+            var context = new Mock<HttpContextBase>();
+            var request = new Mock<HttpRequestBase>();
+            context.Setup(x => x.Request).Returns(request.Object);
+            request.Setup(x => x.Headers).Returns(new NameValueCollection() { });
+            Route fakeRoute = new Route("fakeroute", null);
+            var acceptHeaders = new string[] { string.Format(CustomMediaTypeFormat, "1") };
+            request.Setup(x => x.AcceptTypes).Returns(acceptHeaders);
+
+            var routeValueDictionary = new RouteValueDictionary();
+            bool retVal = customConstraint.Match(context.Object, fakeRoute, null, routeValueDictionary, RouteDirection.IncomingRequest);
+
+            object requestedContentType = string.Empty;
+            routeValueDictionary.TryGetValue("RequestedContentType", out requestedContentType);
+            Assert.AreEqual(string.Format(CustomMediaTypeFormat, "1.1.0"), requestedContentType);
+
+
+            Assert.IsTrue(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(customConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(nonDefaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+        }
+
+        /// <summary>
+        /// Supported Versions: 1.0.0, 1.1.0
+        /// Requested Version:  1.0.0
+        /// Expected Response:  Success 
+        /// Expected Version:   1.1.0
+        /// </summary>
+        [TestMethod]
+        public void SemanticMatchOnCustomMediaTypesTest_15()
+        {
+            var defaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "1.1.0"), satisfyVersionlessRequest: true);
+            var nonDefaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "1.1.0"), satisfyVersionlessRequest: false);
+            var customConstraint = new HeaderVersionConstraint(new string[] { string.Format(CustomMediaTypeFormat, "1.0.0"), string.Format(CustomMediaTypeFormat, "1.1.0") });
+            var context = new Mock<HttpContextBase>();
+            var request = new Mock<HttpRequestBase>();
+            context.Setup(x => x.Request).Returns(request.Object);
+            request.Setup(x => x.Headers).Returns(new NameValueCollection() { });
+            Route fakeRoute = new Route("fakeroute", null);
+            var acceptHeaders = new string[] { string.Format(CustomMediaTypeFormat, "1.0.0") };
+            request.Setup(x => x.AcceptTypes).Returns(acceptHeaders);
+
+            var routeValueDictionary = new RouteValueDictionary();
+            bool retVal = customConstraint.Match(context.Object, fakeRoute, null, routeValueDictionary, RouteDirection.IncomingRequest);
+
+            object requestedContentType = string.Empty;
+            routeValueDictionary.TryGetValue("RequestedContentType", out requestedContentType);
+            Assert.AreEqual(string.Format(CustomMediaTypeFormat, "1.1.0"), requestedContentType);
+
+
+             Assert.IsTrue(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(customConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(nonDefaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+        }
+
+        /// <summary>
+        /// Supported Versions: 1.0.0, 1.1.0
+        /// Requested Version:  1.1.0
+        /// Expected Response:  Success 
+        /// Expected Version:   1.1.0
+        /// </summary>
+        [TestMethod]
+        public void SemanticMatchOnCustomMediaTypesTest_16()
+        {
+            var defaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "1.1.0"), satisfyVersionlessRequest: true);
+            var nonDefaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "1.1.0"), satisfyVersionlessRequest: false);
+            var customConstraint = new HeaderVersionConstraint(new string[] { string.Format(CustomMediaTypeFormat, "1.0.0"), string.Format(CustomMediaTypeFormat, "1.1.0") });
+            var context = new Mock<HttpContextBase>();
+            var request = new Mock<HttpRequestBase>();
+            context.Setup(x => x.Request).Returns(request.Object);
+            request.Setup(x => x.Headers).Returns(new NameValueCollection() { });
+            Route fakeRoute = new Route("fakeroute", null);
+
+            var acceptHeaders = new string[] { string.Format(CustomMediaTypeFormat, "1.1.0") };
+            request.Setup(x => x.AcceptTypes).Returns(acceptHeaders);
+
+
+            var routeValueDictionary = new RouteValueDictionary();
+            bool retVal = customConstraint.Match(context.Object, fakeRoute, null, routeValueDictionary, RouteDirection.IncomingRequest);
+
+            object requestedContentType = string.Empty;
+            routeValueDictionary.TryGetValue("RequestedContentType", out requestedContentType);
+            Assert.AreEqual(string.Format(CustomMediaTypeFormat, "1.1.0"), requestedContentType);
+
+            Assert.IsTrue(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(customConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(nonDefaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+        }
+
+        /// <summary>
+        /// Supported Versions: 1.0.0, 1.1.0
+        /// Requested Version:  1.1.1
+        /// Expected Response:  Success 
+        /// Expected Version:   1.1.0
+        /// </summary>
+        [TestMethod]
+        public void SemanticMatchOnCustomMediaTypesTest_17()
+        {
+            var defaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "1.1.0"), satisfyVersionlessRequest: true);
+            var nonDefaultConstraint = new HeaderVersionConstraint(customMediaTypes: string.Format(CustomMediaTypeFormat, "1.1.0"), satisfyVersionlessRequest: false);
+            var customConstraint = new HeaderVersionConstraint(new string[] { string.Format(CustomMediaTypeFormat, "1.0.0"), string.Format(CustomMediaTypeFormat, "1.1.0") });
+            var context = new Mock<HttpContextBase>();
+            var request = new Mock<HttpRequestBase>();
+            context.Setup(x => x.Request).Returns(request.Object);
+            request.Setup(x => x.Headers).Returns(new NameValueCollection() { });
+            Route fakeRoute = new Route("fakeroute", null);
+
+
+            var acceptHeaders = new string[] { string.Format(CustomMediaTypeFormat, "1.1.1") };
+            request.Setup(x => x.AcceptTypes).Returns(acceptHeaders);
+            Assert.IsFalse(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsFalse(customConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsFalse(nonDefaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+        }
+
+
+        /// <summary>
+        /// Supported Versions: 1.0.0, 2.0.0, 2.1.0
+        /// Requested Version:  1.1.1
+        /// Expected Response:  Success 
+        /// Expected Version:   2.0.0
+        /// </summary>
+        [TestMethod]
+        public void SemanticMatchOnCustomMediaTypesTest_18()
+        {
+            var supportedMediaTypes = new string[]
+            { string.Format(CustomMediaTypeFormat, "1.1.0"),
+            string.Format(CustomMediaTypeFormat, "1.0.0"),
+            string.Format(CustomMediaTypeFormat, "2.0.0")
+            };
+
+            var defaultConstraint = new HeaderVersionConstraint(customMediaTypes: supportedMediaTypes, satisfyVersionlessRequest: true);
+            var nonDefaultConstraint = new HeaderVersionConstraint(customMediaTypes: supportedMediaTypes, satisfyVersionlessRequest: false);
+            var customConstraint = new HeaderVersionConstraint(supportedMediaTypes);
+            var context = new Mock<HttpContextBase>();
+            var request = new Mock<HttpRequestBase>();
+            context.Setup(x => x.Request).Returns(request.Object);
+            request.Setup(x => x.Headers).Returns(new NameValueCollection() { });
+            Route fakeRoute = new Route("fakeroute", null);
+
+            var acceptHeaders = new string[] { string.Format(CustomMediaTypeFormat, "1.1.0") };
+            request.Setup(x => x.AcceptTypes).Returns(acceptHeaders);
+
+            var routeValueDictionary = new RouteValueDictionary();
+            bool retVal = defaultConstraint.Match(context.Object, fakeRoute, null, routeValueDictionary, RouteDirection.IncomingRequest);
+
+            object requestedContentType = string.Empty;
+            routeValueDictionary.TryGetValue("RequestedContentType", out requestedContentType);
+            Assert.AreEqual(string.Format(CustomMediaTypeFormat, "2.0.0"), requestedContentType);
+
+            Assert.IsTrue(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(customConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(nonDefaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+        }
+
+        /// <summary>
+        /// Supported Versions: 1.0.0, 2.0.0, 2.1.0, 3.0.0
+        /// Requested Version:  1.1.1
+        /// Expected Response:  Success 
+        /// Expected Version:   3.0.0
+        /// </summary>
+        [TestMethod]
+        public void SemanticMatchOnCustomMediaTypesTest_19()
+        {
+            var supportedMediaTypes = new string[]
+            { string.Format(CustomMediaTypeFormat, "1.1.0"),
+            string.Format(CustomMediaTypeFormat, "1.0.0"),
+            string.Format(CustomMediaTypeFormat, "2.0.0"),
+            string.Format(CustomMediaTypeFormat, "3.0.0")
+            };
+
+            var defaultConstraint = new HeaderVersionConstraint(customMediaTypes: supportedMediaTypes, satisfyVersionlessRequest: true);
+            var nonDefaultConstraint = new HeaderVersionConstraint(customMediaTypes: supportedMediaTypes, satisfyVersionlessRequest: false);
+            var customConstraint = new HeaderVersionConstraint(supportedMediaTypes);
+            var context = new Mock<HttpContextBase>();
+            var request = new Mock<HttpRequestBase>();
+            context.Setup(x => x.Request).Returns(request.Object);
+            request.Setup(x => x.Headers).Returns(new NameValueCollection() { });
+            Route fakeRoute = new Route("fakeroute", null);
+
+            var acceptHeaders = new string[] { string.Format(CustomMediaTypeFormat, "1.1.0") };
+            request.Setup(x => x.AcceptTypes).Returns(acceptHeaders);
+
+            var routeValueDictionary = new RouteValueDictionary();
+            bool retVal = defaultConstraint.Match(context.Object, fakeRoute, null, routeValueDictionary, RouteDirection.IncomingRequest);
+
+            object requestedContentType = string.Empty;
+            routeValueDictionary.TryGetValue("RequestedContentType", out requestedContentType);
+            Assert.AreEqual(string.Format(CustomMediaTypeFormat, "3.0.0"), requestedContentType);
+
+            Assert.IsTrue(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(customConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(nonDefaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+        }
+
+        /// <summary>
+        /// Supported Versions: 12, 12.1.0, 12.1.1
+        /// Requested Version:  12.1.0
+        /// Expected Response:  Success 
+        /// Expected Version:   12.1.1
+        /// </summary>
+        [TestMethod]
+        public void SemanticMatchOnCustomMediaTypesTest_220()
+        {
+            var supportedMediaTypes = new string[]
+            { string.Format(CustomMediaTypeFormat, "12"),
+            string.Format(CustomMediaTypeFormat, "12.1.0"),
+            string.Format(CustomMediaTypeFormat, "12.1.1")
+
+            };
+
+            var defaultConstraint = new HeaderVersionConstraint(customMediaTypes: supportedMediaTypes, satisfyVersionlessRequest: true);
+            var nonDefaultConstraint = new HeaderVersionConstraint(customMediaTypes: supportedMediaTypes, satisfyVersionlessRequest: false);
+            var customConstraint = new HeaderVersionConstraint(supportedMediaTypes);
+            var context = new Mock<HttpContextBase>();
+            var request = new Mock<HttpRequestBase>();
+            context.Setup(x => x.Request).Returns(request.Object);
+            request.Setup(x => x.Headers).Returns(new NameValueCollection() { });
+            Route fakeRoute = new Route("fakeroute", null);
+
+            var acceptHeaders = new string[] { string.Format(CustomMediaTypeFormat, "12.1.0") };
+            request.Setup(x => x.AcceptTypes).Returns(acceptHeaders);
+
+            var routeValueDictionary = new RouteValueDictionary();
+            bool retVal = defaultConstraint.Match(context.Object, fakeRoute, null, routeValueDictionary, RouteDirection.IncomingRequest);
+
+            object requestedContentType = string.Empty;
+            routeValueDictionary.TryGetValue("RequestedContentType", out requestedContentType);
+            Assert.AreEqual(string.Format(CustomMediaTypeFormat, "12.1.1"), requestedContentType);
+
+            Assert.IsTrue(defaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(customConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
+            Assert.IsTrue(nonDefaultConstraint.Match(context.Object, fakeRoute, null, new RouteValueDictionary(), RouteDirection.IncomingRequest));
         }
     }
 }

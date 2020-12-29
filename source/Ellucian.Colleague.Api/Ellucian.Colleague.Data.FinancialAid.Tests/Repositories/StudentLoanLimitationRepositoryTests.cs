@@ -1,8 +1,7 @@
-﻿/*Copyright 2014-2016 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2014-2019 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.FinancialAid.Repositories;
 using Ellucian.Colleague.Data.FinancialAid.Transactions;
@@ -12,6 +11,7 @@ using Ellucian.Colleague.Domain.FinancialAid.Tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Data.FinancialAid.DataContracts;
 
 namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
 {
@@ -31,6 +31,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
 
             private TestStudentAwardYearRepository studentAwardYearRepository;
             private TestFinancialAidOfficeRepository financialAidOfficeRepository;
+            private TestStudentAwardRepository studentAwardRepository;
             private CurrentOfficeService currentOfficeService;
             private IEnumerable<StudentAwardYear> inputStudentAwardYears;
 
@@ -51,6 +52,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 studentId = "0003914";
                 studentAwardYearRepository = new TestStudentAwardYearRepository();
                 financialAidOfficeRepository = new TestFinancialAidOfficeRepository();
+                studentAwardRepository = new TestStudentAwardRepository();
                 currentOfficeService = new CurrentOfficeService(financialAidOfficeRepository.GetFinancialAidOffices());
                 inputStudentAwardYears = studentAwardYearRepository.GetStudentAwardYears(studentId, currentOfficeService);
 
@@ -81,6 +83,24 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                             });
                         }
                     ).Callback<GetLoanLimitationsRequest>(req => actualGetLoanLimitationsRequestTransactionList.Add(req));
+
+                dataReaderMock
+                .Setup<Task<SaAcyr>>(reader => reader.ReadRecordAsync<SaAcyr>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .Returns<string, string, bool>(
+                    (acyrFileName, key, convertText) =>
+                    {
+                        return Task.FromResult(studentAwardRepository.awardData
+                            .Where(sa =>
+                                sa.awardYear == acyrFileName.Split('.')[1] //e.g. SA.2013
+                            ).Select(sa =>
+                                new SaAcyr()
+                                {
+                                    Recordkey = studentId,
+                                    SaOverLoanMax = sa.supressLoanMax
+                                }
+                            ).FirstOrDefault());
+                    }
+                );
 
                 return new StudentLoanLimitationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
             }
@@ -239,6 +259,66 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 var actualLimitation = (await actualRepository.GetStudentLoanLimitationsAsync(studentId, inputStudentAwardYears)).First(l => l.AwardYear == testTransaction.AwardYear);
 
                 Assert.AreEqual(0, actualLimitation.GradPlusMaximumAmount);
+            }
+
+            [TestMethod]
+            public async Task SuppressStudentMaximumAmounts_DataContractValueEmpty_ReturnsFalseTest()
+            {
+                var firstRecord = studentAwardRepository.awardData.First();
+                firstRecord.supressLoanMax = string.Empty;
+
+                actualRepository = BuildRepository();
+                var actualLimitation = await actualRepository.GetStudentLoanLimitationsAsync(studentId, new List<StudentAwardYear>() { new StudentAwardYear(studentId, firstRecord.awardYear) });
+
+                Assert.IsFalse(actualLimitation.First().SuppressStudentMaximumAmounts);
+            }
+
+            [TestMethod]
+            public async Task SuppressStudentMaximumAmounts_DataContractValueNull_ReturnsFalseTest()
+            {
+                var firstRecord = studentAwardRepository.awardData.First();
+                firstRecord.supressLoanMax = null;
+
+                actualRepository = BuildRepository();
+                var actualLimitation = await actualRepository.GetStudentLoanLimitationsAsync(studentId, new List<StudentAwardYear>() { new StudentAwardYear(studentId, firstRecord.awardYear) });
+
+                Assert.IsFalse(actualLimitation.First().SuppressStudentMaximumAmounts);
+            }
+
+            [TestMethod]
+            public async Task SuppressStudentMaximumAmounts_DataContractValueUnknownValue_ReturnsFalseTest()
+            {
+                var firstRecord = studentAwardRepository.awardData.First();
+                firstRecord.supressLoanMax = "X";
+
+                actualRepository = BuildRepository();
+                var actualLimitation = await actualRepository.GetStudentLoanLimitationsAsync(studentId, new List<StudentAwardYear>() { new StudentAwardYear(studentId, firstRecord.awardYear) });
+
+                Assert.IsFalse(actualLimitation.First().SuppressStudentMaximumAmounts);
+            }
+
+            [TestMethod]
+            public async Task SuppressStudentMaximumAmounts_DataContractValueN_ReturnsFalseTest()
+            {
+                var firstRecord = studentAwardRepository.awardData.First();
+                firstRecord.supressLoanMax = "N";
+
+                actualRepository = BuildRepository();
+                var actualLimitation = await actualRepository.GetStudentLoanLimitationsAsync(studentId, new List<StudentAwardYear>() { new StudentAwardYear(studentId, firstRecord.awardYear) });
+
+                Assert.IsFalse(actualLimitation.First().SuppressStudentMaximumAmounts);
+            }
+
+            [TestMethod]
+            public async Task SuppressStudentMaximumAmounts_DataContractValueY_ReturnsTrueTest()
+            {
+                var firstRecord = studentAwardRepository.awardData.First();
+                firstRecord.supressLoanMax = "Y";
+
+                actualRepository = BuildRepository();
+                var actualLimitation = await actualRepository.GetStudentLoanLimitationsAsync(studentId, new List<StudentAwardYear>() { new StudentAwardYear(studentId, firstRecord.awardYear) });
+
+                Assert.IsTrue(actualLimitation.First().SuppressStudentMaximumAmounts);
             }
 
         }

@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -42,7 +42,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             _studentPetitionService = studentPetitionService;
             _logger = logger;
         }
-        
+
 
         /// <summary>
         /// Creates a new Student Petition.
@@ -53,6 +53,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// If failure, returns the exception information. If failure due to existing Student Petition found for the given student and section,
         /// also returns resource locator to use to retrieve the existing item.
         /// </returns>
+        /// <accessComments>
+        /// User must have correct permission code, depending on petition type:
+        /// CREATE.STUDENT.PETITION
+        /// CREATE.FACULTY.CONSENT
+        /// </accessComments>
         public async Task<HttpResponseMessage> PostStudentPetitionAsync([FromBody]Dtos.Student.StudentPetition studentPetition)
         {
             try
@@ -90,7 +95,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="studentPetitionId">Id of the student Petition (Required)</param>
         /// <param name="sectionId">Id of the section for which the petition is requested. (Required)</param>
         /// <param name="type">Type of student petition desired since same ID can yield either type. If not provided it will default to a petition of type StudentPetition.</param>
-         /// <returns>Student Petition object</returns>
+        /// <returns>Student Petition object</returns>
+        /// <accessComments>
+        /// User must be faculty in specified section to get data.
+        /// </accessComments>
         public async Task<Dtos.Student.StudentPetition> GetAsync(string studentPetitionId, string sectionId, StudentPetitionType type)
         {
             try
@@ -119,6 +127,19 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="studentId">Id of the student </param>
         /// <returns>Collection of Student Petition object</returns>
+        /// <accessComments>
+        /// 1. A student can access their own data
+        /// 2. An Advisor with any of the following codes is accessing the student's data if the student is not assigned advisee.
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 3. An Advisor with any of the following codes is accessing the student's data if the student is assigned advisee.
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// </accessComments>
         public async Task<IEnumerable<Dtos.Student.StudentPetition>> GetAsync(string studentId)
         {
             if (string.IsNullOrEmpty(studentId))

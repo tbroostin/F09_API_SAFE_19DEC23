@@ -1,9 +1,11 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace Ellucian.Colleague.Dtos.ColleagueFinance
 {
@@ -13,6 +15,11 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
     /// </summary>
     public class LineItem
     {
+        /// <summary>
+        /// Line item Id.
+        /// </summary>
+        public string Id { get; set; }
+
         /// <summary>
         /// Line item description.
         /// </summary>
@@ -87,5 +94,36 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// List of line item tax information.
         /// </summary>
         public List<LineItemTax> LineItemTaxes { get; set; }
+
+        /// <summary>
+        /// Line Item commodity code
+        /// </summary>
+        public string CommodityCode { get; set; }
+
+        /// <summary>
+        /// Trade discount percent
+        /// </summary>
+        public decimal? TradeDiscountPercentage { get; set; }
+
+        /// <summary>
+        /// Trade discount amount
+        /// </summary>
+        public decimal? TradeDiscountAmount { get; set; }
+        /// <summary>
+        /// Fixed assets flag
+        /// </summary>
+        public string FixedAssetsFlag { get; set; }
+
+        /// <summary>
+        /// Requisition Line Item tax code
+        /// </summary>
+        public List<LineItemReqTax> ReqLineItemTaxCodes { get; set; }
+
+        /// <summary>
+		/// Line Item Status
+		/// </summary>
+        [JsonConverter(typeof(StringEnumConverter))]
+        public LineItemStatus? LineItemStatus { get; set; }
+
     }
 }

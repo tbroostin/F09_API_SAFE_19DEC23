@@ -19,6 +19,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public string AcadDegree { get; set; }
         public DateTime? AcadDegreeDate { get; set; }
         public List<string> AcadCcd { get; set; }
+        public List<DateTime?> AcadCcdDate { get; set; }
         public List<string> AcadMajors { get; set; }
         public List<string> AcadMinors { get; set; }
         public List<string> AcadSpecialization { get; set; }
@@ -35,6 +36,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public int? AcadRankDenominator { get; set; }
         public List<DateTime?> InstTransciptDate { get; set; }
         public Decimal? InstExtCredits { get; set; }
+        public string InstAttendGuid { get; set; }
 
         public string Id
         {
@@ -81,6 +83,20 @@ namespace Ellucian.Colleague.Domain.Base.Entities
                 throw new ArgumentNullException("ExternalEducation guid can not be null or empty");
             }
             _guid = guid;
+        }
+
+        public ExternalEducation(string id, string guid)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("ExternalEducation id can not be null or empty");
+            }
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("ExternalEducation guid can not be null or empty");
+            }
+            _guid = guid;
+            _id = id;
         }
     }
 }

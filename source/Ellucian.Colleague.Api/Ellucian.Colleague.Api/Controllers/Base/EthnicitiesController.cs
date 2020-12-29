@@ -1,12 +1,8 @@
-﻿// Copyright 2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Web;
 using System.Web.Http;
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -21,6 +17,7 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Filters;
+using Ellucian.Colleague.Coordination.Base.Adapters;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -61,7 +58,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             var ethnicityCollection = await _referenceDataRepository.EthnicitiesAsync();
 
             // Get the right adapter for the type mapping
-            var ethnicityDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.Ethnicity, Ethnicity>();
+            var ethnicityDtoAdapter = new EthnicityEntityAdapter(_adapterRegistry, _logger);
 
             // Map the ethnicity entity to the program DTO
             var ethnicityDtoCollection = new List<Ethnicity>();
@@ -73,11 +70,12 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             return ethnicityDtoCollection;
         }
 
-        /// <remarks>For use with Ellucian HeDM Version 4</remarks>
+        /// <remarks>For use with Ellucian EEDM Version 6</remarks>
         /// <summary>
         /// Retrieves all ethnicities. If the request header "Cache-Control" attribute is set to "no-cache" the data returned will be pulled fresh from the database, otherwise cached data is returned.
         /// </summary>
         /// <returns>All Ethnicity objects.</returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Ethnicity2>> GetEthnicities2Async()
         {
@@ -91,7 +89,15 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
-                return await _demographicService.GetEthnicities2Async(bypassCache);
+                var ethnicities = await _demographicService.GetEthnicities2Async(bypassCache);
+
+                if (ethnicities != null && ethnicities.Any())
+                {
+                    AddEthosContextProperties(await _demographicService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _demographicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              ethnicities.Select(a => a.Id).ToList()));
+                }
+                return ethnicities;
             }
             catch (Exception ex)
             {
@@ -100,15 +106,20 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
         }
 
-        /// <remarks>For use with Ellucian HeDM Version 4</remarks>
+        /// <remarks>For use with Ellucian EEDM Version 4</remarks>
         /// <summary>
         /// Retrieves an ethnicity by ID.
         /// </summary>
         /// <returns>An Ethnicity</returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.Ethnicity2> GetEthnicityById2Async(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                   await _demographicService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                   await _demographicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { id }));
                 return await _demographicService.GetEthnicityById2Async(id);
             }
             catch (Exception ex)
@@ -133,8 +144,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <summary>
         /// Creates a Ethnicity.
         /// </summary>
-        /// <param name="ethnicity"><see cref="Ethnicity2">Ethnicity</see> to create</param>
-        /// <returns>Newly created <see cref="Ethnicity2">Ethnicity</see></returns>
+        /// <param name="ethnicity">Ethnicity to create</param>
+        /// <returns>Newly created Ethnicity</returns>
         [HttpPost]
         public async Task<Dtos.Ethnicity2> PostEthnicitiesAsync([FromBody] Dtos.Ethnicity2 ethnicity)
         {

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -9,10 +9,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AutoMapper;
 using Microsoft.Practices.EnterpriseLibrary.Common.Utility;
 using Ellucian.Web.Http.EthosExtend;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
@@ -66,6 +66,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         public IntegrationApiException IntegrationApiException { get; set; }
 
         /// <summary>
+        /// Used to decide if the EthosApiBuilder is running and then report errors as an exception.
+        /// </summary>
+        public bool ReportEthosApiErrors { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the BaseCoordinationService class.
         /// </summary>
         /// <param name="adapterRegistry">adapter registry, must not be null</param>
@@ -117,18 +122,40 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             if (IntegrationApiException == null)
                 IntegrationApiException = new IntegrationApiException();
+       
+            IntegrationApiException.AddError(ConvertToIntegrationApiError(message, code, guid, id, httpStatusCode));
+        }
 
-            if (string.IsNullOrEmpty(code))
-                code = "Global.Internal.Error";
+        /// <summary>
+        /// Populate IntegrationApiException object for error collection. Extracts all errors
+        /// from a Repository Exception
+        /// </summary>
+        /// <param name="ex">The RepositoryException.</param>
+        /// <param name="code">The error message code used to describe the error details</param>
+        /// <param name="guid">The global identifier of the resource in error.</param>
+        /// <param name="id">The source applications data reference identifier for the primary data entity used to create the resource.</param>
+        /// <param name="httpStatusCode">HTTP Status Code.  Default 400 Bad Request</param>
+        protected void IntegrationApiExceptionAddError(RepositoryException ex, string code = null, string guid = null,
+            string id = null, System.Net.HttpStatusCode httpStatusCode = System.Net.HttpStatusCode.BadRequest)
+        {
+            if (ex == null)
+                return;
 
-            IntegrationApiException.AddError(new Ellucian.Web.Http.Exceptions.IntegrationApiError()
+            if (IntegrationApiException == null)
+                IntegrationApiException = new IntegrationApiException();
+
+            IntegrationApiException.AddErrors(ex.Errors.ToList().ConvertAll(
+                x => ConvertToIntegrationApiError(x.Message, x.Code, 
+                !string.IsNullOrEmpty(x.Id) || !string.IsNullOrEmpty(x.SourceId) ? x.Id : guid,
+                !string.IsNullOrEmpty(x.Id) || !string.IsNullOrEmpty(x.SourceId) ? x.SourceId : id,
+                httpStatusCode)));
+
+            if ((!string.IsNullOrEmpty(ex.Message)) 
+                && (!IntegrationApiException.Errors.Any(e => !string.IsNullOrEmpty(e.Message)
+                    && e.Message.Equals(ex.Message, StringComparison.OrdinalIgnoreCase))))
             {
-                Code = code,
-                Message = message,
-                Guid = guid,
-                Id = id,
-                StatusCode = httpStatusCode
-            });
+                IntegrationApiException.AddError(ConvertToIntegrationApiError(ex.Message, string.IsNullOrEmpty(code) ? "Data.Access" : code, guid, id, httpStatusCode));
+            }           
         }
 
         /// <summary>
@@ -523,17 +550,23 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         }
 
         /// <summary>
-        /// Gets the extended data available on a resource, returns an empty list if there are no 
+        /// Gets the extended data available on a resource, returns an empty list if there are none
         /// </summary>
         /// <param name="ethosResourceRouteInfo">Ethos Resource Route Info </param>
         /// <param name="resourceIds">IEnumerable of the ids for the resources in guid form</param>
         /// <returns>List with all of the extended data if aavailable. Returns an empty list if none available or none configured</returns>
-        public async Task<IList<EthosExtensibleData>> GetExtendedEthosDataByResource(EthosResourceRouteInfo ethosResourceRouteInfo, IEnumerable<string> resourceIds)
+        public async Task<IList<EthosExtensibleData>> GetExtendedEthosDataByResource(EthosResourceRouteInfo ethosResourceRouteInfo, IEnumerable<string> resourceIds, bool bypassCache = false)
         {
+            if (!bypassCache)
+            {
+                bypassCache = ethosResourceRouteInfo.BypassCache;
+            }
+            ReportEthosApiErrors = ethosResourceRouteInfo.ReportEthosExtendedErrors;
+
             if (configurationRepository != null)
             {
                 var extendDataFromRepo = await configurationRepository.GetExtendedEthosDataByResource(ethosResourceRouteInfo.ResourceName,
-                    ethosResourceRouteInfo.ResourceVersionNumber, ethosResourceRouteInfo.ExtendedSchemaResourceId, resourceIds);
+                    ethosResourceRouteInfo.ResourceVersionNumber, ethosResourceRouteInfo.ExtendedSchemaResourceId, resourceIds, ReportEthosApiErrors, bypassCache);
 
                 return ConvertExtendedDataFromDomainToPlatform(extendDataFromRepo);
             }
@@ -544,16 +577,32 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         }
 
         /// <summary>
+        /// Returns the default API version when API builder is called without an accept header.
+        /// </summary>
+        /// <param name="resourceName"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        public async Task<string> GetEthosExtensibilityResourceDefaultVersion(string resourceName, bool bypassCache = false)
+        {
+            return await configurationRepository.GetEthosExtensibilityResourceDefaultVersion(resourceName, bypassCache);
+        }
+
+        /// <summary>
         /// Gets the extended configuration available on a resource, returns null if there are none
         /// </summary>
         /// <param name="ethosResourceRouteInfo">Ethos Resource Route Info </param>
         /// <returns>List with all of the extended configurations if aavailable. Returns an null if none available or none configured</returns>
-        public async Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(EthosResourceRouteInfo ethosResourceRouteInfo)
+        public async Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(EthosResourceRouteInfo ethosResourceRouteInfo, bool bypassCache = false)
         {
+            if (!bypassCache)
+            {
+                bypassCache = ethosResourceRouteInfo.BypassCache;
+            }
+
             if (configurationRepository != null)
             {
                 var extendDataFromRepo = await configurationRepository.GetExtendedEthosConfigurationByResource(ethosResourceRouteInfo.ResourceName,
-                    ethosResourceRouteInfo.ResourceVersionNumber, ethosResourceRouteInfo.ExtendedSchemaResourceId);
+                    ethosResourceRouteInfo.ResourceVersionNumber, ethosResourceRouteInfo.ExtendedSchemaResourceId, bypassCache);
 
                 if (extendDataFromRepo == null)
                 {
@@ -568,6 +617,55 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             var noConfigError = new ArgumentNullException(string.Concat("Configuration Repository is not intialized for API ", ethosResourceRouteInfo.ResourceName, "."));
             logger.Error(noConfigError, string.Concat("Configuration Repository is not intialized for API ", ethosResourceRouteInfo.ResourceName, "."));
             throw noConfigError;
+        }
+
+        /// <summary>
+        /// Gets the extended configuration available on a resource, returns null if there are none
+        /// </summary>
+        /// <param name="ethosResourceRouteInfo">Ethos Resource Route Info </param>
+        /// <returns>List with all of the extended configurations if available. Returns an null if none available or none configured</returns>
+        public async Task<EthosExtensibleData> GetBulkExtendedEthosConfigurationByResource(EthosResourceRouteInfo ethosResourceRouteInfo, bool bypassCache = false)
+        {
+            if (!bypassCache)
+            {
+                bypassCache = ethosResourceRouteInfo.BypassCache;
+            }
+
+            if (configurationRepository != null)
+            {
+                var extendDataFromRepo = await configurationRepository.GetExtendedEthosConfigurationByResource(ethosResourceRouteInfo.ResourceName,
+                    ethosResourceRouteInfo.BulkRepresentation, ethosResourceRouteInfo.ExtendedSchemaResourceId, bypassCache);
+
+                if (extendDataFromRepo == null)
+                {
+                    return null;
+                }
+
+                var extendedConfigList = ConvertExtendedDataFromDomainToPlatform(new List<Domain.Base.Entities.EthosExtensibleData> { extendDataFromRepo });
+
+                return extendedConfigList.Any() ? extendedConfigList.First() : null;
+            }
+
+            var noConfigError = new ArgumentNullException(string.Concat("Configuration Repository is not intialized for API ", ethosResourceRouteInfo.ResourceName, "."));
+            logger.Error(noConfigError, string.Concat("Configuration Repository is not intialized for API ", ethosResourceRouteInfo.ResourceName, "."));
+            throw noConfigError;
+        }
+
+
+        /// <summary>
+        /// Gets  all extended configurations, returns null if there are none
+        /// </summary>
+        /// <param name="ethosResourceRouteInfo">Ethos Resource Route Info </param>
+        /// <returns>List with all of the extended configurations if available. Returns an null if none available, or none configured</returns>
+        public async Task<List<Domain.Base.Entities.EthosExtensibleData>> GetAllExtendedEthosConfigurations(bool bypassCache = false)
+        {
+            if (configurationRepository != null)
+            {
+                return (await configurationRepository.GetEthosExtensibilityConfigurationEntities(true, bypassCache)).ToList();
+
+            }
+            else
+                return null;
         }
 
         /// <summary>
@@ -594,7 +692,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     ExtendedSchemaType = extDataItem.ExtendedSchemaType,
                     ResourceId = extDataItem.ResourceId,
                     ColleagueTimeZone = extDataItem.ColleagueTimeZone,
-                    ExtendedDataList = new List<EthosExtensibleDataRow>()
+                    ExtendedDataList = new List<EthosExtensibleDataRow>(),
+                    ExtendedDataFilterList = new List<EthosExtensibleDataFilter>()
                 };
 
                 foreach (var dataRow in extDataItem.ExtendedDataList)
@@ -607,7 +706,12 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         FullJsonPath = dataRow.FullJsonPath,
                         JsonPath = dataRow.JsonPath,
                         JsonTitle = dataRow.JsonTitle,
-                        ExtendedDataValue = dataRow.ExtendedDataValue
+                        ExtendedDataValue = dataRow.ExtendedDataValue,
+
+
+                        AssociationController = dataRow.associationController,
+                        UsageType = dataRow.databaseUsageType,
+                        TransType = dataRow.transType
                     };
 
                     switch (dataRow.JsonPropertyType.ToLower())
@@ -634,11 +738,188 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                     newEthosDataItem.ExtendedDataList.Add(row);
                 }
+
+                foreach (var filterRow in extDataItem.ExtendedDataFilterList)
+                {
+                    var row = new EthosExtensibleDataFilter
+                    {
+                        ColleagueColumnName = filterRow.ColleagueColumnName,
+                        ColleagueFileName = filterRow.ColleagueFileName,
+                        ColleaguePropertyLength = filterRow.ColleaguePropertyLength,
+                        FullJsonPath = filterRow.FullJsonPath,
+                        JsonPath = filterRow.JsonPath,
+                        JsonTitle = filterRow.JsonTitle,
+                        GuidColumnName = filterRow.GuidColumnName,
+                        GuidDatabaseUsageType = filterRow.GuidDatabaseUsageType,
+                        GuidFileName = filterRow.GuidFileName,
+                        SavingField = filterRow.SavingField,
+                        SavingOption = filterRow.SavingOption,
+                        SelectColumnName = filterRow.SelectColumnName,
+                        SelectFileName = filterRow.SelectFileName,
+                        SelectSubroutineName = filterRow.SelectSubroutineName,
+                        SelectParagraph = filterRow.SelectParagraph,
+                        TransColumnName = filterRow.TransColumnName,
+                        TransFileName = filterRow.TransFileName,
+                        TransTableName = filterRow.TransTableName,
+                        FilterValue = filterRow.FilterValue,
+                        SelectRules = filterRow.SelectRules
+                    };
+
+                    switch (filterRow.JsonPropertyType.ToLower())
+                    {
+                        case "string":
+                            row.JsonPropertyType = JsonPropertyTypeExtensions.String;
+                            break;
+                        case "number":
+                            row.JsonPropertyType = JsonPropertyTypeExtensions.Number;
+                            break;
+                        case "date":
+                            row.JsonPropertyType = JsonPropertyTypeExtensions.Date;
+                            break;
+                        case "time":
+                            row.JsonPropertyType = JsonPropertyTypeExtensions.Time;
+                            break;
+                        case "datetime":
+                            row.JsonPropertyType = JsonPropertyTypeExtensions.DateTime;
+                            break;
+                        default:
+                            row.JsonPropertyType = JsonPropertyTypeExtensions.String;
+                            break;
+                    }
+
+                    row.SelectionCriteria = new List<EthosApiSelectCriteria>();
+                    foreach (var selectionCriteria in filterRow.SelectionCriteria)
+                    {
+                        row.SelectionCriteria.Add(new EthosApiSelectCriteria(selectionCriteria.SelectConnector,
+                            selectionCriteria.SelectColumn,
+                            selectionCriteria.SelectOper,
+                            selectionCriteria.SelectValue)
+                        );
+                    }
+
+                    row.SortColumns = new List<EthosApiSortCriteria>();
+                    foreach (var sortCriteria in filterRow.SortColumns)
+                    {
+                        row.SortColumns.Add(new EthosApiSortCriteria(sortCriteria.SortColumn, sortCriteria.SortSequence));
+                    }
+
+                    row.Enumerations = new List<EthosApiEnumerations>();
+                    foreach (var enums in filterRow.Enumerations)
+                    {
+                        row.Enumerations.Add(new EthosApiEnumerations(enums.EnumerationValue, enums.ColleagueValue));
+                    }
+
+                    newEthosDataItem.ExtendedDataFilterList.Add(row);
+                }
+
                 platformExtensibleDatas.Add(newEthosDataItem);
             }
 
             return platformExtensibleDatas;
         }
 
+        /// <summary>
+        /// Gets the extended configuration available on a resource, returns null if there are none
+        /// </summary>
+        /// <param name="ethosResourceRouteInfo">Ethos Resource Route Info </param>
+        /// <returns>List with all of the extended configurations if aavailable. Returns an null if none available or none configured</returns>
+        public async Task<EthosApiConfiguration> GetEthosApiConfigurationByResource(EthosResourceRouteInfo ethosResourceRouteInfo, bool bypassCache = false)
+        {
+            if (!bypassCache)
+            {
+                bypassCache = ethosResourceRouteInfo.BypassCache;
+            }
+
+            if (configurationRepository != null)
+            {
+                var extendDataFromRepo = await configurationRepository.GetEthosApiConfigurationByResource(ethosResourceRouteInfo.ResourceName, bypassCache);
+
+                if (extendDataFromRepo == null)
+                {
+                    return null;
+                }
+
+                var extendedConfigList = ConvertEthosApiFromDomainToPlatform(new List<Domain.Base.Entities.EthosApiConfiguration> { extendDataFromRepo });
+
+                return extendedConfigList.Any() ? extendedConfigList.First() : null;
+            }
+
+            var noConfigError = new ArgumentNullException(string.Concat("Configuration Repository is not intialized for API ", ethosResourceRouteInfo.ResourceName, "."));
+            logger.Error(noConfigError, string.Concat("Configuration Repository is not intialized for API ", ethosResourceRouteInfo.ResourceName, "."));
+            throw noConfigError;
+        }
+
+
+        private static IList<EthosApiConfiguration> ConvertEthosApiFromDomainToPlatform(IEnumerable<Domain.Base.Entities.EthosApiConfiguration> domainExtensibleData)
+        {
+            var platformExtensibleDatas = new List<EthosApiConfiguration>();
+
+            foreach (var extDataItem in domainExtensibleData)
+            {
+                var newEthosDataItem = new EthosApiConfiguration()
+                {
+                    ResourceName = extDataItem.ResourceName,
+                    PrimaryEntity = extDataItem.PrimaryEntity,
+                    PrimaryApplication = extDataItem.PrimaryApplication,
+                    PrimaryTableName = extDataItem.PrimaryTableName,
+                    PrimaryGuidSource = extDataItem.PrimaryGuidSource,
+                    PrimaryGuidDbType = extDataItem.PrimaryGuidDbType,
+                    PrimaryGuidFileName = extDataItem.PrimaryGuidFileName,
+                    PageLimit = extDataItem.PageLimit,
+                    SelectFileName = extDataItem.SelectFileName,
+                    SelectSubroutineName = extDataItem.SelectSubroutineName,
+                    SavingField = extDataItem.SavingField,
+                    SavingOption = extDataItem.SavingOption,
+                    SelectColumnName = extDataItem.SelectColumnName,
+                    SelectRules = extDataItem.SelectRules,
+                    SelectParagraph = extDataItem.SelectParagraph,
+                    HttpMethods = new List<EthosApiSupportedMethods>(),
+                    SelectionCriteria = new List<EthosApiSelectCriteria>(),
+                    SortColumns = new List<EthosApiSortCriteria>()
+                };
+                foreach (var method in extDataItem.HttpMethods)
+                {
+                    newEthosDataItem.HttpMethods.Add(new EthosApiSupportedMethods(method.Method, method.Permission));
+                }
+                foreach (var select in extDataItem.SelectionCriteria)
+                {
+                    newEthosDataItem.SelectionCriteria.Add(
+                        new EthosApiSelectCriteria(select.SelectConnector,
+                        select.SelectColumn,
+                        select.SelectOper,
+                        select.SelectValue)
+                    );
+                }
+                foreach (var sort in extDataItem.SortColumns)
+                {
+                    newEthosDataItem.SortColumns.Add(new EthosApiSortCriteria(sort.SortColumn, sort.SortSequence));
+                }
+
+                platformExtensibleDatas.Add(newEthosDataItem);
+            }
+
+            return platformExtensibleDatas;
+        }
+
+        /// <summary>
+        /// Static helper method to convert a repository error into an integration API error
+        /// </summary>
+        /// <param name="error">A repository error</param>
+        /// <returns>An integration API error</returns>
+        public static IntegrationApiError ConvertToIntegrationApiError(string message, string code = null, string guid = null,
+            string id = null, System.Net.HttpStatusCode httpStatusCode = System.Net.HttpStatusCode.BadRequest)
+        {
+            if (string.IsNullOrEmpty(code))
+                code = "Global.Internal.Error";
+
+            return new IntegrationApiError()
+            {
+                Code = code,
+                Message = message,
+                Guid = !string.IsNullOrEmpty(guid) ? guid : null,
+                Id = !string.IsNullOrEmpty(id) ? id : null,
+                StatusCode = httpStatusCode
+            };
+        }
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -25,8 +25,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class PurchaseOrderReceiptRepository : BaseColleagueRepository, IPurchaseOrderReceiptRepository
     {
-        private Ellucian.Data.Colleague.DataContracts.IntlParams _internationalParameters;
-
         /// <summary>
         /// The constructor to instantiate a purchase order repository object
         /// </summary>
@@ -79,9 +77,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <param name="offset">item number to start at</param>
         /// <param name="limit">number of items to return on page</param>
         /// <returns>Tuple of PurchaseOrderReceipt entity objects <see cref="PurchaseOrderReceipt"/> and a count for paging.</returns>
-        public async Task<Tuple<IEnumerable<PurchaseOrderReceipt>, int>> GetPurchaseOrderReceiptsAsync(int offset, int limit)
+        public async Task<Tuple<IEnumerable<PurchaseOrderReceipt>, int>> GetPurchaseOrderReceiptsAsync(int offset, int limit, string purchaseOrderID ="")
         {
-            var purchaseOrderReceiptIds = await DataReader.SelectAsync("PO.RECEIPT.INTG", "");
+            var criteria = "";
+
+            if (!string.IsNullOrEmpty(purchaseOrderID))
+            {
+                criteria = string.Format("WITH PRI.PO.ID EQ '{0}'", purchaseOrderID);
+            }
+            var purchaseOrderReceiptIds = await DataReader.SelectAsync("PO.RECEIPT.INTG", criteria);
 
             var totalCount = purchaseOrderReceiptIds.Count();
             Array.Sort(purchaseOrderReceiptIds);
@@ -97,8 +101,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var itemIds = purchaseOrderReceiptData.SelectMany(x => x.PriItems);
             var purchaseOrderReceiptItems = await DataReader.BulkReadRecordAsync<DataContracts.PoReceiptItemIntg>("PO.RECEIPT.ITEM.INTG", itemIds.ToArray());
 
-
-            var purchaseOrderReceipts = BuildPurchaseOrderReceipts(purchaseOrderReceiptData, purchaseOrderReceiptItems);
+            Dictionary<string, Dictionary<string, string>> purchaseOrderData = null;
+            var purchaseOrderIds = purchaseOrderReceiptData.Select(p => p.PriPoId).ToArray();
+            if (purchaseOrderIds.Any())
+            {
+               purchaseOrderData = await DataReader.BatchReadRecordColumnsAsync("PURCHASE.ORDERS", purchaseOrderIds.Distinct().ToArray(), new string[] { "PO.NO" });
+            }
+            var purchaseOrderReceipts = BuildPurchaseOrderReceipts(purchaseOrderReceiptData, purchaseOrderReceiptItems, purchaseOrderData);
 
             return new Tuple<IEnumerable<PurchaseOrderReceipt>, int>(purchaseOrderReceipts, totalCount);
 
@@ -140,7 +149,18 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 poReceiptItems = await DataReader.BulkReadRecordAsync<DataContracts.PoReceiptItemIntg>("PO.RECEIPT.ITEM.INTG", purchaseOrderReceipt.PriItems.ToArray());
             }
 
-            return BuildPurchaseOrderReceipt(purchaseOrderReceipt, poReceiptItems);
+            var poNo = string.Empty;
+            var purchaseOrderIds = new string[]{purchaseOrderReceipt.PriPoId};
+            var purchaseOrderData = await DataReader.BatchReadRecordColumnsAsync("PURCHASE.ORDERS", purchaseOrderIds.ToArray(), new string[] { "PO.NO" });
+            if (purchaseOrderData != null)
+            {
+                
+                var poNoDict = new Dictionary<string, string>();
+                var found = purchaseOrderData.TryGetValue(purchaseOrderReceipt.PriPoId, out poNoDict);
+                if (found)
+                    poNoDict.TryGetValue("PO.NO", out poNo);
+            }
+            return BuildPurchaseOrderReceipt(purchaseOrderReceipt, poReceiptItems, poNo);
         }
 
         /// <summary>
@@ -158,14 +178,22 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// </summary>
         /// <param name="purchaseOrderReceipts">Collection of PurchaseOrderReceipt data contracts</param>
         /// <returns>PurchaseOrderReceipt domain entity</returns>
-        private IEnumerable<PurchaseOrderReceipt> BuildPurchaseOrderReceipts(IEnumerable<DataContracts.PoReceiptIntg> purchaseOrderReceipts, ICollection<DataContracts.PoReceiptItemIntg> poReceiptItems)
+        private IEnumerable<PurchaseOrderReceipt> BuildPurchaseOrderReceipts(IEnumerable<DataContracts.PoReceiptIntg> purchaseOrderReceipts, ICollection<DataContracts.PoReceiptItemIntg> poReceiptItems,
+           Dictionary<string, Dictionary<string, string>> purchaseOrderData)
         {
             var purchaseOrderReceiptCollection = new List<PurchaseOrderReceipt>();
-
+         
             foreach (var purchaseOrderReceipt in purchaseOrderReceipts)
             {
-
-                purchaseOrderReceiptCollection.Add(BuildPurchaseOrderReceipt(purchaseOrderReceipt, poReceiptItems));
+                var poNo = string.Empty;
+                if (purchaseOrderData != null)
+                {
+                    var poNoDict = new Dictionary<string, string>();
+                    var found = purchaseOrderData.TryGetValue(purchaseOrderReceipt.PriPoId, out poNoDict);
+                    if (found)
+                        poNoDict.TryGetValue("PO.NO", out poNo);
+                }
+                purchaseOrderReceiptCollection.Add(BuildPurchaseOrderReceipt(purchaseOrderReceipt, poReceiptItems, poNo));
             }
 
             return purchaseOrderReceiptCollection.AsEnumerable();
@@ -178,7 +206,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <param name="poReceiptItems"></param>
         /// <returns>PurchaseOrderReceipt domain entity</returns>
         private PurchaseOrderReceipt BuildPurchaseOrderReceipt(PoReceiptIntg purchaseOrderReceipt,
-            ICollection<DataContracts.PoReceiptItemIntg> poReceiptItems)
+            ICollection<DataContracts.PoReceiptItemIntg> poReceiptItems, string poNo="")
         {
             if (purchaseOrderReceipt == null)
             {
@@ -191,6 +219,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
 
             var purchaseOrderReceiptDomainEntity = new PurchaseOrderReceipt(purchaseOrderReceipt.RecordGuid);
+
+            if (!string.IsNullOrEmpty(poNo))
+            {
+                purchaseOrderReceiptDomainEntity.PoNo = poNo;
+            }
 
             purchaseOrderReceiptDomainEntity.ArrivedVia = purchaseOrderReceipt.PriArrivedVia;
             purchaseOrderReceiptDomainEntity.PackingSlip = purchaseOrderReceipt.PriPackingSlip;
@@ -278,6 +311,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                                .Replace(DmiString._TM, ' ')
                                                .Replace(DmiString._SM, ' ');
                 request.PriReceivingComments = comment;
+            }
+
+            var extendedDataTuple = GetEthosExtendedDataLists();
+            if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null)
+            {
+                request.ExtendedNames = extendedDataTuple.Item1;
+                request.ExtendedValues = extendedDataTuple.Item2;
             }
             return request;
         }

@@ -43,6 +43,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// Program Start Date
         /// </summary>
         public DateTime? StartDate { get; set; }
+        /// <summary>
+        /// Academic Start Date
+        /// </summary>
+        public DateTime? AcadStartDate { get; set; }
+
         // Added for ESS project
         // srm - 04/08/2014
         /// <summary>
@@ -53,6 +58,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// End Date of the program.  Used in conjunction with Status.
         /// </summary>
         public DateTime? EndDate { get; set; }
+        /// <summary>
+        /// Academic End Date of the program.
+        /// </summary>
+        public DateTime? AcadEndDate { get; set; }
+
         /// <summary>
         /// The Academic Level associated to the program.
         /// </summary>

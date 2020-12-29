@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -13,7 +13,9 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Configuration;
 using slf4net;
+using System.Diagnostics;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
@@ -23,15 +25,96 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class GeneralLedgerAccountRepository : BaseColleagueRepository, IGeneralLedgerAccountRepository
     {
+        private readonly int bulkReadSize;
+
         /// <summary>
         /// This constructor allows us to instantiate a GL cost center repository object.
         /// </summary>
         /// <param name="cacheProvider">Pass in an ICacheProvider object.</param>
         /// <param name="transactionFactory">Pass in an IColleagueTransactionFactory object.</param>
         /// <param name="logger">Pass in an ILogger object.</param>
-        public GeneralLedgerAccountRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
+        public GeneralLedgerAccountRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings settings)
             : base(cacheProvider, transactionFactory, logger)
         {
+            bulkReadSize = settings != null && settings.BulkReadSize > 0 ? settings.BulkReadSize : 5000;
+        }
+
+
+        /// <summary>
+        /// Retrieves the list of expense GL account DTOs for which the user has access.
+        /// </summary>
+        /// <param name="glAccounts">All GL accounts for the user, or just the expense type ones.</param>
+        /// <param name="glAccountStructure">GL account structure.</param>
+        /// <returns>A collection of expense GL account DTOs for the user.</returns>
+        public async Task<IEnumerable<GlAccount>> GetUserGeneralLedgerAccountsAsync(IEnumerable<string> glAccounts, GeneralLedgerAccountStructure glAccountStructure)
+        {
+            Stopwatch watch = null;
+
+            List<GlAccount> glAccountsForUser = new List<GlAccount>();
+
+            if (glAccounts != null && glAccounts.Any())
+            {
+                if (logger.IsInfoEnabled)
+                {
+                    watch = new Stopwatch();
+                    watch.Start();
+                }
+
+                var glAccountDescriptionsDictionary = await GetGlAccountDescriptionsAsync(glAccounts, glAccountStructure);
+
+                if (logger.IsInfoEnabled)
+                {
+                    watch.Stop();
+                    logger.Info("GL account LookUp REPOSITORY timing: (GetGlAccountDescriptionsAsync) completed in " + watch.ElapsedMilliseconds.ToString() + " ms");
+                }
+
+                if (logger.IsInfoEnabled)
+                {
+                    watch.Restart();
+                }
+
+                foreach (var glAccount in glAccounts)
+                {
+                    var glAccountEntity = new GlAccount(glAccount);
+
+                    // Get the GL account description.
+                    string description = "";
+                    if (!string.IsNullOrWhiteSpace(glAccount))
+                    {
+                        glAccountDescriptionsDictionary.TryGetValue(glAccount, out description);
+                    }
+
+                    glAccountEntity.GlAccountDescription = description;
+                    glAccountsForUser.Add(glAccountEntity);
+                }
+
+                if (logger.IsInfoEnabled)
+                {
+                    watch.Stop();
+                    logger.Info("GL account LookUp REPOSITORY timing: building GL Account domain entities completed in " + watch.ElapsedMilliseconds.ToString() + " ms");
+                }
+            }
+
+            return glAccountsForUser;
+        }
+
+        /// <summary>
+        /// Restricts a list of GL accounts to those that are active.
+        /// </summary>
+        /// <param name="glAccounts">List of general ledger account strings.</param>
+        /// <returns>A list of active general ledger account strings.</returns>
+        public async Task<List<string>> GetActiveGeneralLedgerAccounts(List<string> glAccounts)
+        {
+            List<string> activeGlAccounts = new List<string>();
+            string[] activeAccounts;
+            if (glAccounts != null)
+            {
+                string [] accountsArray = glAccounts.ToArray();
+                var criteria = "WITH GL.INACTIVE EQ 'A'";
+                activeAccounts = await DataReader.SelectAsync("GL.ACCTS", accountsArray, criteria);
+                activeGlAccounts = activeAccounts.ToList();
+            }
+            return activeGlAccounts;
         }
 
         /// <summary>
@@ -115,12 +198,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
 
             // Map the major component display pieces into our GL class enumeration.
-            Collection<FdDescs> fundDescriptions = null;
-            Collection<FcDescs> functionDescriptions = null;
-            Collection<ObDescs> objectDescriptions = null;
-            Collection<UnDescs> unitDescriptions = null;
-            Collection<SoDescs> sourceDescriptions = null;
-            Collection<LoDescs> locationDescriptions = null;
+            List<FdDescs> fundDescriptions = new List<FdDescs>();
+            List<FcDescs> functionDescriptions = new List<FcDescs>();
+            List<ObDescs> objectDescriptions = new List<ObDescs>();
+            List<UnDescs> unitDescriptions = new List<UnDescs>();
+            List<SoDescs> sourceDescriptions = new List<SoDescs>();
+            List<LoDescs> locationDescriptions = new List<LoDescs>();
             foreach (var majorComponentId in displayPieces)
             {
                 switch (majorComponentId.ToUpper())
@@ -131,7 +214,27 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         if (fundComponent != null)
                         {
                             var fundIds = generalLedgerAccountIds.Select(x => x.Substring(fundComponent.StartPosition, fundComponent.ComponentLength)).Distinct().ToList();
-                            fundDescriptions = await DataReader.BulkReadRecordAsync<FdDescs>(fundIds.ToArray());
+                            if(fundIds != null)
+                            {
+                                logger.Info("Bulk reading " + fundIds.Count + " FdDescs records.");
+                                for (int i = 0; i < fundIds.Count; i += bulkReadSize)
+                                {
+                                    var subList = fundIds.Skip(i).Take(bulkReadSize);
+                                    var records = await DataReader.BulkReadRecordAsync<FdDescs>(subList.ToArray());
+                                    if (records == null)
+                                    {
+                                        logger.Error("Unexpected null from bulk read of FdDescs records");
+                                    }
+                                    else
+                                    {
+                                        fundDescriptions.AddRange(records);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                logger.Error("Unexpected null from generalLedgerAccountIds select LINQ statement");
+                            }
                         }
 
                         // Assign the object descriptions to the GL accounts
@@ -148,7 +251,27 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         if (functionComponent != null)
                         {
                             var functionIds = generalLedgerAccountIds.Select(x => x.Substring(functionComponent.StartPosition, functionComponent.ComponentLength)).Distinct().ToList();
-                            functionDescriptions = await DataReader.BulkReadRecordAsync<FcDescs>(functionIds.ToArray());
+                            if(functionIds != null)
+                            {
+                                logger.Info("Bulk reading " + functionIds.Count + " FcDescs records.");
+                                for (int i = 0; i < functionIds.Count; i += bulkReadSize)
+                                {
+                                    var subList = functionIds.Skip(i).Take(bulkReadSize);
+                                    var records = await DataReader.BulkReadRecordAsync<FcDescs>(subList.ToArray());
+                                    if (records == null)
+                                    {
+                                        logger.Error("Unexpected null from bulk read of FcDescs records");
+                                    }
+                                    else
+                                    {
+                                        functionDescriptions.AddRange(records);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                logger.Error("Unexpected null from generalLedgerAccountIds select LINQ statement");
+                            }
                         }
 
                         // Assign the object descriptions to the GL accounts
@@ -165,7 +288,27 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         if (objectComponent != null)
                         {
                             var objectIds = generalLedgerAccountIds.Select(x => x.Substring(objectComponent.StartPosition, objectComponent.ComponentLength)).Distinct().ToList();
-                            objectDescriptions = await DataReader.BulkReadRecordAsync<ObDescs>(objectIds.ToArray());
+                            if(objectIds != null)
+                            {
+                                logger.Info("Bulk reading " + objectIds.Count + " ObDescs records.");
+                                for (int i = 0; i < objectIds.Count; i += bulkReadSize)
+                                {
+                                    var subList = objectIds.Skip(i).Take(bulkReadSize);
+                                    var records = await DataReader.BulkReadRecordAsync<ObDescs>(subList.ToArray());
+                                    if (records == null)
+                                    {
+                                        logger.Error("Unexpected null from bulk read of ObDescs records");
+                                    }
+                                    else
+                                    {
+                                        objectDescriptions.AddRange(records);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                logger.Error("Unexpected null from generalLedgerAccountIds select LINQ statement");
+                            }
                         }
 
                         // Assign the object descriptions to the GL accounts
@@ -182,7 +325,27 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         if (unitComponent != null)
                         {
                             var unitIds = generalLedgerAccountIds.Select(x => x.Substring(unitComponent.StartPosition, unitComponent.ComponentLength)).Distinct().ToList();
-                            unitDescriptions = await DataReader.BulkReadRecordAsync<UnDescs>(unitIds.ToArray());
+                            if(unitIds != null)
+                            {
+                                logger.Info("Bulk reading " + unitIds.Count + " UnDescs records.");
+                                for (int i = 0; i < unitIds.Count; i += bulkReadSize)
+                                {
+                                    var subList = unitIds.Skip(i).Take(bulkReadSize);
+                                    var records = await DataReader.BulkReadRecordAsync<UnDescs>(subList.ToArray());
+                                    if (records == null)
+                                    {
+                                        logger.Error("Unexpected null from bulk read of UnDescs records");
+                                    }
+                                    else
+                                    {
+                                        unitDescriptions.AddRange(records);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                logger.Error("Unexpected null from generalLedgerAccountIds select LINQ statement");
+                            }
                         }
 
                         // Assign the object descriptions to the GL accounts
@@ -199,7 +362,27 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         if (sourceComponent != null)
                         {
                             var sourceIds = generalLedgerAccountIds.Select(x => x.Substring(sourceComponent.StartPosition, sourceComponent.ComponentLength)).Distinct().ToList();
-                            sourceDescriptions = await DataReader.BulkReadRecordAsync<SoDescs>(sourceIds.ToArray());
+                            if(sourceIds != null)
+                            {
+                                logger.Info("Bulk reading " + sourceIds.Count + " SoDescs records.");
+                                for (int i = 0; i < sourceIds.Count; i += bulkReadSize)
+                                {
+                                    var subList = sourceIds.Skip(i).Take(bulkReadSize);
+                                    var records = await DataReader.BulkReadRecordAsync<SoDescs>(subList.ToArray());
+                                    if (records == null)
+                                    {
+                                        logger.Error("Unexpected null from bulk read of SoDescs records");
+                                    }
+                                    else
+                                    {
+                                        sourceDescriptions.AddRange(records);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                logger.Error("Unexpected null from generalLedgerAccountIds select LINQ statement");
+                            }
                         }
 
                         // Assign the object descriptions to the GL accounts
@@ -216,7 +399,27 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         if (locationComponent != null)
                         {
                             var locationIds = generalLedgerAccountIds.Select(x => x.Substring(locationComponent.StartPosition, locationComponent.ComponentLength)).Distinct().ToList();
-                            locationDescriptions = await DataReader.BulkReadRecordAsync<LoDescs>(locationIds.ToArray());
+                            if(locationIds != null)
+                            {
+                                logger.Info("Bulk reading " + locationIds.Count + " LoDescs records.");
+                                for (int i = 0; i < locationIds.Count; i += bulkReadSize)
+                                {
+                                    var subList = locationIds.Skip(i).Take(bulkReadSize);
+                                    var records = await DataReader.BulkReadRecordAsync<LoDescs>(subList.ToArray());
+                                    if (records == null)
+                                    {
+                                        logger.Error("Unexpected null from bulk read of LoDescs records");
+                                    }
+                                    else
+                                    {
+                                        locationDescriptions.AddRange(records);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                logger.Error("Unexpected null from generalLedgerAccountIds select LINQ statement");
+                            }
                         }
 
                         // Assign the object descriptions to the GL accounts
@@ -437,6 +640,113 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     glAccounts[glAccountNumber.Key] += componentDescription.Description;
                 }
             }
+        }
+        /// <summary>
+        /// Retrieves all the component description for supplied gl component ids from respective major component description file
+        /// </summary>
+        /// <param name="generalLedgerComponentKeys"></param>
+        /// <param name="glComponentType"></param>
+        /// <returns></returns>
+        public async Task<Dictionary<string, string>> GetGlComponentDescriptionsByIdsAndComponentTypeAsync(IEnumerable<string> generalLedgerComponentIds, GeneralLedgerComponentType glComponentType)
+        {
+            // Initialize the result dictionary for description
+            Dictionary<string, string> results = new Dictionary<string, string>();
+            if (!generalLedgerComponentIds.Any())
+            {
+                logger.Warn("General Ledger ComponentIds are not supplied.");
+                return results;
+            }
+            // Map the major component display pieces into our GL class enumeration.
+            Collection<FdDescs> fundDescriptions = null;
+            Collection<FcDescs> functionDescriptions = null;
+            Collection<ObDescs> objectDescriptions = null;
+            Collection<UnDescs> unitDescriptions = null;
+            Collection<SoDescs> sourceDescriptions = null;
+            Collection<LoDescs> locationDescriptions = null;
+
+            switch (glComponentType)
+            {
+                case GeneralLedgerComponentType.Fund:
+                    // Get the fund descriptions
+                    fundDescriptions = await DataReader.BulkReadRecordAsync<FdDescs>(generalLedgerComponentIds.ToArray());
+                    // Assign the fund descriptions to the results Dictionary
+                    if (fundDescriptions != null)
+                    {
+                        foreach (var item in fundDescriptions)
+                        {
+                            results.Add(item.Recordkey, item.FdDescription);
+                        }
+                    }
+                    break;
+                case GeneralLedgerComponentType.Function:
+                    // Get the function descriptions
+                    functionDescriptions = await DataReader.BulkReadRecordAsync<FcDescs>(generalLedgerComponentIds.ToArray());
+
+                    // Assign the function descriptions to the results Dictionary
+                    if (functionDescriptions != null)
+                    {
+                        foreach (var item in functionDescriptions)
+                        {
+                            results.Add(item.Recordkey, item.FcDescription);
+                        }
+                    }
+                    break;
+                case GeneralLedgerComponentType.Object:
+                    // Get the object descriptions
+                    objectDescriptions = await DataReader.BulkReadRecordAsync<ObDescs>(generalLedgerComponentIds.ToArray());
+
+                    // Assign the object descriptions to the results Dictionary
+                    if (objectDescriptions != null)
+                    {
+                        foreach (var item in objectDescriptions)
+                        {
+                            results.Add(item.Recordkey, item.ObDescription);
+                        }
+                    }
+                    break;
+                case GeneralLedgerComponentType.Unit:
+                    // Get the unit descriptions
+                    unitDescriptions = await DataReader.BulkReadRecordAsync<UnDescs>(generalLedgerComponentIds.ToArray());
+
+                    // Assign the unit descriptions to the results Dictionary
+                    if (unitDescriptions != null)
+                    {
+                        foreach (var item in unitDescriptions)
+                        {
+                            results.Add(item.Recordkey, item.UnDescription);
+                        }
+                    }
+                    break;
+                case GeneralLedgerComponentType.Source:
+                    // Get the source descriptions
+                    sourceDescriptions = await DataReader.BulkReadRecordAsync<SoDescs>(generalLedgerComponentIds.ToArray());
+
+                    // Assign the source descriptions to the results Dictionary
+                    if (sourceDescriptions != null)
+                    {
+                        foreach (var item in sourceDescriptions)
+                        {
+                            results.Add(item.Recordkey, item.SoDescription);
+                        }
+                    }
+                    break;
+                case GeneralLedgerComponentType.Location:
+                    // Get the location descriptions
+                    locationDescriptions = await DataReader.BulkReadRecordAsync<LoDescs>(generalLedgerComponentIds.ToArray());
+
+                    // Assign the location descriptions to the results Dictionary
+                    if (locationDescriptions != null)
+                    {
+                        foreach (var item in locationDescriptions)
+                        {
+                            results.Add(item.Recordkey, item.LoDescription);
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+            return results;
         }
         #endregion
     }

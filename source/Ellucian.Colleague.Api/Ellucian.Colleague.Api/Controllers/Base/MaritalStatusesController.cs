@@ -1,10 +1,8 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Dtos.Base;
@@ -20,6 +18,8 @@ using System.Threading.Tasks;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Web.Http.Filters;
+using Ellucian.Web.Security;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -99,7 +99,7 @@ namespace Ellucian.Colleague.Api.Controllers
             }
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Retrieves a marital status by GUID.
         /// </summary>
@@ -118,11 +118,12 @@ namespace Ellucian.Colleague.Api.Controllers
             }
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HEDM Version 4</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEEDM Version 6</remarks>
         /// <summary>
         /// Retrieves all marital statuses. If the request header "Cache-Control" attribute is set to "no-cache" the data returned will be pulled fresh from the database, otherwise cached data is returned.
         /// </summary>
-        /// <returns>All <see cref="MaritalStatus2">MaritalStatuses.</see></returns>
+        /// <returns>All MaritalStatuses.</returns>
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.MaritalStatus2>> GetMaritalStatuses2Async()
         {
@@ -136,24 +137,62 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
-                return await _demographicService.GetMaritalStatuses2Async(bypassCache);
+                var maritalStatuses = await _demographicService.GetMaritalStatuses2Async(bypassCache);
+
+                if (maritalStatuses != null && maritalStatuses.Any())
+                {
+                    AddEthosContextProperties(await _demographicService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _demographicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              maritalStatuses.Select(a => a.Id).ToList()));
+                }
+                return maritalStatuses;
             }
-            catch (Exception ex)
+            catch (KeyNotFoundException e)
             {
-                _logger.Error(ex.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(ex));
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HEDM Version 4</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM Version 6</remarks>
         /// <summary>
         /// Retrieves a marital status by ID.
         /// </summary>
-        /// <returns>A <see cref="MaritalStatus2">MaritalStatus.</see></returns>
+        /// <returns>A MaritalStatus.</returns>
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.MaritalStatus2> GetMaritalStatusById2Async(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                   await _demographicService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                   await _demographicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { id }));
                 return await _demographicService.GetMaritalStatusById2Async(id);
             }
             catch (KeyNotFoundException e)
@@ -161,10 +200,30 @@ namespace Ellucian.Colleague.Api.Controllers
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
-            catch (Exception ex)
+            catch (PermissionsException e)
             {
-                _logger.Error(ex.ToString());
-                throw CreateHttpResponseException(ex.Message);
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
         }
 

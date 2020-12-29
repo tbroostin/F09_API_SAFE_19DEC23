@@ -1,4 +1,5 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,6 +20,13 @@ using System.Text;
 using Microsoft.Practices.EnterpriseLibrary.Common.Utility;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Dmi.Runtime;
+using Ellucian.Colleague.Configuration;
+using System.CodeDom.Compiler;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Entities;
+using System.Reflection;
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
@@ -27,6 +35,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     {
         private readonly string colleagueTimeZone;
         private readonly string orgIndicator;
+        private IColleagueTransactionInvoker anonymousTransactionInvoker;
+        char _VM = Convert.ToChar(DynamicArray.VM);
+        char _SM = Convert.ToChar(DynamicArray.SM);
+        char _TM = Convert.ToChar(DynamicArray.TM);
+        char _XM = Convert.ToChar(250);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConfigurationRepository"/> class.
@@ -35,13 +48,18 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="transactionFactory">The transaction factory.</param>
         /// <param name="logger">The logger.</param>
         public ConfigurationRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory,
-            ApiSettings settings, ILogger logger)
+            ApiSettings settings, ILogger logger, ColleagueSettings colleagueSettings)
             : base(cacheProvider, transactionFactory, logger)
         {
             // Using level 1 cache time out value for data that rarely changes.
             CacheTimeout = Level1CacheTimeoutValue;
             orgIndicator = "ORG";
             colleagueTimeZone = settings.ColleagueTimeZone;
+
+            // transactionInvoker will only be non-null when a user is logged in
+            // If this is being requested anonymously, create a transaction invoker 
+            // without any user context.
+            anonymousTransactionInvoker = transactionInvoker ?? new ColleagueTransactionInvoker(null, null, logger, colleagueSettings.DmiSettings);
         }
 
         #region Public Methods
@@ -92,24 +110,163 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return hubRecordToCheck != null && hubRecordToCheck.CintApiUsername.Equals(userName, StringComparison.OrdinalIgnoreCase);
         }
 
+        private IEnumerable<EdmExtVersions> _ethosExtensiblitySettingsList = null;
         /// <summary>
         /// Gets all of the Ethos Extensiblity settings stored on EDM.EXT.VERSIONS
         /// </summary>
         /// <param name="bypassCache">bool to determine if cache should be bypassed</param>
         /// <returns>List of DataContracts.EdmExtVersions</returns>
-        private async Task<IEnumerable<EdmExtVersions>> GetEthosExtensibilityConfiguration(bool bypassCache = false)
+        public async Task<IEnumerable<EdmExtVersions>> GetEthosExtensibilityConfiguration(bool bypassCache = false)
         {
-            const string ethosExtensiblityCacheKey = "AllEthosExtensibiltySettings";
+            if (_ethosExtensiblitySettingsList == null)
+            {
+                const string ethosExtensiblityCacheKey = "AllEthosExtensibiltySettings";
+
+                if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
+                {
+                    ClearCache(new List<string> { ethosExtensiblityCacheKey });
+                }
+
+                var ethosExtensiblitySettingsList =
+                    await GetOrAddToCacheAsync<List<EdmExtVersions>>(ethosExtensiblityCacheKey,
+                        async () => (await DataReader.BulkReadRecordAsync<EdmExtVersions>("EDM.EXT.VERSIONS", "")).ToList(), CacheTimeout);
+
+                _ethosExtensiblitySettingsList = ethosExtensiblitySettingsList;
+            }
+            return _ethosExtensiblitySettingsList;
+        }
+
+        private IEnumerable<EdmCodeHooks> _ethosExtensibleCodeHooks = null;
+        /// <summary>
+        /// Gets all of the Ethos Extensiblity code hook settings stored on EDM.CODE.HOOKS
+        /// </summary>
+        /// <param name="bypassCache">bool to determine if cache should be bypassed</param>
+        /// <returns>List of DataContracts.EdmCodeHooks</returns>
+        public async Task<IEnumerable<EdmCodeHooks>> GetEthosExtensibilityCodeHooks(bool bypassCache = false)
+        {
+            if (_ethosExtensibleCodeHooks == null)
+            {
+                const string ethosExtensiblityCacheKey = "AllEthosExtensibiltyCodeHooks";
+
+                if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
+                {
+                    ClearCache(new List<string> { ethosExtensiblityCacheKey });
+                }
+
+                var ethosExtensiblityCodeHooks = new List<EdmCodeHooks>();
+                try
+                {
+                    ethosExtensiblityCodeHooks =
+                        await GetOrAddToCacheAsync<List<EdmCodeHooks>>(ethosExtensiblityCacheKey,
+                            async () => (await DataReader.BulkReadRecordAsync<EdmCodeHooks>("EDM.CODE.HOOKS", "")).ToList(), CacheTimeout);
+                }
+                catch (Exception)
+                {
+                    // If we are missing code hooks table, then do not throw an exception.
+                }
+
+                _ethosExtensibleCodeHooks = ethosExtensiblityCodeHooks;
+            }
+            return _ethosExtensibleCodeHooks;
+        }
+
+
+        /// <summary>
+        /// Gets all of the Ethos Extensiblity settings stored on EDM.EXT.VERSIONS
+        /// </summary>
+        /// <param name="bypassCache">bool to determine if cache should be bypassed</param>
+        /// <returns>List of Domain.Base.Entities.EthosExtensibleData</returns>
+        public async Task<IEnumerable<Domain.Base.Entities.EthosExtensibleData>> GetEthosExtensibilityConfigurationEntities(bool customOnly = true, bool bypassCache = false)
+        {
+            var retVal = new List<Domain.Base.Entities.EthosExtensibleData>();
+            const string ethosExtensiblityCacheKey = "AllEthosExtensibiltySettingsAndData";
 
             if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
             {
                 ClearCache(new List<string> { ethosExtensiblityCacheKey });
             }
 
+            List<string> edmeVersions = new List<string>();
+            if (customOnly)
+            {
+                var extensions = await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS", "WITH EDME.PRIMARY.GUID.SOURCE NE ''");
+                foreach (var ext in extensions)
+                {
+                    edmeVersions.AddRange(ext.EdmeVersions);
+                }
+
+            }
             var ethosExtensiblitySettingsList =
                 await GetOrAddToCacheAsync<List<EdmExtVersions>>(ethosExtensiblityCacheKey,
-                    async () => (await DataReader.BulkReadRecordAsync<EdmExtVersions>("EDM.EXT.VERSIONS", "")).ToList(), CacheTimeout);
-            return ethosExtensiblitySettingsList;
+                    async () => (await DataReader.BulkReadRecordAsync<EdmExtVersions>("EDM.EXT.VERSIONS", edmeVersions.Any() ? edmeVersions.ToArray() : null,
+                        false)).ToList(), CacheTimeout);
+
+            foreach (var ethosExtensiblitySetting in ethosExtensiblitySettingsList)
+            {
+                var extendedEthosConfiguration = (await GetExtendedEthosConfigurationByResource(ethosExtensiblitySetting.EdmvResourceName, ethosExtensiblitySetting.EdmvVersionNumber,
+                        ethosExtensiblitySetting.EdmvResourceName.ToUpperInvariant()));
+                if (extendedEthosConfiguration != null)
+                {
+                    try
+                    {
+                        var depKey = string.Concat(extendedEthosConfiguration.ApiResourceName.ToUpper() + "*" + extendedEthosConfiguration.ApiVersionNumber);
+                        if (depKey != null)
+                        {
+                            var depData = await DataReader.BulkReadRecordAsync<EdmDepNotices>("EDM.DEP.NOTICES", new string[] { depKey }, false);
+                            if (depData != null && depData.Any())
+                            {
+                                extendedEthosConfiguration.DeprecationDate = depData[0].EdmpDeprecationDate;
+                                extendedEthosConfiguration.DeprecationNotice = depData[0].EdmpDeprecationNotice.Replace(_VM, ' ');
+                                extendedEthosConfiguration.SunsetDate = depData[0].EdmpSunsetDate;
+                            }
+                        }
+
+                        var extensions = await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS",
+                            string.Format("WITH EDME.RESOURCE.NAME EQ '{0}'", extendedEthosConfiguration.ApiResourceName), false);
+                        if (extensions != null && extensions.Any())
+                        {
+                            extendedEthosConfiguration.HttpMethodsSupported = extensions[0].EdmeHttpMethods;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        //do not throw error on supplemental data.
+                    }
+
+                    retVal.Add(extendedEthosConfiguration);
+                }
+            }
+
+            return retVal;
+        }
+
+        /// <summary>
+        /// Return the default version for an extension used in Stand Alone API builder.
+        /// </summary>
+        /// <param name="resourceName"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        public async Task<string> GetEthosExtensibilityResourceDefaultVersion(string resourceName, bool bypassCache = false)
+        {
+            string defaultVersion = string.Empty;
+            try
+            {
+                var extendConfigData = (await GetEthosExtensibilityConfiguration(bypassCache)).ToList();
+                var matchingExtendedConfigData = extendConfigData.Where(e =>
+                    e.EdmvResourceName.Equals(resourceName, StringComparison.OrdinalIgnoreCase));
+                var availableVersions = matchingExtendedConfigData.Where(e => !string.IsNullOrEmpty(e.EdmvVersionNumber)).Select(e => e.EdmvVersionNumber).OrderBy(n => n.Split('.')[0]).ToList();
+                defaultVersion = availableVersions.LastOrDefault();
+                if (string.IsNullOrEmpty(defaultVersion))
+                {
+                    defaultVersion = "1.0.0";
+                }
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, string.Concat("Retreiving Ethos Extended Confguration has failed for resource : ", resourceName));
+            }
+
+            return defaultVersion;
         }
 
         /// <summary>
@@ -119,84 +276,623 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="resourceVersionNumber">version number of ther resource</param>
         /// <param name="extendedSchemaResourceId">extended schema identifier</param>
         /// <returns> extended configuration if available. Returns null if none available or none configured</returns>
-        public async Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId)
+        public async Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, bool bypassCache = false)
         {
-            try
+            string ethosExtensiblityCacheKey = "AllExtendedEthosConfigurationBy" + resourceName + resourceVersionNumber;
+
+            if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
             {
-                var extendConfigData = (await GetEthosExtensibilityConfiguration()).ToList();
+                ClearCache(new List<string> { ethosExtensiblityCacheKey });
+            }
 
-                var matchingExtendedConfigData = extendConfigData.FirstOrDefault(e =>
-                    e.EdmvResourceName.Equals(resourceName, StringComparison.OrdinalIgnoreCase) &&
-                    e.EdmvVersionNumber.Equals(resourceVersionNumber, StringComparison.OrdinalIgnoreCase));
-
-                //make sure there is extended config data and row data, if not return null
-                if (matchingExtendedConfigData == null || matchingExtendedConfigData.EdmvColumnsEntityAssociation == null ||
-                    !matchingExtendedConfigData.EdmvColumnsEntityAssociation.Any())
-                {
-                    return null;
-                }
-
-                //create EthosExtensibleData with no resource id since this is just to get the config data for each row
-                var extendedDataConfigReturn = new EthosExtensibleData(resourceName, resourceVersionNumber,
-                    extendedSchemaResourceId, string.Empty, colleagueTimeZone);
-
-                //list of linked column config data for datetime columns, exlcuding date or time only ones.
-                var linkedColumnDetails = matchingExtendedConfigData.EdmvColumnsEntityAssociation
-                    .Where(l => !string.IsNullOrEmpty(l.EdmvDateTimeLinkAssocMember) &&
-                                !l.EdmvJsonPropertyTypeAssocMember.Equals("date", StringComparison.OrdinalIgnoreCase)).ToList();
-
-
-                //loop through and add each row
-                foreach (var edmvColumn in matchingExtendedConfigData.EdmvColumnsEntityAssociation)
-                {
-                    //if the datetime link assoc has a value it is part of a pair
-                    //only add the value that is marked as the datetime
-                    if (!string.IsNullOrEmpty(edmvColumn.EdmvDateTimeLinkAssocMember))
+            var ethosExtensibleData =
+                await GetOrAddToCacheAsync(ethosExtensiblityCacheKey,
+                    async () =>
                     {
-                        if (!edmvColumn.EdmvConversionAssocMember.StartsWith("D", StringComparison.OrdinalIgnoreCase)) continue;
-
-                        var row = new EthosExtensibleDataRow(edmvColumn.EdmvColumnNameAssocMember, edmvColumn.EdmvFileNameAssocMember,
-                            edmvColumn.EdmvJsonLabelAssocMember, edmvColumn.EdmvJsonPathAssocMember,
-                            edmvColumn.EdmvJsonPropertyTypeAssocMember, "", edmvColumn.EdmvLengthAssocMember);
-
-                        extendedDataConfigReturn.AddItemToExtendedData(row);
-
-                        var timeConfig = linkedColumnDetails.FirstOrDefault(t =>
-                            t.EdmvDateTimeLinkAssocMember == edmvColumn.EdmvDateTimeLinkAssocMember &&
-                            t.EdmvConversionAssocMember.StartsWith("M"));
-
-                        if (timeConfig != null)
+                        try
                         {
-                            var timeRow = new EthosExtensibleDataRow(timeConfig.EdmvColumnNameAssocMember, timeConfig.EdmvFileNameAssocMember,
-                                edmvColumn.EdmvJsonLabelAssocMember, edmvColumn.EdmvJsonPathAssocMember,
-                                edmvColumn.EdmvJsonPropertyTypeAssocMember, "", timeConfig.EdmvLengthAssocMember);
+                            var extendResourceConfigData = (await GetEthosApiConfiguration(bypassCache)).ToList();
+                            var apiConfiguration = extendResourceConfigData.FirstOrDefault(ex => ex.EdmeResourceName == resourceName);
 
-                            extendedDataConfigReturn.AddItemToExtendedData(timeRow);
+                            var extendVersionConfigData = (await GetEthosExtensibilityConfiguration(bypassCache)).ToList();
+
+                            // Look for version specific configuration first
+                            var matchingExtendedConfigData = extendVersionConfigData.FirstOrDefault(e =>
+                                e.EdmvResourceName.Equals(resourceName, StringComparison.OrdinalIgnoreCase) &&
+                                e.EdmvVersionNumber.Equals(resourceVersionNumber, StringComparison.OrdinalIgnoreCase));
+
+                            // Look for a major version match.
+                            if (matchingExtendedConfigData == null)
+                            {
+                                if (!string.IsNullOrEmpty(resourceVersionNumber) && resourceVersionNumber.Contains('.'))
+                                {
+                                    var majorVersion = resourceVersionNumber.Split('.')[0];
+                                    var minorVersion = resourceVersionNumber.Split('.')[1];
+                                    matchingExtendedConfigData = extendVersionConfigData.LastOrDefault(e =>
+                                        e.EdmvResourceName.Equals(resourceName, StringComparison.OrdinalIgnoreCase) &&
+                                        e.EdmvVersionNumber.Equals(majorVersion, StringComparison.OrdinalIgnoreCase));
+
+                                    if (matchingExtendedConfigData == null)
+                                    {
+                                        matchingExtendedConfigData = extendVersionConfigData.LastOrDefault(e =>
+                                            e.EdmvResourceName.Equals(resourceName, StringComparison.OrdinalIgnoreCase) &&
+                                            e.EdmvVersionNumber.Contains('.') &&
+                                            e.EdmvVersionNumber.Split('.')[0].Equals(majorVersion, StringComparison.OrdinalIgnoreCase) &&
+                                            Convert.ToInt32(e.EdmvVersionNumber.Split('.')[1]) >= Convert.ToInt32(minorVersion));
+                                    }
+                                }
+                            }
+
+                            // If we don't have a version specific or major version configuration, then look for versionless match.
+                            if (matchingExtendedConfigData == null)
+                            {
+                                matchingExtendedConfigData = extendVersionConfigData.FirstOrDefault(e =>
+                                    e.EdmvResourceName.Equals(resourceName, StringComparison.OrdinalIgnoreCase) &&
+                                    string.IsNullOrEmpty(e.EdmvVersionNumber));
+                            }
+
+                            //make sure there is extended config data and row data, if not return null
+                            if (matchingExtendedConfigData == null)
+
+                            {
+                                return new EthosExtensibleData();
+
+                            }
+
+                            string versionNumber = resourceVersionNumber;
+                            if (resourceVersionNumber != matchingExtendedConfigData.EdmvVersionNumber)
+                            {
+                                versionNumber = versionNumber.Split('.')[0];
+                                if (!string.IsNullOrEmpty(matchingExtendedConfigData.EdmvVersionNumber))
+                                {
+                                    versionNumber = matchingExtendedConfigData.EdmvVersionNumber;
+                                }
+                            }
+
+                            if (matchingExtendedConfigData.EdmvColumnsEntityAssociation == null ||
+                                !matchingExtendedConfigData.EdmvColumnsEntityAssociation.Any())
+                            {
+                                return new EthosExtensibleData(resourceName, versionNumber,
+                                 matchingExtendedConfigData.EdmvExtendedSchemaType, string.Empty, colleagueTimeZone);
+                            }
+
+
+                            //create EthosExtensibleData with no resource id since this is just to get the config data for each row
+                            var extendedDataConfigReturn = new EthosExtensibleData(resourceName, versionNumber,
+                                matchingExtendedConfigData.EdmvExtendedSchemaType, string.Empty, colleagueTimeZone);
+
+
+                            //list of linked column config data for datetime columns, exlcuding date or time only ones.
+                            var linkedColumnDetails = matchingExtendedConfigData.EdmvColumnsEntityAssociation
+                                .Where(l => !string.IsNullOrEmpty(l.EdmvDateTimeLinkAssocMember) &&
+                                            !l.EdmvJsonPropertyTypeAssocMember.Equals("date", StringComparison.OrdinalIgnoreCase)).ToList();
+
+
+                            //loop through and add each row
+                            foreach (var edmvColumn in matchingExtendedConfigData.EdmvColumnsEntityAssociation)
+                            {
+                                //if the datetime link assoc has a value it is part of a pair
+                                //only add the value that is marked as the datetime
+                                if (!string.IsNullOrEmpty(edmvColumn.EdmvDateTimeLinkAssocMember))
+                                {
+                                    if (!edmvColumn.EdmvConversionAssocMember.StartsWith("D", StringComparison.OrdinalIgnoreCase)) continue;
+
+                                    var row = new EthosExtensibleDataRow(edmvColumn.EdmvColumnNameAssocMember, edmvColumn.EdmvFileNameAssocMember,
+                                        edmvColumn.EdmvJsonLabelAssocMember, edmvColumn.EdmvJsonPathAssocMember,
+                                        edmvColumn.EdmvJsonPropertyTypeAssocMember, "", edmvColumn.EdmvLengthAssocMember)
+                                    {
+                                        associationController = edmvColumn.EdmvAssociationControllerAssocMember,
+                                        transType = edmvColumn.EdmvTransTypeAssocMember,
+                                        databaseUsageType = edmvColumn.EdmvDatabaseUsageTypeAssocMember
+                                    };
+
+                                    extendedDataConfigReturn.AddItemToExtendedData(row);
+
+                                    var timeConfig = linkedColumnDetails.FirstOrDefault(t =>
+                                        t.EdmvDateTimeLinkAssocMember == edmvColumn.EdmvDateTimeLinkAssocMember &&
+                                        t.EdmvConversionAssocMember.StartsWith("M"));
+
+                                    if (timeConfig != null)
+                                    {
+                                        var timeRow = new EthosExtensibleDataRow(timeConfig.EdmvColumnNameAssocMember, timeConfig.EdmvFileNameAssocMember,
+                                            edmvColumn.EdmvJsonLabelAssocMember, edmvColumn.EdmvJsonPathAssocMember,
+                                            edmvColumn.EdmvJsonPropertyTypeAssocMember, "", timeConfig.EdmvLengthAssocMember)
+                                        {
+                                            associationController = timeConfig.EdmvAssociationControllerAssocMember,
+                                            transType = timeConfig.EdmvTransTypeAssocMember,
+                                            databaseUsageType = timeConfig.EdmvDatabaseUsageTypeAssocMember
+                                        };
+
+                                        extendedDataConfigReturn.AddItemToExtendedData(timeRow);
+                                    }
+                                }
+                                else
+                                {
+                                    var row = new EthosExtensibleDataRow(edmvColumn.EdmvColumnNameAssocMember, edmvColumn.EdmvFileNameAssocMember,
+                                        edmvColumn.EdmvJsonLabelAssocMember, edmvColumn.EdmvJsonPathAssocMember,
+                                        edmvColumn.EdmvJsonPropertyTypeAssocMember, "", edmvColumn.EdmvLengthAssocMember)
+                                    {
+                                        associationController = edmvColumn.EdmvAssociationControllerAssocMember,
+                                        transType = edmvColumn.EdmvTransTypeAssocMember,
+                                        databaseUsageType = edmvColumn.EdmvDatabaseUsageTypeAssocMember
+                                    };
+
+                                    extendedDataConfigReturn.AddItemToExtendedData(row);
+                                }
+
+                                // Add Filter Criteria to configuration
+                                EdmSelectCriteria selectCriteria = null;
+                                if (!string.IsNullOrEmpty(edmvColumn.EdmvFilterCriteriaAssocMember))
+                                {
+                                    var selectConfigData = (await GetEthosApiSelectCriteria(bypassCache)).ToList();
+                                    selectCriteria = selectConfigData.FirstOrDefault(sc => sc.Recordkey == edmvColumn.EdmvFilterCriteriaAssocMember);
+                                }
+                                else
+                                {
+                                    // If we are pointing to a different table, then we can't select
+                                    // from the primary table and the selection criteria is too complicated
+                                    // to simply select with column eqal to value.
+                                    if (string.IsNullOrEmpty(edmvColumn.EdmvSecColumnNameAssocMember))
+                                    {
+                                        if (!edmvColumn.EdmvFileNameAssocMember.EndsWith("VALCODES"))
+                                        {
+                                            selectCriteria = new EdmSelectCriteria()
+                                            {
+                                                EdmsSelectFileName = edmvColumn.EdmvFileNameAssocMember,
+                                                EdmsSelectColumnName = edmvColumn.EdmvJsonLabelAssocMember,
+                                                EdmsSelectEntityAssociation = new List<EdmSelectCriteriaEdmsSelect>()
+                                                {
+                                                    new EdmSelectCriteriaEdmsSelect()
+                                                    {
+                                                        EdmsSelectColumnAssocMember = edmvColumn.EdmvColumnNameAssocMember,
+                                                        EdmsSelectConnectorAssocMember = "WITH",
+                                                        EdmsSelectOperAssocMember = "EQ",
+                                                        EdmsSelectValueAssocMember = '"' + edmvColumn.EdmvJsonLabelAssocMember + '"'
+                                                    }
+                                                },
+                                                EdmsSortEntityAssociation = new List<EdmSelectCriteriaEdmsSort>()
+                                            };
+                                        }
+                                        else
+                                        {
+                                            if (!string.IsNullOrEmpty(apiConfiguration.EdmePrimaryTableName))
+                                            {
+                                                string fileName = edmvColumn.EdmvFileNameAssocMember;
+                                                if (!string.IsNullOrEmpty(apiConfiguration.EdmePrimaryApplication))
+                                                {
+                                                    fileName = await ValidateValcodeTable(apiConfiguration.EdmePrimaryApplication, apiConfiguration.EdmePrimaryTableName);
+                                                }
+                                                selectCriteria = new EdmSelectCriteria()
+                                                {
+                                                    EdmsSelectFileName = fileName,
+                                                    EdmsSelectColumnName = edmvColumn.EdmvJsonLabelAssocMember,
+                                                    EdmsSelectEntityAssociation = new List<EdmSelectCriteriaEdmsSelect>()
+                                                    {
+                                                        new EdmSelectCriteriaEdmsSelect()
+                                                        {
+                                                            EdmsSelectColumnAssocMember = "VALCODE.ID",
+                                                            EdmsSelectConnectorAssocMember = "WITH",
+                                                            EdmsSelectOperAssocMember = "EQ",
+                                                            EdmsSelectValueAssocMember = '"' + apiConfiguration.EdmePrimaryTableName + '"'
+                                                        },
+                                                        new EdmSelectCriteriaEdmsSelect()
+                                                        {
+                                                            EdmsSelectColumnAssocMember = edmvColumn.EdmvColumnNameAssocMember,
+                                                            EdmsSelectConnectorAssocMember = "WHEN",
+                                                            EdmsSelectOperAssocMember = "EQ",
+                                                            EdmsSelectValueAssocMember = '"' + edmvColumn.EdmvJsonLabelAssocMember + '"'
+                                                        }
+                                                    },
+                                                    EdmsSavingField = "VAL.INTERNAL.CODE",
+                                                    EdmsSortEntityAssociation = new List<EdmSelectCriteriaEdmsSort>()
+                                                    {
+                                                        new EdmSelectCriteriaEdmsSort("VAL.INTERNAL.CODE", "BY.EXP")
+                                                    }
+                                                };
+                                            }
+                                        }
+                                    }
+                                }
+                                if (selectCriteria != null)
+                                {
+                                    var filterRow = new EthosExtensibleDataFilter(edmvColumn.EdmvColumnNameAssocMember, edmvColumn.EdmvFileNameAssocMember,
+                                            edmvColumn.EdmvJsonLabelAssocMember, edmvColumn.EdmvJsonPathAssocMember,
+                                            edmvColumn.EdmvJsonPropertyTypeAssocMember, new List<string>());
+
+                                    filterRow.SelectFileName = selectCriteria.EdmsSelectFileName;
+                                    filterRow.SelectSubroutineName = selectCriteria.EdmsSelectSubroutine;
+                                    filterRow.SavingField = selectCriteria.EdmsSavingField;
+                                    filterRow.SavingOption = selectCriteria.EdmsSavingOption;
+                                    filterRow.SelectColumnName = selectCriteria.EdmsSelectColumnName;
+                                    filterRow.SelectRules = selectCriteria.EdmsSelectRules;
+                                    filterRow.SelectParagraph = selectCriteria.EdmsSelectParagraph;
+
+                                    filterRow.SelectionCriteria = new List<EthosApiSelectCriteria>();
+                                    foreach (var selection in selectCriteria.EdmsSelectEntityAssociation)
+                                    {
+                                        if (!string.IsNullOrEmpty(selection.EdmsSelectConnectorAssocMember))
+                                        {
+                                            filterRow.SelectionCriteria.Add(
+                                                new EthosApiSelectCriteria(selection.EdmsSelectConnectorAssocMember,
+                                                selection.EdmsSelectColumnAssocMember,
+                                                selection.EdmsSelectOperAssocMember,
+                                                selection.EdmsSelectValueAssocMember)
+                                            );
+                                        }
+                                    }
+
+                                    filterRow.SortColumns = new List<EthosApiSortCriteria>();
+                                    foreach (var sort in selectCriteria.EdmsSortEntityAssociation)
+                                    {
+                                        if (!string.IsNullOrEmpty(sort.EdmsSortColumnsAssocMember))
+                                        {
+                                            filterRow.SortColumns.Add(
+                                                new EthosApiSortCriteria(sort.EdmsSortColumnsAssocMember,
+                                                sort.EdmsSortSequenceAssocMember)
+                                            );
+                                        }
+                                    }
+
+                                    filterRow.GuidColumnName = edmvColumn.EdmvGuidColumnNameAssocMember;
+                                    filterRow.GuidFileName = edmvColumn.EdmvGuidFileNameAssocMember;
+                                    filterRow.TransColumnName = edmvColumn.EdmvTransColumnNameAssocMember;
+                                    filterRow.TransFileName = edmvColumn.EdmvTransFileNameAssocMember;
+                                    filterRow.TransTableName = edmvColumn.EdmvTransTableNameAssocMember;
+                                    filterRow.Enumerations = new List<EthosApiEnumerations>();
+                                    var enums = edmvColumn.EdmvTransEnumTableAssocMember;
+                                    var enumTable = enums.Split(_SM);
+                                    if (enumTable != null && enumTable.Count() == 2)
+                                    {
+                                        var collValue = enumTable[0].Split(_TM);
+                                        var enumValue = enumTable[1].Split(_TM);
+                                        int total = collValue.Count() > enumValue.Count() ? collValue.Count() : enumValue.Count();
+                                        for (int i = 0; i < total; i++)
+                                        {
+                                            string value1 = enumValue.Count() > i ? enumValue[i] : string.Empty;
+                                            string value2 = collValue.Count() > i ? collValue[i] : string.Empty;
+                                            if (!string.IsNullOrEmpty(value1) || !string.IsNullOrEmpty(value2))
+                                            {
+                                                filterRow.Enumerations.Add(new EthosApiEnumerations(value1, value2));
+                                            }
+                                        }
+                                    }
+                                    extendedDataConfigReturn.AddItemToExtendedDataFilter(filterRow);
+                                }
+                            }
+
+                            // Add Named Queries to configuration
+                            if (matchingExtendedConfigData.EdmvNamedQueries != null && matchingExtendedConfigData.EdmvNamedQueries.Any())
+                            {
+                                foreach (var edmQuery in matchingExtendedConfigData.EdmvNamedQueries)
+                                {
+                                    var queryConfigData = (await GetEthosApiNamedQueries(bypassCache)).ToList();
+                                    var queryData = queryConfigData.FirstOrDefault(sc => sc.Recordkey == edmQuery);
+                                    var selectConfigData = (await GetEthosApiSelectCriteria(bypassCache)).ToList();
+                                    var selectCriteria = selectConfigData.FirstOrDefault(sc => sc.Recordkey == queryData.EdmqSelectCriteria);
+                                    if (queryData != null && selectCriteria != null)
+                                    {
+                                        var filterRow = new EthosExtensibleDataFilter(queryData.EdmqJsonLabel, "",
+                                                queryData.EdmqJsonLabel, "",
+                                                queryData.EdmqJsonPropertyType, new List<string>(), null, true);
+
+                                        filterRow.SelectFileName = selectCriteria.EdmsSelectFileName;
+                                        filterRow.SelectSubroutineName = selectCriteria.EdmsSelectSubroutine;
+                                        filterRow.SavingField = selectCriteria.EdmsSavingField;
+                                        filterRow.SavingOption = selectCriteria.EdmsSavingOption;
+                                        filterRow.SelectColumnName = selectCriteria.EdmsSelectColumnName;
+                                        filterRow.SelectRules = selectCriteria.EdmsSelectRules;
+                                        filterRow.SelectParagraph = selectCriteria.EdmsSelectParagraph;
+
+                                        filterRow.SelectionCriteria = new List<EthosApiSelectCriteria>();
+                                        foreach (var selection in selectCriteria.EdmsSelectEntityAssociation)
+                                        {
+                                            if (!string.IsNullOrEmpty(selection.EdmsSelectConnectorAssocMember))
+                                            {
+                                                filterRow.SelectionCriteria.Add(
+                                                    new EthosApiSelectCriteria(selection.EdmsSelectConnectorAssocMember,
+                                                    selection.EdmsSelectColumnAssocMember,
+                                                    selection.EdmsSelectOperAssocMember,
+                                                    selection.EdmsSelectValueAssocMember)
+                                                );
+                                            }
+                                        }
+
+                                        filterRow.SortColumns = new List<EthosApiSortCriteria>();
+                                        foreach (var sort in selectCriteria.EdmsSortEntityAssociation)
+                                        {
+                                            if (!string.IsNullOrEmpty(sort.EdmsSortColumnsAssocMember))
+                                            {
+                                                filterRow.SortColumns.Add(
+                                                    new EthosApiSortCriteria(sort.EdmsSortColumnsAssocMember,
+                                                    sort.EdmsSortSequenceAssocMember)
+                                                );
+                                            }
+                                        }
+
+                                        filterRow.GuidColumnName = queryData.EdmqGuidColumnName;
+                                        filterRow.GuidFileName = queryData.EdmqGuidFileName;
+                                        filterRow.TransColumnName = queryData.EdmqTransColumnName;
+                                        filterRow.TransFileName = queryData.EdmqTransFileName;
+                                        filterRow.TransTableName = queryData.EdmqTransTableName;
+                                        filterRow.Enumerations = new List<EthosApiEnumerations>();
+                                        var collValue = queryData.EdmqTransEnumValue;
+                                        var enumValue = queryData.EdmqTransCollValue;
+                                        int total = collValue.Count() > enumValue.Count() ? collValue.Count() : enumValue.Count();
+                                        for (int i = 0; i < total; i++)
+                                        {
+                                            string value1 = enumValue.Count() < i ? enumValue.ElementAt(i) : string.Empty;
+                                            string value2 = collValue.Count() < i ? collValue.ElementAt(i) : string.Empty;
+                                            if (!string.IsNullOrEmpty(value1) || !string.IsNullOrEmpty(value2))
+                                            {
+                                                filterRow.Enumerations.Add(new EthosApiEnumerations(value1, value2));
+                                            }
+                                        }
+                                        extendedDataConfigReturn.AddItemToExtendedDataFilter(filterRow);
+                                    }
+                                }
+                            }
+
+                            if (extendedDataConfigReturn.ExtendedDataList != null &&
+                                extendedDataConfigReturn.ExtendedDataList.Any())
+                            {
+                                return extendedDataConfigReturn;
+                            }
                         }
-                    }
-                    else
-                    {
-                        var row = new EthosExtensibleDataRow(edmvColumn.EdmvColumnNameAssocMember, edmvColumn.EdmvFileNameAssocMember,
-                                edmvColumn.EdmvJsonLabelAssocMember, edmvColumn.EdmvJsonPathAssocMember,
-                                edmvColumn.EdmvJsonPropertyTypeAssocMember, "", edmvColumn.EdmvLengthAssocMember);
+                        catch (Exception e)
+                        {
+                            logger.Error(e, string.Concat("Retreiving Ethos Extended Confguration has failed for resource : ", resourceName, " at version : ", resourceVersionNumber));
+                        }
 
-                        extendedDataConfigReturn.AddItemToExtendedData(row);
-                    }
-                }
+                        //if it makes it here there were no configuration rows or an exception so return null
+                        return new EthosExtensibleData();
+                    }, CacheTimeout);
 
-                if (extendedDataConfigReturn.ExtendedDataList != null &&
-                    extendedDataConfigReturn.ExtendedDataList.Any())
-                {
-                    return extendedDataConfigReturn;
-                }
-            }
-            catch (Exception e)
+            if (ethosExtensibleData == null || ethosExtensibleData.ExtendedDataList == null || !ethosExtensibleData.ExtendedDataList.Any())
             {
-                logger.Error(e, string.Concat("Retreiving Ethos Extended Confguration has failed for resource : ", resourceName, " at version : ", resourceVersionNumber));
+                return null;
+            }
+            return ethosExtensibleData;
+
+        }
+
+        private IEnumerable<EdmExtensions> _ethosExtensibilitySettings = null;
+        /// <summary>
+        /// Gets all of the Ethos API builder settings stored on EDM.EXTENSIONS
+        /// </summary>
+        /// <param name="bypassCache">bool to determine if cache should be bypassed</param>
+        /// <returns>List of DataContracts.EdmExtensions</returns>
+        private async Task<IEnumerable<EdmExtensions>> GetEthosApiConfiguration(bool bypassCache = false)
+        {
+            if (_ethosExtensibilitySettings == null)
+            {
+                const string ethosExtensiblityCacheKey = "AllEthosApiBuilderConfigurationSettings";
+
+                if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
+                {
+                    ClearCache(new List<string> { ethosExtensiblityCacheKey });
+                }
+
+                var ethosExtensiblitySettingsList =
+                    await GetOrAddToCacheAsync(ethosExtensiblityCacheKey,
+                        async () => (await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS", "")).ToList(), CacheTimeout);
+
+                _ethosExtensibilitySettings = ethosExtensiblitySettingsList;
+            }
+            return _ethosExtensibilitySettings;
+        }
+
+        private IEnumerable<EdmSelectCriteria> _ethosSelectionCriteria = null;
+        /// <summary>
+        /// Gets all of the Ethos API builder settings stored on EDM.SELECT.CRITERIA
+        /// </summary>
+        /// <param name="bypassCache">bool to determine if cache should be bypassed</param>
+        /// <returns>List of DataContracts.EdmExtensions</returns>
+        private async Task<IEnumerable<EdmSelectCriteria>> GetEthosApiSelectCriteria(bool bypassCache = false)
+        {
+            if (_ethosSelectionCriteria == null)
+            {
+                const string ethosExtensiblityCacheKey = "AllEthosApiSelectCriteriaConfigurationSettings";
+
+                if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
+                {
+                    ClearCache(new List<string> { ethosExtensiblityCacheKey });
+                }
+
+                var ethosExtensiblitySettingsList =
+                    await GetOrAddToCacheAsync<List<EdmSelectCriteria>>(ethosExtensiblityCacheKey,
+                        async () => (await DataReader.BulkReadRecordAsync<EdmSelectCriteria>("EDM.SELECT.CRITERIA", "")).ToList(), CacheTimeout);
+
+                _ethosSelectionCriteria = ethosExtensiblitySettingsList;
+            }
+            return _ethosSelectionCriteria;
+        }
+
+        private IEnumerable<EdmQueries> _ethosExtensibilityQueries = null;
+        /// <summary>
+        /// Gets all of the Ethos API builder settings stored on EDM.QUERIES
+        /// </summary>
+        /// <param name="bypassCache">bool to determine if cache should be bypassed</param>
+        /// <returns>List of DataContracts.EdmExtensions</returns>
+        private async Task<IEnumerable<EdmQueries>> GetEthosApiNamedQueries(bool bypassCache = false)
+        {
+            if (_ethosExtensibilityQueries == null)
+            {
+                const string ethosExtensiblityCacheKey = "AllEthosApiNamedQueriesConfigurationSettings";
+
+                if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
+                {
+                    ClearCache(new List<string> { ethosExtensiblityCacheKey });
+                }
+
+                var ethosExtensiblitySettingsList =
+                    await GetOrAddToCacheAsync<List<EdmQueries>>(ethosExtensiblityCacheKey,
+                        async () => (await DataReader.BulkReadRecordAsync<EdmQueries>("EDM.QUERIES", "")).ToList(), CacheTimeout);
+
+                _ethosExtensibilityQueries = ethosExtensiblitySettingsList;
+            }
+            return _ethosExtensibilityQueries;
+        }
+
+        /// <summary>
+        /// Gets the extended configuration available on a resource, returns null if there are none
+        /// </summary>
+        /// <param name="resourceName">name of the resource (api) </param>
+        /// <returns> extended configuration if available. Returns null if none available or none configured</returns>
+        public async Task<EthosApiConfiguration> GetEthosApiConfigurationByResource(string resourceName, bool bypassCache = false)
+        {
+            string ethosExtensiblityCacheKey = "AllEthosApiConfigurationSettingsBy" + resourceName;
+
+            if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
+            {
+                ClearCache(new List<string> { ethosExtensiblityCacheKey });
             }
 
-            //if it makes it here there were no configuration rows or an exception so return null
-            return null;
+            var ethosApiConfigurationByResource =
+                await GetOrAddToCacheAsync(ethosExtensiblityCacheKey,
+                    async () =>
+                    {
+                        try
+                        {
+                            EdmSelectCriteria selectCriteria = null;
+                            var extendConfigData = (await GetEthosApiConfiguration(bypassCache)).ToList();
+                            var apiConfiguration = extendConfigData.FirstOrDefault(ex => ex.EdmeResourceName == resourceName);
+
+                            if (!string.IsNullOrEmpty(apiConfiguration.EdmeSelectCriteria))
+                            {
+                                var selectConfigData = (await GetEthosApiSelectCriteria(bypassCache)).ToList();
+                                selectCriteria = selectConfigData.FirstOrDefault(sc => sc.Recordkey == apiConfiguration.EdmeSelectCriteria);
+                            }
+                            if (apiConfiguration != null)
+                            {
+                                var ethosApiConfiguration = new EthosApiConfiguration()
+                                {
+                                    ResourceName = apiConfiguration.EdmeResourceName,
+                                    PrimaryEntity = apiConfiguration.EdmePrimaryEntity.EndsWith("VALCODES")
+                                        && !string.IsNullOrEmpty(apiConfiguration.EdmePrimaryApplication)
+                                        && !string.IsNullOrEmpty(apiConfiguration.EdmePrimaryTableName)
+                                        ? (await ValidateValcodeTable(apiConfiguration.EdmePrimaryApplication, apiConfiguration.EdmePrimaryTableName))
+                                        : apiConfiguration.EdmePrimaryEntity,
+                                    PrimaryApplication = apiConfiguration.EdmePrimaryApplication,
+                                    PrimaryTableName = apiConfiguration.EdmePrimaryTableName,
+                                    PrimaryGuidSource = apiConfiguration.EdmePrimaryGuidSource,
+                                    PrimaryGuidDbType = apiConfiguration.EdmePrimaryGuidDbType,
+                                    PrimaryGuidFileName = apiConfiguration.EdmePrimaryGuidFileName.EndsWith("VALCODES")
+                                        && !string.IsNullOrEmpty(apiConfiguration.EdmePrimaryApplication)
+                                        && !string.IsNullOrEmpty(apiConfiguration.EdmePrimaryTableName)
+                                        ? (await ValidateValcodeTable(apiConfiguration.EdmePrimaryApplication, apiConfiguration.EdmePrimaryTableName))
+                                        : apiConfiguration.EdmePrimaryGuidFileName,
+                                    PageLimit = apiConfiguration.EdmePageLimit
+                                };
+
+                                ethosApiConfiguration.HttpMethods = new List<EthosApiSupportedMethods>();
+                                foreach (var method in apiConfiguration.EdmeMethodsEntityAssociation)
+                                {
+                                    if (!string.IsNullOrEmpty(method.EdmeHttpMethodsAssocMember))
+                                    {
+                                        ethosApiConfiguration.HttpMethods.Add(
+                                            new EthosApiSupportedMethods(method.EdmeHttpMethodsAssocMember,
+                                            method.EdmeHttpPermissionsAssocMember)
+                                        );
+                                    }
+                                }
+                                if (selectCriteria != null)
+                                {
+                                    ethosApiConfiguration.SelectFileName = selectCriteria.EdmsSelectFileName;
+                                    ethosApiConfiguration.SelectSubroutineName = selectCriteria.EdmsSelectSubroutine;
+                                    ethosApiConfiguration.SavingField = selectCriteria.EdmsSavingField;
+                                    ethosApiConfiguration.SavingOption = selectCriteria.EdmsSavingOption;
+                                    ethosApiConfiguration.SelectColumnName = selectCriteria.EdmsSelectColumnName;
+                                    ethosApiConfiguration.SelectRules = selectCriteria.EdmsSelectRules;
+                                    ethosApiConfiguration.SelectParagraph = selectCriteria.EdmsSelectParagraph;
+
+                                    ethosApiConfiguration.SelectionCriteria = new List<EthosApiSelectCriteria>();
+                                    foreach (var selection in selectCriteria.EdmsSelectEntityAssociation)
+                                    {
+                                        if (!string.IsNullOrEmpty(selection.EdmsSelectConnectorAssocMember))
+                                        {
+                                            ethosApiConfiguration.SelectionCriteria.Add(
+                                                new EthosApiSelectCriteria(selection.EdmsSelectConnectorAssocMember,
+                                                selection.EdmsSelectColumnAssocMember,
+                                                selection.EdmsSelectOperAssocMember,
+                                                selection.EdmsSelectValueAssocMember)
+                                            );
+                                        }
+                                    }
+
+                                    ethosApiConfiguration.SortColumns = new List<EthosApiSortCriteria>();
+                                    foreach (var sort in selectCriteria.EdmsSortEntityAssociation)
+                                    {
+                                        if (!string.IsNullOrEmpty(sort.EdmsSortColumnsAssocMember))
+                                        {
+                                            ethosApiConfiguration.SortColumns.Add(
+                                                new EthosApiSortCriteria(sort.EdmsSortColumnsAssocMember,
+                                                sort.EdmsSortSequenceAssocMember)
+                                            );
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    ethosApiConfiguration.SelectFileName = apiConfiguration.EdmePrimaryEntity;
+                                    ethosApiConfiguration.SelectRules = new List<string>();
+                                    ethosApiConfiguration.SelectParagraph = new List<string>();
+
+                                    ethosApiConfiguration.SelectionCriteria = new List<EthosApiSelectCriteria>();
+                                    ethosApiConfiguration.SortColumns = new List<EthosApiSortCriteria>();
+
+                                    if (apiConfiguration.EdmePrimaryEntity.EndsWith("VALCODES"))
+                                    {
+                                        if (!string.IsNullOrEmpty(apiConfiguration.EdmePrimaryTableName) && !string.IsNullOrEmpty(apiConfiguration.EdmePrimaryApplication))
+                                        {
+                                            ethosApiConfiguration.SelectFileName = await ValidateValcodeTable(apiConfiguration.EdmePrimaryApplication, apiConfiguration.EdmePrimaryTableName);
+                                        }
+                                        ethosApiConfiguration.SavingField = "VAL.INTERNAL.CODE";
+                                        ethosApiConfiguration.SelectionCriteria.Add(
+                                            new EthosApiSelectCriteria("WITH", "VALCODE.ID", "EQ", '"' + apiConfiguration.EdmePrimaryTableName + '"')
+                                        );
+                                        ethosApiConfiguration.SortColumns.Add(
+                                            new EthosApiSortCriteria("VAL.INTERNAL.CODE", "BY.EXP")
+                                        );
+                                    }
+                                    else
+                                    {
+                                        if (!apiConfiguration.EdmePrimaryGuidDbType.Equals("K", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(apiConfiguration.EdmePrimaryGuidSource))
+                                        {
+                                            ethosApiConfiguration.SelectFileName = !string.IsNullOrEmpty(apiConfiguration.EdmePrimaryGuidFileName) ? apiConfiguration.EdmePrimaryGuidFileName : apiConfiguration.EdmePrimaryEntity;
+                                            ethosApiConfiguration.SavingField = apiConfiguration.EdmePrimaryGuidSource;
+                                            ethosApiConfiguration.SelectionCriteria.Add(
+                                                new EthosApiSelectCriteria("WITH", apiConfiguration.EdmePrimaryGuidSource, "NE", "''")
+                                            );
+
+                                            if (!apiConfiguration.EdmePrimaryGuidDbType.Equals("D", StringComparison.OrdinalIgnoreCase) && !apiConfiguration.EdmePrimaryGuidDbType.Equals("X", StringComparison.OrdinalIgnoreCase))
+                                                ethosApiConfiguration.SortColumns.Add(
+                                                    new EthosApiSortCriteria(apiConfiguration.EdmePrimaryGuidSource, "BY.EXP")
+                                            );
+                                        }
+                                    }
+                                }
+
+                                if (ethosApiConfiguration != null)
+                                {
+                                    return ethosApiConfiguration;
+                                }
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            logger.Error(e, string.Concat("Retreiving Ethos Extended Confguration has failed for resource : ", resourceName));
+                        }
+
+                        //if it makes it here there were no configuration rows or an exception so return null
+                        return new EthosApiConfiguration();
+                    }, CacheTimeout);
+
+            if (ethosApiConfigurationByResource == null || string.IsNullOrEmpty(ethosApiConfigurationByResource.PrimaryEntity))
+            {
+                return null;
+            }
+
+            return ethosApiConfigurationByResource;
 
         }
 
@@ -207,15 +903,49 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="resourceVersionNumber">version number of ther resource</param>
         /// <param name="extendedSchemaResourceId">extended schema identifier</param>
         /// <param name="resourceIds">IEnumerable of the ids for the resources in guid form</param>
+        /// <param name="reportEthosApiErrors">Flag to determine if we should throw an exception on Extended Errors.</param>
+        /// <param name="bypassCache">Flag to indicate if we should bypass the cache and read directly from disk.</param>
         /// <returns>List with all of the extended data if aavailable. Returns an empty list if none available or none configured</returns>
-        public async Task<IEnumerable<EthosExtensibleData>> GetExtendedEthosDataByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, IEnumerable<string> resourceIds, bool bypassCache = false)
+        public async Task<IEnumerable<EthosExtensibleData>> GetExtendedEthosDataByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, IEnumerable<string> resourceIds, bool reportEthosApiErrors = false, bool bypassCache = false)
         {
-            char _VM = Convert.ToChar(DynamicArray.VM);
+            var exception = new RepositoryException("Extensibility configuration errors.");
+
             var extendConfigData = (await GetEthosExtensibilityConfiguration(bypassCache)).ToList();
 
+            // Look for version specific configuration first
             var matchingExtendedConfigData = extendConfigData.FirstOrDefault(e =>
                 e.EdmvResourceName.Equals(resourceName, StringComparison.OrdinalIgnoreCase) &&
                 e.EdmvVersionNumber.Equals(resourceVersionNumber, StringComparison.OrdinalIgnoreCase));
+
+            // Look for a major version match.
+            if (matchingExtendedConfigData == null)
+            {
+                if (!string.IsNullOrEmpty(resourceVersionNumber) && resourceVersionNumber.Contains('.'))
+                {
+                    var majorVersion = resourceVersionNumber.Split('.')[0];
+                    var minorVersion = resourceVersionNumber.Split('.')[1];
+                    matchingExtendedConfigData = extendConfigData.LastOrDefault(e =>
+                        e.EdmvResourceName.Equals(resourceName, StringComparison.OrdinalIgnoreCase) &&
+                        e.EdmvVersionNumber.Equals(majorVersion, StringComparison.OrdinalIgnoreCase));
+
+                    if (matchingExtendedConfigData == null)
+                    {
+                        matchingExtendedConfigData = extendConfigData.LastOrDefault(e =>
+                            e.EdmvResourceName.Equals(resourceName, StringComparison.OrdinalIgnoreCase) &&
+                            e.EdmvVersionNumber.Contains('.') &&
+                            e.EdmvVersionNumber.Split('.')[0].Equals(majorVersion, StringComparison.OrdinalIgnoreCase) &&
+                            Convert.ToInt32(e.EdmvVersionNumber.Split('.')[1]) >= Convert.ToInt32(minorVersion));
+                    }
+                }
+            }
+
+            // If we don't have a version specific or major version configuration, then look for versionless match.
+            if (matchingExtendedConfigData == null)
+            {
+                matchingExtendedConfigData = extendConfigData.FirstOrDefault(e =>
+                    e.EdmvResourceName.Equals(resourceName, StringComparison.OrdinalIgnoreCase) &&
+                    string.IsNullOrEmpty(e.EdmvVersionNumber));
+            }
 
             // TODO: SRM Uncomment when we want to support the metadata Object
             //if (matchingExtendedConfigData == null)
@@ -238,160 +968,238 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             //}
 
             var retConfigData = new List<EthosExtensibleData>();
+            if (resourceIds == null || !resourceIds.Any())
+            {
+                return retConfigData;
+            }
 
             //crate guidlookup array to get primary key info
-            var guidLookupArray = resourceIds.Select(r => new GuidLookup(r)).ToArray();
+            var guidLookupArray = resourceIds.Where(i => !string.IsNullOrWhiteSpace(i)).Select(r => new GuidLookup(r)).ToArray();
 
             //get coll primary key info and if none return exit with empty list
             var idDict = await DataReader.SelectAsync(guidLookupArray);
             if (idDict == null || !idDict.Any())
             {
+                if (reportEthosApiErrors)
+                {
+                    var message = string.Format("Record Keys for GUIDs not found for resource '{0}' version number '{1}'", resourceName, resourceVersionNumber);
+                    logger.Error(message);
+                    exception.AddError(new RepositoryError("Bad.Data", message));
+                    throw exception;
+                }
                 return retConfigData;
             }
             // TODO: SRM Uncomment when we want to support the metadata Object
             //matchingExtendedConfigData = await AddEthosMetadataConfigurationData(matchingExtendedConfigData, idDict, bypassCache);
-            
+
             //make sure there is extended config data and row data, if not return empty list
             if (matchingExtendedConfigData == null || matchingExtendedConfigData.EdmvColumnsEntityAssociation == null || !matchingExtendedConfigData.EdmvColumnsEntityAssociation.Any())
             {
+                if (reportEthosApiErrors)
+                {
+                    var message = string.Format("No matching version with valid columns found for resource '{0}' version number '{1}'", resourceName, resourceVersionNumber);
+                    logger.Error(message);
+                    exception.AddError(new RepositoryError("Bad.Data", message));
+                    throw exception;
+                }
                 return retConfigData;
             }
 
-            //get the filenames from the config data, extended data can come from any file keyed to the main entity
-            var fileNameStrList = matchingExtendedConfigData.EdmvColumnsEntityAssociation.Select(e => e.EdmvFileNameAssocMember).ToList().Distinct();
-            
             var allColumnData = new Dictionary<string, Dictionary<string, string>>();
-            var colleagueFileAndKeys = new Dictionary<string, List<string>>();
             var colleagueSecondaryKeys = new Dictionary<string, string>();
-            foreach (var guidLkup in idDict)
+
+            // For now, the use of the CTX is still experimental though most likely
+            // it will continue to be used.  However, if we don't support virtual fields
+            // then we won't necessarily need the CTX.  We would however need to add
+            // reads of all secondary data columns/files using the pointers defined.
+            // So, for now (as of 04/14/2020 SRM) we will leave in the old code and
+            // force it to use the CTX.
+
+            bool useCtx = true;
+            if (useCtx)
             {
-                // Found in some cases, the guid lookup fails to return a GUID record causing object reference error.
-                if (guidLkup.Value != null && !string.IsNullOrEmpty(guidLkup.Value.Entity) && !string.IsNullOrEmpty(guidLkup.Value.PrimaryKey))
+                var request = new GetEthosExtendedDataRequest()
                 {
-                    if (colleagueFileAndKeys.ContainsKey(guidLkup.Value.Entity))
+                    Guids = resourceIds.ToList(),
+                    ResourceName = resourceName,
+                    Version = resourceVersionNumber
+                };
+                try
+                {
+                    var response = await transactionInvoker.ExecuteAsync<GetEthosExtendedDataRequest, GetEthosExtendedDataResponse>(request);
+                    if (response.Error || (response.GetEthosExtendDataErrors != null && response.GetEthosExtendDataErrors.Any()))
                     {
-                        colleagueFileAndKeys[guidLkup.Value.Entity].Add(guidLkup.Value.PrimaryKey);
-                    }
-                    else //key didn't exist yet so just add the guid as the key with the current column data set
-                    {
-                        colleagueFileAndKeys.Add(guidLkup.Value.Entity, new List<string>() { guidLkup.Value.PrimaryKey });
-                    }
-                    if (!string.IsNullOrEmpty(guidLkup.Value.SecondaryKey))
-                    {
-                        if (!colleagueSecondaryKeys.ContainsKey(guidLkup.Key))
+                        var message = string.Format("Extensibility configuration errors for resource '{0}' version number '{1}'", resourceName, resourceVersionNumber);
+                        logger.Error(message);
+                        exception.AddError(new RepositoryError("Data.Access", message));
+
+                        foreach (var error in response.GetEthosExtendDataErrors)
                         {
-                            colleagueSecondaryKeys.Add(guidLkup.Key, guidLkup.Value.SecondaryKey);
+                            message = string.Concat(error.ErrorCodes, " - ", error.ErrorMessages);
+                            logger.Error(message);
+                            if (reportEthosApiErrors)
+                            {
+                                exception.AddError(new RepositoryError("Data.Access", message));
+                            }
+                        }
+                        if (reportEthosApiErrors && exception != null && exception.Errors != null && exception.Errors.Any())
+                        {
+                            throw exception;
+                        }
+                        return retConfigData;
+                    }
+
+                    foreach (var resp in response.ResourceDataObject)
+                    {
+                        if (resp.ColumnNames != null && resp.PropertyValues != null)
+                        {
+                            var columnNames = resp.ColumnNames.Split(_SM).ToList();
+                            var columnValues = resp.PropertyValues.Split(_SM).ToList();
+                            Dictionary<string, string> columnDataItem = new Dictionary<string, string>();
+                            var index = 0;
+                            foreach (var columnName in columnNames)
+                            {
+                                var inputData = columnValues.ElementAt(index).Replace(_TM, _VM).Replace(_XM, _SM);
+                                var outputData = await GetOutputDataHookAsync(columnName, inputData, columnNames, columnValues, resourceName, resourceVersionNumber, reportEthosApiErrors, bypassCache);
+
+                                if (!string.IsNullOrEmpty(outputData))
+                                {
+                                    columnDataItem.Add(columnName, outputData);
+                                }
+                                else
+                                {
+                                    columnDataItem.Add(columnName, inputData);
+                                }
+                                index++;
+                            }
+                            if (!string.IsNullOrEmpty(resp.ResourceSecondaryKeys))
+                            {
+                                if (!colleagueSecondaryKeys.ContainsKey(resp.ResourceGuids))
+                                {
+                                    colleagueSecondaryKeys.Add(resp.ResourceGuids, resp.ResourceSecondaryKeys);
+                                }
+                            }
+                            //if the allColumndata contains the key column data has already been added for this record 
+                            //so the new column data must be combined with the existing column data
+                            if (allColumnData.ContainsKey(resp.ResourceGuids))
+                            {
+                                var currentColumnDictionary = allColumnData[resp.ResourceGuids];
+                                var unionOfResults = currentColumnDictionary.Union(columnDataItem)
+                                    .ToDictionary(k => k.Key, v => v.Value);
+                                allColumnData[resp.ResourceGuids] = unionOfResults;
+                            }
+                            else //key didn't exist yet so just add the guid as the key with the current column data set
+                            {
+                                allColumnData.Add(resp.ResourceGuids, columnDataItem);
+                            }
                         }
                     }
                 }
-            }
-
-            var fileSuiteInstance = string.Empty;
-            foreach (var fileAndKeys in colleagueFileAndKeys)
-            {
-                fileSuiteInstance = await GetEthosFileSuiteInstance(fileAndKeys.Key);
-                //get the extended colum data from each file and put into single dictionary
-                foreach (var fileName in fileNameStrList)
+                catch (Exception ex)
                 {
-                    //don't process empty file name
-                    if (string.IsNullOrEmpty(fileName))
+                    if (reportEthosApiErrors)
                     {
-                        logger.Error(string.Concat("Extensibility config does not have a filename for resource ", resourceName, " version number ", resourceVersionNumber));
-                        continue;
+                        throw ex;
                     }
-                    //get the column names for the file we are going to get the data from
-                    var fileColumns = matchingExtendedConfigData.EdmvColumnsEntityAssociation
-                        .Where(e => e.EdmvFileNameAssocMember.Equals(fileName, StringComparison.OrdinalIgnoreCase)
-                        && !e.EdmvDatabaseUsageTypeAssocMember.Equals("K", StringComparison.OrdinalIgnoreCase))
-                        .Select(e => e.EdmvColumnNameAssocMember).Distinct().ToList();
+                    logger.Error(string.Concat(ex.Message));
+                    return retConfigData;
+                }
+            }
+            else
+            {
+                //get the filenames from the config data, extended data can come from any file keyed to the main entity
+                var fileNameStrList = matchingExtendedConfigData.EdmvColumnsEntityAssociation.Select(e => e.EdmvFileNameAssocMember).ToList().Distinct();
+                var colleagueFileAndKeys = new Dictionary<string, List<string>>();
 
-                    //get the Key column names for the file we are going to get the data from
-                    var keyColumns = matchingExtendedConfigData.EdmvColumnsEntityAssociation
-                        .Where(e => e.EdmvFileNameAssocMember.Equals(fileName, StringComparison.OrdinalIgnoreCase)
-                        && e.EdmvDatabaseUsageTypeAssocMember.Equals("K", StringComparison.OrdinalIgnoreCase))
-                        .Select(e => e.EdmvColumnNameAssocMember).Distinct().ToList();
-
-                    var additionalColumns = matchingExtendedConfigData.EdmvColumnsEntityAssociation
-                        .Where(e => e.EdmvFileNameAssocMember.Equals(fileName, StringComparison.OrdinalIgnoreCase)
-                        && !string.IsNullOrEmpty(e.EdmvAssociationControllerAssocMember))
-                        .Select(e => e.EdmvAssociationControllerAssocMember).Distinct().ToList();
-
-                    fileColumns.AddRange(additionalColumns);
-                    var fileColumnNames = fileColumns.Distinct().ToArray();
-
-                    //var fileSuiteFileName = await GetEthosFileSuiteFileNameAsync(fileSuiteYear, fileName);
-                    var physicalFileName = fileName;
-                    if (!string.IsNullOrEmpty(fileSuiteInstance) && await IsEthosFileSuiteTemplateFile(fileName))
+                foreach (var guidLkup in idDict)
+                {
+                    // Found in some cases, the guid lookup fails to return a GUID record causing object reference error.
+                    if (guidLkup.Value != null && !string.IsNullOrEmpty(guidLkup.Value.Entity) && !string.IsNullOrEmpty(guidLkup.Value.PrimaryKey))
                     {
-                        physicalFileName = await GetEthosFileSuiteFileNameAsync(fileName, fileSuiteInstance);
-                    }
-                    var collIdsByFileName = fileAndKeys.Value.Distinct().ToArray();
-
-                    //get the colleague keys from the select data - This will handle if they are co-files (temp fix until the "primary" file can be identified)
-                    var colleagueKeys = idDict.Where(id => id.Value != null).Select(i => i.Value.PrimaryKey).Distinct().ToArray();
-
-                    var colleagueIdsToQueryWith = collIdsByFileName.Any() ? collIdsByFileName : colleagueKeys;
-
-                    //We may have only key columns and no actual data columns.
-                    if (fileColumnNames != null && fileColumnNames.Any())
-                    {
-                        //data for the columns matching to the file for the set of keys
-                        var currentFileColumnData = await DataReader.BatchReadRecordColumnsAsync(physicalFileName, colleagueIdsToQueryWith, fileColumnNames);
-
-                        //go through each columndata result to add the key and column data to the single collection
-                        foreach (var columnDataItem in currentFileColumnData)
+                        if (colleagueFileAndKeys.ContainsKey(guidLkup.Value.Entity))
                         {
-                            //get the guidlookupresult for the colleague key and primary filename
-                            //there can be multiple guids for the same colleague id when there are multiple primary files involved on the API
-                            var guidForColumnData = idDict.Where(i => i.Value != null && i.Value.PrimaryKey.Equals(columnDataItem.Key) &&
-                                i.Value.Entity.Equals(physicalFileName, StringComparison.OrdinalIgnoreCase));
-
-                            if (guidForColumnData == null || !guidForColumnData.Any())
+                            colleagueFileAndKeys[guidLkup.Value.Entity].Add(guidLkup.Value.PrimaryKey);
+                        }
+                        else //key didn't exist yet so just add the guid as the key with the current column data set
+                        {
+                            colleagueFileAndKeys.Add(guidLkup.Value.Entity, new List<string>() { guidLkup.Value.PrimaryKey });
+                        }
+                        if (!string.IsNullOrEmpty(guidLkup.Value.SecondaryKey))
+                        {
+                            if (!colleagueSecondaryKeys.ContainsKey(guidLkup.Key))
                             {
-                                //get the guids for the colleague key, there can be multiple guids for the same colleague id
-                                guidForColumnData = idDict.Where(i => i.Value != null && i.Value.PrimaryKey.Equals(columnDataItem.Key)).ToList();
-                            }
-
-                            if (guidForColumnData.Any())
-                            {
-                                foreach (var collIdKeyPair in guidForColumnData)
-                                {
-                                    //if the allColumndata contains the key column data has already been added for this record 
-                                    //so it the new column data must be combined with the existing column data
-                                    if (allColumnData.ContainsKey(collIdKeyPair.Key))
-                                    {
-                                        var currentColumnDictionary = allColumnData[collIdKeyPair.Key];
-                                        var unionOfResults = currentColumnDictionary.Union(columnDataItem.Value)
-                                            .ToDictionary(k => k.Key, v => v.Value);
-                                        allColumnData[collIdKeyPair.Key] = unionOfResults;
-                                    }
-                                    else //key didn't exist yet so just add the guid as the key with the current column data set
-                                    {
-                                        allColumnData.Add(collIdKeyPair.Key, columnDataItem.Value);
-                                    }
-                                }
+                                colleagueSecondaryKeys.Add(guidLkup.Key, guidLkup.Value.SecondaryKey);
                             }
                         }
                     }
+                }
 
-                    // Add all data coming from the Colleague record keys to the allColumnData dictionary.
-                    if (keyColumns != null && keyColumns.Any())
+                var fileSuiteInstance = string.Empty;
+                foreach (var fileAndKeys in colleagueFileAndKeys)
+                {
+                    fileSuiteInstance = await GetEthosFileSuiteInstance(fileAndKeys.Key);
+                    //get the extended colum data from each file and put into single dictionary
+                    foreach (var fileName in fileNameStrList)
                     {
-                        foreach (var keyColumnName in keyColumns)
+                        //don't process empty file name
+                        if (string.IsNullOrEmpty(fileName))
                         {
-                            foreach (var collId in colleagueIdsToQueryWith)
+                            var message = string.Concat("Extensibility configuration does not have a filename for resource ", resourceName, " version number ", resourceVersionNumber);
+                            logger.Error(message);
+                            exception.AddError(new RepositoryError("Data.Access", message));
+                            continue;
+                        }
+                        //get the column names for the file we are going to get the data from
+                        var fileColumns = matchingExtendedConfigData.EdmvColumnsEntityAssociation
+                            .Where(e => e.EdmvFileNameAssocMember.Equals(fileName, StringComparison.OrdinalIgnoreCase)
+                            && !e.EdmvDatabaseUsageTypeAssocMember.Equals("K", StringComparison.OrdinalIgnoreCase))
+                            .Select(e => e.EdmvColumnNameAssocMember).Distinct().ToList();
+
+                        //get the Key column names for the file we are going to get the data from
+                        var keyColumns = matchingExtendedConfigData.EdmvColumnsEntityAssociation
+                            .Where(e => e.EdmvFileNameAssocMember.Equals(fileName, StringComparison.OrdinalIgnoreCase)
+                            && e.EdmvDatabaseUsageTypeAssocMember.Equals("K", StringComparison.OrdinalIgnoreCase))
+                            .Select(e => e.EdmvColumnNameAssocMember).Distinct().ToList();
+
+                        var additionalColumns = matchingExtendedConfigData.EdmvColumnsEntityAssociation
+                            .Where(e => e.EdmvFileNameAssocMember.Equals(fileName, StringComparison.OrdinalIgnoreCase)
+                            && !string.IsNullOrEmpty(e.EdmvAssociationControllerAssocMember))
+                            .Select(e => e.EdmvAssociationControllerAssocMember).Distinct().ToList();
+
+                        fileColumns.AddRange(additionalColumns);
+                        var fileColumnNames = fileColumns.Distinct().ToArray();
+
+                        //var fileSuiteFileName = await GetEthosFileSuiteFileNameAsync(fileSuiteYear, fileName);
+                        var physicalFileName = fileName;
+                        if (!string.IsNullOrEmpty(fileSuiteInstance) && await IsEthosFileSuiteTemplateFile(fileName))
+                        {
+                            physicalFileName = await GetEthosFileSuiteFileNameAsync(fileName, fileSuiteInstance);
+                        }
+                        var collIdsByFileName = fileAndKeys.Value.Distinct().ToArray();
+
+                        //get the colleague keys from the select data - This will handle if they are co-files (temp fix until the "primary" file can be identified)
+                        var colleagueKeys = idDict.Where(id => id.Value != null).Select(i => i.Value.PrimaryKey).Distinct().ToArray();
+
+                        var colleagueIdsToQueryWith = collIdsByFileName.Any() ? collIdsByFileName : colleagueKeys;
+
+                        //We may have only key columns and no actual data columns.
+                        if (fileColumnNames != null && fileColumnNames.Any())
+                        {
+                            //data for the columns matching to the file for the set of keys
+                            var currentFileColumnData = await DataReader.BatchReadRecordColumnsAsync(physicalFileName, colleagueIdsToQueryWith, fileColumnNames);
+
+                            //go through each columndata result to add the key and column data to the single collection
+                            foreach (var columnDataItem in currentFileColumnData)
                             {
-                                var keyDict = new Dictionary<string, string>();
-                                keyDict.Add(keyColumnName, collId);
                                 //get the guidlookupresult for the colleague key and primary filename
                                 //there can be multiple guids for the same colleague id when there are multiple primary files involved on the API
-                                var guidForColumnData = idDict.Where(i => i.Value != null && i.Value.PrimaryKey.Equals(collId) &&
+                                var guidForColumnData = idDict.Where(i => i.Value != null && i.Value.PrimaryKey.Equals(columnDataItem.Key) &&
                                     i.Value.Entity.Equals(physicalFileName, StringComparison.OrdinalIgnoreCase));
 
                                 if (guidForColumnData == null || !guidForColumnData.Any())
                                 {
                                     //get the guids for the colleague key, there can be multiple guids for the same colleague id
-                                    guidForColumnData = idDict.Where(i => i.Value != null && i.Value.PrimaryKey.Equals(collId)).ToList();
+                                    guidForColumnData = idDict.Where(i => i.Value != null && i.Value.PrimaryKey.Equals(columnDataItem.Key)).ToList();
                                 }
 
                                 if (guidForColumnData.Any())
@@ -403,13 +1211,56 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                         if (allColumnData.ContainsKey(collIdKeyPair.Key))
                                         {
                                             var currentColumnDictionary = allColumnData[collIdKeyPair.Key];
-                                            var unionOfResults = currentColumnDictionary.Union(keyDict)
+                                            var unionOfResults = currentColumnDictionary.Union(columnDataItem.Value)
                                                 .ToDictionary(k => k.Key, v => v.Value);
                                             allColumnData[collIdKeyPair.Key] = unionOfResults;
                                         }
                                         else //key didn't exist yet so just add the guid as the key with the current column data set
                                         {
-                                            allColumnData.Add(collIdKeyPair.Key, keyDict);
+                                            allColumnData.Add(collIdKeyPair.Key, columnDataItem.Value);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Add all data coming from the Colleague record keys to the allColumnData dictionary.
+                        if (keyColumns != null && keyColumns.Any())
+                        {
+                            foreach (var keyColumnName in keyColumns)
+                            {
+                                foreach (var collId in colleagueIdsToQueryWith)
+                                {
+                                    var keyDict = new Dictionary<string, string>();
+                                    keyDict.Add(keyColumnName, collId);
+                                    //get the guidlookupresult for the colleague key and primary filename
+                                    //there can be multiple guids for the same colleague id when there are multiple primary files involved on the API
+                                    var guidForColumnData = idDict.Where(i => i.Value != null && i.Value.PrimaryKey.Equals(collId) &&
+                                        i.Value.Entity.Equals(physicalFileName, StringComparison.OrdinalIgnoreCase));
+
+                                    if (guidForColumnData == null || !guidForColumnData.Any())
+                                    {
+                                        //get the guids for the colleague key, there can be multiple guids for the same colleague id
+                                        guidForColumnData = idDict.Where(i => i.Value != null && i.Value.PrimaryKey.Equals(collId)).ToList();
+                                    }
+
+                                    if (guidForColumnData.Any())
+                                    {
+                                        foreach (var collIdKeyPair in guidForColumnData)
+                                        {
+                                            //if the allColumndata contains the key column data has already been added for this record 
+                                            //so it the new column data must be combined with the existing column data
+                                            if (allColumnData.ContainsKey(collIdKeyPair.Key))
+                                            {
+                                                var currentColumnDictionary = allColumnData[collIdKeyPair.Key];
+                                                var unionOfResults = currentColumnDictionary.Union(keyDict)
+                                                    .ToDictionary(k => k.Key, v => v.Value);
+                                                allColumnData[collIdKeyPair.Key] = unionOfResults;
+                                            }
+                                            else //key didn't exist yet so just add the guid as the key with the current column data set
+                                            {
+                                                allColumnData.Add(collIdKeyPair.Key, keyDict);
+                                            }
                                         }
                                     }
                                 }
@@ -426,7 +1277,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             foreach (var cData in allColumnData)
             {
-                var newEthosThing = new EthosExtensibleData(resourceName, resourceVersionNumber, extendedSchemaResourceId, cData.Key, colleagueTimeZone);
+                var newEthosThing = new EthosExtensibleData(resourceName, resourceVersionNumber, matchingExtendedConfigData.EdmvExtendedSchemaType, cData.Key, colleagueTimeZone);
 
                 //dictionary to hold linked columns for special processing
                 //T1 - data type(date or time), T2 - link value, T3 - column name, T4 - column value 
@@ -445,7 +1296,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     //if a column detail isn't matched continue out
                     if (columnConfigDetails == null)
                     {
-                        logger.Error(string.Concat("Extensibility config does not have a column configuration for ", colKeyValuePair.Key, " for resource ", resourceName));
+                        var message = string.Concat("Extensibility configuration does not have a column configuration for ", colKeyValuePair.Key, " for resource ", resourceName);
+                        logger.Error(message);
+                        //exception.AddError(new RepositoryError("Data.Access", message));
                         continue;
                     }
                     // Determine the Colleague Data value to be returned with each record key.
@@ -454,24 +1307,56 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         // If we are dealing with a Valcode table, we need to find the guid key and
                         // compare that to the resource key to find the associated value in a multi-valued
                         // associated data element.
-                        var secondaryKeyList = cData.Value.FirstOrDefault(cdv => cdv.Key == columnConfigDetails.EdmvAssociationControllerAssocMember).Value.Split(_VM);
-                        var secondaryKey = colleagueSecondaryKeys.FirstOrDefault(rk => rk.Key == cData.Key).Value;
-                        if (secondaryKeyList != null && secondaryKey != null)
+                        var associationColumn = matchingExtendedConfigData.EdmvColumnsEntityAssociation.FirstOrDefault(m =>
+                            m.EdmvColumnNameAssocMember.Equals(columnConfigDetails.EdmvAssociationControllerAssocMember));
+
+                        var secondaryKeyValue = cData.Value.FirstOrDefault(cdv => cdv.Key == columnConfigDetails.EdmvAssociationControllerAssocMember);
+                        if (secondaryKeyValue.Key != null && secondaryKeyValue.Value != null && !string.IsNullOrEmpty(secondaryKeyValue.Value))
                         {
-                            for (var i = 0; i < secondaryKeyList.Count(); i++)
+                            var secondaryKeyList = secondaryKeyValue.Value.Split(_VM);
+                            var colleagueSecondaryKey = colleagueSecondaryKeys.FirstOrDefault(rk => rk.Key == cData.Key);
+                            if (colleagueSecondaryKey.Key != null && colleagueSecondaryKey.Value != null && !string.IsNullOrEmpty(colleagueSecondaryKey.Value))
                             {
-                                if (secondaryKeyList[i] == secondaryKey)
+                                var secondaryKey = colleagueSecondaryKey.Value;
+                                if (secondaryKeyList != null && secondaryKey != null)
                                 {
-                                    var newValue = colleagueValue.Split(_VM);
-                                    if (i < newValue.Count()) colleagueValue = newValue[i];
-                                    else colleagueValue = string.Empty;
+                                    for (var i = 0; i < secondaryKeyList.Count(); i++)
+                                    {
+                                        var secondaryKeyListValue = secondaryKeyList[i];
+                                        if (associationColumn != null && associationColumn.EdmvJsonPropertyTypeAssocMember.StartsWith("date", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            try
+                                            {
+                                                var dateValues = secondaryKeyListValue.Split('-');
+                                                if (dateValues.Count() >= 3)
+                                                {
+                                                    var year = Convert.ToInt32(dateValues[0]);
+                                                    var month = Convert.ToInt32(dateValues[1]);
+                                                    var day = Convert.ToInt32(dateValues[2]);
+                                                    secondaryKeyListValue = DmiString.DateTimeToPickDate(new DateTime(year, month, day)).ToString();
+                                                }
+                                            }
+                                            catch
+                                            {
+                                                // Ignore for now.
+                                            }
+                                        }
+                                        if (secondaryKeyListValue == secondaryKey)
+                                        {
+                                            var newValue = colleagueValue.Split(_VM);
+                                            if (i < newValue.Count())
+                                            {
+                                                colleagueValue = newValue[i];
+                                            }
+                                            else colleagueValue = string.Empty;
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                     else
                     {
-                        // We don't yet support multi-valued fields outside of Valcodes
                         // If we have comments or text, then convert value mark to spaces.
                         if (colleagueValue.Contains(_VM))
                         {
@@ -486,8 +1371,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             }
                             else
                             {
-                                // Strip off just the first value until we support arrays.
-                                colleagueValue = colKeyValuePair.Value.Split(_VM)[0];
+                                colleagueValue = colKeyValuePair.Value;
                             }
                         }
                     }
@@ -520,13 +1404,19 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                     else //else this is just a single value column
                     {
-                        var row = new EthosExtensibleDataRow(columnConfigDetails.EdmvColumnNameAssocMember, columnConfigDetails.EdmvFileNameAssocMember, columnConfigDetails.EdmvJsonLabelAssocMember, columnConfigDetails.EdmvJsonPathAssocMember,
-                            columnConfigDetails.EdmvJsonPropertyTypeAssocMember, ConvertColleagueValueToExtensibleStringValue(columnConfigDetails, colleagueValue));
+                        var row = new EthosExtensibleDataRow(columnConfigDetails.EdmvColumnNameAssocMember, columnConfigDetails.EdmvFileNameAssocMember,
+                            columnConfigDetails.EdmvJsonLabelAssocMember, columnConfigDetails.EdmvJsonPathAssocMember,
+                            columnConfigDetails.EdmvJsonPropertyTypeAssocMember, colleagueValue)
+                        {
+                            associationController = columnConfigDetails.EdmvAssociationControllerAssocMember,
+                            transType = columnConfigDetails.EdmvTransTypeAssocMember,
+                            databaseUsageType = columnConfigDetails.EdmvDatabaseUsageTypeAssocMember
+
+                        }; ;
 
                         newEthosThing.AddItemToExtendedData(row);
                     }
                 }
-
                 try
                 {
                     var datetimeExtensions = ConvertColleageDateAndTimeValues(linkedColumnsTuple, linkedColumnDetails);
@@ -536,9 +1426,22 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 catch (Exception ex)
                 {
                     logger.Error(ex, string.Concat("DateTime get failed for resource id ", cData.Key));
+                    var message = string.Concat(ex.Message, " DateTime get failed for resource id '", cData.Key, "'.");
+                    exception.AddError(new RepositoryError("Data.Access", message));
+                }
+
+                var variableCalcuations = await GetVariableCalculationHookAsync(resourceName, resourceVersionNumber, newEthosThing.ExtendedDataList, reportEthosApiErrors, bypassCache);
+                if (variableCalcuations != null && variableCalcuations.Any())
+                {
+                    variableCalcuations.ForEach(e => newEthosThing.AddItemToExtendedData(e));
                 }
 
                 retConfigData.Add(newEthosThing);
+            }
+
+            if (reportEthosApiErrors && exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
             }
 
             return retConfigData;
@@ -550,10 +1453,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="matchingExtendedConfigData">Configuration for extended data.</param>
         /// <param name="idDict">dictionary containing the ids for the resources in guidlookup form</param>
         /// <returns>List of extensions with all of the metadata objects defined.</returns>
-        private async Task<EdmExtVersions> AddEthosMetadataConfigurationData(EdmExtVersions matchingExtendedConfigData, Dictionary<string,GuidLookupResult> idDict, bool bypassCache = false)
+        private async Task<EdmExtVersions> AddEthosMetadataConfigurationData(EdmExtVersions matchingExtendedConfigData, Dictionary<string, GuidLookupResult> idDict, bool bypassCache = false)
         {
             var matchingColumnConfigDetails = new List<EdmExtVersionsEdmvColumns>();
-           
+
             var allFileNames = new List<string>();
             var fileNamesForGuids = idDict.Where(i => i.Value != null && i.Value.Entity != null).Select(i => i.Value.Entity).Distinct().ToList();
             foreach (var fileName in fileNamesForGuids)
@@ -926,53 +1829,68 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     continue;
                 }
 
-                int intDateValue, intTimeValue;
-
-                if (timeTuple != null && int.TryParse(dateTuple.Item4, out intDateValue) && int.TryParse(timeTuple.Item4, out intTimeValue))
+                var dateValues = dateTuple.Item4.Split(_VM);
+                string[] timeValues;
+                if (timeTuple != null)
                 {
-                    var date = Dmi.Runtime.DmiString.PickDateToDateTime(intDateValue);
-                    var time = Dmi.Runtime.DmiString.PickTimeToDateTime(intTimeValue);
-
-                    var convertedDateTime = new DateTime(date.Year, date.Month, date.Day, time.Hours, time.Minutes, time.Seconds, DateTimeKind.Local);
-
-                    var utcDateTimeString = convertedDateTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
-
-                    if (string.IsNullOrEmpty(utcDateTimeString))
-                    {
-                        continue;
-                    }
-
-                    var returnEthosDataRow = new EthosExtensibleDataRow(dateColumnConfig.EdmvColumnNameAssocMember,
-                        dateColumnConfig.EdmvFileNameAssocMember, dateColumnConfig.EdmvJsonLabelAssocMember,
-                        dateColumnConfig.EdmvJsonPathAssocMember, dateColumnConfig.EdmvJsonPropertyTypeAssocMember,
-                        utcDateTimeString);
-
-                    returnList.Add(returnEthosDataRow);
+                    timeValues = timeTuple.Item4.Split(_VM);
                 }
                 else
                 {
-                    // We only have a Date and not a time.
-                    if (int.TryParse(dateTuple.Item4, out intDateValue))
+                    timeValues = string.Empty.Split(_VM);
+                }
+
+                var maxDateTime = dateValues.Count();
+                if (timeValues.Count() > maxDateTime)
+                    maxDateTime = timeValues.Count();
+                var utcDateTimeStringValues = string.Empty;
+
+                for (int valIdx = 0; valIdx < maxDateTime; valIdx++)
+                {
+                    int intDateValue, intTimeValue;
+
+                    var dateValue = valIdx < dateValues.Count() ? dateValues[valIdx] : string.Empty;
+                    var timeValue = valIdx < timeValues.Count() ? timeValues[valIdx] : string.Empty;
+                    if (!string.IsNullOrEmpty(timeValue) && int.TryParse(dateValue, out intDateValue) && int.TryParse(timeValue, out intTimeValue))
                     {
                         var date = Dmi.Runtime.DmiString.PickDateToDateTime(intDateValue);
+                        var time = Dmi.Runtime.DmiString.PickTimeToDateTime(intTimeValue);
 
-                        var convertedDateTime = new DateTime(date.Year, date.Month, date.Day, 0, 0, 0, DateTimeKind.Local);
+                        var convertedDateTime = new DateTime(date.Year, date.Month, date.Day, time.Hours, time.Minutes, time.Seconds, DateTimeKind.Local);
 
                         var utcDateTimeString = convertedDateTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
 
-                        if (string.IsNullOrEmpty(utcDateTimeString))
+                        utcDateTimeStringValues = string.Concat(utcDateTimeStringValues, _VM, utcDateTimeString);
+                    }
+                    else
+                    {
+                        // We only have a Date and not a time.
+                        if (int.TryParse(dateValue, out intDateValue))
                         {
-                            continue;
+                            var date = Dmi.Runtime.DmiString.PickDateToDateTime(intDateValue);
+
+                            var convertedDateTime = new DateTime(date.Year, date.Month, date.Day, 0, 0, 0, DateTimeKind.Local);
+
+                            var utcDateTimeString = convertedDateTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
+
+                            utcDateTimeStringValues = string.Concat(utcDateTimeStringValues, _VM, utcDateTimeString);
                         }
-
-                        var returnEthosDataRow = new EthosExtensibleDataRow(dateColumnConfig.EdmvColumnNameAssocMember,
-                            dateColumnConfig.EdmvFileNameAssocMember, dateColumnConfig.EdmvJsonLabelAssocMember,
-                            dateColumnConfig.EdmvJsonPathAssocMember, dateColumnConfig.EdmvJsonPropertyTypeAssocMember,
-                            utcDateTimeString);
-
-                        returnList.Add(returnEthosDataRow);
                     }
                 }
+
+
+                var returnEthosDataRow = new EthosExtensibleDataRow(dateColumnConfig.EdmvColumnNameAssocMember,
+                    dateColumnConfig.EdmvFileNameAssocMember, dateColumnConfig.EdmvJsonLabelAssocMember,
+                    dateColumnConfig.EdmvJsonPathAssocMember, dateColumnConfig.EdmvJsonPropertyTypeAssocMember,
+                    utcDateTimeStringValues.TrimStart(_VM))
+                {
+                    associationController = dateColumnConfig.EdmvAssociationControllerAssocMember,
+                    transType = dateColumnConfig.EdmvTransTypeAssocMember,
+                    databaseUsageType = dateColumnConfig.EdmvDatabaseUsageTypeAssocMember
+
+                };
+
+                returnList.Add(returnEthosDataRow);
             }
 
             return returnList;
@@ -1137,432 +2055,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return await BuildIntegrationConfiguration(integrationConfigurationId);
         }
 
-        #region Tax form consent paragraphs
-        /// <summary>
-        /// Gets the tax form configuration parameters for the specific tax form passed in.
-        /// </summary>
-        /// <param name="taxFormId">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
-        /// <returns>Consent and withheld paragraphs for the specific tax form</returns>
-        public async Task<TaxFormConfiguration> GetTaxFormConsentConfigurationAsync(TaxForms taxFormId)
-        {
-            var configuration = new TaxFormConfiguration(taxFormId);
-
-            switch (taxFormId)
-            {
-                case TaxForms.FormW2:
-                    configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("W2ConsentParagraphs",
-                     async () =>
-                     {
-                         var paragraph = new TaxFormConsentParagraph();
-
-                         // Get tax form parameters from HRWEB.DEFAULTS
-                         var hrWebDefaults = await DataReader.ReadRecordAsync<HrwebDefaults>("HR.PARMS", "HRWEB.DEFAULTS");
-                         if (hrWebDefaults != null)
-                         {
-
-                             // Get the tax form consent paragraphs for W-2
-                             paragraph.ConsentText = hrWebDefaults.HrwebW2oConText;
-                             paragraph.ConsentWithheldText = hrWebDefaults.HrwebW2oWhldText;
-                         }
-                         return paragraph;
-                     });
-                    break;
-
-                case TaxForms.Form1095C:
-                    configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("1095cConsentParagraphs",
-                    async () =>
-                    {
-                        var paragraph = new TaxFormConsentParagraph();
-
-                        // Get tax form parameters from HRWEB.DEFAULTS
-                        var hrWebDefaults = await DataReader.ReadRecordAsync<HrwebDefaults>("HR.PARMS", "HRWEB.DEFAULTS");
-                        if (hrWebDefaults != null)
-                        {
-                            // Get the tax form consent paragraphs for 1095-C
-                            paragraph.ConsentText = hrWebDefaults.Hrweb1095cConText;
-                            paragraph.ConsentWithheldText = hrWebDefaults.Hrweb1095cWhldText;
-                        }
-                        return paragraph;
-                    });
-                    break;
-                case TaxForms.Form1098:
-                    configuration = await Get1098TaxFormConsentParagraphsAsync();
-                    break;
-                case TaxForms.FormT4:
-                    configuration = await GetT4TaxFormConsentParagraphsAsync();
-                    break;
-                case TaxForms.FormT4A:
-                    configuration = await GetT4ATaxFormConsentParagraphsAsync();
-                    break;
-                case TaxForms.FormT2202A:
-                    configuration = await GetT2202ATaxFormConsentParagraphsAsync();
-                    break;
-                case TaxForms.Form1099MI:
-                    configuration = await Get1099MiTaxFormConsentParagraphsAsync();
-                    break;
-            }
-
-            return configuration;
-        }
-
-        private async Task<TaxFormConfiguration> Get1098TaxFormConsentParagraphsAsync()
-        {
-            TaxFormConfiguration configuration = new TaxFormConfiguration(TaxForms.Form1098);
-            configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("1098ConsentParagraphs",
-                async () =>
-                {
-                    var paragraph = new TaxFormConsentParagraph();
-
-                    // Get tax form parameters from HRWEB.DEFAULTS
-                    var parm1098Contract = await DataReader.ReadRecordAsync<Parm1098>("ST.PARMS", "PARM.1098");
-                    if (parm1098Contract != null)
-                    {
-                        // Get the tax form consent paragraphs for 1095-C
-                        paragraph.ConsentText = parm1098Contract.P1098ConsentText;
-                        paragraph.ConsentWithheldText = parm1098Contract.P1098WhldConsentText;
-                    }
-                    return paragraph;
-                });
-
-            return configuration;
-        }
-
-        /// <summary>
-        ///  Gets 1099Mi Tax consents Paragraph.
-        /// </summary>
-        /// <returns></returns>
-        private async Task<TaxFormConfiguration> Get1099MiTaxFormConsentParagraphsAsync()
-        {
-            TaxFormConfiguration configuration = new TaxFormConfiguration(TaxForms.Form1099MI);
-            configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("1099MiConsentParagraphs",
-                async () =>
-                {
-                    var paragraph = new TaxFormConsentParagraph();
-
-                    // Get tax form parameters from HRWEB.DEFAULTS
-                    var parm1099MiContract = await DataReader.ReadRecordAsync<Parm1099mi>("CF.PARMS", "PARM.1099MI");
-                    if (parm1099MiContract != null)
-                    {
-                        // Get the tax form consent paragraphs for 1099MI
-                        paragraph.ConsentText = parm1099MiContract.P1099miConsentText;
-                        paragraph.ConsentWithheldText = parm1099MiContract.P1099miWhldConsentText;
-                    }
-                    return paragraph;
-                });
-
-            return configuration;
-        }
-
-
-        private async Task<TaxFormConfiguration> GetT4TaxFormConsentParagraphsAsync()
-        {
-            TaxFormConfiguration configuration = new TaxFormConfiguration(TaxForms.FormT4);
-            configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("T4ConsentParagraphs",
-                async () =>
-                {
-                    var paragraph = new TaxFormConsentParagraph();
-
-                    // Get tax form parameters from PARM.T4
-                    var contract = await DataReader.ReadRecordAsync<ParmT4>("HR.PARMS", "T4");
-                    if (contract != null)
-                    {
-                        // Get the tax form consent paragraphs for T4
-                        paragraph.ConsentText = contract.Pt4ConText;
-                        paragraph.ConsentWithheldText = contract.Pt4WhldText;
-                    }
-                    return paragraph;
-                });
-
-            return configuration;
-        }
-
-        private async Task<TaxFormConfiguration> GetT4ATaxFormConsentParagraphsAsync()
-        {
-            TaxFormConfiguration configuration = new TaxFormConfiguration(TaxForms.FormT4A);
-            configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("T4AConsentParagraphs",
-                async () =>
-                {
-                    var paragraph = new TaxFormConsentParagraph();
-
-                    // Get tax form parameters from PARM.T4A
-                    var contract = await DataReader.ReadRecordAsync<ParmT4a>("CF.PARMS", "T4A");
-                    if (contract != null)
-                    {
-                        // Get the tax form consent paragraphs for T4A
-                        paragraph.ConsentText = contract.Pt4aConText;
-                        paragraph.ConsentWithheldText = contract.Pt4aWhldText;
-                    }
-                    return paragraph;
-                });
-
-            return configuration;
-        }
-
-        private async Task<TaxFormConfiguration> GetT2202ATaxFormConsentParagraphsAsync()
-        {
-            TaxFormConfiguration configuration = new TaxFormConfiguration(TaxForms.FormT2202A);
-            configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("T2202AConsentParagraphs",
-                async () =>
-                {
-                    var paragraph = new TaxFormConsentParagraph();
-
-                    // Get tax form parameters from CNST.RPT.PARMS
-                    var contract = await DataReader.ReadRecordAsync<CnstRptParms>("ST.PARMS", "CNST.RPT.PARMS");
-                    if (contract != null)
-                    {
-                        // Get the tax form consent paragraphs for T2202A
-                        paragraph.ConsentText = contract.CnstConsentText;
-                        paragraph.ConsentWithheldText = contract.CnstWhldConsentText;
-                    }
-                    return paragraph;
-                });
-
-            return configuration;
-        }
-
-        #endregion
-
-        #region Tax form availability
-        /// <summary>
-        /// Gets the tax form configuration parameters for the specific tax form passed in.
-        /// </summary>
-        /// <param name="taxFormId">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
-        /// <returns>Availability dates for the specific tax form</returns>
-        public async Task<TaxFormConfiguration> GetTaxFormAvailabilityConfigurationAsync(TaxForms taxFormId)
-        {
-            var configuration = new TaxFormConfiguration(taxFormId);
-
-            switch (taxFormId)
-            {
-                case TaxForms.FormW2:
-                    // Obtain the availability dates for W-2.
-                    var qtdYtdParameterW2 = await DataReader.ReadRecordAsync<QtdYtdParameterW2>("HR.PARMS", "QTD.YTD.PARAMETER");
-                    if (qtdYtdParameterW2 != null)
-                    {
-                        // Validate the availability dates for W-2.
-                        if (qtdYtdParameterW2.WebW2ParametersEntityAssociation != null)
-                        {
-                            foreach (var dataContract in qtdYtdParameterW2.WebW2ParametersEntityAssociation)
-                            {
-                                try
-                                {
-                                    if (string.IsNullOrEmpty(dataContract.QypWebW2YearsAssocMember))
-                                        throw new ArgumentNullException("QypWebW2YearsAssocMember", "QypWebW2YearsAssocMember is required.");
-
-                                    if (!dataContract.QypWebW2AvailableDatesAssocMember.HasValue)
-                                        throw new ArgumentNullException("QypWebW2AvailableDatesAssocMember", "QypWebW2AvailableDatesAssocMember is required.");
-
-                                    configuration.AddAvailability(new TaxFormAvailability(dataContract.QypWebW2YearsAssocMember, dataContract.QypWebW2AvailableDatesAssocMember.Value));
-                                }
-                                catch (Exception e)
-                                {
-                                    LogDataError("QypWebW2YearsAssocMember", "HR.PARMS - QTD.YTD.PARAMETER", dataContract, e, e.Message);
-                                }
-                            }
-                        }
-                    }
-                    break;
-                case TaxForms.Form1095C:
-                    // Obtain the availability dates for 1095-C.
-                    var qtdYtdParameter1095C = await DataReader.ReadRecordAsync<QtdYtdParameter1095C>("HR.PARMS", "QTD.YTD.PARAMETER");
-                    if (qtdYtdParameter1095C != null)
-                    {
-                        // Validate the availability dates for 1095-C.
-                        if (qtdYtdParameter1095C.Qyp1095cParametersEntityAssociation != null)
-                        {
-                            foreach (var contract in qtdYtdParameter1095C.Qyp1095cParametersEntityAssociation)
-                            {
-                                try
-                                {
-                                    if (string.IsNullOrEmpty(contract.QypWeb1095cYearsAssocMember))
-                                        throw new ArgumentNullException("QypWeb1095cYearsAssocMember", "QypWeb1095cYearsAssocMember is required.");
-
-                                    if (!contract.QypWeb1095cAvailDatesAssocMember.HasValue)
-                                        throw new ArgumentNullException("QypWeb1095cAvailDatesAssocMember", "QypWeb1095cAvailDatesAssocMember is required.");
-
-                                    configuration.AddAvailability(new TaxFormAvailability(contract.QypWeb1095cYearsAssocMember, contract.QypWeb1095cAvailDatesAssocMember.Value));
-                                }
-                                catch (Exception e)
-                                {
-                                    LogDataError("Qyp1095cParametersEntityAssociation", "HR.PARMS - QTD.YTD.PARAMETER", contract, e, e.Message);
-                                }
-                            }
-                        }
-                    }
-                    break;
-                case TaxForms.Form1098T:
-                    configuration = await Get1098TaxFormAvailabilityAsync(TaxForms.Form1098T);
-                    break;
-                case TaxForms.Form1098E:
-                    configuration = await Get1098TaxFormAvailabilityAsync(TaxForms.Form1098E);
-                    break;
-                case TaxForms.FormT4:
-                    configuration = await GetT4TaxFormAvailabilityAsync();
-                    break;
-                case TaxForms.FormT2202A:
-                    // Read the CNST.RPT.PARMS record to get the list of tax years for which T2202A
-                    // tax forms are online.
-                    var t2202aParameter = await DataReader.ReadRecordAsync<CnstRptParms>("ST.PARMS", "CNST.RPT.PARMS");
-                    if (t2202aParameter != null)
-                    {
-                        // Throw an exception if there a row of tax year information that does not have
-                        // a tax year or an online availability flag.
-                        if (t2202aParameter.CnstT2202aPdfParmsEntityAssociation != null)
-                        {
-                            foreach (var contract in t2202aParameter.CnstT2202aPdfParmsEntityAssociation)
-                            {
-                                try
-                                {
-                                    if (string.IsNullOrEmpty(contract.CnstT2202aPdfTaxYearAssocMember))
-                                        throw new ArgumentNullException("CnstT2202aPdfTaxYearAssocMember", "CnstT2202aPdfTaxYearAssocMember is required.");
-
-                                    if (string.IsNullOrEmpty(contract.CnstT2202aPdfWebFlagAssocMember))
-                                        throw new ArgumentNullException("CnstT2202aPdfWebFlagAssocMember", "CnstT2202aPdfWebFlagAssocMember is required.");
-
-                                    var available = false;
-                                    if (contract.CnstT2202aPdfWebFlagAssocMember.ToUpper().Equals("Y"))
-                                    {
-                                        available = true;
-                                    }
-                                    configuration.AddAvailability(new TaxFormAvailability(contract.CnstT2202aPdfTaxYearAssocMember, available));
-                                }
-                                catch (Exception e)
-                                {
-                                    LogDataError("CnstT2202aPdfParmsEntityAssociation", "ST.PARMS - CNST.RPT.PARMS", contract, e, e.Message);
-                                }
-                            }
-                        }
-                    }
-                    break;
-            }
-            return configuration;
-        }
-
-        private async Task<TaxFormConfiguration> Get1098TaxFormAvailabilityAsync(TaxForms taxFormId)
-        {
-            TaxFormConfiguration configuration = new TaxFormConfiguration(taxFormId);
-
-            // Read the PARM.1098 record so we can use the tax form specified as the 1098 tax form in Colleague.
-            var parm1098Contract = await DataReader.ReadRecordAsync<Parm1098>("ST.PARMS", "PARM.1098");
-            if (parm1098Contract == null)
-            {
-                LogDataError("ST.PARMS", "PARM.1098", "", null, "PARM.1098 cannot be null.");
-                return configuration;
-            }
-            string paramContract1098TaxForm = string.Empty, formatted1098Name = string.Empty;
-            if (taxFormId == TaxForms.Form1098T)
-            {
-                paramContract1098TaxForm = parm1098Contract.P1098TTaxForm;
-                formatted1098Name = "1098-T";
-            }
-            else if (taxFormId == TaxForms.Form1098E)
-            {
-                paramContract1098TaxForm = parm1098Contract.P1098ETaxForm;
-                formatted1098Name = "1098-E";
-            }
-
-            if (string.IsNullOrEmpty(paramContract1098TaxForm))
-            {
-                LogDataError("ST.PARMS", "PARM.1098", "", null, "No " + formatted1098Name + "form specified.");
-                return configuration;
-            }
-
-            // Obtain the availability dates for 1098.
-            var taxForm1098Years = await DataReader.BulkReadRecordAsync<TaxForm1098Years>("WITH TF98Y.TAX.FORM EQ '" + paramContract1098TaxForm + "'");
-            if (taxForm1098Years != null)
-            {
-                var taxForm1098Status = await DataReader.ReadRecordAsync<TaxFormStatus>(paramContract1098TaxForm);
-                // Validate the availability dates for 1098.
-                foreach (var taxFormYear in taxForm1098Years)
-                {
-                    try
-                    {
-                        if (taxFormYear.Tf98yTaxYear == null)
-                        {
-                            throw new NullReferenceException("Tf98yTaxYear cannot be null.");
-                        }
-                        if (taxFormYear.Tf98yWebEnabled == null)
-                        {
-                            throw new NullReferenceException("Tf98yWebEnabled cannot be null.");
-                        }
-                        var available = true;
-                        if (taxFormYear.Tf98yWebEnabled.ToUpper().Equals("Y"))
-                        {
-                            // If the tax form status doesn't exist, then the tax form is not available.
-                            if (taxForm1098Status == null)
-                            {
-                                LogDataError("TaxFormStatus", "taxForm1098Status", taxForm1098Status);
-                                available = false;
-                            }
-                            // If the tax form status year exists and is equal to the tax form year from taxForm1098Years, then we have additional evaluation.
-                            if (taxForm1098Status.TfsTaxYear != null && taxForm1098Status.TfsTaxYear == taxFormYear.Tf98yTaxYear.ToString())
-                            {
-                                // If there is no gen date, the tax form is not available.
-                                if (taxForm1098Status.TfsGenDate == null)
-                                {
-                                    available = false;
-                                }
-                                // If the tax form status exists and is "GEN", "MOD", or "UNF" then the tax form is not available.
-                                if (taxForm1098Status.TfsStatus != null &&
-                                    (taxForm1098Status.TfsStatus.ToUpper() == "GEN" ||
-                                    taxForm1098Status.TfsStatus.ToUpper() == "MOD" ||
-                                    taxForm1098Status.TfsStatus.ToUpper() == "UNF"))
-                                {
-                                    available = false;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            // If the tax form year is specified as not web enabled, the tax form is not available.
-                            available = false;
-                        }
-                        // Create a tax form availability object and add it to the tax form configuration.
-                        configuration.AddAvailability(new TaxFormAvailability(taxFormYear.Tf98yTaxYear.ToString(), available));
-                    }
-                    catch (NullReferenceException e)
-                    {
-                        LogDataError("TaxForm1098Years", "contract", taxFormYear, e, e.Message);
-                    }
-                }
-            }
-            return configuration;
-        }
-
-        private async Task<TaxFormConfiguration> GetT4TaxFormAvailabilityAsync()
-        {
-            TaxFormConfiguration configuration = new TaxFormConfiguration(TaxForms.FormT4);
-
-            var qtdYtdParameterT4 = await DataReader.ReadRecordAsync<QtdYtdParameterT4>("HR.PARMS", "QTD.YTD.PARAMETER");
-            if (qtdYtdParameterT4 != null)
-            {
-                // Validate the availability dates for T4.
-                if (qtdYtdParameterT4.WebT4ParameterEntityAssociation != null)
-                {
-                    foreach (var dataContract in qtdYtdParameterT4.WebT4ParameterEntityAssociation)
-                    {
-                        try
-                        {
-                            if (string.IsNullOrEmpty(dataContract.QypWebT4YearsAssocMember))
-                                throw new ArgumentNullException("QypWebT4YearsAssocMember", "QypWebT4YearsAssocMember is required.");
-
-                            if (!dataContract.QypWebT4AvailableDatesAssocMember.HasValue)
-                                throw new ArgumentNullException("QypWebT4AvailableDatesAssocMember", "QypWebT4AvailableDatesAssocMember is required.");
-
-                            configuration.AddAvailability(new TaxFormAvailability(dataContract.QypWebT4YearsAssocMember, dataContract.QypWebT4AvailableDatesAssocMember.Value));
-                        }
-                        catch (Exception e)
-                        {
-                            LogDataError("QypWebT4YearsAssocMember", "HR.PARMS - QTD.YTD.PARAMETER", dataContract, e, e.Message);
-                        }
-                    }
-                }
-            }
-
-            return configuration;
-        }
-        #endregion
-
         /// <summary>
         /// Retrieve user profile configuration servicing old versions of the API.
         /// </summary>
@@ -1647,8 +2139,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <summary>
         /// Retrieve user profile configuration.
         /// </summary>
+        /// <param name="allAdrelTypes">Address Relation Type codes</param>
         /// <returns>User profile configuration</returns>
-        public async Task<UserProfileConfiguration2> GetUserProfileConfiguration2Async()
+        public async Task<UserProfileConfiguration2> GetUserProfileConfiguration2Async(List<AddressRelationType> allAdrelTypes)
         {
             UserProfileConfiguration2 configuration = new UserProfileConfiguration2();
 
@@ -1666,7 +2159,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 configuration.UpdateAddressTypeConfiguration(string.Equals(corewebDefaultsRecord.CorewebAllAddrViewable, "Y", StringComparison.OrdinalIgnoreCase),
                     corewebDefaultsRecord.CorewebAddressViewTypes,
-                    corewebDefaultsRecord.CorewebAddressUpdtTypes);
+                    corewebDefaultsRecord.CorewebAddressUpdtTypes,
+                    allAdrelTypes);
 
                 configuration.UpdateEmailTypeConfiguration(string.Equals(corewebDefaultsRecord.CorewebAllEmailViewable, "Y", StringComparison.OrdinalIgnoreCase),
                     corewebDefaultsRecord.CorewebEmailViewTypes,
@@ -1779,7 +2273,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         {
             if (code == null)
             {
-                return  defaultSortField;
+                return defaultSortField;
             }
 
             switch (code.ToUpperInvariant())
@@ -1795,7 +2289,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 case "OFFICE":
                     return WebSortField.OfficeDescription;
                 default:
-                    return defaultSortField; 
+                    return defaultSortField;
             }
         }
 
@@ -1805,8 +2299,18 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>Required document configuration</returns>
         public async Task<RequiredDocumentConfiguration> GetRequiredDocumentConfigurationAsync()
         {
-            RequiredDocumentConfiguration configuration = null;  
-
+            RequiredDocumentConfiguration configuration = new RequiredDocumentConfiguration();
+            // Get OFFICE.COLLECTION.MAP
+            OfficeCollectionMap officeCollectionMap = null;
+            try
+            {
+                officeCollectionMap = await GetOfficeCollectionMapAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.Info(ex, "Error retrieving OFFICE.COLLECTION.MAP from CORE.PARMS.");
+            }
+            // Get COREWEB.DEFAULTS
             CorewebDefaults corewebDefaultsRecord = null;
             try
             {
@@ -1815,18 +2319,42 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             catch (Exception e)
             {
                 logger.Info(e, "Error retrieving COREWEB.DEFAULTS record");
-                return configuration;
+                // To be consistent with earlier versions of this endpoint - when the mapping was not included - 
+                // return a null object when it cannot read COREWEB.DEFAULTS.
+                return null;
             }
+
             if (corewebDefaultsRecord != null)
             {
-                configuration = new RequiredDocumentConfiguration(
-                    string.Equals(corewebDefaultsRecord.CorewebSuppressInstance, "Y", StringComparison.OrdinalIgnoreCase),
-                    ConvertCodeToWebSortField(corewebDefaultsRecord.CorewebDocumentsSort1, WebSortField.Status),
-                    ConvertCodeToWebSortField(corewebDefaultsRecord.CorewebDocumentsSort2, WebSortField.OfficeDescription),
-                    corewebDefaultsRecord.CorewebBlankStatusText,
-                    corewebDefaultsRecord.CorewebBlankDueDateText
-                    );
+                configuration.SuppressInstance = string.Equals(corewebDefaultsRecord.CorewebSuppressInstance, "Y", StringComparison.OrdinalIgnoreCase);
+                configuration.PrimarySortField = ConvertCodeToWebSortField(corewebDefaultsRecord.CorewebDocumentsSort1, WebSortField.Status);
+                configuration.SecondarySortField = ConvertCodeToWebSortField(corewebDefaultsRecord.CorewebDocumentsSort2, WebSortField.OfficeDescription);
+                configuration.TextForBlankStatus = corewebDefaultsRecord.CorewebBlankStatusText;
+                configuration.TextForBlankDueDate = corewebDefaultsRecord.CorewebBlankDueDateText;
             }
+            if (officeCollectionMap != null)
+            {
+                RequiredDocumentCollectionMapping mapping = new RequiredDocumentCollectionMapping();
+                mapping.RequestsWithoutOfficeCodeCollection = officeCollectionMap.OfcoDefaultCollection;
+                mapping.UnmappedOfficeCodeCollection = officeCollectionMap.OfcoDfltOfficeCollection;
+                if (officeCollectionMap.OfcomapEntityAssociation != null && officeCollectionMap.OfcomapEntityAssociation.Any())
+                {
+                    foreach (var oa in officeCollectionMap.OfcomapEntityAssociation)
+                    {
+                        try
+                        {
+                            var officeCodeAttachmentCollection = new OfficeCodeAttachmentCollection(oa.OfcoOfficeCodesAssocMember, oa.OfcoCollectionIdsAssocMember);
+                            mapping.AddOfficeCodeAttachment(officeCodeAttachmentCollection);
+                        }
+                        catch (Exception ae)
+                        {
+                            logger.Info(ae, "Not able to add to office code collection mapping - either duplicate or missing info: OfficeCode = " + oa.OfcoOfficeCodesAssocMember + " Collection = " + oa.OfcoCollectionIdsAssocMember);
+                        }
+                    }
+                }
+                configuration.RequiredDocumentCollectionMapping = mapping;
+            }
+
             return configuration;
         }
 
@@ -2028,7 +2556,34 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
 
         #endregion
-        
+
+        /// <summary>
+        /// Gets the Session Configuration.
+        /// </summary>
+        /// <returns>Session Configuration entity</returns>
+        public async Task<SessionConfiguration> GetSessionConfigurationAsync()
+        {
+            try
+            {
+                var sessionConfigurationResponse = await anonymousTransactionInvoker.ExecuteAnonymousAsync<GetSessionConfigurationRequest, GetSessionConfigurationResponse>(new GetSessionConfigurationRequest());
+                if (!string.IsNullOrEmpty(sessionConfigurationResponse.ErrorOccurred) && !string.Equals(sessionConfigurationResponse.ErrorOccurred, "0", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    throw new ApplicationException(string.Format("Error occurred during session configuration transaction: {0} {1}", sessionConfigurationResponse.ErrorOccurred, sessionConfigurationResponse.ErrorMessage));
+                }
+                var sessionConfiguration = new SessionConfiguration()
+                {
+                    UsernameRecoveryEnabled = string.Equals(sessionConfigurationResponse.UsernameRecoveryEnabled, "Y", StringComparison.InvariantCultureIgnoreCase),
+                    PasswordResetEnabled = string.Equals(sessionConfigurationResponse.PasswordResetEnabled, "Y", StringComparison.InvariantCultureIgnoreCase)
+                };
+                return sessionConfiguration;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Error retrieving session configuration.");
+                throw;
+            }
+        }
+
         #endregion
 
         #region Private Methods
@@ -2185,9 +2740,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// 
         private async Task<IntegrationConfiguration> BuildIntegrationConfiguration(string integrationConfigurationId)
         {
-            
+
             IntegrationConfiguration configuration = null;
-            
+
             var cdmIntegration = await DataReader.ReadRecordAsync<CdmIntegration>("CDM.INTEGRATION", integrationConfigurationId.ToUpper());
             if (cdmIntegration == null)
             {
@@ -2218,7 +2773,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             bool? cintUseIntegrationHub = false;
             cintUseIntegrationHub = cdmIntegration.CintUseIntegrationHub.ToUpper() == "Y";
 
-            configuration = new IntegrationConfiguration(cdmIntegration.Recordkey, cdmIntegration.CintDesc, uri.Host, (uri.Scheme == "https"), uri.Port,
+            configuration = new IntegrationConfiguration(cdmIntegration.Recordkey, cdmIntegration.CintDesc, uri.Host, (uri.Scheme == "https" || uri.Scheme == "amqps"), uri.Port,
                 cdmIntegration.CintServerUsername, cdmIntegration.CintServerPassword, cdmIntegration.CintBusEventExchange,
                 cdmIntegration.CintBusEventQueue, cdmIntegration.CintOutboundExchange, cdmIntegration.CintInboundExchange,
                 cdmIntegration.CintInboundQueue, cdmIntegration.CintApiUsername, cdmIntegration.CintApiPassword,
@@ -2246,7 +2801,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 configuration.InboundExchangeRoutingKeys.AddRange(cdmIntegration.CintInboundRoutingKeys);
             }
-            
+
             return configuration;
         }
 
@@ -2303,6 +2858,26 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
             });
         }
+        /// <summary>
+        /// Gets an OfficeCollectionMapp data contract
+        /// </summary>
+        /// <returns>OfficeCollectionMapps data contract object</returns>
+        private async Task<OfficeCollectionMap> GetOfficeCollectionMapAsync()
+        {
+            return await GetOrAddToCacheAsync<OfficeCollectionMap>("OfficeCollectionMap", async () =>
+            {
+                var officeCollectionMap = await DataReader.ReadRecordAsync<OfficeCollectionMap>("CORE.PARMS", "OFFICE.COLLECTION.MAP");
+                if (officeCollectionMap != null)
+                {
+                    return officeCollectionMap;
+                }
+                else
+                {
+                    logger.Info("Null OfficeCollectionMap record returned from database");
+                    return new OfficeCollectionMap();
+                }
+            });
+        }
 
         private async Task<PilotParms> GetPilotParmsAsync()
         {
@@ -2332,7 +2907,1166 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     return relationshipTable;
                 }, Level1CacheTimeoutValue);
         }
+
+        private async Task<string> ValidateValcodeTable(string appl, string table)
+        {
+            string fileName = "VALCODES";
+            var selectKeys = await DataReader.SelectAsync(fileName, "WITH VALCODE.ID EQ " + table);
+            if (selectKeys != null && selectKeys.Any())
+            {
+                return fileName;
+            }
+            return string.Concat(appl, ".VALCODES");
+        }
+
         #endregion
 
+
+        ///////////////////////////////////////////////////////////////////////////////////
+        ///                                                                             ///
+        ///                               CF Team                                       ///                                                                             
+        ///                         TAX INFORMATION VIEWS                               ///
+        ///           TAX FORMS CONFIGURATION, CONSENTs, STATEMENTs, PDFs               ///
+        ///                                                                             ///
+        ///////////////////////////////////////////////////////////////////////////////////
+
+        #region CF Views
+
+        #region Tax form consent paragraphs
+
+        /// <summary>
+        /// Gets the tax form configuration parameters for the specific tax form passed in.
+        /// </summary>
+        /// <param name="taxForm">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
+        /// <returns>Consent and withheld paragraphs for the specific tax form</returns>
+        public async Task<TaxFormConfiguration2> GetTaxFormConsentConfiguration2Async(string taxForm)
+        {
+            if (string.IsNullOrWhiteSpace(taxForm))
+                throw new ArgumentNullException("taxForm", "The tax form type must be specified.");
+
+            var configuration = new TaxFormConfiguration2(taxForm);
+
+            switch (taxForm)
+            {
+                case TaxFormTypes.FormW2:
+                    configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("W2ConsentParagraphs",
+                     async () =>
+                     {
+                         var paragraph = new TaxFormConsentParagraph();
+
+                         // Get tax form parameters from HRWEB.DEFAULTS
+                         var hrWebDefaults = await DataReader.ReadRecordAsync<HrwebDefaults>("HR.PARMS", "HRWEB.DEFAULTS");
+                         if (hrWebDefaults != null)
+                         {
+
+                             // Get the tax form consent paragraphs for W-2
+                             paragraph.ConsentText = hrWebDefaults.HrwebW2oConText;
+                             paragraph.ConsentWithheldText = hrWebDefaults.HrwebW2oWhldText;
+                         }
+                         return paragraph;
+                     });
+                    break;
+
+                case TaxFormTypes.Form1095C:
+                    configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("1095cConsentParagraphs",
+                    async () =>
+                    {
+                        var paragraph = new TaxFormConsentParagraph();
+
+                        // Get tax form parameters from HRWEB.DEFAULTS
+                        var hrWebDefaults = await DataReader.ReadRecordAsync<HrwebDefaults>("HR.PARMS", "HRWEB.DEFAULTS");
+                        if (hrWebDefaults != null)
+                        {
+                            // Get the tax form consent paragraphs for 1095-C
+                            paragraph.ConsentText = hrWebDefaults.Hrweb1095cConText;
+                            paragraph.ConsentWithheldText = hrWebDefaults.Hrweb1095cWhldText;
+                        }
+                        return paragraph;
+                    });
+                    break;
+                case TaxFormTypes.Form1098:
+                    configuration = await Get1098TaxFormConsentParagraphs2Async();
+                    break;
+                case TaxFormTypes.FormT4:
+                    configuration = await GetT4TaxFormConsentParagraphs2Async();
+                    break;
+                case TaxFormTypes.FormT4A:
+                    configuration = await GetT4ATaxFormConsentParagraphs2Async();
+                    break;
+                case TaxFormTypes.FormT2202A:
+                    configuration = await GetT2202ATaxFormConsentParagraphs2Async();
+                    break;
+                case TaxFormTypes.Form1099MI:
+                    configuration = await Get1099MiTaxFormConsentParagraphs2Async();
+                    break;
+                case TaxFormTypes.Form1099NEC:
+                    configuration = await Get1099NecTaxFormConsentParagraphsAsync();
+                    break;
+                default:
+                    throw new ArgumentException("Invalid taxform.");
+            }
+
+            return configuration;
+        }
+
+        /// <summary>
+        ///  Gets 1098-T/E Tax consents Paragraph.
+        /// </summary>
+        /// <returns></returns>
+        private async Task<TaxFormConfiguration2> Get1098TaxFormConsentParagraphs2Async()
+        {
+            
+            return await GetOrAddToCacheAsync<TaxFormConfiguration2>("1098ConsentConfig",
+                async () =>
+                {
+                    TaxFormConfiguration2 configuration = new TaxFormConfiguration2(TaxFormTypes.Form1098);
+                    var paragraph = new TaxFormConsentParagraph();
+
+                    // Get tax form parameters from HRWEB.DEFAULTS
+                    var parm1098Contract = await DataReader.ReadRecordAsync<Parm1098>("ST.PARMS", "PARM.1098");
+                    if (parm1098Contract != null)
+                    {
+                        // Get the tax form consent paragraphs for 1095-C
+                        paragraph.ConsentText = parm1098Contract.P1098ConsentText;
+                        paragraph.ConsentWithheldText = parm1098Contract.P1098WhldConsentText;
+                    }
+                    configuration.ConsentParagraphs = paragraph;
+
+                    // Determine if consent is required based on client configuration.
+                    bool consentRequired = true;
+                    if (parm1098Contract != null && !string.IsNullOrWhiteSpace(parm1098Contract.P1098ReqConsentToView))
+                    {
+                        consentRequired = !parm1098Contract.P1098ReqConsentToView.Equals("N", StringComparison.InvariantCultureIgnoreCase);
+                    }
+                    configuration.IsBypassingConsentPermitted = !consentRequired;
+
+                    return configuration;
+                });
+
+        }
+
+        /// <summary>
+        ///  Gets 1099-MISC Tax consents Paragraph.
+        /// </summary>
+        /// <returns></returns>
+        private async Task<TaxFormConfiguration2> Get1099MiTaxFormConsentParagraphs2Async()
+        {
+            TaxFormConfiguration2 configuration = new TaxFormConfiguration2(TaxFormTypes.Form1099MI);
+            configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("1099MiConsentParagraphs",
+                async () =>
+                {
+                    var paragraph = new TaxFormConsentParagraph();
+
+                    // Get tax form parameters from HRWEB.DEFAULTS
+                    var parm1099MiContract = await DataReader.ReadRecordAsync<Parm1099mi>("CF.PARMS", "PARM.1099MI");
+                    if (parm1099MiContract != null)
+                    {
+                        // Get the tax form consent paragraphs for 1099MI
+                        paragraph.ConsentText = parm1099MiContract.P1099miConsentText;
+                        paragraph.ConsentWithheldText = parm1099MiContract.P1099miWhldConsentText;
+                    }
+                    return paragraph;
+                });
+
+            return configuration;
+        }
+
+        /// <summary>
+        ///  Gets 1099Nec Tax consents Paragraph.
+        /// </summary>
+        /// <returns></returns>
+        private async Task<TaxFormConfiguration2> Get1099NecTaxFormConsentParagraphsAsync()
+        {
+            TaxFormConfiguration2 configuration = new TaxFormConfiguration2(TaxFormTypes.Form1099NEC);
+            configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("1099NecConsentParagraphs",
+                async () =>
+                {
+                    var paragraph = new TaxFormConsentParagraph();
+
+                    // Get tax form parameters from HRWEB.DEFAULTS
+                    var parm1099NecContract = await DataReader.ReadRecordAsync<Parm1099nec>("CF.PARMS", "PARM.1099NEC");
+                    if (parm1099NecContract != null)
+                    {
+                        // Get the tax form consent paragraphs for 1099MI
+                        paragraph.ConsentText = parm1099NecContract.P1099necConsentText;
+                        paragraph.ConsentWithheldText = parm1099NecContract.P1099necWhldConsentText;
+                    }
+                    return paragraph;
+                });
+            return configuration;
+        }
+
+        private async Task<TaxFormConfiguration2> GetT4TaxFormConsentParagraphs2Async()
+        {
+            TaxFormConfiguration2 configuration = new TaxFormConfiguration2(TaxFormTypes.FormT4);
+            configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("T4ConsentParagraphs",
+                async () =>
+                {
+                    var paragraph = new TaxFormConsentParagraph();
+
+                    // Get tax form parameters from PARM.T4
+                    var contract = await DataReader.ReadRecordAsync<ParmT4>("HR.PARMS", "T4");
+                    if (contract != null)
+                    {
+                        // Get the tax form consent paragraphs for T4
+                        paragraph.ConsentText = contract.Pt4ConText;
+                        paragraph.ConsentWithheldText = contract.Pt4WhldText;
+                    }
+                    return paragraph;
+                });
+
+            return configuration;
+        }
+
+        private async Task<TaxFormConfiguration2> GetT4ATaxFormConsentParagraphs2Async()
+        {
+            TaxFormConfiguration2 configuration = new TaxFormConfiguration2(TaxFormTypes.FormT4A);
+            configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("T4AConsentParagraphs",
+                async () =>
+                {
+                    var paragraph = new TaxFormConsentParagraph();
+
+                    // Get tax form parameters from PARM.T4A
+                    var contract = await DataReader.ReadRecordAsync<ParmT4a>("CF.PARMS", "T4A");
+                    if (contract != null)
+                    {
+                        // Get the tax form consent paragraphs for T4A
+                        paragraph.ConsentText = contract.Pt4aConText;
+                        paragraph.ConsentWithheldText = contract.Pt4aWhldText;
+                    }
+                    return paragraph;
+                });
+
+            return configuration;
+        }
+
+        private async Task<TaxFormConfiguration2> GetT2202ATaxFormConsentParagraphs2Async()
+        {
+            TaxFormConfiguration2 configuration = new TaxFormConfiguration2(TaxFormTypes.FormT2202A);
+            configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("T2202AConsentParagraphs",
+                async () =>
+                {
+                    var paragraph = new TaxFormConsentParagraph();
+
+                    // Get tax form parameters from CNST.RPT.PARMS
+                    var contract = await DataReader.ReadRecordAsync<CnstRptParms>("ST.PARMS", "CNST.RPT.PARMS");
+                    if (contract != null)
+                    {
+                        // Get the tax form consent paragraphs for T2202A
+                        paragraph.ConsentText = contract.CnstConsentText;
+                        paragraph.ConsentWithheldText = contract.CnstWhldConsentText;
+                    }
+                    return paragraph;
+                });
+
+            return configuration;
+        }
+
+        #endregion
+
+        #region Tax form availability
+
+        /// <summary>
+        /// Gets the tax form configuration parameters for the specific tax form passed in.
+        /// </summary>
+        /// <param name="taxForm">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
+        /// <returns>Availability dates for the specific tax form</returns>
+        public async Task<TaxFormConfiguration2> GetTaxFormAvailabilityConfiguration2Async(string taxForm)
+        {
+            if (string.IsNullOrWhiteSpace(taxForm))
+                throw new ArgumentNullException("taxForm", "The tax form type must be specified.");
+
+            var configuration = new TaxFormConfiguration2(taxForm);
+
+            switch (taxForm)
+            {
+                case TaxFormTypes.FormW2:
+                    // Obtain the availability dates for W-2.
+                    var qtdYtdParameterW2 = await DataReader.ReadRecordAsync<QtdYtdParameterW2>("HR.PARMS", "QTD.YTD.PARAMETER");
+                    if (qtdYtdParameterW2 != null)
+                    {
+                        // Validate the availability dates for W-2.
+                        if (qtdYtdParameterW2.WebW2ParametersEntityAssociation != null)
+                        {
+                            foreach (var dataContract in qtdYtdParameterW2.WebW2ParametersEntityAssociation)
+                            {
+                                try
+                                {
+                                    if (string.IsNullOrEmpty(dataContract.QypWebW2YearsAssocMember))
+                                        throw new ArgumentNullException("QypWebW2YearsAssocMember", "QypWebW2YearsAssocMember is required.");
+
+                                    if (!dataContract.QypWebW2AvailableDatesAssocMember.HasValue)
+                                        throw new ArgumentNullException("QypWebW2AvailableDatesAssocMember", "QypWebW2AvailableDatesAssocMember is required.");
+
+                                    configuration.AddAvailability(new TaxFormAvailability(dataContract.QypWebW2YearsAssocMember, dataContract.QypWebW2AvailableDatesAssocMember.Value));
+                                }
+                                catch (Exception e)
+                                {
+                                    LogDataError("QypWebW2YearsAssocMember", "HR.PARMS - QTD.YTD.PARAMETER", dataContract, e, e.Message);
+                                }
+                            }
+                        }
+                    }
+                    break;
+                case TaxFormTypes.Form1095C:
+                    // Obtain the availability dates for 1095-C.
+                    var qtdYtdParameter1095C = await DataReader.ReadRecordAsync<QtdYtdParameter1095C>("HR.PARMS", "QTD.YTD.PARAMETER");
+                    if (qtdYtdParameter1095C != null)
+                    {
+                        // Validate the availability dates for 1095-C.
+                        if (qtdYtdParameter1095C.Qyp1095cParametersEntityAssociation != null)
+                        {
+                            foreach (var contract in qtdYtdParameter1095C.Qyp1095cParametersEntityAssociation)
+                            {
+                                try
+                                {
+                                    if (string.IsNullOrEmpty(contract.QypWeb1095cYearsAssocMember))
+                                        throw new ArgumentNullException("QypWeb1095cYearsAssocMember", "QypWeb1095cYearsAssocMember is required.");
+
+                                    if (!contract.QypWeb1095cAvailDatesAssocMember.HasValue)
+                                        throw new ArgumentNullException("QypWeb1095cAvailDatesAssocMember", "QypWeb1095cAvailDatesAssocMember is required.");
+
+                                    configuration.AddAvailability(new TaxFormAvailability(contract.QypWeb1095cYearsAssocMember, contract.QypWeb1095cAvailDatesAssocMember.Value));
+                                }
+                                catch (Exception e)
+                                {
+                                    LogDataError("Qyp1095cParametersEntityAssociation", "HR.PARMS - QTD.YTD.PARAMETER", contract, e, e.Message);
+                                }
+                            }
+                        }
+                    }
+                    break;
+                case TaxFormTypes.Form1098T:
+                    configuration = await Get1098TaxFormAvailability2Async(TaxFormTypes.Form1098T);
+                    break;
+                case TaxFormTypes.Form1098E:
+                    configuration = await Get1098TaxFormAvailability2Async(TaxFormTypes.Form1098E);
+                    break;
+                case TaxFormTypes.FormT4:
+                    configuration = await GetT4TaxFormAvailability2Async();
+                    break;
+                case TaxFormTypes.FormT2202A:
+                    // Read the CNST.RPT.PARMS record to get the list of tax years for which T2202A
+                    // tax forms are online.
+                    var t2202aParameter = await DataReader.ReadRecordAsync<CnstRptParms>("ST.PARMS", "CNST.RPT.PARMS");
+                    if (t2202aParameter != null)
+                    {
+                        // Throw an exception if there a row of tax year information that does not have
+                        // a tax year or an online availability flag.
+                        if (t2202aParameter.CnstT2202aPdfParmsEntityAssociation != null)
+                        {
+                            foreach (var contract in t2202aParameter.CnstT2202aPdfParmsEntityAssociation)
+                            {
+                                try
+                                {
+                                    if (string.IsNullOrEmpty(contract.CnstT2202aPdfTaxYearAssocMember))
+                                        throw new ArgumentNullException("CnstT2202aPdfTaxYearAssocMember", "CnstT2202aPdfTaxYearAssocMember is required.");
+
+                                    if (string.IsNullOrEmpty(contract.CnstT2202aPdfWebFlagAssocMember))
+                                        throw new ArgumentNullException("CnstT2202aPdfWebFlagAssocMember", "CnstT2202aPdfWebFlagAssocMember is required.");
+
+                                    var available = false;
+                                    if (contract.CnstT2202aPdfWebFlagAssocMember.ToUpper().Equals("Y"))
+                                    {
+                                        available = true;
+                                    }
+                                    configuration.AddAvailability(new TaxFormAvailability(contract.CnstT2202aPdfTaxYearAssocMember, available));
+                                }
+                                catch (Exception e)
+                                {
+                                    LogDataError("CnstT2202aPdfParmsEntityAssociation", "ST.PARMS - CNST.RPT.PARMS", contract, e, e.Message);
+                                }
+                            }
+                        }
+                    }
+                    break;
+            }
+            return configuration;
+        }
+
+        private async Task<TaxFormConfiguration2> Get1098TaxFormAvailability2Async(string taxForm)
+        {
+            if (string.IsNullOrWhiteSpace(taxForm))
+                throw new ArgumentNullException("taxForm", "The tax form type must be specified.");
+
+            TaxFormConfiguration2 configuration = new TaxFormConfiguration2(taxForm);
+
+            // Read the PARM.1098 record so we can use the tax form specified as the 1098 tax form in Colleague.
+            var parm1098Contract = await DataReader.ReadRecordAsync<Parm1098>("ST.PARMS", "PARM.1098");
+            if (parm1098Contract == null)
+            {
+                LogDataError("ST.PARMS", "PARM.1098", "", null, "PARM.1098 cannot be null.");
+                return configuration;
+            }
+            string paramContract1098TaxForm = string.Empty, formatted1098Name = string.Empty;
+            if (taxForm == TaxFormTypes.Form1098T)
+            {
+                paramContract1098TaxForm = parm1098Contract.P1098TTaxForm;
+                formatted1098Name = "1098-T";
+            }
+            else if (taxForm == TaxFormTypes.Form1098E)
+            {
+                paramContract1098TaxForm = parm1098Contract.P1098ETaxForm;
+                formatted1098Name = "1098-E";
+            }
+
+            if (string.IsNullOrEmpty(paramContract1098TaxForm))
+            {
+                LogDataError("ST.PARMS", "PARM.1098", "", null, "No " + formatted1098Name + "form specified.");
+                return configuration;
+            }
+
+            // Obtain the availability dates for 1098.
+            var taxForm1098Years = await DataReader.BulkReadRecordAsync<TaxForm1098Years>("WITH TF98Y.TAX.FORM EQ '" + paramContract1098TaxForm + "'");
+            if (taxForm1098Years != null)
+            {
+                var taxForm1098Status = await DataReader.ReadRecordAsync<TaxFormStatus>(paramContract1098TaxForm);
+                // Validate the availability dates for 1098.
+                foreach (var taxFormYear in taxForm1098Years)
+                {
+                    try
+                    {
+                        if (taxFormYear.Tf98yTaxYear == null)
+                        {
+                            throw new NullReferenceException("Tf98yTaxYear cannot be null.");
+                        }
+                        if (taxFormYear.Tf98yWebEnabled == null)
+                        {
+                            throw new NullReferenceException("Tf98yWebEnabled cannot be null.");
+                        }
+                        var available = true;
+                        if (taxFormYear.Tf98yWebEnabled.ToUpper().Equals("Y"))
+                        {
+                            // If the tax form status doesn't exist, then the tax form is not available.
+                            if (taxForm1098Status == null)
+                            {
+                                LogDataError("TaxFormStatus", "taxForm1098Status", taxForm1098Status);
+                                available = false;
+                            }
+                            // If the tax form status year exists and is equal to the tax form year from taxForm1098Years, then we have additional evaluation.
+                            if (taxForm1098Status.TfsTaxYear != null && taxForm1098Status.TfsTaxYear == taxFormYear.Tf98yTaxYear.ToString())
+                            {
+                                // If there is no gen date, the tax form is not available.
+                                if (taxForm1098Status.TfsGenDate == null)
+                                {
+                                    available = false;
+                                }
+                                // If the tax form status exists and is "GEN", "MOD", or "UNF" then the tax form is not available.
+                                if (taxForm1098Status.TfsStatus != null &&
+                                    (taxForm1098Status.TfsStatus.ToUpper() == "GEN" ||
+                                    taxForm1098Status.TfsStatus.ToUpper() == "MOD" ||
+                                    taxForm1098Status.TfsStatus.ToUpper() == "UNF"))
+                                {
+                                    available = false;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // If the tax form year is specified as not web enabled, the tax form is not available.
+                            available = false;
+                        }
+                        // Create a tax form availability object and add it to the tax form configuration.
+                        configuration.AddAvailability(new TaxFormAvailability(taxFormYear.Tf98yTaxYear.ToString(), available));
+                    }
+                    catch (NullReferenceException e)
+                    {
+                        LogDataError("TaxForm1098Years", "contract", taxFormYear, e, e.Message);
+                    }
+                }
+            }
+            return configuration;
+        }
+
+        private async Task<TaxFormConfiguration2> GetT4TaxFormAvailability2Async()
+        {
+            TaxFormConfiguration2 configuration = new TaxFormConfiguration2(TaxFormTypes.FormT4);
+
+            var qtdYtdParameterT4 = await DataReader.ReadRecordAsync<QtdYtdParameterT4>("HR.PARMS", "QTD.YTD.PARAMETER");
+            if (qtdYtdParameterT4 != null)
+            {
+                // Validate the availability dates for T4.
+                if (qtdYtdParameterT4.WebT4ParameterEntityAssociation != null)
+                {
+                    foreach (var dataContract in qtdYtdParameterT4.WebT4ParameterEntityAssociation)
+                    {
+                        try
+                        {
+                            if (string.IsNullOrEmpty(dataContract.QypWebT4YearsAssocMember))
+                                throw new ArgumentNullException("QypWebT4YearsAssocMember", "QypWebT4YearsAssocMember is required.");
+
+                            if (!dataContract.QypWebT4AvailableDatesAssocMember.HasValue)
+                                throw new ArgumentNullException("QypWebT4AvailableDatesAssocMember", "QypWebT4AvailableDatesAssocMember is required.");
+
+                            configuration.AddAvailability(new TaxFormAvailability(dataContract.QypWebT4YearsAssocMember, dataContract.QypWebT4AvailableDatesAssocMember.Value));
+                        }
+                        catch (Exception e)
+                        {
+                            LogDataError("QypWebT4YearsAssocMember", "HR.PARMS - QTD.YTD.PARAMETER", dataContract, e, e.Message);
+                        }
+                    }
+                }
+            }
+
+            return configuration;
+        }
+        #endregion
+
+        #region OBSOLETE METHODS
+
+        /// <summary>
+        /// Gets the tax form configuration parameters for the specific tax form passed in.
+        /// </summary>
+        /// <param name="taxFormId">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
+        /// <returns>Consent and withheld paragraphs for the specific tax form</returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use GetTaxFormConsentConfiguration2Async instead.")]
+        public async Task<TaxFormConfiguration> GetTaxFormConsentConfigurationAsync(TaxForms taxFormId)
+        {
+            var configuration = new TaxFormConfiguration(taxFormId);
+
+            switch (taxFormId)
+            {
+                case TaxForms.FormW2:
+                    configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("W2ConsentParagraphs",
+                     async () =>
+                     {
+                         var paragraph = new TaxFormConsentParagraph();
+
+                         // Get tax form parameters from HRWEB.DEFAULTS
+                         var hrWebDefaults = await DataReader.ReadRecordAsync<HrwebDefaults>("HR.PARMS", "HRWEB.DEFAULTS");
+                         if (hrWebDefaults != null)
+                         {
+
+                             // Get the tax form consent paragraphs for W-2
+                             paragraph.ConsentText = hrWebDefaults.HrwebW2oConText;
+                             paragraph.ConsentWithheldText = hrWebDefaults.HrwebW2oWhldText;
+                         }
+                         return paragraph;
+                     });
+                    break;
+
+                case TaxForms.Form1095C:
+                    configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("1095cConsentParagraphs",
+                    async () =>
+                    {
+                        var paragraph = new TaxFormConsentParagraph();
+
+                        // Get tax form parameters from HRWEB.DEFAULTS
+                        var hrWebDefaults = await DataReader.ReadRecordAsync<HrwebDefaults>("HR.PARMS", "HRWEB.DEFAULTS");
+                        if (hrWebDefaults != null)
+                        {
+                            // Get the tax form consent paragraphs for 1095-C
+                            paragraph.ConsentText = hrWebDefaults.Hrweb1095cConText;
+                            paragraph.ConsentWithheldText = hrWebDefaults.Hrweb1095cWhldText;
+                        }
+                        return paragraph;
+                    });
+                    break;
+                case TaxForms.Form1098:
+                    configuration = await Get1098TaxFormConsentParagraphsAsync();
+                    break;
+                case TaxForms.FormT4:
+                    configuration = await GetT4TaxFormConsentParagraphsAsync();
+                    break;
+                case TaxForms.FormT4A:
+                    configuration = await GetT4ATaxFormConsentParagraphsAsync();
+                    break;
+                case TaxForms.FormT2202A:
+                    configuration = await GetT2202ATaxFormConsentParagraphsAsync();
+                    break;
+                case TaxForms.Form1099MI:
+                    configuration = await Get1099MiTaxFormConsentParagraphsAsync();
+                    break;
+            }
+
+            return configuration;
+        }
+
+        [Obsolete("Obsolete as of API 1.29.1. Use Get1098TaxFormConsentParagraphs2Async instead.")]
+        private async Task<TaxFormConfiguration> Get1098TaxFormConsentParagraphsAsync()
+        {
+            TaxFormConfiguration configuration = new TaxFormConfiguration(TaxForms.Form1098);
+            configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("1098ConsentParagraphs",
+                async () =>
+                {
+                    var paragraph = new TaxFormConsentParagraph();
+
+                    // Get tax form parameters from HRWEB.DEFAULTS
+                    var parm1098Contract = await DataReader.ReadRecordAsync<Parm1098>("ST.PARMS", "PARM.1098");
+                    if (parm1098Contract != null)
+                    {
+                        // Get the tax form consent paragraphs for 1095-C
+                        paragraph.ConsentText = parm1098Contract.P1098ConsentText;
+                        paragraph.ConsentWithheldText = parm1098Contract.P1098WhldConsentText;
+                    }
+                    return paragraph;
+                });
+
+            return configuration;
+        }
+
+        /// <summary>
+        ///  Gets 1099Mi Tax consents Paragraph.
+        /// </summary>
+        /// <returns></returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use Get1099MiTaxFormConsentParagraphs2Async instead.")]
+        private async Task<TaxFormConfiguration> Get1099MiTaxFormConsentParagraphsAsync()
+        {
+            TaxFormConfiguration configuration = new TaxFormConfiguration(TaxForms.Form1099MI);
+            configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("1099MiConsentParagraphs",
+                async () =>
+                {
+                    var paragraph = new TaxFormConsentParagraph();
+
+                    // Get tax form parameters from HRWEB.DEFAULTS
+                    var parm1099MiContract = await DataReader.ReadRecordAsync<Parm1099mi>("CF.PARMS", "PARM.1099MI");
+                    if (parm1099MiContract != null)
+                    {
+                        // Get the tax form consent paragraphs for 1099MI
+                        paragraph.ConsentText = parm1099MiContract.P1099miConsentText;
+                        paragraph.ConsentWithheldText = parm1099MiContract.P1099miWhldConsentText;
+                    }
+                    return paragraph;
+                });
+
+            return configuration;
+        }
+
+        [Obsolete("Obsolete as of API 1.29.1. Use GetT4TaxFormConsentParagraphs2Async instead.")]
+        private async Task<TaxFormConfiguration> GetT4TaxFormConsentParagraphsAsync()
+        {
+            TaxFormConfiguration configuration = new TaxFormConfiguration(TaxForms.FormT4);
+            configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("T4ConsentParagraphs",
+                async () =>
+                {
+                    var paragraph = new TaxFormConsentParagraph();
+
+                    // Get tax form parameters from PARM.T4
+                    var contract = await DataReader.ReadRecordAsync<ParmT4>("HR.PARMS", "T4");
+                    if (contract != null)
+                    {
+                        // Get the tax form consent paragraphs for T4
+                        paragraph.ConsentText = contract.Pt4ConText;
+                        paragraph.ConsentWithheldText = contract.Pt4WhldText;
+                    }
+                    return paragraph;
+                });
+
+            return configuration;
+        }
+
+        [Obsolete("Obsolete as of API 1.29.1. Use GetT4ATaxFormConsentParagraphs2Async instead.")]
+        private async Task<TaxFormConfiguration> GetT4ATaxFormConsentParagraphsAsync()
+        {
+            TaxFormConfiguration configuration = new TaxFormConfiguration(TaxForms.FormT4A);
+            configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("T4AConsentParagraphs",
+                async () =>
+                {
+                    var paragraph = new TaxFormConsentParagraph();
+
+                    // Get tax form parameters from PARM.T4A
+                    var contract = await DataReader.ReadRecordAsync<ParmT4a>("CF.PARMS", "T4A");
+                    if (contract != null)
+                    {
+                        // Get the tax form consent paragraphs for T4A
+                        paragraph.ConsentText = contract.Pt4aConText;
+                        paragraph.ConsentWithheldText = contract.Pt4aWhldText;
+                    }
+                    return paragraph;
+                });
+
+            return configuration;
+        }
+
+        [Obsolete("Obsolete as of API 1.29.1. Use GetT2202ATaxFormConsentParagraphs2Async instead.")]
+        private async Task<TaxFormConfiguration> GetT2202ATaxFormConsentParagraphsAsync()
+        {
+            TaxFormConfiguration configuration = new TaxFormConfiguration(TaxForms.FormT2202A);
+            configuration.ConsentParagraphs = await GetOrAddToCacheAsync<TaxFormConsentParagraph>("T2202AConsentParagraphs",
+                async () =>
+                {
+                    var paragraph = new TaxFormConsentParagraph();
+
+                    // Get tax form parameters from CNST.RPT.PARMS
+                    var contract = await DataReader.ReadRecordAsync<CnstRptParms>("ST.PARMS", "CNST.RPT.PARMS");
+                    if (contract != null)
+                    {
+                        // Get the tax form consent paragraphs for T2202A
+                        paragraph.ConsentText = contract.CnstConsentText;
+                        paragraph.ConsentWithheldText = contract.CnstWhldConsentText;
+                    }
+                    return paragraph;
+                });
+
+            return configuration;
+        }
+
+        /// <summary>
+        /// Gets the tax form configuration parameters for the specific tax form passed in.
+        /// </summary>
+        /// <param name="taxFormId">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
+        /// <returns>Availability dates for the specific tax form</returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use GetTaxFormAvailabilityConfiguration2Async instead.")]
+        public async Task<TaxFormConfiguration> GetTaxFormAvailabilityConfigurationAsync(TaxForms taxFormId)
+        {
+            var configuration = new TaxFormConfiguration(taxFormId);
+
+            switch (taxFormId)
+            {
+                case TaxForms.FormW2:
+                    // Obtain the availability dates for W-2.
+                    var qtdYtdParameterW2 = await DataReader.ReadRecordAsync<QtdYtdParameterW2>("HR.PARMS", "QTD.YTD.PARAMETER");
+                    if (qtdYtdParameterW2 != null)
+                    {
+                        // Validate the availability dates for W-2.
+                        if (qtdYtdParameterW2.WebW2ParametersEntityAssociation != null)
+                        {
+                            foreach (var dataContract in qtdYtdParameterW2.WebW2ParametersEntityAssociation)
+                            {
+                                try
+                                {
+                                    if (string.IsNullOrEmpty(dataContract.QypWebW2YearsAssocMember))
+                                        throw new ArgumentNullException("QypWebW2YearsAssocMember", "QypWebW2YearsAssocMember is required.");
+
+                                    if (!dataContract.QypWebW2AvailableDatesAssocMember.HasValue)
+                                        throw new ArgumentNullException("QypWebW2AvailableDatesAssocMember", "QypWebW2AvailableDatesAssocMember is required.");
+
+                                    configuration.AddAvailability(new TaxFormAvailability(dataContract.QypWebW2YearsAssocMember, dataContract.QypWebW2AvailableDatesAssocMember.Value));
+                                }
+                                catch (Exception e)
+                                {
+                                    LogDataError("QypWebW2YearsAssocMember", "HR.PARMS - QTD.YTD.PARAMETER", dataContract, e, e.Message);
+                                }
+                            }
+                        }
+                    }
+                    break;
+                case TaxForms.Form1095C:
+                    // Obtain the availability dates for 1095-C.
+                    var qtdYtdParameter1095C = await DataReader.ReadRecordAsync<QtdYtdParameter1095C>("HR.PARMS", "QTD.YTD.PARAMETER");
+                    if (qtdYtdParameter1095C != null)
+                    {
+                        // Validate the availability dates for 1095-C.
+                        if (qtdYtdParameter1095C.Qyp1095cParametersEntityAssociation != null)
+                        {
+                            foreach (var contract in qtdYtdParameter1095C.Qyp1095cParametersEntityAssociation)
+                            {
+                                try
+                                {
+                                    if (string.IsNullOrEmpty(contract.QypWeb1095cYearsAssocMember))
+                                        throw new ArgumentNullException("QypWeb1095cYearsAssocMember", "QypWeb1095cYearsAssocMember is required.");
+
+                                    if (!contract.QypWeb1095cAvailDatesAssocMember.HasValue)
+                                        throw new ArgumentNullException("QypWeb1095cAvailDatesAssocMember", "QypWeb1095cAvailDatesAssocMember is required.");
+
+                                    configuration.AddAvailability(new TaxFormAvailability(contract.QypWeb1095cYearsAssocMember, contract.QypWeb1095cAvailDatesAssocMember.Value));
+                                }
+                                catch (Exception e)
+                                {
+                                    LogDataError("Qyp1095cParametersEntityAssociation", "HR.PARMS - QTD.YTD.PARAMETER", contract, e, e.Message);
+                                }
+                            }
+                        }
+                    }
+                    break;
+                case TaxForms.Form1098T:
+                    configuration = await Get1098TaxFormAvailabilityAsync(TaxForms.Form1098T);
+                    break;
+                case TaxForms.Form1098E:
+                    configuration = await Get1098TaxFormAvailabilityAsync(TaxForms.Form1098E);
+                    break;
+                case TaxForms.FormT4:
+                    configuration = await GetT4TaxFormAvailabilityAsync();
+                    break;
+                case TaxForms.FormT2202A:
+                    // Read the CNST.RPT.PARMS record to get the list of tax years for which T2202A
+                    // tax forms are online.
+                    var t2202aParameter = await DataReader.ReadRecordAsync<CnstRptParms>("ST.PARMS", "CNST.RPT.PARMS");
+                    if (t2202aParameter != null)
+                    {
+                        // Throw an exception if there a row of tax year information that does not have
+                        // a tax year or an online availability flag.
+                        if (t2202aParameter.CnstT2202aPdfParmsEntityAssociation != null)
+                        {
+                            foreach (var contract in t2202aParameter.CnstT2202aPdfParmsEntityAssociation)
+                            {
+                                try
+                                {
+                                    if (string.IsNullOrEmpty(contract.CnstT2202aPdfTaxYearAssocMember))
+                                        throw new ArgumentNullException("CnstT2202aPdfTaxYearAssocMember", "CnstT2202aPdfTaxYearAssocMember is required.");
+
+                                    if (string.IsNullOrEmpty(contract.CnstT2202aPdfWebFlagAssocMember))
+                                        throw new ArgumentNullException("CnstT2202aPdfWebFlagAssocMember", "CnstT2202aPdfWebFlagAssocMember is required.");
+
+                                    var available = false;
+                                    if (contract.CnstT2202aPdfWebFlagAssocMember.ToUpper().Equals("Y"))
+                                    {
+                                        available = true;
+                                    }
+                                    configuration.AddAvailability(new TaxFormAvailability(contract.CnstT2202aPdfTaxYearAssocMember, available));
+                                }
+                                catch (Exception e)
+                                {
+                                    LogDataError("CnstT2202aPdfParmsEntityAssociation", "ST.PARMS - CNST.RPT.PARMS", contract, e, e.Message);
+                                }
+                            }
+                        }
+                    }
+                    break;
+            }
+            return configuration;
+        }
+
+        [Obsolete("Obsolete as of API 1.29.1. Use Get1098TaxFormAvailability2Async instead.")]
+        private async Task<TaxFormConfiguration> Get1098TaxFormAvailabilityAsync(TaxForms taxFormId)
+        {
+            TaxFormConfiguration configuration = new TaxFormConfiguration(taxFormId);
+
+            // Read the PARM.1098 record so we can use the tax form specified as the 1098 tax form in Colleague.
+            var parm1098Contract = await DataReader.ReadRecordAsync<Parm1098>("ST.PARMS", "PARM.1098");
+            if (parm1098Contract == null)
+            {
+                LogDataError("ST.PARMS", "PARM.1098", "", null, "PARM.1098 cannot be null.");
+                return configuration;
+            }
+            string paramContract1098TaxForm = string.Empty, formatted1098Name = string.Empty;
+            if (taxFormId == TaxForms.Form1098T)
+            {
+                paramContract1098TaxForm = parm1098Contract.P1098TTaxForm;
+                formatted1098Name = "1098-T";
+            }
+            else if (taxFormId == TaxForms.Form1098E)
+            {
+                paramContract1098TaxForm = parm1098Contract.P1098ETaxForm;
+                formatted1098Name = "1098-E";
+            }
+
+            if (string.IsNullOrEmpty(paramContract1098TaxForm))
+            {
+                LogDataError("ST.PARMS", "PARM.1098", "", null, "No " + formatted1098Name + "form specified.");
+                return configuration;
+            }
+
+            // Obtain the availability dates for 1098.
+            var taxForm1098Years = await DataReader.BulkReadRecordAsync<TaxForm1098Years>("WITH TF98Y.TAX.FORM EQ '" + paramContract1098TaxForm + "'");
+            if (taxForm1098Years != null)
+            {
+                var taxForm1098Status = await DataReader.ReadRecordAsync<TaxFormStatus>(paramContract1098TaxForm);
+                // Validate the availability dates for 1098.
+                foreach (var taxFormYear in taxForm1098Years)
+                {
+                    try
+                    {
+                        if (taxFormYear.Tf98yTaxYear == null)
+                        {
+                            throw new NullReferenceException("Tf98yTaxYear cannot be null.");
+                        }
+                        if (taxFormYear.Tf98yWebEnabled == null)
+                        {
+                            throw new NullReferenceException("Tf98yWebEnabled cannot be null.");
+                        }
+                        var available = true;
+                        if (taxFormYear.Tf98yWebEnabled.ToUpper().Equals("Y"))
+                        {
+                            // If the tax form status doesn't exist, then the tax form is not available.
+                            if (taxForm1098Status == null)
+                            {
+                                LogDataError("TaxFormStatus", "taxForm1098Status", taxForm1098Status);
+                                available = false;
+                            }
+                            // If the tax form status year exists and is equal to the tax form year from taxForm1098Years, then we have additional evaluation.
+                            if (taxForm1098Status.TfsTaxYear != null && taxForm1098Status.TfsTaxYear == taxFormYear.Tf98yTaxYear.ToString())
+                            {
+                                // If there is no gen date, the tax form is not available.
+                                if (taxForm1098Status.TfsGenDate == null)
+                                {
+                                    available = false;
+                                }
+                                // If the tax form status exists and is "GEN", "MOD", or "UNF" then the tax form is not available.
+                                if (taxForm1098Status.TfsStatus != null &&
+                                    (taxForm1098Status.TfsStatus.ToUpper() == "GEN" ||
+                                    taxForm1098Status.TfsStatus.ToUpper() == "MOD" ||
+                                    taxForm1098Status.TfsStatus.ToUpper() == "UNF"))
+                                {
+                                    available = false;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // If the tax form year is specified as not web enabled, the tax form is not available.
+                            available = false;
+                        }
+                        // Create a tax form availability object and add it to the tax form configuration.
+                        configuration.AddAvailability(new TaxFormAvailability(taxFormYear.Tf98yTaxYear.ToString(), available));
+                    }
+                    catch (NullReferenceException e)
+                    {
+                        LogDataError("TaxForm1098Years", "contract", taxFormYear, e, e.Message);
+                    }
+                }
+            }
+            return configuration;
+        }
+
+        [Obsolete("Obsolete as of API 1.29.1. Use GetT4TaxFormAvailability2Async instead.")]
+        private async Task<TaxFormConfiguration> GetT4TaxFormAvailabilityAsync()
+        {
+            TaxFormConfiguration configuration = new TaxFormConfiguration(TaxForms.FormT4);
+
+            var qtdYtdParameterT4 = await DataReader.ReadRecordAsync<QtdYtdParameterT4>("HR.PARMS", "QTD.YTD.PARAMETER");
+            if (qtdYtdParameterT4 != null)
+            {
+                // Validate the availability dates for T4.
+                if (qtdYtdParameterT4.WebT4ParameterEntityAssociation != null)
+                {
+                    foreach (var dataContract in qtdYtdParameterT4.WebT4ParameterEntityAssociation)
+                    {
+                        try
+                        {
+                            if (string.IsNullOrEmpty(dataContract.QypWebT4YearsAssocMember))
+                                throw new ArgumentNullException("QypWebT4YearsAssocMember", "QypWebT4YearsAssocMember is required.");
+
+                            if (!dataContract.QypWebT4AvailableDatesAssocMember.HasValue)
+                                throw new ArgumentNullException("QypWebT4AvailableDatesAssocMember", "QypWebT4AvailableDatesAssocMember is required.");
+
+                            configuration.AddAvailability(new TaxFormAvailability(dataContract.QypWebT4YearsAssocMember, dataContract.QypWebT4AvailableDatesAssocMember.Value));
+                        }
+                        catch (Exception e)
+                        {
+                            LogDataError("QypWebT4YearsAssocMember", "HR.PARMS - QTD.YTD.PARAMETER", dataContract, e, e.Message);
+                        }
+                    }
+                }
+            }
+
+            return configuration;
+        }
+
+        #endregion
+
+        #endregion
+
+
+
+        ///////////////////////////////////////////////////////////////////////////////////
+        ///                                                                             ///
+        ///                                 CODE HOOKS                                ///
+        ///                                                                             ///
+        ///////////////////////////////////////////////////////////////////////////////////
+
+        #region CodeHooks
+
+        /// <summary>
+        /// Returns Output Data from Code Hooks Execution.
+        /// </summary>
+        /// <param name="columnName"></param>
+        /// <param name="inputData"></param>
+        /// <param name="resourceName"></param>
+        /// <param name="resourceVersionNumber"></param>
+        /// <param name="reportEthosApiErrors"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        private async Task<string> GetOutputDataHookAsync(string columnName, string inputData, List<string> columnNames, List<string> columnValues, string resourceName, string resourceVersionNumber, bool reportEthosApiErrors = false, bool bypassCache = false)
+        {
+            var exception = new RepositoryException("Extensibility configuration errors.");
+
+            List<string> inputDataList = new List<string>();
+            inputDataList = inputData.Split(_VM).ToList();
+
+            var allCodeHooks = await GetEthosExtensibilityCodeHooks(bypassCache);
+            if (allCodeHooks == null || !allCodeHooks.Any())
+            {
+                return null;
+            }
+            var outputCodeHooks = allCodeHooks.Where(ch => ch.EdmcResourceName.Contains(resourceName.ToUpper())
+                && ch.EdmcType.Equals("read", StringComparison.OrdinalIgnoreCase)
+                && ch.EdmcFieldName.Contains(columnName.ToUpper())
+                && (ch.EdmcFileName == null || !ch.EdmcFileName.Any()));
+
+            foreach (var outputHook in outputCodeHooks)
+            {
+                bool matchingResourceVersion = false;
+                foreach (var resource in outputHook.EdmcResourceEntityAssociation)
+                {
+                    if (!string.IsNullOrEmpty(resource.EdmcResourceVersionAssocMember))
+                    {
+                        if (resource.EdmcResourceNameAssocMember.Equals(resourceName, StringComparison.OrdinalIgnoreCase) && resource.EdmcResourceVersionAssocMember.Equals(resourceVersionNumber, StringComparison.OrdinalIgnoreCase))
+                        {
+                            matchingResourceVersion = true;
+                        }
+                    }
+                    else
+                    {
+                        if (resource.EdmcResourceNameAssocMember.Equals(resourceName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            matchingResourceVersion = true;
+                        }
+                    }
+                }
+                if (matchingResourceVersion)
+                {
+                    Dictionary<string, List<string>> columnDataRows = new Dictionary<string, List<string>>();
+                    int index = 0;
+                    var maxValues = columnValues.Count;
+                    foreach (var column in columnNames)
+                    {
+                        if (index < maxValues)
+                        {
+                            if (!columnDataRows.ContainsKey(column))
+                            {
+                                columnDataRows.Add(column, columnValues[index].Replace(_TM, _VM).Replace(_XM, _SM).Split(_VM).ToList());
+                            }
+                        }
+                    }
+
+                    CodeBuilderObject inputObject = new CodeBuilderObject()
+                    {
+                        DataDictionary = columnDataRows,
+                        DataValues = inputDataList,
+                        SourceCode = outputHook.EdmcHookCode
+                    };
+
+                    var cacheName = CodeBuilderSupport.BuildCacheKey("OutputDataCodeHook", outputHook.Recordkey);
+                    var result = await CodeBuilderSupport.CodeBuilderAsync(this, ContainsKey, GetOrAddToCache,
+                        transactionInvoker, DataReader, cacheName, bypassCache, CacheTimeout, inputObject);
+
+                    if (result != null && result.ErrorFlag)
+                    {
+                        var message = string.Format("Errors executing OutputData Hooks on '{2}' for resource '{0}' version number '{1}'", resourceName, resourceVersionNumber, columnName);
+                        logger.Error(message);
+                        exception.AddError(new RepositoryError("Data.Access", message));
+
+                        foreach (var error in result.ErrorMessages)
+                        {
+                            message = error;
+                            logger.Error(message);
+                            if (reportEthosApiErrors)
+                            {
+                                exception.AddError(new RepositoryError("Data.Access", message));
+                            }
+                        }
+                        if (reportEthosApiErrors && exception != null && exception.Errors != null && exception.Errors.Any())
+                        {
+                            throw exception;
+                        }
+                    }
+
+                    var outputData = string.Empty;
+                    if (result != null && result.DataValues != null && result.DataValues.Any())
+                    {
+                        foreach (var data in result.DataValues)
+                        {
+                            if (!string.IsNullOrEmpty(outputData)) outputData = string.Concat(outputData, _VM);
+                            outputData = string.Concat(outputData, data);
+                        }
+                    }
+                    else
+                    {
+                        outputData = inputData;
+                    }
+                    inputData = outputData;
+                }
+            }
+
+            return inputData;
+        }
+
+        /// <summary>
+        /// Returns Calculated Property Variable for insert into Json Data.
+        /// </summary>
+        /// <param name="resourceName"></param>
+        /// <param name="resourceVersionNumber"></param>
+        /// <param name="reportEthosApiErrors"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        private async Task<IEnumerable<EthosExtensibleDataRow>> GetVariableCalculationHookAsync(string resourceName, string resourceVersionNumber, IList<EthosExtensibleDataRow> ethosExtensibleDataRows, bool reportEthosApiErrors = false, bool bypassCache = false)
+        {
+            var exception = new RepositoryException("Extensibility configuration errors.");
+
+            List<EthosExtensibleDataRow> extensibleCalculatedRows = new List<EthosExtensibleDataRow>();
+
+            var allCodeHooks = await GetEthosExtensibilityCodeHooks(bypassCache);
+            if (allCodeHooks == null || !allCodeHooks.Any())
+            {
+                return null;
+            }
+            var calculatedProperties = allCodeHooks.Where(ch => ch.EdmcResourceName.Contains(resourceName.ToUpper()) && ch.EdmcType.Equals("calc", StringComparison.OrdinalIgnoreCase));
+
+            foreach (var calcProperties in calculatedProperties)
+            {
+                bool matchingResourceVersion = false;
+                foreach (var resource in calcProperties.EdmcResourceEntityAssociation)
+                {
+                    if (!string.IsNullOrEmpty(resource.EdmcResourceVersionAssocMember))
+                    {
+                        if (resource.EdmcResourceNameAssocMember.Equals(resourceName, StringComparison.OrdinalIgnoreCase) && resource.EdmcResourceVersionAssocMember.Equals(resourceVersionNumber, StringComparison.OrdinalIgnoreCase))
+                        {
+                            matchingResourceVersion = true;
+                        }
+                    }
+                    else
+                    {
+                        if (resource.EdmcResourceNameAssocMember.Equals(resourceName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            matchingResourceVersion = true;
+                        }
+                    }
+                }
+                if (matchingResourceVersion)
+                {
+                    Dictionary<string, List<string>> columnDataRows = ethosExtensibleDataRows.ToDictionary(edr => edr.ColleagueColumnName, edr => edr.ExtendedDataValue.Split(_VM).ToList());
+
+                    CodeBuilderObject inputObject = new CodeBuilderObject()
+                    {
+                        DataDictionary = columnDataRows,
+                        SourceCode = calcProperties.EdmcHookCode
+                    };
+
+                    var cacheName = CodeBuilderSupport.BuildCacheKey("VariableCalcuationRows", calcProperties.Recordkey);
+                    var result = await CodeBuilderSupport.CodeBuilderAsync(this, ContainsKey, GetOrAddToCache,
+                        transactionInvoker, DataReader, cacheName, bypassCache, CacheTimeout, inputObject);
+
+                    if (result != null && result.ErrorFlag)
+                    {
+                        var message = string.Format("Errors executing Variable Calculation Hooks on '{2}' for resource '{0}' version number '{1}'", resourceName, resourceVersionNumber, string.Concat(calcProperties.EdmcJsonPath, calcProperties.EdmcJsonLabel));
+                        logger.Error(message);
+                        exception.AddError(new RepositoryError("Data.Access", message));
+
+                        foreach (var error in result.ErrorMessages)
+                        {
+                            message = error;
+                            logger.Error(message);
+                            if (reportEthosApiErrors)
+                            {
+                                exception.AddError(new RepositoryError("Data.Access", message));
+                            }
+                        }
+                        if (reportEthosApiErrors && exception != null && exception.Errors != null && exception.Errors.Any())
+                        {
+                            throw exception;
+                        }
+                    }
+
+                    string outputData = string.Empty;
+                    if (result != null && result.DataValues != null && result.DataValues.Any())
+                    {
+                        foreach (var data in result.DataValues)
+                        {
+                            if (!string.IsNullOrEmpty(outputData)) outputData = string.Concat(outputData, _VM);
+                            outputData = string.Concat(outputData, data);
+                        }
+                        var returnEthosDataRow = new EthosExtensibleDataRow(string.Concat("VAR", calcProperties.Recordkey),
+                            "", calcProperties.EdmcJsonLabel, calcProperties.EdmcJsonPath, calcProperties.EdmcJsonPropertyType, outputData);
+
+                        extensibleCalculatedRows.Add(returnEthosDataRow);
+                    }
+                }
+            }
+
+            return extensibleCalculatedRows;
+        }
+
+        #endregion
     }
 }

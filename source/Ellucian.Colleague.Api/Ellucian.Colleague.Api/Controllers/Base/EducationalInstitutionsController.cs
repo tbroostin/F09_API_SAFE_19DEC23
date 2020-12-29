@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -53,7 +53,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="page">paging information</param>
         /// <param name="type">Type of Educational-Institution ex:"secondary" or "postSecondary"</param>
         /// <returns>List of EducationalInstitutions <see cref="Dtos.EducationalInstitution"/> objects representing matching educationalInstitutions</returns>
-        [HttpGet]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         [ValidateQueryStringFilter(new string[] { "type" }, false, true)]
         public async Task<IHttpActionResult> GetEducationalInstitutionsAsync(Paging page, [FromUri] string type = "")
@@ -137,7 +137,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="id">GUID to desired educationalInstitution</param>
         /// <returns>An EducationalInstitutions object <see cref="Dtos.EducationalInstitution"/> in DataModel format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
         public async Task<Dtos.EducationalInstitution> GetEducationalInstitutionsByGuidAsync(string id)
         {
             var bypassCache = false;

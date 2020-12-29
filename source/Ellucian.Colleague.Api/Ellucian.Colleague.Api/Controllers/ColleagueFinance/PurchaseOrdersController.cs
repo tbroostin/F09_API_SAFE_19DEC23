@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -22,7 +22,6 @@ using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Domain.Base.Exceptions;
-using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
 
@@ -101,11 +100,13 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// Return all purchaseOrders
         /// </summary>
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
-        /// <returns>List of PurchaseOrders <see cref="Dtos.PurchaseOrders"/> objects representing matching purchaseOrders</returns>
-        [HttpGet]
+        /// <param name="criteria">Criteria Filter (orderNumber)</param>
+        /// <returns>List of PurchaseOrders <see cref="Dtos.PurchaseOrders2"/> objects representing matching purchaseOrders</returns>
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.PurchaseOrders2))]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
-        public async Task<IHttpActionResult> GetPurchaseOrdersAsync2(Paging page)
+        public async Task<IHttpActionResult> GetPurchaseOrdersAsync(Paging page, QueryStringFilter criteria)
         {
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
@@ -122,7 +123,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                     page = new Paging(100, 0);
                 }
 
-                var pageOfItems = await purchaseOrderService.GetPurchaseOrdersAsync2(page.Offset, page.Limit, bypassCache);
+                var criteriaObject = GetFilterObject<Dtos.PurchaseOrders2>(logger, "criteria");
+                if (CheckForEmptyFilterParameters())
+                    return new PagedHttpActionResult<IEnumerable<Dtos.PurchaseOrders2>>(new List<Dtos.PurchaseOrders2>(), page, 0, this.Request);
+
+                var pageOfItems = await purchaseOrderService.GetPurchaseOrdersAsync(page.Offset, page.Limit, criteriaObject, bypassCache);
                 AddEthosContextProperties(
                     await purchaseOrderService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await purchaseOrderService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -138,7 +143,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -167,8 +172,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="guid">GUID to desired purchaseOrders</param>
         /// <returns>A purchaseOrders object <see cref="Dtos.PurchaseOrders"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
-        public async Task<Dtos.PurchaseOrders2> GetPurchaseOrdersByGuidAsync2(string guid)
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        public async Task<Dtos.PurchaseOrders2> GetPurchaseOrdersByGuidAsync(string guid)
         {
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
@@ -191,7 +196,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                     await purchaseOrderService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                     new List<string>() { guid }));
 
-                return await purchaseOrderService.GetPurchaseOrdersByGuidAsync2(guid);
+                return await purchaseOrderService.GetPurchaseOrdersByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)
             {
@@ -201,7 +206,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -230,8 +235,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="purchaseOrders">DTO of the new purchaseOrders</param>
         /// <returns>A purchaseOrders object <see cref="Dtos.PurchaseOrders"/> in EEDM format</returns>
-        [HttpPost, EedmResponseFilter]
-        public async Task<Dtos.PurchaseOrders2> PostPurchaseOrdersAsync2([ModelBinder(typeof(EedmModelBinder))] Dtos.PurchaseOrders2 purchaseOrders)
+        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        public async Task<Dtos.PurchaseOrders2> PostPurchaseOrdersAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.PurchaseOrders2 purchaseOrders)
         {
             if (purchaseOrders == null)
             {
@@ -245,13 +250,12 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 {
                     throw new ArgumentNullException("purchaseOrdersDto", "Nil GUID must be used in POST operation.");
                 }
-                ValidatePO2(purchaseOrders);
-
+               
                 //call import extend method that needs the extracted extension data and the config
                 await purchaseOrderService.ImportExtendedEthosData(await ExtractExtendedData(await purchaseOrderService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), logger));
 
                 // Create Purchase Order
-                var purchaseOrderReturn = await purchaseOrderService.PostPurchaseOrdersAsync2(purchaseOrders);
+                var purchaseOrderReturn = await purchaseOrderService.PostPurchaseOrdersAsync(purchaseOrders);
 
                 //store dataprivacy list and get the extended data to store
                 AddEthosContextProperties(await purchaseOrderService.GetDataPrivacyListByApi(GetRouteResourceName(), true),
@@ -267,7 +271,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -302,8 +306,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="guid">GUID of the purchaseOrders to update</param>
         /// <param name="purchaseOrders">DTO of the updated purchaseOrders</param>
         /// <returns>A purchaseOrders object <see cref="Dtos.PurchaseOrders"/> in EEDM format</returns>
-        [HttpPut, EedmResponseFilter]
-        public async Task<Dtos.PurchaseOrders2> PutPurchaseOrdersAsync2([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.PurchaseOrders2 purchaseOrders)
+        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        public async Task<Dtos.PurchaseOrders2> PutPurchaseOrdersAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.PurchaseOrders2 purchaseOrders)
         {
             if (string.IsNullOrEmpty(guid))
             {
@@ -339,12 +343,10 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 await purchaseOrderService.ImportExtendedEthosData(await ExtractExtendedData(await purchaseOrderService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), logger));
 
                 var mergedPurchaseOrder = await PerformPartialPayloadMerge(purchaseOrders,
-                            async () => await purchaseOrderService.GetPurchaseOrdersByGuidAsync2(guid),
+                            async () => await purchaseOrderService.GetPurchaseOrdersByGuidAsync(guid),
                             dpList, logger);
 
-                ValidatePO2(mergedPurchaseOrder);
-
-                var purchaseOrderReturn = await purchaseOrderService.PutPurchaseOrdersAsync2(guid, mergedPurchaseOrder);
+                var purchaseOrderReturn = await purchaseOrderService.PutPurchaseOrdersAsync(guid, mergedPurchaseOrder);
 
                 //store dataprivacy list and get the extended data to store
 
@@ -356,7 +358,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -394,317 +396,36 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
         }
 
-        /// <summary>
-        /// Helper method to validate Purchase Order PUT/POST.
-        /// </summary>
-        /// <param name="po">Purchase Order DTO object of type <see cref="Dtos.PurchaseOrders"/></param>
-        private void ValidatePO2(Dtos.PurchaseOrders2 po)
-        {
-            var defaultCurrency = new CurrencyIsoCode?();
-            if (po.Vendor == null)
-            {
-                throw new ArgumentNullException("purchaseOrders.Vendor", "The vendor is required when submitting a purchase order. ");
-            }
-            if (po.Vendor != null && po.Vendor.ExistingVendor != null 
-                && po.Vendor.ExistingVendor.Vendor != null && string.IsNullOrEmpty(po.Vendor.ExistingVendor.Vendor.Id))
-            {
-                throw new ArgumentNullException("purchaseOrders.Vendor", "The vendor id is required when submitting a purchase order. ");
-            }
-            if (po.OrderedOn == default(DateTime))
-            {
-                throw new ArgumentNullException("purchaseOrders.OrderedOn.", "OrderedOn is a required field");
-            }
-
-            if (po.TransactionDate == default(DateTime))
-            {
-                throw new ArgumentNullException("purchaseOrders.TransactionDate.", "TransactionDate is a required field");
-            }
-
-            if (po.OrderedOn > po.TransactionDate)
-            {
-                throw new ArgumentNullException("purchaseOrders.TransactionDate.", "TransactionDate cannot before OrderedOn date.");
-            }
-
-            if (po.DeliveredBy != default(DateTime) && po.OrderedOn > po.DeliveredBy)
-            {
-                throw new ArgumentNullException("purchaseOrders.DeliveredBy.", "DeliveredBy date cannot be before the OrderedOn date");
-            }
-            if (po.StatusDate != default(DateTime) && po.OrderedOn > po.StatusDate && po.Status == PurchaseOrdersStatus.Voided)
-            {
-                throw new ArgumentNullException("purchaseOrders.StatusDate.", "StatusDate date cannot be before the OrderedOn date when Voiding the purchase order");
-            }
-            
-            if (po.OverrideShippingDestination != null && po.OverrideShippingDestination.Place != null)
-            {
-                if (po.OverrideShippingDestination.Place.Country != null && po.OverrideShippingDestination.Place.Country.Code.Value != IsoCode.CAN && po.OverrideShippingDestination.Place.Country.Code.Value != IsoCode.USA)
-                {
-                    throw new ArgumentNullException("purchaseOrders.OverrideShippingDestination.Country.", "Country code can only be CAN or USA");
-                }
-                if (po.OverrideShippingDestination.Contact != null && po.OverrideShippingDestination.Contact.Extension.Length > 4)
-                {
-                    throw new ArgumentNullException("purchaseOrders.OverrideShippingDestination.Contact.Extension", "The Extension cannot be greater then 4 in length.");
-                }
-            }
-            if (po.Vendor.ManualVendorDetails != null && po.Vendor.ManualVendorDetails.Place != null)
-            {
-                if (po.Vendor.ManualVendorDetails.Place.Country != null &&
-                    po.Vendor.ManualVendorDetails.Place.Country.Code.Value != IsoCode.CAN && po.Vendor.ManualVendorDetails.Place.Country.Code.Value != IsoCode.USA)
-                {
-                    throw new ArgumentNullException("purchaseOrders.Vendor.Country.", "Country code can only be CAN or USA");
-                }
-            }
-
-            if (po.PaymentSource == null)
-            {
-                throw new ArgumentNullException("purchaseOrders.PaymentSource.", "PaymentSource is a required field for Colleague");
-            }
-            if (po.Comments != null)
-            {
-                foreach (var comments in po.Comments)
-                {
-                    if (comments.Comment == null)
-                    {
-                        throw new ArgumentNullException("purchaseOrders.Comments", "Comments require a comment");
-                    }
-                    if (comments.Type == CommentTypes.NotSet)
-                    {
-                        throw new ArgumentNullException("purchaseOrders.Comments", "Type is require for a comment");
-                    }
-                    if (comments.Type == null)
-                    {
-                        throw new ArgumentNullException("purchaseOrders.Comments", "Type is require for a comment");
-                    }
-                }
-            }
-            if (po.Buyer != null && po.Buyer.Id == null)
-            {
-                throw new ArgumentNullException("purchaseOrders.Buyer", "Buyer Id is require for a Buyer object.");
-            }
-            if (po.Initiator != null && po.Initiator.Detail != null && string.IsNullOrWhiteSpace(po.Initiator.Detail.Id))
-            {
-                throw new ArgumentNullException("purchaseOrders.Initiator.Detail", "The Initiator detail Id is require for an Initiator detail object.");
-            }
-            if (po.PaymentTerms != null && string.IsNullOrWhiteSpace(po.PaymentTerms.Id))
-            {
-                throw new ArgumentNullException("purchaseOrders.PaymentTerms", "The PaymentTerms Id is require for a PaymentTerms object.");
-            }
-            if (po.Classification != null && string.IsNullOrWhiteSpace(po.Classification.Id))
-            {
-                throw new ArgumentNullException("purchaseOrders.Classification", "The Classification Id is require for a Classification object.");
-            }
-            if (po.SubmittedBy != null && string.IsNullOrWhiteSpace(po.SubmittedBy.Id))
-            {
-                throw new ArgumentNullException("purchaseOrders.SubmittedBy", "The SubmittedBy Id is require for a SubmittedBy object.");
-            }
-
-
-            if (po.LineItems == null)
-            {
-                throw new ArgumentNullException("purchaseOrders.LineItems.", "At least one line item must be provided when submitting an accounts-payable-invoice. ");
-            }
-            if (po.LineItems != null)
-            {
-                foreach (var lineItem in po.LineItems)
-                {
-                    if (lineItem.CommodityCode != null && string.IsNullOrWhiteSpace(lineItem.CommodityCode.Id))
-                    {
-                        throw new ArgumentNullException("purchaseOrders.LineItems.CommodityCode", "The commodity code id is required when submitting a commodity code. ");
-                    }
-                    if (lineItem.UnitOfMeasure != null && string.IsNullOrWhiteSpace(lineItem.UnitOfMeasure.Id))
-                    {
-                        throw new ArgumentNullException("purchaseOrders.LineItems.UnitofMeasure", "The UnitofMeasure id is required when submitting a UnitofMeasure. ");
-                    }
-                    if (lineItem.UnitPrice != null && (!lineItem.UnitPrice.Value.HasValue || lineItem.UnitPrice.Currency == null))
-                    {
-                        throw new ArgumentNullException("purchaseOrders.Taxes.UnitPrice.", "Both the unit price amount value and currency are required when submitting a line item unit price. ");
-                    }
-                    if (lineItem.UnitPrice != null)
-                    {
-                        defaultCurrency = checkCurrency(defaultCurrency, lineItem.UnitPrice.Currency);
-                    }
-                    if (lineItem.AdditionalAmount != null && (!lineItem.AdditionalAmount.Value.HasValue || lineItem.AdditionalAmount.Currency == null))
-                    {
-                        throw new ArgumentNullException("purchaseOrders.AdditionalAmount.UnitPrice", "The additional amount value and currency are required when submitting a line item additional price. ");
-                    }
-                    if (lineItem.AdditionalAmount != null)
-                    {
-                        defaultCurrency = checkCurrency(defaultCurrency, lineItem.AdditionalAmount.Currency);
-                    }
-                    if (lineItem.TaxCodes != null)
-                    {
-                        foreach (var lineItemTaxes in lineItem.TaxCodes)
-                        {
-                            if (lineItemTaxes.Id == null)
-                            {
-                                throw new ArgumentNullException("purchaseOrders.LineItems.Taxes.TaxCode", "The Taxes.TaxCode is required when submitting a line item Tax Code. ");
-                            }
-                        }
-                    }
-
-                    if (lineItem.TradeDiscount != null)
-                    {
-                        if (lineItem.TradeDiscount.Amount != null && lineItem.TradeDiscount.Percent != null)
-                        {
-                            throw new ArgumentNullException("purchaseOrders.LineItems.TradeDiscount", "TradeDiscount cannot contain both an Amount and Percentage");
-                        }
-                        if (lineItem.TradeDiscount.Amount != null && (!lineItem.TradeDiscount.Amount.Value.HasValue || lineItem.TradeDiscount.Amount.Currency == null))
-                        {
-                            throw new ArgumentNullException("purchaseOrders.LineItems.TradeDiscount.Amount", "TradeDiscount amount requires both an Amount and Currency");
-                        }
-                        if (lineItem.AdditionalAmount != null)
-                        {
-                            defaultCurrency = checkCurrency(defaultCurrency, lineItem.AdditionalAmount.Currency);
-                        }
-                    }
-
-                    try
-                    {
-                        if (lineItem.Reference != null)
-                        {
-                            var referenceDoc = lineItem.Reference;
-                            // Check to see if the reference line item differ, If they do then we have to make sure that the are the same Item number
-                            if (referenceDoc.lineItemNumber != lineItem.LineItemNumber)
-                            {
-                                if (!string.IsNullOrEmpty(referenceDoc.lineItemNumber) && string.IsNullOrEmpty(lineItem.LineItemNumber))
-                                {
-                                    lineItem.LineItemNumber = referenceDoc.lineItemNumber;
-                                }
-                                else
-                                {
-                                    lineItem.Reference.lineItemNumber = lineItem.LineItemNumber;
-                                    referenceDoc.lineItemNumber = lineItem.LineItemNumber;
-                                }
-                            }
-
-                            if (referenceDoc.Document.PurchasingArrangement != null)
-                            {
-                                throw new ArgumentNullException("purchaseOrders.LineItems.Reference.Document", "The Document of Purchasing Arrangment is not acceptable in this system.");
-                            }
-
-                            if (referenceDoc.Document.Requisition.Id == null)
-                            {
-                                throw new ArgumentNullException("purchaseOrders.LineItems.Reference.Document", "The requisition ID is a required field");
-                            }
-
-                            if (string.IsNullOrEmpty(referenceDoc.lineItemNumber))
-                            {
-                                throw new ArgumentNullException("purchaseOrders.LineItems.Reference.LineItemNumber", "The Line number is a required field for a reference to requisitions");
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        throw new Exception("An unexpected error occurred: " + ex.Message);
-                    }
-
-
-
-
-                    if (lineItem.AccountDetail != null)
-                    {
-                        foreach (var accountDetail in lineItem.AccountDetail)
-                        {
-                            if (accountDetail.AccountingString == null)
-                            {
-                                throw new ArgumentNullException("purchaseOrders.LineItems.AccountDetails.AccountingString", "The AccountingString is required when submitting a line item account detail.");
-
-                            }
-                            if (accountDetail.Allocation != null)
-                            {
-                                var allocation = accountDetail.Allocation;
-                                if (allocation.Allocated != null)
-                                {
-                                    var allocated = allocation.Allocated;
-                                    if (allocated.Amount != null && (!allocated.Amount.Value.HasValue || allocated.Amount.Currency == null))
-                                    {
-                                        throw new ArgumentNullException("purchaseOrders.LineItems.AccountDetail.Allocation.Allocated",
-                                            "The Allocation.Allocated value and currency are required when submitting a line item AccountDetail.Allocation.Allocated. ");
-                                    }
-                                    if (allocated.Amount != null)
-                                    {
-                                        defaultCurrency = checkCurrency(defaultCurrency, allocated.Amount.Currency);
-                                    }
-                                }
-                                if (allocation.TaxAmount != null && (!allocation.TaxAmount.Value.HasValue || allocation.TaxAmount.Currency == null))
-                                {
-                                    throw new ArgumentNullException("purchaseOrders.LineItems.AccountDetail.Allocation.TaxAmount",
-                                        "The tax amount value and currency are required when submitting a line item account detail allocation tax amount. ");
-                                }
-                                if (allocation.TaxAmount != null)
-                                {
-                                    defaultCurrency = checkCurrency(defaultCurrency, allocation.TaxAmount.Currency);
-                                }
-                                if (allocation.AdditionalAmount != null && (!allocation.AdditionalAmount.Value.HasValue || allocation.AdditionalAmount.Currency == null))
-                                {
-                                    throw new ArgumentNullException("purchaseOrders.LineItems.AccountDetail.Allocation.AdditionalAmount",
-                                        "The additional amount value and currency are required when submitting a line item account detail allocation additional amount. ");
-                                }
-                                if (allocation.AdditionalAmount != null)
-                                {
-                                    defaultCurrency = checkCurrency(defaultCurrency, allocation.AdditionalAmount.Currency);
-                                }
-                                if (allocation.DiscountAmount != null && (!allocation.DiscountAmount.Value.HasValue || allocation.AdditionalAmount.Currency == null))
-                                {
-                                    throw new ArgumentNullException("purchaseOrders.LineItems.AccountDetails.DiscountAmount.Allocation.AdditionalAmount",
-                                        "The discount amount value and currency are required when submitting a line item account detail allocation discount amount. ");
-                                }
-                                if (allocation.DiscountAmount != null)
-                                {
-                                    defaultCurrency = checkCurrency(defaultCurrency, allocation.DiscountAmount.Currency);
-                                }
-
-                            }
-                            if (accountDetail.SubmittedBy != null && string.IsNullOrEmpty(accountDetail.SubmittedBy.Id))
-                            {
-                                throw new ArgumentNullException("purchaseOrders.LineItems.AccountDetails.SubmittedBy", "The SubmittedBy id is required when submitting a line item account detail SubmittedBy. ");
-                            }
-                            if (string.IsNullOrEmpty(accountDetail.AccountingString))
-                            {
-                                throw new ArgumentNullException("purchaseOrders.LineItems.AccountDetails.AccountingString", "The AccountingString id is required when submitting a line item account detail AccountingString. ");
-                            }
-                            if (accountDetail.Allocation == null)
-                            {
-                                throw new ArgumentNullException("purchaseOrders.LineItems.AccountDetails.Allocation", "The Allocation is required when submitting a line item account detail. ");
-                            }
-                        }
-
-                    }
-                    if (string.IsNullOrEmpty(lineItem.Description))
-                    {
-                        throw new ArgumentNullException("purchaseOrders.LineItems.Description", "The Description is required when submitting a line item. ");
-                    }
-                    if (lineItem.Quantity == 0)
-                    {
-                        throw new ArgumentNullException("purchaseOrders.LineItems.Quantity", "The Quantity is required when submitting a line item. ");
-                    }
-                    if (lineItem.UnitPrice == null)
-                    {
-                        throw new ArgumentNullException("purchaseOrders.LineItems.UnitPrice", "The UnitPrice is required when submitting a line item. ");
-                    }
-                    else
-                    {
-                        if (lineItem.UnitPrice.Currency != null)
-                        {
-                            defaultCurrency = checkCurrency(defaultCurrency, lineItem.UnitPrice.Currency);
-                        }
-                        else
-                        {
-                            throw new ArgumentNullException("purchaseOrders.LineItems.UnitPrice", "The UnitPrice currency is a required when submitting a line item. ");
-                        }
-                        if (!lineItem.UnitPrice.Value.HasValue)
-                        {
-                            throw new ArgumentNullException("purchaseOrders.LineItems.UnitPrice", "The UnitPrice value is required when submitting a line item. ");
-                        }
-                    }
-                    if (lineItem.PartNumber != null && lineItem.PartNumber.Length > 11)
-                    {
-                        throw new ArgumentNullException("purchaseOrders.LineItems.PartNumber", "The PartNumber cannot exceed 11 characters in length.");
-                    }
-                }
-            }
-        }
+      
 
         #endregion
+
+        /// <summary>
+        /// Create / Update a purchase order.
+        /// </summary>
+        /// <param name="purchaseOrderCreateUpdateRequest">The purchase order create update request DTO.</param>        
+        /// <returns>The purchase order create response DTO.</returns>
+        /// <accessComments>
+        /// Requires Staff record, requires permission CREATE.UPDATE.PURCHASE.ORDER.
+        /// </accessComments>
+        [HttpPost]
+        public async Task<Dtos.ColleagueFinance.PurchaseOrderCreateUpdateResponse> PostPurchaseOrderAsync([FromBody] Dtos.ColleagueFinance.PurchaseOrderCreateUpdateRequest purchaseOrderCreateUpdateRequest)
+        {
+            try
+            {
+                return await purchaseOrderService.CreateUpdatePurchaseOrderAsync(purchaseOrderCreateUpdateRequest);
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex.Message);
+                throw CreateHttpResponseException("Insufficient permissions to create/update the purchase order.", HttpStatusCode.Forbidden);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message);
+                throw CreateHttpResponseException("Unable to create/update the purchase order.", HttpStatusCode.BadRequest);
+            }
+        }
 
         /// <summary>
         /// Delete (DELETE) a purchaseOrders
@@ -715,19 +436,84 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
-
         }
 
-        private CurrencyIsoCode? checkCurrency(CurrencyIsoCode? defaultValue, CurrencyIsoCode? newValue)
+
+        /// <summary>
+        /// Retrieves list of Purchase Order summary
+        /// </summary>
+        /// <param name="personId">ID logged in user</param>
+        /// <returns>list of Purchase Order Summary DTO</returns>
+        /// <accessComments>
+        /// Requires permission VIEW.PURCHASE.ORDER, and requires access to at least one of the
+        /// general ledger numbers on the purchase order line items.
+        /// </accessComments>
+        [HttpGet]
+        public async Task<IEnumerable<PurchaseOrderSummary>> GetPurchaseOrderSummaryByPersonIdAsync(string personId)
         {
-            if (defaultValue != null && defaultValue != newValue && newValue != null)
+            if (string.IsNullOrEmpty(personId))
             {
-                throw new ArgumentException("purchaseOrders.Currency", "All currency codes in the request must be the same and cannot differ.");
+                string message = "person Id must be specified.";
+                logger.Error(message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
-            CurrencyIsoCode? cc = newValue == null ? defaultValue : newValue;
-            return cc;
+
+            try
+            {
+                var purchaseOrder = await purchaseOrderService.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+                return purchaseOrder;
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex.Message);
+                throw CreateHttpResponseException("Insufficient permissions to get the purchase order.", HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException anex)
+            {
+                logger.Error(anex, anex.Message);
+                throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
+            }
+            catch (KeyNotFoundException knfex)
+            {
+                logger.Error(knfex, knfex.Message);
+                throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
+            }
+            // Application exceptions will be caught below.
+            catch (Exception ex)
+            {
+                logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException("Unable to get the purchase order.", HttpStatusCode.BadRequest);
+            }           
+        }
+                
+        /// <summary>
+        /// Void a purchase order.
+        /// </summary>
+        /// <param name="purchaseOrderVoidRequest">The purchase order void request DTO.</param>        
+        /// <returns>The purchase order void response DTO.</returns>
+        /// <accessComments>
+        /// Requires Staff record, requires permission CREATE.UPDATE.PURCHASE.ORDER.
+        /// </accessComments>
+        [HttpPost]
+        public async Task<Dtos.ColleagueFinance.PurchaseOrderVoidResponse> VoidPurchaseOrderAsync([FromBody] Dtos.ColleagueFinance.PurchaseOrderVoidRequest purchaseOrderVoidRequest)
+        {
+            try
+            {
+                return await purchaseOrderService.VoidPurchaseOrderAsync(purchaseOrderVoidRequest);
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex.Message);
+                throw CreateHttpResponseException("Insufficient permissions to void the purchase order.", HttpStatusCode.Forbidden);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message);
+                throw CreateHttpResponseException("Unable to void the purchase order.", HttpStatusCode.BadRequest);
+            }
         }
 
+        
 
     }
 }

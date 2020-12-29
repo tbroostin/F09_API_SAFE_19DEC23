@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -141,7 +141,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             
             try
             {
-                var item = await _admissionDecisionTypesService.GetAdmissionDecisionTypesByGuidAsync(guid);
+                var item = await _admissionDecisionTypesService.GetAdmissionDecisionTypesByGuidAsync(guid, bypassCache);
 
                 if (item != null)
                 {

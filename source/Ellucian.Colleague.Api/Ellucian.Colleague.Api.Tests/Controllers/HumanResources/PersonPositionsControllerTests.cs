@@ -80,7 +80,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
                 EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
                 PersonPositionsControllerTestsInitialize();
 
-                personPositionServiceMock.Setup(s => s.GetPersonPositionsAsync(null))
+                personPositionServiceMock.Setup(s => s.GetPersonPositionsAsync(null, null))
                     .Returns(async () => await getExpectedPositions());
             }
 
@@ -97,7 +97,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             [ExpectedException(typeof(HttpResponseException))]
             public async Task CatchGenericExceptionTest()
             {
-                personPositionServiceMock.Setup(s => s.GetPersonPositionsAsync(null)).Throws(new Exception());
+                personPositionServiceMock.Setup(s => s.GetPersonPositionsAsync(null, null)).Throws(new Exception());
 
                 try
                 {

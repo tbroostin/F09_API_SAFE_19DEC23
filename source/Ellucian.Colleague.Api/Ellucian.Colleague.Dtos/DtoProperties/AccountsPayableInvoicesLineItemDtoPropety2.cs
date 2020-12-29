@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Runtime.Serialization;
@@ -41,6 +41,12 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         /// </summary>
         [DataMember(Name = "commodityCode", EmitDefaultValue = false)]
         public GuidObject2 CommodityCode { get; set; }
+
+        /// <summary>
+        /// The fixed asset designation associated with the line item.
+        /// </summary>
+        [DataMember(Name = "fixedAssetDesignation", EmitDefaultValue = false)]      
+        public GuidObject2 FixedAssetDesignation { get; set; }
 
         /// <summary>
         /// The number of units specified for the line item.

@@ -53,11 +53,15 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             var relationshipTypesEntities = await _referenceDataRepository.GetRelationTypes2Async(bypassCache);
             if (relationshipTypesEntities != null && relationshipTypesEntities.Any())
             {
-                foreach (var relationshipType in relationshipTypesEntities)
+                foreach (var relationshipTypes in relationshipTypesEntities)
                 {
-                    Ellucian.Colleague.Dtos.RelationshipTypes relTyp = ConvertRelationshipTypesEntityToDto(relationshipType);
-                    var inverse = !string.IsNullOrEmpty(relationshipType.InverseRelType) ? relationshipTypesEntities.FirstOrDefault(i => i.Code.ToUpper() == relationshipType.InverseRelType.ToUpper()) : null;
+                    Ellucian.Colleague.Dtos.RelationshipTypes relTyp = ConvertRelationshipTypesEntityToDto(relationshipTypes);
+                    var inverse = !string.IsNullOrEmpty(relationshipTypes.InverseRelType) ? relationshipTypesEntities.FirstOrDefault(i => i.Code.ToUpper() == relationshipTypes.InverseRelType.ToUpper()) : null;
                     relationshipTypesCollection.Add(ConvertInverseRelationshipTypeEntityToValidRelationshipTypeDtoAndAddToCollection(relTyp, inverse));
+                }
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
                 }
             }
             return relationshipTypesCollection;
@@ -68,10 +72,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// Get a RelationshipTypes from its GUID
         /// </summary>
         /// <returns>RelationshipTypes DTO object</returns>
-        public async Task<Ellucian.Colleague.Dtos.RelationshipTypes> GetRelationshipTypesByGuidAsync(string guid)
+        public async Task<Ellucian.Colleague.Dtos.RelationshipTypes> GetRelationshipTypesByGuidAsync(string guid, bool bypassCache = true)
         {
-            var relationTypeEntities = (await _referenceDataRepository.GetRelationTypes2Async(true));
-
+            var relationTypeEntities = (await _referenceDataRepository.GetRelationTypes2Async(bypassCache));
             try
             {
                 Ellucian.Colleague.Domain.Base.Entities.RelationType relTypEntity = (relationTypeEntities).Where(rt => rt.Guid == guid).FirstOrDefault();
@@ -82,17 +85,19 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 Ellucian.Colleague.Dtos.RelationshipTypes relTypDto = ConvertRelationshipTypesEntityToDto(relTypEntity);
                 var inverse = !string.IsNullOrEmpty(relTypEntity.InverseRelType) ? relationTypeEntities.FirstOrDefault(i => i.Code.ToUpper() == relTypEntity.InverseRelType.ToUpper()) : null;
                 return ConvertInverseRelationshipTypeEntityToValidRelationshipTypeDtoAndAddToCollection(relTypDto, inverse);
+
+
             }
             catch (KeyNotFoundException ex)
             {
-                throw new KeyNotFoundException("relationship-types not found for GUID " + guid, ex);
+                throw new KeyNotFoundException(string.Format("No relationship-types was found for guid '{0}'", guid), ex);
             }
             catch (InvalidOperationException ex)
             {
-                throw new KeyNotFoundException("relationship-types not found for GUID " + guid, ex);
+                throw new KeyNotFoundException(string.Format("No relationship-types was found for guid '{0}'", guid), ex);
             }
+            
         }
-
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
@@ -100,7 +105,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// </summary>
         /// <param name="source">RelationTypes domain entity</param>
         /// <returns>RelationshipTypes DTO</returns>
-        private Ellucian.Colleague.Dtos.RelationshipTypes ConvertRelationshipTypesEntityToDto(Ellucian.Colleague.Domain.Base.Entities.RelationType source)
+        private Ellucian.Colleague.Dtos.RelationshipTypes ConvertRelationshipTypesEntityToDto(Domain.Base.Entities.RelationType source)
         {
             var relationshipTypes = new Ellucian.Colleague.Dtos.RelationshipTypes();
 
@@ -119,7 +124,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     relationshipTypes.RestrictedUsage = RelationshipTypesRestrictedUsage.Personsonly;
                 }
             }
-                                                                                                
+
             return relationshipTypes;
         }
 
@@ -143,8 +148,5 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             return source;
         }
-
-
     }
-   
 }

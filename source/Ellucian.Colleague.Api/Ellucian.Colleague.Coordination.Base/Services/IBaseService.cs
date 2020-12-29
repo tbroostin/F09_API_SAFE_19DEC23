@@ -30,8 +30,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="ethosResourceRouteInfo">Ethos Resource Route Info </param>
         /// <param name="resournceIds">IEnumerable of the ids for the resources in guid form</param>
         /// <returns>List with all of the extended data if aavailable. Returns an empty list if none available or none configured</returns>
-        Task<IList<EthosExtensibleData>> GetExtendedEthosDataByResource(EthosResourceRouteInfo ethosResourceRouteInfo, IEnumerable<string> resournceIds);
+        Task<IList<EthosExtensibleData>> GetExtendedEthosDataByResource(EthosResourceRouteInfo ethosResourceRouteInfo, IEnumerable<string> resournceIds, bool bypassCache = false);
 
+      
         /// <summary>
         /// Import Extended Ethos Data
         /// </summary>
@@ -39,10 +40,39 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         Task ImportExtendedEthosData(Dictionary<string, string> importedDataList);
 
         /// <summary>
+        /// Returns the default API version when API builder is called without an accept header.
+        /// </summary>
+        /// <param name="resourceName"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        Task<string> GetEthosExtensibilityResourceDefaultVersion(string resourceName, bool bypassCache = false);
+
+        /// <summary>
         /// Gets the extended configuration available on a resource, returns an empty list if there are none
         /// </summary>
         /// <param name="ethosResourceRouteInfo">Ethos Resource Route Info </param>
         /// <returns>List with all of the extended configurations if aavailable. Returns an empty list if none available or none configured</returns>
-        Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(EthosResourceRouteInfo ethosResourceRouteInfo);
+        Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(EthosResourceRouteInfo ethosResourceRouteInfo, bool bypassCache = false);
+
+        /// <summary>
+        /// Gets the extended configuration available on a resource, returns an empty list if there are none
+        /// </summary>
+        /// <param name="ethosResourceRouteInfo">Ethos Resource Route Info </param>
+        /// <returns>List with all of the extended configurations if available. Returns an empty list if none available or none configured</returns>
+        Task<EthosExtensibleData> GetBulkExtendedEthosConfigurationByResource(EthosResourceRouteInfo ethosResourceRouteInfo, bool bypassCache = false);
+
+        /// <summary>
+        /// Gets  all extended configurations, returns null if there are none
+        /// </summary>
+        /// <param name="bypassCache">bypassCache </param>
+        /// <returns>List with all of the extended configurations if available. Returns an null if none available or none configured</returns>
+        Task<List<Domain.Base.Entities.EthosExtensibleData>> GetAllExtendedEthosConfigurations(bool bypassCache = false);
+
+        /// <summary>
+        /// Gets the extended configuration available on a resource, returns an empty list if there are none
+        /// </summary>
+        /// <param name="ethosResourceRouteInfo">Ethos Resource Route Info </param>
+        /// <returns>List with all of the extended configurations if aavailable. Returns an empty list if none available or none configured</returns>
+        Task<EthosApiConfiguration> GetEthosApiConfigurationByResource(EthosResourceRouteInfo ethosResourceRouteInfo, bool bypassCache = false);
     }
 }

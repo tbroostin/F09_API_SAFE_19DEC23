@@ -13,25 +13,25 @@ namespace Ellucian.Colleague.Dtos
         /// <summary>
         /// "The code for the grade scheme that may be used a reference or for reporting
         /// </summary>
-        [DataMember(Name = "code")]
+        [DataMember(Name = "code", EmitDefaultValue = false)]
         public string Code { get; set; }
 
         /// <summary>
         /// The full name of a grade scheme
         /// </summary>
-        [DataMember(Name = "title")]
+        [DataMember(Name = "title", EmitDefaultValue = false)]
         public string Title { get; set; }
 
         /// <summary>
         /// A designation of the level of instruction of a course or a program of study
         /// </summary>
-        [DataMember(Name = "academicLevel")]
+        [DataMember(Name = "academicLevel", EmitDefaultValue = false)]
         public AcademicLevelProperty AcademicLevel { get; set; }
 
         /// <summary>
         /// The date after which a grade scheme may be used.
         /// </summary>
-        [DataMember(Name = "startOn")]
+        [DataMember(Name = "startOn", EmitDefaultValue = false)]
         public DateTime? StartOn { get; set; }
 
         /// <summary>
@@ -43,7 +43,7 @@ namespace Ellucian.Colleague.Dtos
         /// <summary>
         /// The <see cref="GuidObject2">guid</see> for the grade scheme
         /// </summary>
-        [DataMember(Name = "detail")]
+        [DataMember(Name = "detail", EmitDefaultValue = false)]
         public GuidObject2 Detail { get; set; }
     }
 }

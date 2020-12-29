@@ -1,4 +1,4 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -35,6 +35,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         private Mock<IRoleRepository> roleRepoMock;
         private IRoleRepository roleRepo;
         private ICurrentUserFactory currentUserFactory;
+        private IConfigurationRepository _configurationRepository;
+        private Mock<IConfigurationRepository> _configurationRepositoryMock;
         private IEnumerable<Domain.HumanResources.Entities.JobChangeReason> allJobChangeReasons;
         private JobChangeReasonService jobChangeReasonService;
         private string guid = "625c69ff-280b-4ed3-9474-662a43616a8a";
@@ -50,6 +52,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             refRepo = refRepoMock.Object;
             adapterRegistryMock = new Mock<IAdapterRegistry>();
             adapterRegistry = adapterRegistryMock.Object;
+            _configurationRepositoryMock = new Mock<IConfigurationRepository>();
+            _configurationRepository = _configurationRepositoryMock.Object;
             roleRepoMock = new Mock<IRoleRepository>();
             roleRepo = roleRepoMock.Object;
             logger = new Mock<ILogger>().Object;
@@ -64,7 +68,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             personRole.AddPermission(permissionViewAnyPerson);
             roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-            jobChangeReasonService = new JobChangeReasonService(refRepo, adapterRegistry, currentUserFactory, roleRepo, logger);
+            jobChangeReasonService = new JobChangeReasonService(refRepo, adapterRegistry, currentUserFactory, _configurationRepository, roleRepo, logger);
         }
 
         [TestCleanup]

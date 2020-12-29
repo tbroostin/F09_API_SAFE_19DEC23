@@ -25,54 +25,54 @@ using Ellucian.Data.Colleague;
 
 namespace Ellucian.Colleague.Data.Base.DataContracts
 {
-	[GeneratedCodeAttribute("Colleague Data Contract Generator", "1.2")]
-	[DataContract(Name = "ProjectsLineItems")]
-	[ColleagueDataContract(GeneratedDateTime = "10/4/2017 10:44:56 AM", User = "dvcoll-schandraseka")]
-	[EntityDataContract(EntityName = "PROJECTS.LINE.ITEMS", EntityType = "PHYS")]
-	public class ProjectsLineItems : IColleagueGuidEntity
-	{
-		/// <summary>
-		/// Version
-		/// </summary>
-		[DataMember]
-		public int _AppServerVersion { get; set; }
+    [GeneratedCodeAttribute("Colleague Data Contract Generator", "1.2")]
+    [DataContract(Name = "ProjectsLineItems")]
+    [ColleagueDataContract(GeneratedDateTime = "10/4/2017 10:44:56 AM", User = "dvcoll-schandraseka")]
+    [EntityDataContract(EntityName = "PROJECTS.LINE.ITEMS", EntityType = "PHYS")]
+    public class ProjectsLineItems : IColleagueGuidEntity
+    {
+        /// <summary>
+        /// Version
+        /// </summary>
+        [DataMember]
+        public int _AppServerVersion { get; set; }
 
-		/// <summary>
-		/// Record Key
-		/// </summary>
-		[DataMember]
-		public string Recordkey { get; set; }
-		
-		public void setKey(string key)
-		{
-			Recordkey = key;
-		}
-	
-		/// <summary>
-		/// Record GUID
-		/// </summary>
-		[DataMember(Name = "RecordGuid")]
-		public string RecordGuid { get; set; }
+        /// <summary>
+        /// Record Key
+        /// </summary>
+        [DataMember]
+        public string Recordkey { get; set; }
 
-		/// <summary>
-		/// Record Model Name
-		/// </summary>
-		[DataMember(Name = "RecordModelName")]
-		public string RecordModelName { get; set; }	
-		
-		/// <summary>
-		/// CDD Name: PRJLN.PROJECT.ITEM.CODE
-		/// </summary>
-		[DataMember(Order = 0, Name = "PRJLN.PROJECT.ITEM.CODE")]
-		public string PrjlnProjectItemCode { get; set; }
-		
-	
-		// build up all the Associated objects and add them to the properties
-		public void buildAssociations()
-		{	
-			   
-		}
-	}
-	
-	// EntityAssociation classes
+        public void setKey(string key)
+        {
+            Recordkey = key;
+        }
+
+        /// <summary>
+        /// Record GUID
+        /// </summary>
+        [DataMember(Name = "RecordGuid")]
+        public string RecordGuid { get; set; }
+
+        /// <summary>
+        /// Record Model Name
+        /// </summary>
+        [DataMember(Name = "RecordModelName")]
+        public string RecordModelName { get; set; }
+
+        /// <summary>
+        /// CDD Name: PRJLN.PROJECT.ITEM.CODE
+        /// </summary>
+        [DataMember(Order = 0, Name = "PRJLN.PROJECT.ITEM.CODE")]
+        public string PrjlnProjectItemCode { get; set; }
+
+
+        // build up all the Associated objects and add them to the properties
+        public void buildAssociations()
+        {
+
+        }
+    }
+
+    // EntityAssociation classes
 }

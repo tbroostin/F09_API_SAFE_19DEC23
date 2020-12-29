@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -10,6 +10,7 @@ using Ellucian.Colleague.Data.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Tests;
+using Ellucian.Data.Colleague;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -35,6 +36,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private GlAccountValidationResponse glAccountValidationResponse;
         private string glAccount = "11_00_01_02_ACTIV_50000";
         private string fiscalYear = DateTime.Now.Year.ToString();
+        string[] activeGlAcctsArray;
+        List<string> activeGlAccounts;
 
         [TestInitialize]
         public void Initialize()
@@ -42,11 +45,19 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             this.MockInitialize();
             testGlAccountRepository = new TestGlAccountRepository();
             testGeneralLedgerAccountRepository = new TestGeneralLedgerAccountRepository();
-            actualRepository = new GeneralLedgerAccountRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+            actualRepository = new GeneralLedgerAccountRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, null);
 
             glAccountRecord = new GlAccts();
             glAccountsDescriptionResponse = new GetGlAccountDescriptionResponse();
+
+
+            activeGlAccounts = new List<string>()
+            {
+                "11_01_01_00_00000_75075"
+            };
+
             InitializeMockStatements();
+
         }
 
         [TestCleanup]
@@ -55,6 +66,29 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             actualRepository = null;
             glAccountRecord = null;
             glAccountValidationResponse = null;
+            activeGlAcctsArray = null;
+            activeGlAccounts = null;
+        }
+        #endregion
+
+        #region GetActiveGeneralLedgerAccounts
+        [TestMethod]
+        public async Task GetActiveGeneralLedgerAccounts_NullAccounts()
+        {
+            var activeGlAccounts = await actualRepository.GetActiveGeneralLedgerAccounts(null);
+            Assert.IsNotNull(activeGlAccounts);
+            Assert.IsFalse(activeGlAccounts.Any());
+        }
+
+        [TestMethod]
+        public async Task GetActiveGeneralLedgerAccounts_ActiveAccounts()
+        {
+            List<string> testRepositoryActiveAccounts = await testGeneralLedgerAccountRepository.GetActiveGeneralLedgerAccounts(activeGlAccounts);
+            var actualActiveGlAccounts = await actualRepository.GetActiveGeneralLedgerAccounts(activeGlAccounts);
+            foreach(var account in actualActiveGlAccounts)
+            {
+                Assert.IsTrue(testRepositoryActiveAccounts.Contains(account));
+            }
         }
         #endregion
 
@@ -545,6 +579,76 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         #endregion
         #endregion
 
+        #region  GetGlComponentDescriptionsByIdsAndComponentTypeAsync
+
+        [TestMethod]
+        public async Task GetGlComponentDescriptionsByIdsAndComponentTypeAsync_FundType()
+        {
+            //For Subtotal Criteria with Fund Component types
+            var fdDescriptionsDictionaryResult = await actualRepository.GetGlComponentDescriptionsByIdsAndComponentTypeAsync(testGlAccountRepository.FundTypeGlNumbers.Distinct(), GeneralLedgerComponentType.Fund);
+            foreach (var item in fdDescriptionsDictionaryResult)
+            {
+                Assert.IsTrue(item.Value.Contains("Fund"));
+            }           
+        }
+
+        [TestMethod]
+        public async Task GetGlComponentDescriptionsByIdsAndComponentTypeAsync_LocationType()
+        {
+            //For Subtotal Criteria with Location Component types
+            var loDescriptionsDictionaryResult = await actualRepository.GetGlComponentDescriptionsByIdsAndComponentTypeAsync(testGlAccountRepository.LocationTypeGlNumbers.Distinct(), GeneralLedgerComponentType.Location);
+            foreach (var item in loDescriptionsDictionaryResult)
+            {
+                Assert.IsTrue(item.Value.Contains("Location"));
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlComponentDescriptionsByIdsAndComponentTypeAsync_SourceType()
+        {
+            //For Subtotal Criteria with Source Component types
+            var soDescriptionsDictionaryResult = await actualRepository.GetGlComponentDescriptionsByIdsAndComponentTypeAsync(testGlAccountRepository.SourceTypeGlNumbers.Distinct(), GeneralLedgerComponentType.Source);
+            foreach (var item in soDescriptionsDictionaryResult)
+            {
+                Assert.IsTrue(item.Value.Contains("Source"));
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlComponentDescriptionsByIdsAndComponentTypeAsync_FunctionType()
+        {
+            //For Subtotal Criteria with Function Component types
+            var fnDescriptionsDictionaryResult = await actualRepository.GetGlComponentDescriptionsByIdsAndComponentTypeAsync(testGlAccountRepository.FunctionTypeGlNumbers.Distinct(), GeneralLedgerComponentType.Function);
+            foreach (var item in fnDescriptionsDictionaryResult)
+            {
+                Assert.IsTrue(item.Value.Contains("Function"));
+            }
+        }
+
+       
+        [TestMethod]
+        public async Task GetGlComponentDescriptionsByIdsAndComponentTypeAsync_UnitType()
+        {
+            //For Subtotal Criteria with Unit Component types
+            var unDescriptionsDictionaryResult = await actualRepository.GetGlComponentDescriptionsByIdsAndComponentTypeAsync(testGlAccountRepository.UnitTypeGlNumbers.Distinct(), GeneralLedgerComponentType.Unit);
+            foreach (var item in unDescriptionsDictionaryResult)
+            {
+                Assert.IsTrue(item.Value.Contains("Unit"));
+            }
+        }
+        [TestMethod]
+        public async Task GetGlComponentDescriptionsByIdsAndComponentTypeAsync_ObjectType()
+        {
+            //For Subtotal Criteria with Object Component types
+            var obDescriptionsDictionaryResult = await actualRepository.GetGlComponentDescriptionsByIdsAndComponentTypeAsync(testGlAccountRepository.ObjectTypeGlNumbers.Distinct(), GeneralLedgerComponentType.Object);
+            foreach (var item in obDescriptionsDictionaryResult)
+            {
+                Assert.IsTrue(item.Value.Contains("Object"));
+            }
+        }
+
+        #endregion
+
         #region GetAsync
         [TestMethod]
         public async Task GetAsync_HappyPath()
@@ -987,6 +1091,16 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             dataReaderMock.Setup(dr => dr.ReadRecordAsync<GlAccts>(It.IsAny<string>(), true)).Returns(() =>
             {
                 return Task.FromResult(glAccountRecord);
+            });
+
+            // Mock DataReader.SelectAsync on active GL.ACCTS
+            activeGlAcctsArray = new string[]
+            {
+                    "11_01_01_00_00000_75075"
+            };
+            dataReaderMock.Setup(dr => dr.SelectAsync("GL.ACCTS", It.IsAny<string[]>(), It.IsAny<string>())).Returns(() =>
+            {
+                return Task.FromResult(activeGlAcctsArray);
             });
         }
         #endregion

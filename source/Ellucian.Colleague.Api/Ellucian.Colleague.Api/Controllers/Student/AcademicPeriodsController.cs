@@ -162,14 +162,18 @@ namespace Ellucian.Colleague.Api.Controllers
                 if (CheckForEmptyFilterParameters())
                     return new List<Dtos.AcademicPeriod4>(new List<Dtos.AcademicPeriod4>());
 
+                var filterQualifiers = GetFilterQualifiers(_logger);
+
                 var registrationStatus = acadPeriod.RegistrationStatus != null ?
                     acadPeriod.RegistrationStatus.ToString() : string.Empty;
                 var termCode = acadPeriod.Code != null ?
                     acadPeriod.Code : string.Empty;
                 var category = acadPeriod.Category != null && acadPeriod.Category.Type != null ?
                     acadPeriod.Category.Type.ToString() : string.Empty;
+                var startOn = acadPeriod.StartOn.HasValue ? acadPeriod.StartOn.Value : default(DateTimeOffset?);
+                var endOn = acadPeriod.EndOn.HasValue ? acadPeriod.EndOn.Value : default( DateTimeOffset? );
 
-                var items = await _academicPeriodService.GetAcademicPeriods4Async(bypassCache, registrationStatus, termCode, category);
+                var items = await _academicPeriodService.GetAcademicPeriods4Async(bypassCache, registrationStatus, termCode, category, startOn, endOn, filterQualifiers);
 
                 AddEthosContextProperties(
                   await _academicPeriodService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -243,7 +247,7 @@ namespace Ellucian.Colleague.Api.Controllers
                   await _academicPeriodService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                       new List<string>() { id }));
 
-                return await _academicPeriodService.GetAcademicPeriodByGuid3Async(id);
+                return await _academicPeriodService.GetAcademicPeriodByGuid3Async(id, bypassCache);
             }
             catch (KeyNotFoundException e)
             {
@@ -282,7 +286,7 @@ namespace Ellucian.Colleague.Api.Controllers
                   await _academicPeriodService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                       new List<string>() { id }));
 
-                return await _academicPeriodService.GetAcademicPeriodByGuid4Async(id);
+                return await _academicPeriodService.GetAcademicPeriodByGuid4Async(id, bypassCache);
             }
             catch (KeyNotFoundException e)
             {

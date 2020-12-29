@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Ellucian.Colleague.Api.Client</RootNamespace>
     <AssemblyName>Ellucian.Colleague.Api.Client</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <EnableCodeInspectionOnBuild>true</EnableCodeInspectionOnBuild>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -38,12 +38,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Ellucian.Rest.Client, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Rest.Client.1.0.0.186\lib\net451\Ellucian.Rest.Client.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Ellucian.Rest.Client.1.0.0.192\lib\net451\Ellucian.Rest.Client.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Web.Utility, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.181\lib\net451\Ellucian.Web.Utility.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.184\lib\net451\Ellucian.Web.Utility.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -63,6 +61,7 @@
     </Reference>
     <Reference Include="System.Net.Http.WebRequest" />
     <Reference Include="System.Web" />
+    <Reference Include="System.Web.Mvc, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -71,6 +70,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ColleagueApiClient.Base.cs" />
+    <Compile Include="ColleagueApiClient.BudgetManagement.cs" />
     <Compile Include="ColleagueApiClient.ColleagueFinance.cs" />
     <Compile Include="ColleagueApiClient.cs" />
     <Compile Include="ColleagueApiClient.F09.cs" />
@@ -82,14 +82,20 @@
     <Compile Include="Core\ColleagueServiceClient.cs" />
     <Compile Include="Core\ColleagueServiceClientManager.cs" />
     <Compile Include="Core\LoggingRestrictions.cs" />
+    <Compile Include="Exceptions\AdvisingException.cs" />
     <Compile Include="Exceptions\AdvisingExceptionCodes.cs" />
+    <Compile Include="Exceptions\DegreePlanException.cs" />
+    <Compile Include="Exceptions\DegreePlanExceptionCodes.cs" />
     <Compile Include="Exceptions\ExistingResourceException.cs" />
     <Compile Include="Exceptions\LoginDisabledException.cs" />
     <Compile Include="Exceptions\PasswordExpiredException.cs" />
     <Compile Include="Exceptions\ListenerNotFoundException.cs" />
+    <Compile Include="Exceptions\TotalCompensationException.cs" />
+    <Compile Include="Exceptions\TotalCompensationExceptionCodes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ColleagueApiClient.Planning.cs" />
     <None Include="app.config">
       <SubType>Designer</SubType>
     </None>
@@ -102,9 +108,17 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.Base\Ellucian.Colleague.Domain.Base.csproj">
+      <Project>{A3B49510-737B-4FFD-8BCA-17BCCE7FBAF7}</Project>
+      <Name>Ellucian.Colleague.Domain.Base</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Ellucian.Colleague.Dtos.Base\Ellucian.Colleague.Dtos.Base.csproj">
       <Project>{A147BD58-ECC6-409B-A633-128946AAA456}</Project>
       <Name>Ellucian.Colleague.Dtos.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.BudgetManagement\Ellucian.Colleague.Dtos.BudgetManagement.csproj">
+      <Project>{44E7004A-038F-44D3-97F3-0EBAFFDCBC20}</Project>
+      <Name>Ellucian.Colleague.Dtos.BudgetManagement</Name>
     </ProjectReference>
     <ProjectReference Include="..\Ellucian.Colleague.Dtos.ColleagueFinance\Ellucian.Colleague.Dtos.ColleagueFinance.csproj">
       <Project>{ca034d7a-0963-4463-b974-bef18be515ae}</Project>
@@ -125,6 +139,10 @@
     <ProjectReference Include="..\Ellucian.Colleague.Dtos.HumanResources\Ellucian.Colleague.Dtos.HumanResources.csproj">
       <Project>{1a7b9d0e-1665-492c-b287-0d89710408e5}</Project>
       <Name>Ellucian.Colleague.Dtos.HumanResources</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.Planning\Ellucian.Colleague.Dtos.Planning.csproj">
+      <Project>{BA6CC859-0852-4027-AABF-8536C495D239}</Project>
+      <Name>Ellucian.Colleague.Dtos.Planning</Name>
     </ProjectReference>
     <ProjectReference Include="..\Ellucian.Colleague.Dtos.Student\Ellucian.Colleague.Dtos.Student.csproj">
       <Project>{28EB3CAC-2FA7-401E-8246-0C03C50FDEDA}</Project>

@@ -1,4 +1,4 @@
-﻿// Copyright 2015 - 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015 - 2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -172,6 +172,41 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
                 }
             }
         }
+
+        /// <summary>
+        /// Vendor Address lines for a voucher.        
+        /// </summary>
+        public List<string> VendorAddressLines { get; set; }
+
+        /// <summary>
+        /// Vendor City for a voucher.
+        /// </summary>
+        public string VendorCity { get; set; }
+
+        /// <summary>
+        /// Vendor state for a voucher.
+        /// </summary>
+        public string VendorState { get; set; }
+
+        /// <summary>
+        /// Vendor postal code for a voucher.
+        /// </summary>
+        public string VendorZip { get; set; }
+
+        /// <summary>
+        /// Vendor country for a voucher.
+        /// </summary>
+        public string VendorCountry { get; set; }
+
+        /// <summary>
+        /// Voucher status date
+        /// </summary>
+        public DateTime StatusDate { get; set; }
+
+        /// <summary>
+        /// List of email addresses - confirmation email notifications would be sent to these email addresses on create / update .
+        /// </summary>
+        public List<string> ConfirmationEmailAddresses { get; set; }
 
         /// <summary>
         /// This constructor initializes the voucher domain entity.

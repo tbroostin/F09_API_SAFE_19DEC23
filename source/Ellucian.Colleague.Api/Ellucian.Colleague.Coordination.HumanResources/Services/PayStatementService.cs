@@ -1,4 +1,4 @@
-﻿/* Copyright 2017-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2019 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.Base.Reports;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -259,8 +259,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                         internalStopWatch.Start();
                     }
                     var byteArray = reportService.RenderReport();
-                    reportService.ResetReport();
-
+                    
                     if (logger.IsErrorEnabled)
                     {
                         internalStopWatch.Stop();
@@ -278,6 +277,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 catch (Exception e)
                 {
                     logger.Error(e, string.Format("Unable to create pdf for pay statement {0}", payStatementSource.Id));
+                }
+                finally
+                {
+                    reportService.ResetReport();
                 }
             }
             if (logger.IsErrorEnabled)
@@ -368,7 +371,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             //apply the pay Date filter if specified
             if (payDateFilter.HasValue)
-            {       
+            {
                 summaryEntities = summaryEntities.Where(s => s.PayDate == payDateFilter.Value).ToList();
                 if (summaryEntities == null || !summaryEntities.Any())
                 {
@@ -380,14 +383,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             //filter the list of personids to the ones who have pay statement sources, potentially filtered by pay date
             personIds = summaryEntities.Select(s => s.EmployeeId).Distinct().ToList();
             if (!personIds.Any())
-            {                
+            {
                 logger.Info("no statement summaries for the selected employee ids");
                 return new List<PayStatementSummary>();
             }
 
             //adjusted ytd start date filter is Jan 1 of the startDateFilter year
             //this ensures we get all the payroll register entries to computed YTD values
-            var adjustedYtdStartDateFilter = startDateFilter.HasValue ? new DateTime(startDateFilter.Value.Year, 1, 1) : (DateTime?)null; 
+            var adjustedYtdStartDateFilter = startDateFilter.HasValue ? new DateTime(startDateFilter.Value.Year, 1, 1) : (DateTime?)null;
             var payrollRegister = await payrollRegisterRepository.GetPayrollRegisterByEmployeeIdsAsync(personIds, startDateFilter, endDateFilter);
             if (payrollRegister == null || !payrollRegister.Any())
             {

@@ -1,4 +1,4 @@
-﻿/*Copyright 2014-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2014-2019 Ellucian Company L.P. and its affiliates.*/
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -128,7 +128,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.FinancialAid
             public void NumberOfKnownPropertiesTest()
             {
                 var StudentLoanLimitationProperties = typeof(StudentLoanLimitation).GetProperties(BindingFlags.Public | BindingFlags.Instance);
-                Assert.AreEqual(5, StudentLoanLimitationProperties.Length);
+                Assert.AreEqual(6, StudentLoanLimitationProperties.Length);
             }
 
             [TestMethod]

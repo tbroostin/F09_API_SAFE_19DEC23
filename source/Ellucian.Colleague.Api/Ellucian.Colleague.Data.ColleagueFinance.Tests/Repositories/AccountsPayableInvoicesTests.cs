@@ -16,6 +16,9 @@ using Moq;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Base.Transactions;
+using Ellucian.Web.Http.Configuration;
+using Ellucian.Colleague.Domain.Base.Services;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 {
@@ -26,10 +29,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         // So using the already created Mock data that is used there and add to it for testing
         // this accounts payable invoices tests.
         #region Initialize and Cleanup
+        ApiSettings apiSettings;
 
         private AccountsPayableInvoicesRepository accountsPayableInvoicesRepo;
+        protected Mock<IColleagueTransactionFactory> transFactoryMock;        
         private Mock<IColleagueTransactionInvoker> transactionInvoker = null;
-        private TestVoucherRepository testVoucherRepository;
+        private TestAccountsPayableInvoicesRepository testVoucherRepository;
         private AccountsPayableInvoices accountsPayableInvoicesEntity;
         private Voucher voucherDomainEntity;
         UpdateVouchersIntegrationResponse response;
@@ -39,6 +44,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private TxGetHierarchyNameResponse hierarchyNameResponse;
         private Collection<Opers> opersResponse;
         System.Collections.ObjectModel.Collection<Ellucian.Colleague.Data.Base.DataContracts.Person> people;
+        System.Collections.ObjectModel.Collection<PurchaseOrders> purchaseOrders;
+        System.Collections.ObjectModel.Collection<RcVouSchedules> recurringVouchers;
         private RcVouSchedules recurringVoucherDataContract;
         private Collection<Opers> opersDataContracts;
         private Collection<Projects> projectDataContracts;
@@ -60,15 +67,22 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
             // Set up a mock transaction invoker for the colleague transaction that gets
             // the GL accounts descriptions for the GL accounts in a project line item.
+            dataReaderMock = new Mock<IColleagueDataReader>();
+
+            // transaction factory mock
+            transFactoryMock = new Mock<IColleagueTransactionFactory>();
+
             transactionInvoker = new Mock<IColleagueTransactionInvoker>();
             transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transactionInvoker.Object);
+            transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataReaderMock.Object);
 
             // Initialize the Voucher repository
-            testVoucherRepository = new TestVoucherRepository();
+            testVoucherRepository = new TestAccountsPayableInvoicesRepository();
             this.voucherDataContract = new Vouchers();
             personContract = new Base.DataContracts.Person();
             Taxes = new List<LineItemTax>();
-
+            apiSettings = new ApiSettings("TEST");
+                        
             BuildData();
             accountsPayableInvoicesRepo = new AccountsPayableInvoicesRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
             versionNumber = 2;
@@ -79,12 +93,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         {
             cacheProviderMock = null;
             transFactoryMock = null;
-            transFactoryMock = null;
             loggerMock = null;
             dataReaderMock = null;
             hierarchyNameResponse = null;
             transactionInvoker = null;
             accountsPayableInvoicesEntity = null;
+            apiSettings = null;
         }
         #endregion
 
@@ -100,6 +114,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
                 //adding values that are missing in defaults of Vouchers
                 this.voucherDataContract.VouDiscAmt = 1.5m;
+                this.voucherDataContract.VouManualCashDisc = "Y";
                 this.voucherDataContract.VouAddressId = "112233";
                 this.voucherDataContract.VouNet = 2.5m;
                 this.voucherDataContract.VouPayFlag = "Y";
@@ -198,6 +213,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     Assert.AreEqual(dtoItem.ItmTaxFormCode, lineItem.TaxFormCode);
                     Assert.AreEqual(dtoItem.ItmTaxFormLoc, lineItem.TaxFormLocation);
                     Assert.AreEqual(dtoItem.ItmCommodityCode, lineItem.CommodityCode);
+                    Assert.AreEqual(dtoItem.ItmFixedAssetsFlag, lineItem.FixedAssetsFlag);
                     Assert.AreEqual(dtoItem.ItmVouCashDiscAmt, lineItem.CashDiscountAmount);
                     Assert.AreEqual(dtoItem.ItmVouTradeDiscAmt, lineItem.TradeDiscountAmount);
                     Assert.AreEqual(dtoItem.ItmVouTradeDiscPct, lineItem.TradeDiscountPercent);
@@ -271,13 +287,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                         rcVouSchedulesIds.Add(vouRcvsId);
                         rcVouSched = new RcVouSchedules() { Recordkey = vouRcvsId, RcvsRcVoucher = "RV000001" };
                     }
-                    this.voucherDataContract.VouItemsId = null;
                     dataContractVouchers.Add(this.voucherDataContract);
                 }
-
-
                 dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "1" });
-
                 dataReaderMock.Setup(repo => repo.ReadRecordAsync<RcVouSchedules>(It.IsAny<string>(), true)).ReturnsAsync(rcVouSched);
                 dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string>())).ReturnsAsync(voucherIds);
                 dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(voucherIds);
@@ -289,8 +301,38 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
                 var purchaseOrder = new PurchaseOrders() { PoNo = "P0000001" };
                 dataReaderMock.Setup(repo => repo.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).ReturnsAsync(purchaseOrder);
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Items>("ITEMS", It.IsAny<string[]>(), true)).ReturnsAsync(this.itemsDataContracts);
 
-                var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100);
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 21,
+                    CacheName = "AllAccountsPayableInvoices",
+                    Entity = "VOUCHERS",
+                    Sublist = voucherIds.ToList(),
+                    TotalCount = 21,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+                };
+                transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
+                var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, It.IsAny<string>());
 
                 Assert.AreEqual(dataContractVouchers.Count(), accountsPayables.Item1.Count());
 
@@ -428,7 +470,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                         rcVouSched = new RcVouSchedules() { Recordkey = vouRcvsId, RcvsRcVoucher = "RV000001" };
                     }
 
-                    this.voucherDataContract.VouItemsId = null;
                     dataContractVouchers.Add(this.voucherDataContract);
                 }
 
@@ -443,24 +484,518 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
                 var purchaseOrder = new PurchaseOrders() { PoNo = "P0000001" };
                 dataReaderMock.Setup(repo => repo.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).ReturnsAsync(purchaseOrder);
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Items>("ITEMS", It.IsAny<string[]>(), true)).ReturnsAsync(this.itemsDataContracts);
 
-                var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 3);
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 3,
+                    CacheName = "AllAccountsPayableInvoices",
+                    Entity = "VOUCHERS",
+                    Sublist = voucherIds.ToList(),
+                    TotalCount = 21,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+                };
+                transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
+                var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 3, It.IsAny<string>());
 
                 Assert.AreEqual(3, accountsPayables.Item1.Count());
 
             }
         }
 
+
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(RepositoryException))]
+        public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesAsync_BulkReadNullRecord()
+        {
+            {
+                dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
+
+
+                dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string>())).ReturnsAsync(voucherIds);
+                dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(voucherIds);
+                dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(voucherIds);
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Vouchers>("VOUCHERS", It.IsAny<string[]>(), true)).ReturnsAsync(null);
+
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
+                var purchaseOrder = new PurchaseOrders() { PoNo = "P0000001" };
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).ReturnsAsync(purchaseOrder);
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Items>("ITEMS", It.IsAny<string[]>(), true)).ReturnsAsync(this.itemsDataContracts);
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 3,
+                    CacheName = "AllAccountsPayableInvoices",
+                    Entity = "VOUCHERS",
+                    Sublist = voucherIds.ToList(),
+                    TotalCount = 21,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+                };
+                transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
+                var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 3, It.IsAny<string>());
+
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(RepositoryException))]
+        public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesAsync_BulkReadPONullRecord()
+        {
+            {
+                dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
+                Collection<DataContracts.Vouchers> dataContractVouchers = new Collection<DataContracts.Vouchers>();
+                for (int i = 0; i < 3; i++)
+                {
+                    var voucherId = voucherIds[i];
+                    this.voucherDataContract = new DataContracts.Vouchers();
+                    this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
+                    ConvertDomainEntitiesIntoDataContracts();
+                    VouchersVouTaxes tax = new VouchersVouTaxes() { VouTaxAmtsAssocMember = Taxes[0].TaxAmount, VouTaxCodesAssocMember = Taxes[0].TaxCode };
+                    this.voucherDataContract.VouTaxesEntityAssociation.Add(tax);
+                    this.voucherDataContract.VouMiscName = new List<string>();
+                    if (string.IsNullOrEmpty(this.voucherDataContract.VouVendor))
+                    {
+                        this.voucherDataContract.VouMiscName.Add("Test misc Name");
+                    }
+                    this.voucherDataContract.VouPoNo = "123";
+                    dataContractVouchers.Add(this.voucherDataContract);
+                }
+
+
+                dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string>())).ReturnsAsync(voucherIds);
+                dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(voucherIds);
+                dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(voucherIds);
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Vouchers>("VOUCHERS", It.IsAny<string[]>(), true)).ReturnsAsync(dataContractVouchers);
+
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
+                var purchaseOrder = new PurchaseOrders() { PoNo = "P0000001" };
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<PurchaseOrders>("PURCHASE.ORDERS", It.IsAny<string[]>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Items>("ITEMS", It.IsAny<string[]>(), true)).ReturnsAsync(this.itemsDataContracts);
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 3,
+                    CacheName = "AllAccountsPayableInvoices",
+                    Entity = "VOUCHERS",
+                    Sublist = voucherIds.ToList(),
+                    TotalCount = 21,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+                };
+                transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
+                var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 3, It.IsAny<string>());
+
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(RepositoryException))]
+        public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesAsync_BulkReadRecNullRecord()
+        {
+            {
+                dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
+                Collection<DataContracts.Vouchers> dataContractVouchers = new Collection<DataContracts.Vouchers>();
+                for (int i = 0; i < 3; i++)
+                {
+                    var voucherId = voucherIds[i];
+                    this.voucherDataContract = new DataContracts.Vouchers();
+                    this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
+                    ConvertDomainEntitiesIntoDataContracts();
+                    VouchersVouTaxes tax = new VouchersVouTaxes() { VouTaxAmtsAssocMember = Taxes[0].TaxAmount, VouTaxCodesAssocMember = Taxes[0].TaxCode };
+                    this.voucherDataContract.VouTaxesEntityAssociation.Add(tax);
+                    this.voucherDataContract.VouMiscName = new List<string>();
+                    if (string.IsNullOrEmpty(this.voucherDataContract.VouVendor))
+                    {
+                        this.voucherDataContract.VouMiscName.Add("Test misc Name");
+                    }
+                    this.voucherDataContract.VouPoNo = string.Empty;
+                    this.voucherDataContract.VouRcvsId = "123";
+                    dataContractVouchers.Add(this.voucherDataContract);
+                }
+
+
+                dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string>())).ReturnsAsync(voucherIds);
+                dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(voucherIds);
+                dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(voucherIds);
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Vouchers>("VOUCHERS", It.IsAny<string[]>(), true)).ReturnsAsync(dataContractVouchers);
+
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
+                var purchaseOrder = new RcVouSchedules() { Recordkey = "0000002", RcvsRcVoucher = "R0002" };
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<RcVouSchedules>("RC.VOU.SCHEDULES", It.IsAny<string[]>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Items>("ITEMS", It.IsAny<string[]>(), true)).ReturnsAsync(this.itemsDataContracts);
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 3,
+                    CacheName = "AllAccountsPayableInvoices",
+                    Entity = "VOUCHERS",
+                    Sublist = voucherIds.ToList(),
+                    TotalCount = 21,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+                };
+                transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
+                var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 3, It.IsAny<string>());
+
+            }
+        }
+
+        [TestMethod]
+        public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesAsync_InvoiceNumber_Filter()
+        {
+            {
+
+                List<string> rcVouSchedulesIds = new List<string>();
+
+                Collection<DataContracts.Vouchers> dataContractVouchers = new Collection<DataContracts.Vouchers>();
+                RcVouSchedules rcVouSched = new RcVouSchedules();
+
+
+                for (int i = 0; i < 3; i++)
+                {
+                    var voucherId = voucherIds[i];
+                    this.voucherDataContract = new DataContracts.Vouchers();
+                    this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
+                    ConvertDomainEntitiesIntoDataContracts();
+                    VouchersVouTaxes tax = new VouchersVouTaxes() { VouTaxAmtsAssocMember = Taxes[0].TaxAmount, VouTaxCodesAssocMember = Taxes[0].TaxCode };
+                    this.voucherDataContract.VouTaxesEntityAssociation.Add(tax);
+                    this.voucherDataContract.VouMiscName = new List<string>();
+                    if (string.IsNullOrEmpty(this.voucherDataContract.VouVendor))
+                    {
+                        this.voucherDataContract.VouMiscName.Add("Test misc Name");
+                    }
+
+                    if (!string.IsNullOrEmpty(this.voucherDataContract.VouRcvsId))
+                    {
+                        string vouRcvsId = this.voucherDataContract.VouRcvsId;
+                        rcVouSchedulesIds.Add(vouRcvsId);
+                        rcVouSched = new RcVouSchedules() { Recordkey = vouRcvsId, RcvsRcVoucher = "RV000001" };
+                    }
+
+                    dataContractVouchers.Add(this.voucherDataContract);
+                }
+
+                dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
+
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<RcVouSchedules>(It.IsAny<string>(), true)).ReturnsAsync(rcVouSched);
+                dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string>())).ReturnsAsync(voucherIds);
+                dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(voucherIds);
+                dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(voucherIds);
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Vouchers>("VOUCHERS", It.IsAny<string[]>(), true)).ReturnsAsync(dataContractVouchers);
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>("1", true)).ReturnsAsync(dataContractVouchers.FirstOrDefault(x=>x.Recordkey == "1"));
+
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
+                var purchaseOrder = new PurchaseOrders() { PoNo = "P0000001" };
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).ReturnsAsync(purchaseOrder);
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Items>("ITEMS", It.IsAny<string[]>(), true)).ReturnsAsync(this.itemsDataContracts);
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 3,
+                    CacheName = "AllAccountsPayableInvoices",
+                    Entity = "VOUCHERS",
+                    Sublist = voucherIds.ToList(),
+                    TotalCount = 21,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+                };
+                transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
+                var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 3, "1");
+
+                Assert.AreEqual("1", accountsPayables.Item1.FirstOrDefault().Id);
+
+            }
+        }
+
+        [TestMethod]
+        public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesAsync_Invoice_FilterVouchers_Null()
+        {
+            dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string>())).ReturnsAsync(voucherIds);
+            dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>("1", true)).ReturnsAsync(null);
+
+            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
+
+            transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(null);
+
+            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, "1");
+            Assert.AreEqual(0, accountsPayables.Item1.Count());
+
+        }
+
+        [TestMethod]
+        public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesAsync_Invoice_FilterVouchers_StatusX()
+        {
+            string voucherId = "1";
+            this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
+            ConvertDomainEntitiesIntoDataContracts();
+            dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
+            voucherDataContract.VouStatus = new List<string> { "X" };
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
+
+            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
+
+            transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(null);
+
+            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, "1");
+            Assert.AreEqual(0, accountsPayables.Item1.Count());
+
+        }
+
+        [TestMethod]
+        public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesAsync_Invoice_FilterVouchers_StatusU()
+        {
+            string voucherId = "1";
+            this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
+            ConvertDomainEntitiesIntoDataContracts();
+            dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
+            voucherDataContract.VouStatus = new List<string> { "U" };
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
+
+            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
+
+            transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(null);
+
+            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, "1");
+            Assert.AreEqual(0, accountsPayables.Item1.Count());
+
+        }
+
+
+        [TestMethod]
+        public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesAsync_Invoice_FilterVouchers_noLineItem()
+        {
+            string voucherId = "1";
+            this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
+            ConvertDomainEntitiesIntoDataContracts();
+            dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
+            voucherDataContract.VouItemsId = null;
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
+
+            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
+
+            transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(null);
+
+            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, "1");
+            Assert.AreEqual(0, accountsPayables.Item1.Count());
+
+        }
+
+        [TestMethod]
+        public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesAsync_Invoice_FilterVouchers_InvalidAPType()
+        {
+            string voucherId = "1";
+            this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
+            ConvertDomainEntitiesIntoDataContracts();
+            dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
+            voucherDataContract.VouApType = "123";
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
+
+            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
+
+            transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(null);
+
+            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, "1");
+            Assert.AreEqual(0, accountsPayables.Item1.Count());
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(RepositoryException))]
+        public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesAsync_Invoice_FilterVouchers_Null_Person()
+        {
+            string voucherId = "1";
+            this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
+            ConvertDomainEntitiesIntoDataContracts();
+            dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
+            voucherDataContract.VouStatus = new List<string> { "O" };
+            voucherDataContract.VouVendor = "123";
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Base.DataContracts.Person>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(null);
+
+            transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(null);
+
+            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, "1");
+            Assert.AreEqual(0, accountsPayables.Item1.Count());
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(RepositoryException))]
+        public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesAsync_Invoice_FilterVouchers_InvalidPO()
+        {
+            string voucherId = "1";
+            this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
+            ConvertDomainEntitiesIntoDataContracts();
+            dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
+            voucherDataContract.VouPoNo = "123";
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
+
+            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
+
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).ReturnsAsync(null);
+
+            transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(null);
+
+            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, "1");
+            Assert.AreEqual(0, accountsPayables.Item1.Count());
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(RepositoryException))]
+        public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesAsync_Invoice_FilterVouchers_InvalidRecVou()
+        {
+            string voucherId = "1";
+            this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
+            ConvertDomainEntitiesIntoDataContracts();
+            dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
+            voucherDataContract.VouRcvsId = "123";
+            voucherDataContract.VouPoNo = string.Empty;
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
+
+            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
+
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<RcVouSchedules>(It.IsAny<string>(), true)).ReturnsAsync(null);
+
+            transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(null);
+
+            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, "1");
+            Assert.AreEqual(0, accountsPayables.Item1.Count());
+
+        }
+
+        [TestMethod]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesAsync_Vouchers_Null()
         {
             dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string>())).ReturnsAsync(voucherIds);
+            dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Vouchers>("VOUCHERS", It.IsAny<string[]>(), true)).ReturnsAsync(null);
 
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
 
-            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100);
+            transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(null);
+
+            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, It.IsAny<string>());
+            Assert.AreEqual(0, accountsPayables.Item1.Count());
+
+        }
+
+        [TestMethod]
+        public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesAsync_NoApType()
+        {
+            dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string>())).ReturnsAsync(voucherIds);
+            dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[0]);
+            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Vouchers>("VOUCHERS", It.IsAny<string[]>(), true)).ReturnsAsync(null);
+
+            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
+
+            transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(null);
+
+            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, It.IsAny<string>());
+            Assert.AreEqual(0, accountsPayables.Item1.Count());
 
         }
 
@@ -484,7 +1019,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_GUID_RecordNotVoucher()
         {
             GuidLookupResult result = new GuidLookupResult() { Entity = "PERSONS", PrimaryKey = "1", SecondaryKey = "" };
@@ -503,14 +1038,54 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
             ConvertDomainEntitiesIntoDataContracts();
             dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
-
+            voucherDataContract.VouStatus = new List<string> { "O" };
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<Base.DataContracts.Person>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(null);
             var accountsPayable = await accountsPayableInvoicesRepo.GetAccountsPayableInvoicesByGuidAsync(guid, false);
         }
 
-       
         [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
+        [ExpectedException(typeof(KeyNotFoundException))]
+        public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_ReadRecord_Null()
+        {
+            string voucherId = "1";
+            this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
+            ConvertDomainEntitiesIntoDataContracts();
+            dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
+            voucherDataContract.VouStatus = new List<string> { "O" };
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(null);
+            var accountsPayable = await accountsPayableInvoicesRepo.GetAccountsPayableInvoicesByGuidAsync(guid, false);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_Status_X()
+        {
+            string voucherId = "1";
+            this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
+            ConvertDomainEntitiesIntoDataContracts();
+            dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
+            voucherDataContract.VouStatus = new List<string> { "X" };
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
+            var accountsPayable = await accountsPayableInvoicesRepo.GetAccountsPayableInvoicesByGuidAsync(guid, false);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_Status_U()
+        {
+            string voucherId = "1";
+            this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
+            ConvertDomainEntitiesIntoDataContracts();
+            dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
+            voucherDataContract.VouStatus = new List<string> { "U" };
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
+            var accountsPayable = await accountsPayableInvoicesRepo.GetAccountsPayableInvoicesByGuidAsync(guid, false);
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesAsync_PersonsRecs_Is_Null()
         {
             List<string> rcVouSchedulesIds = new List<string>();
@@ -552,7 +1127,36 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             string[] personIds = { "0001234", "0000002" };
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", personIds, true)).ReturnsAsync(null);
 
-            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100);
+            GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+            {
+                Offset = 0,
+                Limit = 21,
+                CacheName = "AllAccountsPayableInvoices",
+                Entity = "VOUCHERS",
+                Sublist = voucherIds.ToList(),
+                TotalCount = 21,
+                KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+            };
+            transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                .ReturnsAsync(resp);
+
+            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, It.IsAny<string>());
         }
 
         [TestMethod]
@@ -586,7 +1190,22 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var accountsPayable = await accountsPayableInvoicesRepo.GetAccountsPayableInvoicesByGuidAsync(guid, false);
         }
 
-      
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_VoucherStatus_ContainsInProgressStatus()
+        {
+            string voucherId = "1";
+            this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
+            ConvertDomainEntitiesIntoDataContracts();
+
+            voucherDataContract.VoucherStatusEntityAssociation = new List<VouchersVoucherStatus>()
+            { new VouchersVoucherStatus() {VouStatusAssocMember = "U", VouStatusDateAssocMember = new DateTime(2017,1,11) } };
+
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
+
+            var accountsPayable = await accountsPayableInvoicesRepo.GetAccountsPayableInvoicesByGuidAsync(guid, false);
+        }
+
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_VoucherStatus_Contains_Cancelled()
@@ -605,13 +1224,18 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
-        public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_NameMissing()
+          public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_NameMissing()
         {
             string voucherId = "1";
             this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
             ConvertDomainEntitiesIntoDataContracts();
-
+            purchaseOrders = new Collection<PurchaseOrders>()
+            {
+                new PurchaseOrders(){RecordGuid = "4f937f08-f6a0-4a1c-8d55-9f2a6dd6be46", Recordkey = "12",PoNo = "0001", PoIntgType = "procurement"},
+                new PurchaseOrders(){RecordGuid = "be0c904d-d3d5-4085-9f0a-a76a34c21bff", Recordkey = "0000002", PoNo = "0002"}
+            };
+            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<PurchaseOrders>("PURCHASE.ORDERS", It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrders);
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).ReturnsAsync(purchaseOrders.FirstOrDefault());
             voucherDataContract.VouMiscName = null;
             voucherDataContract.VouVendor = null;
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
@@ -627,8 +1251,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             string voucherId = "1";
             this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
             ConvertDomainEntitiesIntoDataContracts();
-
+            purchaseOrders = new Collection<PurchaseOrders>()
+            {
+                new PurchaseOrders(){RecordGuid = "4f937f08-f6a0-4a1c-8d55-9f2a6dd6be46", Recordkey = "12",PoNo = "0001", PoIntgType = "procurement"},
+                new PurchaseOrders(){RecordGuid = "be0c904d-d3d5-4085-9f0a-a76a34c21bff", Recordkey = "0000002", PoNo = "0002"}
+            };
+            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<PurchaseOrders>("PURCHASE.ORDERS", It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrders);
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(),true)).ReturnsAsync(purchaseOrders.FirstOrDefault());
             voucherDataContract.VouDate = null;
+            voucherDataContract.VouStatus = new List<string> { "O" };
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
             dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
 
@@ -636,14 +1267,21 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(ApplicationException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_MissingInvoiceDate()
         {
             string voucherId = "1";
             this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
             ConvertDomainEntitiesIntoDataContracts();
-
+            purchaseOrders = new Collection<PurchaseOrders>()
+            {
+                new PurchaseOrders(){RecordGuid = "4f937f08-f6a0-4a1c-8d55-9f2a6dd6be46", Recordkey = "12",PoNo = "0001", PoIntgType = "procurement"},
+                new PurchaseOrders(){RecordGuid = "be0c904d-d3d5-4085-9f0a-a76a34c21bff", Recordkey = "0000002", PoNo = "0002"}
+            };
+            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<PurchaseOrders>("PURCHASE.ORDERS", It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrders);
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).ReturnsAsync(purchaseOrders.FirstOrDefault());
             voucherDataContract.VouDefaultInvoiceDate = null;
+            voucherDataContract.VouDate = null;
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
             dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
 
@@ -659,6 +1297,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             ConvertDomainEntitiesIntoDataContracts();
 
             voucherDataContract.VouApType = null;
+            voucherDataContract.VouStatus = new List<string> { "O" };
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
             dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
 
@@ -684,6 +1323,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             this.voucherDataContract.VouPayFlag = "Y";
             this.voucherDataContract.VouReferenceNo = new List<string>() { "Ref123" };
             this.voucherDataContract.VouStatus = new List<string>() { "O" };
+            this.voucherDataContract.VouIntgSubmittedBy = "1";
 
             this.voucherDataContract.VouStatusDate = new List<DateTime?>() { new DateTime(2013, 1, 18) };
             this.voucherDataContract.VouVendorTerms = "SaTerm";
@@ -823,6 +1463,18 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 new Base.DataContracts.Person(){RecordGuid = "be0c904d-d3d5-4085-9f0a-a76a34c21bff", Recordkey = "0000002", PersonCorpIndicator = "N"}
             };
 
+            purchaseOrders = new Collection<PurchaseOrders>()
+            {
+                new PurchaseOrders(){RecordGuid = "4f937f08-f6a0-4a1c-8d55-9f2a6dd6be46", Recordkey = "12",PoNo = "0001", PoIntgType = "procurement"},
+                new PurchaseOrders(){RecordGuid = "be0c904d-d3d5-4085-9f0a-a76a34c21bff", Recordkey = "0000002", PoNo = "0002"}
+            };
+            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<PurchaseOrders>("PURCHASE.ORDERS", It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrders);
+            recurringVouchers = new Collection<RcVouSchedules>()
+            {
+                new RcVouSchedules(){Recordkey = "65", RcvsRcVoucher = "R0001"},
+                new RcVouSchedules(){ Recordkey = "0000002",  RcvsRcVoucher = "R0002"}
+            };
+            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<RcVouSchedules>("RC.VOU.SCHEDULES", It.IsAny<string[]>(), true)).ReturnsAsync(recurringVouchers);
             var expectedPerson = people.FirstOrDefault(i => i.RecordGuid.Equals(guid));
             expectedPerson.PreferredAddress = "0123";
 
@@ -1186,6 +1838,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private Base.DataContracts.Person person;
         private List<string> apTypes;
 
+        private Collection<Projects> projectDataContracts;
+        private Collection<Items> itemsDataContracts;
+        private Collection<ProjectsLineItems> projectLineItemDataContracts;
         private string guid = "1a49eed8-5fe7-4120-b1cf-f23266b9e874";
 
         #endregion
@@ -1221,7 +1876,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 VouDefaultInvoiceNo = "1",
                 VouDefaultInvoiceDate = DateTime.Today,
                 VouDate = DateTime.Today,
-                VouStatus = new List<string>() { "U" },
+                VouStatus = new List<string>() { "O" },
                 VouRequestor = "1",
                 VoucherStatusEntityAssociation = new List<VouchersVoucherStatus>()
                     {
@@ -1230,9 +1885,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 VouTaxesEntityAssociation = new List<VouchersVouTaxes>()
                 {
 
-                }
+                },
+                VouItemsId = new List<string>() { "1"}
             };
 
+           
             person = new Base.DataContracts.Person()
             {
                 RecordGuid = guid,
@@ -1248,7 +1905,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     { guid, new GuidLookupResult() { Entity = "VOUCHERS", PrimaryKey = "1" } }
                 };
 
-            accountsPayableInvoiceEntity = new Domain.ColleagueFinance.Entities.AccountsPayableInvoices(guid, "1", DateTime.Today, VoucherStatus.InProgress, "name", "1", DateTime.Today)
+            accountsPayableInvoiceEntity = new Domain.ColleagueFinance.Entities.AccountsPayableInvoices(guid, "1", DateTime.Today, VoucherStatus.Outstanding, "name", "1", DateTime.Today)
             {
                 CurrencyCode = "USD",
                 HostCountry = "CAN",
@@ -1275,12 +1932,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 VoucherVendorTerms = "1",
                 Comments = "comments",
                 PurchaseOrderId = "1",
+               
                 VoucherTaxes = new List<LineItemTax>() { new LineItemTax("1", 50) },
             };
 
             lineItem = new AccountsPayableInvoicesLineItem("1", "desc", 10, 1000, 100)
             {
                 CommodityCode = "1",
+                FixedAssetsFlag = "S",
                 UnitOfIssue = "1",
                 CashDiscountAmount = 10,
                 TradeDiscountAmount = 5,
@@ -1304,6 +1963,140 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             });
 
             accountsPayableInvoiceEntity.AddAccountsPayableInvoicesLineItem(lineItem);
+            ConvertLineItemsIntoDataContracts();
+
+        }
+
+        private void ConvertLineItemsIntoDataContracts()
+        {
+            this.itemsDataContracts = new Collection<Items>();
+            this.projectDataContracts = new Collection<Projects>();
+            this.projectLineItemDataContracts = new Collection<ProjectsLineItems>();
+
+            foreach (var lineItem in this.accountsPayableInvoiceEntity.LineItems)
+            {
+                // Populate the line items directly
+                var itemsDataContract = new Items()
+                {
+                    Recordkey = lineItem.Id,
+                    ItmDesc = new List<string>() { lineItem.Description },
+                    ItmVouQty = lineItem.Quantity,
+                    ItmVouPrice = lineItem.Price,
+                    ItmVouExtPrice = lineItem.ExtendedPrice,
+                    ItmVouIssue = lineItem.UnitOfIssue,
+                    ItmInvoiceNo = lineItem.InvoiceNumber,
+                    ItmTaxForm = lineItem.TaxForm,
+                    ItmFixedAssetsFlag = lineItem.FixedAssetsFlag,
+                    ItmTaxFormCode = lineItem.TaxFormCode,
+                    ItmTaxFormLoc = lineItem.TaxFormLocation,
+                    ItmComments = lineItem.Comments,
+                    VouchGlEntityAssociation = new List<ItemsVouchGl>(),
+                    VouGlTaxesEntityAssociation = new List<ItemsVouGlTaxes>()
+                };
+
+                // Populate the GL Distributions
+
+                int counter = 0;
+                foreach (var glDistr in lineItem.GlDistributions)
+                {
+                    counter++;
+
+                    decimal localGlAmount = 0,
+                        foreignGlAmount = 0;
+
+                    // The amount from the LineItemGlDistribution domain entity is always going to be a local amount.
+                    // If the voucher is in foreign currency, we need to manually set the test foreign amounts since
+                    // they cannot be gotten from the domain entity. Currently, there is only one foreign currency voucher
+                    // in the test data.
+                    localGlAmount = glDistr.Amount;
+                    if (!string.IsNullOrEmpty(this.accountsPayableInvoiceEntity.CurrencyCode))
+                    {
+                        if (counter == 1)
+                        {
+                            foreignGlAmount = 150.00m;
+                        }
+                        else if (counter == 2)
+                        {
+                            foreignGlAmount = 100.00m;
+                        }
+                        else
+                        {
+                            foreignGlAmount = 50.00m;
+                        }
+                    }
+
+                    itemsDataContract.VouchGlEntityAssociation.Add(new ItemsVouchGl()
+                    {
+                        ItmVouGlNoAssocMember = glDistr.GlAccountNumber,
+                        ItmVouGlQtyAssocMember = glDistr.Quantity,
+                        ItmVouProjectCfIdAssocMember = glDistr.ProjectId,
+                        ItmVouPrjItemIdsAssocMember = glDistr.ProjectLineItemId,
+                        ItmVouGlAmtAssocMember = localGlAmount,
+                        ItmVouGlForeignAmtAssocMember = foreignGlAmount
+                    });
+
+                    this.projectDataContracts.Add(new Projects()
+                    {
+                        Recordkey = glDistr.ProjectId,
+                        PrjRefNo = glDistr.ProjectNumber
+                    });
+
+                    this.projectLineItemDataContracts.Add(new ProjectsLineItems()
+                    {
+                        Recordkey = glDistr.ProjectLineItemId,
+                        PrjlnProjectItemCode = glDistr.ProjectLineItemCode
+                    });
+                }
+
+                // Populate the taxes
+                int taxCounter = 0;
+                foreach (var taxDistr in lineItem.LineItemTaxes)
+                {
+                    taxCounter++;
+                    decimal? localTaxAmount = null,
+                        foreignTaxAmount = null;
+
+                    // The amount from the LineItemTax domain entity is going to be in local currency unless there is a
+                    // currency code on the voucher.
+                    //
+                    // If the voucher does not have a currency code, the tax amount in the domain entity will be in local
+                    // currency, and the foreign tax amount on the data contract will be null. 
+                    //
+                    // If the voucher does have a currency code, the tax amount in the domain entity will be in foreign
+                    // currency, and we need to manually set the test local tax amounts since they cannot be gotten from
+                    // the domain entity. Currently, there is only one foreign currency voucher in the test data.
+
+                    if (string.IsNullOrEmpty(this.accountsPayableInvoiceEntity.CurrencyCode))
+                    {
+                        localTaxAmount = taxDistr.TaxAmount;
+                    }
+                    else
+                    {
+                        foreignTaxAmount = taxDistr.TaxAmount;
+                        if (counter == 1)
+                        {
+                            localTaxAmount = 15.00m;
+                        }
+                        else if (counter == 2)
+                        {
+                            localTaxAmount = 25.00m;
+                        }
+                        else
+                        {
+                            localTaxAmount = 10.00m;
+                        }
+                    }
+
+                    itemsDataContract.VouGlTaxesEntityAssociation.Add(new ItemsVouGlTaxes()
+                    {
+                        ItmVouGlTaxCodeAssocMember = taxDistr.TaxCode,
+                        ItmVouGlTaxAmtAssocMember = localTaxAmount,
+                        ItmVouGlForeignTaxAmtAssocMember = foreignTaxAmount
+                    });
+                }
+
+                this.itemsDataContracts.Add(itemsDataContract);
+            }
         }
 
         private void InitializeTestMock()
@@ -1313,6 +2106,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             dataReaderMock.Setup(r => r.ReadRecordAsync<Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucher);
             dataReaderMock.Setup(r => r.ReadRecordAsync<Base.DataContracts.Person>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(person);
             dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(apTypes.ToArray());
+            string[] itemsId = { "1"};
+            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Items>(itemsId, true)).ReturnsAsync(this.itemsDataContracts);
+
         }
 
         #endregion
@@ -1357,7 +2153,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task ActPayInvService_CreateAccountsPayableInvoices_InvalidEntity_Name_Repositoryxception()
         {
             dicResult[guid].Entity = "VOUCHER";
@@ -1390,7 +2186,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public async Task ActPayInvService_CreateAccountsPayableInvoices_Get_VoucherType_Null_ArgumentException()
+        public async Task ActPayInvService_CreateAccountsPayableInvoices_Get_VoucherType_Null_RepositorytException()
         {
             voucher.VouApType = "2";
             await accountsPayableInvoicesRepository.CreateAccountsPayableInvoicesAsync(accountsPayableInvoiceEntity);
@@ -1427,9 +2223,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             voucher.VouDate = null;
             await accountsPayableInvoicesRepository.CreateAccountsPayableInvoicesAsync(accountsPayableInvoiceEntity);
         }
-
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_CreateAccountsPayableInvoices_Get_ReccuringVoucher_NotFound()
         {
             voucher.VouRcvsId = "1";
@@ -1445,6 +2240,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             dataReaderMock.Setup(d => d.ReadRecordAsync<RcVouSchedules>(It.IsAny<string>(), true)).ThrowsAsync(new ApplicationException());
             await accountsPayableInvoicesRepository.CreateAccountsPayableInvoicesAsync(accountsPayableInvoiceEntity);
         }
+
 
         [TestMethod]
         public async Task ActPayInvService_CreateAccountsPayableInvoices()
@@ -1469,6 +2265,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     CurrencyCode = "USD",
                     HostCountry = "CAN",
                     VendorId = "1",
+                    SubmittedBy = "1",
                     VoucherAddressId = "1",
                     VoucherUseAltAddress = true,
                     VoucherMiscName = new List<string>() { "name" },

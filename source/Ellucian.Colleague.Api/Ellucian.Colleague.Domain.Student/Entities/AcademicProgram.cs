@@ -92,5 +92,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             LocalCourseClassifications = new List<string>();
             DeptartmentCodes = new List<string>();
         }
+
+        public List<string> AddnlCcds { get; set; }
+        public List<string> AddnlMajors { get; set; }
+        public List<string> AddnlMinors { get; set; }
+        public List<string> AddnlSpecializations { get; set; }
     }
 }

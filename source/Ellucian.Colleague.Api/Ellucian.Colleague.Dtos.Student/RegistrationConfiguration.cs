@@ -1,5 +1,5 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
-using System;
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+
 using System.Collections.Generic;
 
 namespace Ellucian.Colleague.Dtos.Student
@@ -24,9 +24,28 @@ namespace Ellucian.Colleague.Dtos.Student
         /// </summary>
         public bool PromptForDropReason { get; set; }
         /// <summary>
-        /// To determine when drop reason is prompted in SelfService then if it is required or not.
+        /// To determine when drop reason is prompted in Colleague Self-Service then if it is required or not.
         /// </summary>
         public bool RequireDropReason { get; set; }
 
+        /// <summary>
+        /// Show course section book information on printed schedules in Colleague Self-Service
+        /// </summary>
+        public bool ShowBooksOnPrintedSchedules { get; set; }
+
+        /// <summary>
+        /// Show course section additional information on printed schedules in Colleague Self-Service
+        /// </summary>
+        public bool ShowCommentsOnPrintedSchedules { get; set; }
+
+        /// <summary>
+        /// Flag indicating whether or not the Colleague Self-Service Quick Registration workflow is enabled
+        /// </summary>
+        public bool QuickRegistrationIsEnabled { get; set; }
+
+        /// <summary>
+        /// List of terms for which the Colleague Self-Service Quick Registration workflow may be used
+        /// </summary>
+        public IEnumerable<string> QuickRegistrationTermCodes { get; set; }
     }
 }

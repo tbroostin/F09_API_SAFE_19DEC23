@@ -408,7 +408,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 //condense the transactions and merge duplicates together.
                 var fundsAvailable = new List<Domain.ColleagueFinance.Entities.FundsAvailable>();
                 int transactionLevel = 0;
-                var transactionsTypes = new List<AccountFundsAvailable_TransactionsType>();
+                var transactionsTypes = new List<AccountFundsAvailable_TransactionsType2>();
 
                 if (transaction == null || transaction.Transactions == null)
                     throw new ArgumentNullException("AccountsFundsAvailableTransactions",
@@ -416,7 +416,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
                 foreach (var checkTrans in transaction.Transactions)
                 {
-                    if (checkTrans.Type == Dtos.EnumProperties.AccountFundsAvailable_TransactionsType.NotSet)
+                    if (checkTrans.Type == Dtos.EnumProperties.AccountFundsAvailable_TransactionsType2.NotSet)
                     {
                         throw new InvalidOperationException("You must have a Transaction type");
                     }

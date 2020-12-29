@@ -14,6 +14,7 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
@@ -94,6 +95,38 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             Dtos.CampusOrganization campusOrgDto = await ConvertCampusOrganizationEntityToDtoAsync(campOrg);
             return campusOrgDto;
+        }
+
+        /// <summary>
+        /// Gets CampusOrganization2 objects by campusOrgIds
+        /// </summary>
+        /// <param name="campusOrgIds">List of campus organization ids</param>
+        /// <returns>CampusOrganization2 DTO</returns>
+        public async Task<IEnumerable<CampusOrganization2>> GetCampusOrganizations2ByCampusOrgIdsAsync(List<string> campusOrgIds)
+        {
+            if (campusOrgIds == null)
+            {
+                throw new ArgumentNullException("campusOrgIds");
+            }
+            if (!campusOrgIds.Any())
+            {
+                throw new ArgumentException("campusOrgIds are required to get CampusOrganization2 objects");
+            }
+           
+            var campusOrganization2Entities = await _campusOrganizationRepository.GetCampusOrganizations2Async(campusOrgIds);
+            
+            if (campusOrganization2Entities == null)
+            {
+                var message = "Null CampusOrganization2s returned from the repository";
+                logger.Error(message);
+                throw new ApplicationException(message);
+            }
+
+            var campusOrganization2EntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.CampusOrganization2, CampusOrganization2>();
+
+            var campusOrganization2Dtos = campusOrganization2Entities.Select(cmpOrgs2 => campusOrganization2EntityToDtoAdapter.MapToType(cmpOrgs2));
+
+            return campusOrganization2Dtos;
         }
 
         /// <summary>

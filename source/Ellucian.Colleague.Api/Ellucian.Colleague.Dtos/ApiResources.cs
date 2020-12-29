@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Newtonsoft.Json;
@@ -50,6 +50,12 @@ namespace Ellucian.Colleague.Dtos
         public List<string> Filters { get; set; }
 
         /// <summary>
+        /// Array of any supported get all patterns, paging and batch.
+        /// </summary>
+        [JsonProperty("getAllPatterns", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public List<GetAllPattern> GetAllPatterns { get; set; }
+
+        /// <summary>
         /// Array of any supported named queries by the API in json dot notation. This is not included if no named queries are supported.
         /// </summary>
         [JsonProperty("namedQueries", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
@@ -60,12 +66,51 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>
         [JsonProperty("deprecationNotice", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
         public DeprecationNotice DeprecationNotice { get; set; }
+
+        /*
+        /// <summary>
+        /// PageSize - Used for doc generation only.  Uncomment as needed.
+        /// </summary>
+         [JsonProperty("pageSize", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
+         public int? PageSize { get; set; }
+         */
+
+        /// <summary>
+        /// Used by the resources controller to determine which versionless route is most current.  Does not appear in output
+        /// </summary>
+        [JsonIgnore]
+        public string VersionNumber { get; set; }
+
     }
 
     /// <summary>
-    /// NamedQuery
+    /// Patterns for GetAll support, Paging or Batch.
     /// </summary>
-    public class NamedQuery
+    public class GetAllPattern
+    {
+        /// <summary>
+        /// paging or batch
+        /// </summary>
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        /// <summary>
+        /// get or post
+        /// </summary>
+        [JsonProperty("method")]
+        public string Method { get; set; }
+
+        /// <summary>
+        /// the custom media type supported
+        /// </summary>
+        [JsonProperty("X-Media-Type", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public string XMediaType { get; set; }
+    }
+
+/// <summary>
+/// NamedQuery
+/// </summary>
+public class NamedQuery
     {
         /// <summary>
         /// Name

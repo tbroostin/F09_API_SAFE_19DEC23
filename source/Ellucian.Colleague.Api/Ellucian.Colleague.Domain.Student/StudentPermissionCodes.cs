@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base;
 using System;
@@ -50,6 +50,9 @@ namespace Ellucian.Colleague.Domain.Student
 
         //Permission to create/update student academic program
         public const string CreateStudentAcademicProgramConsent = "CREATE.UPDATE.STUDENT.ACADEMIC.PROGRAM";
+
+        //Permission to replace student academic program
+        public const string ReplaceStudentAcademicProgram = "REPLACE.STUDENT.ACADEMIC.PROGRAM";
 
         //Permission to create/update an academic program enrollment
         public const string ViewStudentAcademicProgramConsent = "VIEW.STUDENT.ACADEMIC.PROGRAM";
@@ -205,6 +208,9 @@ namespace Ellucian.Colleague.Domain.Student
         // Enables access to view student transcript grades
         public const string ViewStudentTranscriptGrades = "VIEW.STUDENT.TRANSCRIPT.GRADES";
 
+        // Permissions code that allows an external system to perform the READ operation.
+        public const string ViewStudentCohortAssignments = "VIEW.STUDENT.COHORT.ASSIGNMENTS";
+
         // Enables access to update student transcript grades
         public const string UpdateStudentTranscriptGradesAdjustments = "UPDATE.STUDENT.TRANSCRIPT.GRADES.ADJUSTMENTS";
 
@@ -222,5 +228,21 @@ namespace Ellucian.Colleague.Domain.Student
 
         //Enables access to update student unverified grades
         public const string ViewStudentUnverifiedGradesSubmissions = "UPDATE.STUDENT.UNVERIFIED.GRADES.SUBMISSIONS";
+
+        // Access to view student-academic-periods.
+        public const string ViewStudentAcademicPeriods = "VIEW.STUDENT.ACADEMIC.PERIODS";
+
+        //Permissions code that allows an external system to perform the READ operation.
+        public const string ViewProspectOpportunity = "VIEW.PROSPECT.OPPORTUNITY";
+
+        //Permissions code that allows an external system to perform the CREATE and UPDATE operations using prospect-opportunities-submissions and therefore 
+        //also provides the same permissions as VIEW.PROSPECT.OPPORTUNITY.
+        public const string UpdateProspectOpportunity = "UPDATE.PROSPECT.OPPORTUNITY";
+
+        //Permissions code that allows an external system to perform the READ operation.
+        public const string ViewStudentAcademicCredentials = "VIEW.STUDENT.ACADEMIC.CREDENTIALS";
+
+        //Permissions code that allows users to perform instant enrollment operations.
+        public const string InstantEnrollmentAllowAll = "IE.ALLOW.ALL";
     }
 }

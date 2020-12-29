@@ -9,7 +9,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
     /// <summary>
     /// Accesses Colleague for a person's relationship information.
     /// </summary>
-    public interface IRelationshipRepository
+    public interface IRelationshipRepository : IEthosExtended
     {
         /// <summary>
         /// Retrieves an enumeration of the given person's relationships with other persons or organizations
@@ -36,7 +36,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// Get a list of personal relationships using criteria
         /// </summary>
         /// <returns>A list of personal relationships Entities</returns>
-        Task<Tuple<IEnumerable<Domain.Base.Entities.Relationship>, int>> GetRelationships2Async(int offset, int limit, string person = "", string relationType = "", string inverseRelationType = "");
+        Task<Tuple<IEnumerable<Domain.Base.Entities.Relationship>, int>> GetRelationships2Async(int offset, int limit, string[] persons = null, string relationType = "", string inverseRelationType = "");
 
         /// <summary>
         /// Creates the given relationship type between the two given entities
@@ -68,7 +68,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// </summary>
         /// <param name="id">guid</param>
         /// <returns>Domain.Base.Entities.Relationship</returns>
-        Task<Domain.Base.Entities.Relationship> GetPersonRelationshipById2Async(string id);
+        Task<Domain.Base.Entities.Relationship> GetPersonalRelationshipById2Async(string id);
 
         /// <summary>
         /// Gets guardian relationship types defaults
@@ -81,7 +81,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// </summary>
         /// <param name="guid">The GUID</param>
         /// <returns>Primary key</returns>
-        Task<string> GetPersonRelationshipsIdFromGuidAsync(string guid);
+        Task<string> GetPersonalRelationshipsIdFromGuidAsync(string guid);
 
         /// <summary>
         /// Gets guardian relationship by id
@@ -133,14 +133,9 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// </summary>
         /// <param name="Relationship">personrelationship entity</param>
         /// <returns>Domain.Base.Entities.Relationship</returns>
-        Task<Domain.Base.Entities.Relationship> UpdatePersonRelationshipsAsync(Domain.Base.Entities.Relationship personRelationshipsEntity);
+        Task<Domain.Base.Entities.Relationship> UpdatePersonalRelationshipsAsync(Domain.Base.Entities.Relationship personRelationshipsEntity);
 
-        /// <summary>
-        /// Create person relationship
-        /// </summary>
-        /// <param name="Relationship">personrelationship entity</param>
-        /// <returns>Domain.Base.Entities.Relationship</returns>
-        Task<Domain.Base.Entities.Relationship> CreatePersonRelationshipsAsync(Domain.Base.Entities.Relationship personRelationshipsEntity);
+        Task<Tuple<Domain.Base.Entities.Relationship, string>> CreatePersonalRelationshipInitiationProcessAsync(Domain.Base.Entities.PersonalRelationshipInitiation personalRelationshipsEntity);
 
         /// <summary>
         /// Delete person relationship

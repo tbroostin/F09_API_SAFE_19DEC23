@@ -41,6 +41,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         public string PoId { get; set; }
 
         /// <summary>
+        /// The human-readable PO.NO.
+        /// </summary>
+        public string PoNo { get; set; }
+
+        /// <summary>
         /// Free-form text containing the packing slip number.
         /// </summary>
         public string PackingSlip { get; set; }

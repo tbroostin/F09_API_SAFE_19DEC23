@@ -183,6 +183,14 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public bool HasIsirResults { get; set; }
         public bool HasIsirResultsOriginal { get; set; }
         public bool IsPellEligibleOriginal { get; set; }
+        public string FafsaMaritalStatus { get; set; }
+        public string ProfileMaritalStatus { get; set; }
+        public int? ApplicantFamilySize { get; set; }
+        public int? ParentFamilySize { get; set; }
+        public int? ApplicantNumberInCollege { get; set; }
+        public int? ParentNoInCollege { get; set; }
+        public string FatherEducationLevel { get; set; }
+        public string MotherEducationLevel { get; set; }
 
         /// <summary>
         /// Constructor for FinancialAidApplication object used for Ethos Data Model APIs.
@@ -196,15 +204,15 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         {
             if (string.IsNullOrEmpty(guid))
             {
-                throw new ArgumentNullException("guid", "Guid is required when creating a Fafsa. ");
+                throw new ArgumentNullException("guid", string.Format("Application GUID is empty or missing for ISIR.FAFSA {0}.", id));
             }
             if (string.IsNullOrEmpty(studentId))
             {
-                throw new ArgumentNullException("studentId", "Stuent Id is required when creating a Fafsa. ");
+                throw new ArgumentNullException("studentId", string.Format("Student Id is empty or missing for ISIR.FAFSA {0}.", id));
             }
             if (string.IsNullOrEmpty(awardYear))
             {
-                throw new ArgumentNullException("awardYear", "Award Year is required when creating a Fafsa. ");
+                throw new ArgumentNullException("awardYear", string.Format("Award Year is empty or missing for ISIR.FAFSA {0}.", id));
             }
             Guid = guid;
             IsPellEligible = false;

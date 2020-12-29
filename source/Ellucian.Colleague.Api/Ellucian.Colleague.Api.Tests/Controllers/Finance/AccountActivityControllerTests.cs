@@ -1,9 +1,10 @@
-﻿//Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.Finance;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Finance;
 using Ellucian.Colleague.Coordination.Finance.Adapters;
 using Ellucian.Colleague.Domain.Finance;
+using Ellucian.Colleague.Dtos.Finance;
 using Ellucian.Colleague.Dtos.Finance.AccountActivity;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Configuration;
@@ -789,6 +790,223 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Finance
                     throw;
                 }
             }
+        }
+    }
+
+    [TestClass]
+    public class QueryStudentPotentialD7FinancialAidAsync
+    {
+        #region Test Context
+        private TestContext testContextInstance;
+
+        /// <summary>
+        ///Gets or sets the test context which provides
+        ///information about and functionality for the current test run.
+        ///</summary>
+        public TestContext TestContext
+        {
+            get
+            {
+                return testContextInstance;
+            }
+            set
+            {
+                testContextInstance = value;
+            }
+        }
+        #endregion
+
+        private Mock<IAdapterRegistry> adapterRegistryMock;
+        private Mock<ILogger> loggerMock;
+        private Mock<IAccountActivityService> accountActivityServiceMock;
+
+        private AccountActivityController accountActivityController;
+
+        private List<AwardPeriodAwardTransmitExcessStatus> dummyStatus;
+
+        [TestInitialize]
+        public async void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+            adapterRegistryMock = new Mock<IAdapterRegistry>();
+            loggerMock = new Mock<ILogger>();
+            accountActivityServiceMock = new Mock<IAccountActivityService>();
+            var adapter = new AutoMapperAdapter<Domain.Finance.Entities.AccountActivity.PotentialD7FinancialAid,
+                Dtos.Finance.AccountActivity.PotentialD7FinancialAid>
+                (adapterRegistryMock.Object, loggerMock.Object);
+
+            // Service mock will throw various exceptions based on various inputs.
+            // Throw ArgumentNullException if any of the arguments are null/empty
+            accountActivityServiceMock.Setup(s => s.GetPotentialD7FinancialAidAsync(
+                It.Is<PotentialD7FinancialAidCriteria>(x =>
+                string.IsNullOrEmpty(x.StudentId) ||
+                 string.IsNullOrEmpty(x.TermId) ||
+                 x.AwardPeriodAwardsToEvaluate == null 
+                )))
+                .ThrowsAsync(new ArgumentNullException());
+            // Throw a Permissions exception
+            accountActivityServiceMock.Setup(s => s.GetPotentialD7FinancialAidAsync(
+                It.Is<PotentialD7FinancialAidCriteria>(x => x.StudentId.Equals("Perms"))))
+                .ThrowsAsync(new PermissionsException());
+            // Throw an application exception
+            accountActivityServiceMock.Setup(s => s.GetPotentialD7FinancialAidAsync(
+                It.Is<PotentialD7FinancialAidCriteria>(x => x.StudentId.Equals("Mismatch"))))
+                .ThrowsAsync(new ApplicationException());
+            // Throw a generic exception
+            accountActivityServiceMock.Setup(s => s.GetPotentialD7FinancialAidAsync(
+                It.Is<PotentialD7FinancialAidCriteria>(x => x.StudentId.Equals("Generic"))))
+                .ThrowsAsync(new Exception());
+
+            accountActivityController = new AccountActivityController(accountActivityServiceMock.Object, loggerMock.Object);
+
+            dummyStatus = new List<AwardPeriodAwardTransmitExcessStatus>()
+                    {
+                        new AwardPeriodAwardTransmitExcessStatus()
+                        {
+                           AwardPeriodAward = "Foo",
+                           TransmitExcessIndicator = false,
+                        }
+                    };
+        }
+
+        /// <summary>
+        /// Verify a null input argument results in an HttpResponseException
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountActivityController_QueryStudentPotentialD7FinancialAidAsync_NullCriteria()
+        {
+            await accountActivityController.QueryStudentPotentialD7FinancialAidAsync(null);
+        }
+
+        /// <summary>
+        /// Verify an input argument with a null student id results in an HttpResponseException
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountActivityController_QueryStudentPotentialD7FinancialAidAsync_NullStudentId()
+        {
+            await accountActivityController.QueryStudentPotentialD7FinancialAidAsync(
+                new Dtos.Finance.PotentialD7FinancialAidCriteria()
+                {
+                    StudentId = null,
+                    TermId = "Term",
+                    AwardPeriodAwardsToEvaluate = dummyStatus,
+                });
+        }
+
+        /// <summary>
+        /// Verify an input argument with an empty student id results in an HttpResponseException
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountActivityController_QueryStudentPotentialD7FinancialAidAsync_EmptyStudentId()
+        {
+            await accountActivityController.QueryStudentPotentialD7FinancialAidAsync(
+                new Dtos.Finance.PotentialD7FinancialAidCriteria()
+                {
+                    StudentId = string.Empty,
+                    TermId = "Term",
+                    AwardPeriodAwardsToEvaluate = dummyStatus,
+                });
+        }
+
+        /// <summary>
+        /// Verify an input argument with a null term id results in an HttpResponseException
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountActivityController_QueryStudentPotentialD7FinancialAidAsync_NullTermId()
+        {
+            await accountActivityController.QueryStudentPotentialD7FinancialAidAsync(
+                new Dtos.Finance.PotentialD7FinancialAidCriteria()
+                {
+                    StudentId = "Valid",
+                    TermId = null,
+                    AwardPeriodAwardsToEvaluate = dummyStatus,
+                });
+        }
+
+        /// <summary>
+        /// Verify an input argument with an empty term id results in an HttpResponseException
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountActivityController_QueryStudentPotentialD7FinancialAidAsync_EmptyTermId()
+        {
+            await accountActivityController.QueryStudentPotentialD7FinancialAidAsync(
+                new Dtos.Finance.PotentialD7FinancialAidCriteria()
+                {
+                    StudentId = "Valid",
+                    TermId = string.Empty,
+                    AwardPeriodAwardsToEvaluate = dummyStatus,
+                });
+        }
+
+        /// <summary>
+        /// Verify an input argument with a null list of awards results in an HttpResponseException
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountActivityController_QueryStudentPotentialD7FinancialAidAsync_NullAwards()
+        {
+            await accountActivityController.QueryStudentPotentialD7FinancialAidAsync(
+                new Dtos.Finance.PotentialD7FinancialAidCriteria()
+                {
+                    StudentId = "Valid",
+                    TermId = "Term",
+                    AwardPeriodAwardsToEvaluate = null,
+                });
+        }
+
+        /// <summary>
+        /// Verify a permission issue results in an HttpResponseException
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountActivityController_QueryStudentPotentialD7FinancialAidAsync_Permissions()
+        {
+            await accountActivityController.QueryStudentPotentialD7FinancialAidAsync(
+                new Dtos.Finance.PotentialD7FinancialAidCriteria()
+                {
+                    StudentId = "Perms",
+                    TermId = "Term",
+                    AwardPeriodAwardsToEvaluate = new List<Dtos.Finance.AwardPeriodAwardTransmitExcessStatus>(),
+                });
+        }
+
+        /// <summary>
+        /// Verify an execution issue results in an HttpResponseException
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountActivityController_QueryStudentPotentialD7FinancialAidAsync_ArgumentMismatch()
+        {
+            await accountActivityController.QueryStudentPotentialD7FinancialAidAsync(
+                new Dtos.Finance.PotentialD7FinancialAidCriteria()
+                {
+                    StudentId = "Mismatch",
+                    TermId = "Term",
+                    AwardPeriodAwardsToEvaluate = new List<Dtos.Finance.AwardPeriodAwardTransmitExcessStatus>(),
+                });
+        }
+
+        /// <summary>
+        /// Verify all other errors result in an HttpResponseException
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountActivityController_QueryStudentPotentialD7FinancialAidAsync_GenericException()
+        {
+            await accountActivityController.QueryStudentPotentialD7FinancialAidAsync(
+                new Dtos.Finance.PotentialD7FinancialAidCriteria()
+                {
+                    StudentId = "Generic",
+                    TermId = "Term",
+                    AwardPeriodAwardsToEvaluate = new List<Dtos.Finance.AwardPeriodAwardTransmitExcessStatus>(),
+                });
         }
     }
 }

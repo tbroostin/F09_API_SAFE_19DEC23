@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -957,6 +957,386 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
+        public async Task GetGlObjectCodesAsync_ClosedYear_PooleeWithOnlyRequisitionAmounts_UmbrellaWithGls_UmbrellaIsVisible()
+        {
+            // The umbrella has posted activity in GLS but no direct expenses.
+            // Only one poolee that has only a requisition amount.
+            var umbrellaAccount = "11_01_01_00_10001_55200";
+            var pooleeAccounts = new List<string>()
+            {
+                "10_00_01_01_10001_55204"
+            };
+
+            var dataContract = new EncFyr()
+            {
+                Recordkey = "10_00_01_01_10001_55204",
+                EncReqAmt = new List<decimal?>() { 123m },
+                EncReqEntityAssociation = new List<EncFyrEncReq>()
+                {
+                    new EncFyrEncReq
+                    {
+
+                        EncReqNoAssocMember = "0000001",
+                        EncReqDateAssocMember = new DateTime(),
+                        EncReqVendorAssocMember = "Supplies",
+                        EncReqAmtAssocMember = 123m,
+                        EncReqIdAssocMember = "12"
+                    }
+                 }
+            };
+            var glpFyr = new GlpFyr()
+            {
+                Recordkey = "11_01_01_00_10001_55200",
+                GlpPooleeAcctsList = new List<string>()
+                {
+                    "10_00_01_01_10001_55204"
+                }
+            };
+
+            this.param1_GlUser = new GeneralLedgerUser("0000032", "Kleehammer");
+            this.param1_GlUser.AddAllAccounts(new List<string>() { umbrellaAccount });
+            this.param1_GlUser.AddAllAccounts(pooleeAccounts);
+            this.param1_GlUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+            this.param2_glAccountStructure = await testGlConfigurationRepository.GetAccountStructureAsync();
+            this.param4_costCenterQueryCriteria.FiscalYear = testGlConfigurationRepository.ClosedYear;
+            this.param4_costCenterQueryCriteria.ComponentCriteria = new List<CostCenterComponentQueryCriteria>();
+
+            // Populate the GLS record for the umbrella account.
+            PopulateGlsFyrDataContracts(new List<string>() { umbrellaAccount }, GlBudgetPoolType.Umbrella, null, false);
+
+            encFyrDataContracts.Add(dataContract);
+            glpFyrDataContracts.Add(glpFyr);
+
+            this.param4_FiscalYear = Convert.ToInt32(testGlConfigurationRepository.ClosedYear);
+            var glpFyrFilename = "GLP." + this.param4_FiscalYear;
+
+            string[] glpFyrIds = new string[] { "11_01_01_00_10001_55200" };
+            dataReaderMock.Setup(dr => dr.SelectAsync(glpFyrFilename, null)).Returns(() =>
+            {
+                return Task.FromResult(glpFyrIds);
+            });
+
+            dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<GlpFyr>(It.IsAny<string>(), It.IsAny<string[]>(), true)).Returns(() =>
+            {
+                return Task.FromResult(glpFyrDataContracts);
+            });
+
+            var glObjectCodes = await RealRepository_GetGlObjectCodesAsync();
+
+            // Make sure each each GL class is represented in the total number of GL Object codes.
+            Assert.IsTrue(glObjectCodes is IEnumerable<GlObjectCode>);
+            Assert.AreEqual(1, glObjectCodes.Count());
+            Assert.AreEqual(1, glObjectCodes.FirstOrDefault().Pools.Count());
+            Assert.AreEqual(umbrellaAccount, glObjectCodes.FirstOrDefault().Pools.FirstOrDefault().Umbrella.GlAccountNumber);
+            Assert.AreEqual(pooleeAccounts.FirstOrDefault(), glObjectCodes.FirstOrDefault().Pools.FirstOrDefault().Poolees.FirstOrDefault().GlAccountNumber);
+        }
+
+        [TestMethod]
+        public async Task GetGlObjectCodesAsync_ClosedYear_PooleeWithOnlyRequisitionAmounts_UmbrellaWithGls_UmbrellaIsNotVisible()
+        {
+            // The umbrella has posted activity in GLS but no direct expenses.
+            // Only one poolee that has only a requisition amount.
+            var umbrellaAccount = "11_01_01_00_10001_55200";
+            var pooleeAccounts = new List<string>()
+            {
+                "10_00_01_01_10001_55204"
+            };
+
+            var dataContract = new EncFyr()
+            {
+                Recordkey = "10_00_01_01_10001_55204",
+                EncReqAmt = new List<decimal?>() { 123m },
+                EncReqEntityAssociation = new List<EncFyrEncReq>()
+                {
+                    new EncFyrEncReq
+                    {
+
+                        EncReqNoAssocMember = "0000001",
+                        EncReqDateAssocMember = new DateTime(),
+                        EncReqVendorAssocMember = "Supplies",
+                        EncReqAmtAssocMember = 123m,
+                        EncReqIdAssocMember = "12"
+                    }
+                 }
+            };
+            var glpFyr = new GlpFyr()
+            {
+                Recordkey = "11_01_01_00_10001_55200",
+                GlpPooleeAcctsList = new List<string>()
+                {
+                    "10_00_01_01_10001_55204"
+                }
+            };
+
+            this.param1_GlUser = new GeneralLedgerUser("0000032", "Kleehammer");
+            this.param1_GlUser.AddAllAccounts(new List<string>());
+            // Don't add the umbrella to the list of GL accounts for the user.
+            this.param1_GlUser.AddAllAccounts(pooleeAccounts);
+            this.param1_GlUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+            this.param2_glAccountStructure = await testGlConfigurationRepository.GetAccountStructureAsync();
+            this.param4_costCenterQueryCriteria.FiscalYear = testGlConfigurationRepository.ClosedYear;
+            this.param4_costCenterQueryCriteria.ComponentCriteria = new List<CostCenterComponentQueryCriteria>();
+
+            // Populate the GLS record for the umbrella account.
+            PopulateGlsFyrDataContracts(new List<string>() { umbrellaAccount }, GlBudgetPoolType.Umbrella, null, false);
+            var umbrellaGlsRecord = glsFyrDataContracts.FirstOrDefault();
+            glsFyrDataContracts = new Collection<GlsFyr>();
+
+            encFyrDataContracts.Add(dataContract);
+            glpFyrDataContracts.Add(glpFyr);
+
+            this.param4_FiscalYear = Convert.ToInt32(testGlConfigurationRepository.ClosedYear);
+            var glpFyrFilename = "GLP." + this.param4_FiscalYear;
+
+            dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<GlsFyr>(It.IsAny<string>(), It.IsAny<string[]>(), true)).Returns(() =>
+            {
+                return Task.FromResult(glsFyrDataContracts);
+            });
+
+            dataReaderMock.Setup(dr => dr.ReadRecordAsync<GlsFyr>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(
+                (string fileName, string glNumber, bool flag) =>
+                {
+                    //var dataContract = this.glsFyrNoAccessUmbrellaDataContracts.FirstOrDefault(x => x.Recordkey == glNumber);
+
+                    return Task.FromResult(umbrellaGlsRecord);
+                });
+
+            string[] glpFyrIds = new string[] { "11_01_01_00_10001_55200" };
+            dataReaderMock.Setup(dr => dr.SelectAsync(glpFyrFilename, null)).Returns(() =>
+            {
+                return Task.FromResult(glpFyrIds);
+            });
+
+            dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<GlpFyr>(It.IsAny<string>(), It.IsAny<string[]>(), true)).Returns(() =>
+            {
+                return Task.FromResult(glpFyrDataContracts);
+            });
+
+            var glObjectCodes = await RealRepository_GetGlObjectCodesAsync();
+
+            // Make sure each each GL class is represented in the total number of GL Object codes.
+            Assert.IsTrue(glObjectCodes is IEnumerable<GlObjectCode>);
+            Assert.AreEqual(1, glObjectCodes.Count());
+            Assert.AreEqual(1, glObjectCodes.FirstOrDefault().Pools.Count());
+            Assert.AreEqual(umbrellaAccount, glObjectCodes.FirstOrDefault().Pools.FirstOrDefault().Umbrella.GlAccountNumber);
+            Assert.AreEqual(pooleeAccounts.FirstOrDefault(), glObjectCodes.FirstOrDefault().Pools.FirstOrDefault().Poolees.FirstOrDefault().GlAccountNumber);
+
+            foreach (var glObjectCode in glObjectCodes)
+            {
+                var poolGls = glsFyrDataContracts.Where(y => y.Recordkey == umbrellaAccount).FirstOrDefault();
+                var poolBudget = 0m;
+                //poolBudget = poolGls.BAlocDebitsYtd.HasValue ? poolGls.BAlocDebitsYtd.Value : 0m;
+                // poolBudget -= poolGls.BAlocCreditsYtd.HasValue ? poolGls.BAlocCreditsYtd.Value : 0m;
+
+                var poolActuals = 0m;
+                //foreach (var amount in poolGls.GlsFaMactuals)
+                //{
+                //    poolActuals += amount.HasValue ? amount.Value : 0m;
+                //}
+
+                var poolEncumbrance = 0m;
+                //foreach (var amount in poolGls.GlsFaMencumbrances)
+                //{
+                //    poolEncumbrance += amount.HasValue ? amount.Value : 0m;
+                //}
+                var encFyrContract = this.encFyrDataContracts.Where(x => x.Recordkey == pooleeAccounts.FirstOrDefault()).ToList().FirstOrDefault();
+                var poolRequisitions = encFyrContract.EncReqAmt.Sum().HasValue ? encFyrContract.EncReqAmt.Sum().Value : 0m;
+                poolEncumbrance += poolRequisitions;
+
+                foreach (var pool in glObjectCode.Pools)
+                {
+                    // Make sure the pool amounts match the amounts in the data contract.
+                    Assert.AreEqual(pool.Umbrella.BudgetAmount, poolBudget);
+                    Assert.AreEqual(pool.Umbrella.ActualAmount, poolActuals);
+                    Assert.AreEqual(pool.Umbrella.EncumbranceAmount, poolEncumbrance);
+                    Assert.IsFalse(pool.IsUmbrellaVisible);
+                }
+                Assert.AreEqual(glObjectCode.TotalBudget, poolBudget);
+                Assert.AreEqual(glObjectCode.TotalActuals, poolActuals);
+                Assert.AreEqual(glObjectCode.TotalEncumbrances, poolEncumbrance);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlObjectCodesAsync_ClosedYear_PooleeWithOnlyRequisitionAmountsAndUmbrellaWithNoGls__UmbrellaIsVisible()
+        {
+            // The umbrella does not have posted activity in GLS and no direct expenses.
+            // Only one poolee that has only a requisition amount.
+            // User has access to umbrella.
+            var umbrellaAccount = "11_01_01_00_10001_55200";
+            var pooleeAccounts = new List<string>()
+            {
+                "10_00_01_01_10001_55204"
+            };
+
+            var dataContract = new EncFyr()
+            {
+                Recordkey = "10_00_01_01_10001_55204",
+                EncReqAmt = new List<decimal?>() { 123m },
+                EncReqEntityAssociation = new List<EncFyrEncReq>()
+                {
+                    new EncFyrEncReq
+                    {
+
+                        EncReqNoAssocMember = "0000001",
+                        EncReqDateAssocMember = new DateTime(),
+                        EncReqVendorAssocMember = "Supplies",
+                        EncReqAmtAssocMember = 123m,
+                        EncReqIdAssocMember = "12"
+                    }
+                 }
+            };
+            var glpFyr = new GlpFyr()
+            {
+                Recordkey = "11_01_01_00_10001_55200",
+                GlpPooleeAcctsList = new List<string>()
+                {
+                    "10_00_01_01_10001_55204"
+                }
+            };
+
+            this.param1_GlUser = new GeneralLedgerUser("0000032", "Kleehammer");
+            this.param1_GlUser.AddAllAccounts(new List<string>() { umbrellaAccount });
+            this.param1_GlUser.AddAllAccounts(pooleeAccounts);
+            this.param1_GlUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+            this.param2_glAccountStructure = await testGlConfigurationRepository.GetAccountStructureAsync();
+            this.param4_costCenterQueryCriteria.FiscalYear = testGlConfigurationRepository.ClosedYear;
+            this.param4_costCenterQueryCriteria.ComponentCriteria = new List<CostCenterComponentQueryCriteria>();
+
+            encFyrDataContracts.Add(dataContract);
+            glpFyrDataContracts.Add(glpFyr);
+
+            this.param4_FiscalYear = Convert.ToInt32(testGlConfigurationRepository.ClosedYear);
+            var glpFyrFilename = "GLP." + this.param4_FiscalYear;
+
+            string[] glpFyrIds = new string[] { "11_01_01_00_10001_55200" };
+            dataReaderMock.Setup(dr => dr.SelectAsync(glpFyrFilename, null)).Returns(() =>
+            {
+                return Task.FromResult(glpFyrIds);
+            });
+
+            dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<GlpFyr>(It.IsAny<string>(), It.IsAny<string[]>(), true)).Returns(() =>
+            {
+                return Task.FromResult(glpFyrDataContracts);
+            });
+
+            var glObjectCodes = await RealRepository_GetGlObjectCodesAsync();
+
+            // Make sure each each GL class is represented in the total number of GL Object codes.
+            Assert.IsTrue(glObjectCodes is IEnumerable<GlObjectCode>);
+            Assert.AreEqual(1, glObjectCodes.Count());
+            Assert.AreEqual(1, glObjectCodes.FirstOrDefault().Pools.Count());
+            Assert.AreEqual(umbrellaAccount, glObjectCodes.FirstOrDefault().Pools.FirstOrDefault().Umbrella.GlAccountNumber);
+            Assert.AreEqual(pooleeAccounts.FirstOrDefault(), glObjectCodes.FirstOrDefault().Pools.FirstOrDefault().Poolees.FirstOrDefault().GlAccountNumber);
+
+            foreach (var glObjectCode in glObjectCodes)
+            {
+                var encFyrContract = this.encFyrDataContracts.Where(x => x.Recordkey == pooleeAccounts.FirstOrDefault()).ToList().FirstOrDefault();
+                foreach (var pool in glObjectCode.Pools)
+                {
+                    // Make sure the pool amounts match the amounts in the data contract.
+                    Assert.AreEqual(pool.Umbrella.BudgetAmount, 0m);
+                    Assert.AreEqual(pool.Umbrella.ActualAmount, 0m);
+                    Assert.AreEqual(pool.Umbrella.EncumbranceAmount, encFyrContract.EncReqAmt.Sum());
+                    Assert.IsTrue(pool.IsUmbrellaVisible);
+                }
+                Assert.AreEqual(glObjectCode.TotalBudget, 0m);
+                Assert.AreEqual(glObjectCode.TotalActuals, 0m);
+                Assert.AreEqual(glObjectCode.TotalEncumbrances, encFyrContract.EncReqAmt.Sum());
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlObjectCodesAsync_ClosedYear_PooleeWithOnlyRequisitionAmountsAndUmbrellaWithNoGls__UmbrellaIsNotVisible()
+        {
+            // The umbrella does not have posted activity in GLS and no direct expenses.
+            // Only one poolee that has only a requisition amount.
+            // User does NOT have access to umbrella.
+            var umbrellaAccount = "11_01_01_00_10001_55200";
+            var pooleeAccounts = new List<string>()
+            {
+                "10_00_01_01_10001_55204"
+            };
+
+            var dataContract = new EncFyr()
+            {
+                Recordkey = "10_00_01_01_10001_55204",
+                EncReqAmt = new List<decimal?>() { 123m },
+                EncReqEntityAssociation = new List<EncFyrEncReq>()
+                {
+                    new EncFyrEncReq
+                    {
+
+                        EncReqNoAssocMember = "0000001",
+                        EncReqDateAssocMember = new DateTime(),
+                        EncReqVendorAssocMember = "Supplies",
+                        EncReqAmtAssocMember = 123m,
+                        EncReqIdAssocMember = "12"
+                    }
+                 }
+            };
+            var glpFyr = new GlpFyr()
+            {
+                Recordkey = "11_01_01_00_10001_55200",
+                GlpPooleeAcctsList = new List<string>()
+                {
+                    "10_00_01_01_10001_55204"
+                }
+            };
+
+            this.param1_GlUser = new GeneralLedgerUser("0000032", "Kleehammer");
+            this.param1_GlUser.AddAllAccounts(new List<string>());
+            // Don't add the umbrella to the user list of GL accounts.
+            this.param1_GlUser.AddAllAccounts(pooleeAccounts);
+            this.param1_GlUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+            this.param2_glAccountStructure = await testGlConfigurationRepository.GetAccountStructureAsync();
+            this.param4_costCenterQueryCriteria.FiscalYear = testGlConfigurationRepository.ClosedYear;
+            this.param4_costCenterQueryCriteria.ComponentCriteria = new List<CostCenterComponentQueryCriteria>();
+
+            encFyrDataContracts.Add(dataContract);
+            glpFyrDataContracts.Add(glpFyr);
+
+            this.param4_FiscalYear = Convert.ToInt32(testGlConfigurationRepository.ClosedYear);
+            var glpFyrFilename = "GLP." + this.param4_FiscalYear;
+
+            string[] glpFyrIds = new string[] { "11_01_01_00_10001_55200" };
+            dataReaderMock.Setup(dr => dr.SelectAsync(glpFyrFilename, null)).Returns(() =>
+            {
+                return Task.FromResult(glpFyrIds);
+            });
+
+            dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<GlpFyr>(It.IsAny<string>(), It.IsAny<string[]>(), true)).Returns(() =>
+            {
+                return Task.FromResult(glpFyrDataContracts);
+            });
+
+            var glObjectCodes = await RealRepository_GetGlObjectCodesAsync();
+
+            // Make sure each each GL class is represented in the total number of GL Object codes.
+            Assert.IsTrue(glObjectCodes is IEnumerable<GlObjectCode>);
+            Assert.AreEqual(1, glObjectCodes.Count());
+            Assert.AreEqual(1, glObjectCodes.FirstOrDefault().Pools.Count());
+            Assert.AreEqual(umbrellaAccount, glObjectCodes.FirstOrDefault().Pools.FirstOrDefault().Umbrella.GlAccountNumber);
+            Assert.AreEqual(pooleeAccounts.FirstOrDefault(), glObjectCodes.FirstOrDefault().Pools.FirstOrDefault().Poolees.FirstOrDefault().GlAccountNumber);
+
+            foreach (var glObjectCode in glObjectCodes)
+            {
+                var encFyrContract = this.encFyrDataContracts.Where(x => x.Recordkey == pooleeAccounts.FirstOrDefault()).ToList().FirstOrDefault();
+                foreach (var pool in glObjectCode.Pools)
+                {
+                    // Make sure the pool amounts match the amounts in the data contract.
+                    Assert.AreEqual(pool.Umbrella.BudgetAmount, 0m);
+                    Assert.AreEqual(pool.Umbrella.ActualAmount, 0m);
+                    Assert.AreEqual(pool.Umbrella.EncumbranceAmount, encFyrContract.EncReqAmt.Sum());
+                    Assert.IsFalse(pool.IsUmbrellaVisible);
+                }
+                Assert.AreEqual(glObjectCode.TotalBudget, 0m);
+                Assert.AreEqual(glObjectCode.TotalActuals, 0m);
+                Assert.AreEqual(glObjectCode.TotalEncumbrances, encFyrContract.EncReqAmt.Sum());
+            }
+        }
+
+        [TestMethod]
         [Ignore]
         public async Task GetGlObjectCodesAsync_ClosedYear_UmbrellaHasDirectExpenses_NoPoolees()
         {
@@ -1744,7 +2124,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private GlsFyr PopulateSingleGlsFyrDataContract(string glAccount, string dataContractUmbrellaReference, string dataContractPoolType,
             bool umbrellaHasDirectExpenses, bool amountsAreZero, bool amountsAreNull)
         {
-            // Default the amounts for the GL.ACCTS data contracts
+            // Default the amounts for the GLS.FYR data contracts
             decimal? openBal = 250000m,
                 bAlocDebitsYtd = 10000m,
                 bAlocCreditsYtd = 500m,
@@ -1867,7 +2247,28 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var dataContract = new EncFyr()
             {
                 Recordkey = glAccount,
-                EncReqAmt = encReqAmt
+                EncReqAmt = encReqAmt,
+                EncReqEntityAssociation = new List<EncFyrEncReq>()
+                {
+                    new EncFyrEncReq
+                    {
+
+                        EncReqNoAssocMember = "0000001",
+                        EncReqDateAssocMember = new DateTime(),
+                        EncReqVendorAssocMember = "Supplies",
+                        EncReqAmtAssocMember = 100m,
+                        EncReqIdAssocMember = "11"
+                    },
+                    new EncFyrEncReq
+                    {
+
+                        EncReqNoAssocMember = "0000002",
+                        EncReqDateAssocMember = new DateTime(),
+                        EncReqVendorAssocMember = "Supplies",
+                        EncReqAmtAssocMember = 75m,
+                        EncReqIdAssocMember = "12"
+                    }
+                }
             };
 
             return dataContract;

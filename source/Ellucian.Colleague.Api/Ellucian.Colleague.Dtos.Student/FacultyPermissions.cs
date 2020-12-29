@@ -26,5 +26,10 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Faculty can enter and update grade information for their sections
         /// </summary>
         public bool CanUpdateGrades { get; set; }
+
+        /// <summary>
+        /// Faculty can search for students in the sections
+        /// </summary>
+        public bool CanSearchStudents { get; set; }
     }
 }

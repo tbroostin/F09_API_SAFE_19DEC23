@@ -1,10 +1,5 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Ellucian.Colleague.Coordination.Base.Adapters;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -12,11 +7,10 @@ using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Dtos;
-using Ellucian.Colleague.Dtos.EnumProperties;
-using Ellucian.Colleague.Coordination.Base.Services;
-using Ellucian.Colleague.Domain.Base.Repositories;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {

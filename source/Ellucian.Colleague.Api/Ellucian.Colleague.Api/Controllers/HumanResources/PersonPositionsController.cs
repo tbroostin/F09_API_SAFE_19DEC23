@@ -1,4 +1,4 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
@@ -44,14 +44,16 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// user's permissions.
         /// Example: If the current user/user who has proxy is an employee, this endpoint returns that employee's/proxy's PersonPositions
         /// Example: If the current user/user who has proxy is a manager, this endpoint returns all the PersonPositions of the employees reporting to the manager
+        /// Example: If the current user is an admin, this endpoint returns the PersonPositions for the effectivePersonId
         /// </summary>
         /// <param name="effectivePersonId">Optional parameter for effective personId</param>
+        /// <param name="lookupStartDate">lookup start date, all records with end date before this date will not be retrieved</param>
         /// <returns>A list of PersonPosition objects</returns>
-        public async Task<IEnumerable<PersonPosition>> GetPersonPositionsAsync(string effectivePersonId = null)
+        public async Task<IEnumerable<PersonPosition>> GetPersonPositionsAsync(string effectivePersonId = null, DateTime? lookupStartDate = null)
         {
             try
             {
-                return await personPositionService.GetPersonPositionsAsync(effectivePersonId);
+                return await personPositionService.GetPersonPositionsAsync(effectivePersonId, lookupStartDate);
             }
             catch(Exception e)
             {

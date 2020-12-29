@@ -1,23 +1,19 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
-
-using System.Collections.Generic;
-using Ellucian.Web.Http.Controllers;
-using Ellucian.Colleague.Dtos.Student;
-using Ellucian.Colleague.Domain.Student.Repositories;
-using System.Web.Http;
-using System.ComponentModel;
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
+using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
-using Ellucian.Web.License;
-using Ellucian.Web.Adapters;
 using Ellucian.Colleague.Coordination.Student.Services;
+using Ellucian.Web.Http.Controllers;
+using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Web.License;
 using slf4net;
 using System;
-using System.Threading.Tasks;
-using Ellucian.Web.Http.Exceptions;
-using Ellucian.Colleague.Api.Utility;
-using Ellucian.Web.Http.Filters;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Web.Http;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -54,6 +50,31 @@ namespace Ellucian.Colleague.Api.Controllers
             try
             {
                 return await _gradeSchemeService.GetGradeSchemesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a grade scheme by ID
+        /// </summary>
+        /// <param name="id">ID of the grade scheme</param>
+        /// <returns>A grade scheme</returns>
+        /// <accessComments>Any authenticated user can retrieve grade scheme information.</accessComments>
+        [ParameterSubstitutionFilter]
+        public async Task<Ellucian.Colleague.Dtos.Student.GradeScheme> GetNonEthosGradeSchemeByIdAsync([FromUri]string id)
+        {
+            try
+            {
+                return await _gradeSchemeService.GetNonEthosGradeSchemeByIdAsync(id);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                _logger.Error(ex, string.Format("Could not retrieve a grade scheme with ID {0}.", id));
+                throw CreateHttpResponseException(string.Format("Could not retrieve a grade scheme with ID {0}.", id), System.Net.HttpStatusCode.NotFound);
             }
             catch (Exception ex)
             {

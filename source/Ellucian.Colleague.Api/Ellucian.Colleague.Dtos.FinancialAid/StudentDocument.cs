@@ -1,4 +1,4 @@
-﻿//Copyright 2014-2016 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -46,5 +46,10 @@ namespace Ellucian.Colleague.Dtos.FinancialAid
         /// The document's due date.
         /// </summary>
         public DateTime? DueDate { get; set; }
+
+        /// <summary>
+        /// The correspondence request's assign date. Needed to match up to correct item in the database along with Code and person.
+        /// </summary>
+        public DateTime? AssignDate { get; set; }
     }
 }

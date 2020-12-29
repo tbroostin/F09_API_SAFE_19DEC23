@@ -1,21 +1,19 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
+using Ellucian.Colleague.Coordination.Student.Services;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Colleague.Dtos;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Security;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Coordination.Student.Services;
-using Ellucian.Colleague.Domain.Student.Entities.Requirements;
-using Ellucian.Colleague.Domain.Student.Repositories;
-using Ellucian.Colleague.Dtos;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
-using slf4net;
-using Ellucian.Web.Adapters;
-using Ellucian.Colleague.Coordination.Base.Services;
-using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Web.Security;
-using Ellucian.Colleague.Domain.Repositories;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -232,7 +230,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task AcademicProgramService__AcademicPrograms4()
             {
-                var results = await _academicProgramService.GetAcademicPrograms4Async("",false);
+                var results = await _academicProgramService.GetAcademicPrograms4Async("","", null, false);
                 Assert.IsTrue(results is IEnumerable<AcademicProgram4>);
                 Assert.IsNotNull(results);
             }
@@ -240,19 +238,19 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task AcademicProgramService_AcademicPrograms4_Count()
             {
-                var results = await _academicProgramService.GetAcademicPrograms4Async("",false);
+                var results = await _academicProgramService.GetAcademicPrograms4Async("", "active", null, false);
                 Assert.AreEqual(3, results.Count());
             }
 
             [TestMethod]
             public async Task AcademicProgramService_AcademicPrograms4_Properties()
             {
-                var results = await _academicProgramService.GetAcademicPrograms4Async("", false);
-                var academicProgram = results.First(x => x.Code == "GR-UNDEC");
+                AcademicProgram4 ap4 = new AcademicProgram4() { AcademicLevel = new GuidObject2("74588696-D1EC-2267-A0B7-DE602533E3A6") };
+                var results = await _academicProgramService.GetAcademicPrograms4Async("", "", ap4, false);
+                var academicProgram = results.First(x => x.Code == "BA-EDUC");
                 Assert.IsNotNull(academicProgram.Id);
                 Assert.IsNotNull(academicProgram.Code);
                 Assert.IsNotNull(academicProgram.StartDate);
-                Assert.IsNotNull(academicProgram.EndDate);
                 Assert.IsNotNull(academicProgram.Status);
             }
 
@@ -282,6 +280,57 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.IsNotNull(academicProgram.Status);
             }
 
+            [TestMethod]
+            public async Task AcademicProgramService_AcademicPrograms4_Zero_Count()
+            {
+                var results = await _academicProgramService.GetAcademicPrograms4Async("", "actives", null, false);
+                Assert.AreEqual(0, results.Count());
+            }
+
+            [TestMethod]
+            public async Task AcademicProgramService_AcademicPrograms4_With_AcadCatalog_Count()
+            {
+                var results = await _academicProgramService.GetAcademicPrograms4Async("74588696-D1EC-2267-A0B7-DE602533E3A6", "", null, false);
+                Assert.AreEqual(1, results.Count());
+            }
+                       
+            [TestMethod]
+            public async Task AcademicProgramService_AcademicPrograms4_Null_Academic_Programs()
+            {
+                _studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicProgramsAsync(false)).ReturnsAsync(null);
+                var results = await _academicProgramService.GetAcademicPrograms4Async("", "", null, false);
+                Assert.AreEqual(0, results.Count());
+            }
+
+            [TestMethod]
+            public async Task AcademicProgramService_AcademicPrograms4_Null_Academic_Catalogs()
+            {
+                _catalogRepositoryMock.Setup(i => i.GetAsync(It.IsAny<bool>())).ReturnsAsync(null);
+                var results = await _academicProgramService.GetAcademicPrograms4Async("74588696-D1EC-2267-A0B7-DE602533E3A6", "", null, false);
+                Assert.AreEqual(0, results.Count());
+            }
+
+            [TestMethod]
+            public async Task AcademicProgramService_AcademicPrograms4_WrongGuid_Academic_Catalogs()
+            {
+                var results = await _academicProgramService.GetAcademicPrograms4Async("BAD_GUID", "", null, false);
+                Assert.AreEqual(0, results.Count());
+            }
+            
+            [TestMethod]
+            public async Task AcademicProgramService_AcademicPrograms4_Null_Academic_Levels()
+            {
+                _studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+                var results = await _academicProgramService.GetAcademicPrograms4Async("", "",new AcademicProgram4() { AcademicLevel = new GuidObject2("BAD_GUID") }, false);
+                Assert.AreEqual(0, results.Count());
+            }
+
+            [TestMethod]
+            public async Task AcademicProgramService_AcademicPrograms4_BAD_AcadLevel_Guid_Academic_Levels()
+            {
+                var results = await _academicProgramService.GetAcademicPrograms4Async("", "", new AcademicProgram4() { AcademicLevel = new GuidObject2("BAD_GUID") }, false);
+                Assert.AreEqual(0, results.Count());
+            }
             #endregion
 
             private void SetupValidRepositoryData()
@@ -301,6 +350,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _personRepository = _personRepositoryMock.Object;
                 _personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(personGuidCollection);
 
+                List<Ellucian.Colleague.Domain.Student.Entities.Requirements.Catalog> catalogList = new List<Domain.Student.Entities.Requirements.Catalog>()
+                {
+                    new Domain.Student.Entities.Requirements.Catalog("74588696-D1EC-2267-A0B7-DE602533E3A6", "MA-HIST", DateTime.Today)
+                    {
+                        AcadPrograms = new List<string>(){ "MA-HIST" }
+                    }
+                };
+
+                _catalogRepositoryMock.Setup(i => i.GetAsync(It.IsAny<bool>())).ReturnsAsync(catalogList);
 
                 _academicProgramCollection.Add(new Domain.Student.Entities.AcademicProgram("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "BA-EDUC", "BA in Education")
                     {
@@ -312,7 +370,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         AuthorizingInstitute = new List<string>() {  "0000123" }
                     });
                 _academicProgramCollection.Add(new Domain.Student.Entities.AcademicProgram("73244057-D1EC-4094-A0B7-DE602533E3A6", "MA-HIST", "MA History")
-                    {
+                    {                    
                         StartDate = new DateTime(2012, 12, 31),
                         CertificateCodes = new List<string>() { "TEACH" },
                         AcadLevelCode = "CE",
@@ -348,7 +406,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _academicLevelCollection.Add(new Domain.Student.Entities.AcademicLevel("74588696-D1EC-2267-A0B7-DE602533E3A6", "UG", "Undergraduate"));
                 _academicLevelCollection.Add(new Domain.Student.Entities.AcademicLevel("74826546-D1EC-2267-A0B7-DE602533E3A6", "GR", "Graduate"));
                 _academicLevelCollection.Add(new Domain.Student.Entities.AcademicLevel("54364536-D1EC-2267-A0B7-DE602533E3A6", "CE", "Continuing Education"));
-                _studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync()).ReturnsAsync(_academicLevelCollection);
+                _studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync(It.IsAny<bool>())).ReturnsAsync(_academicLevelCollection);
                 
                 // Mock Academic Credentials Service
                _credentialCollection.Add(new AcademicCredential()

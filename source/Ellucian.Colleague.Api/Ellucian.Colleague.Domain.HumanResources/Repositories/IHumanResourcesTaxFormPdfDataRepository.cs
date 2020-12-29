@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
@@ -10,6 +10,12 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
     /// </summary>
     public interface IHumanResourcesTaxFormPdfDataRepository
     {
+
+        /// <summary>
+        /// Gets the boolean value that indicates if the client is set up to use the Guam version of the W2 form.
+        /// </summary>
+        /// <returns>Boolean value where true = Guam and false = USA</returns>
+        Task<bool> GetW2GuamFlag();
         /// <summary>
         /// Get the W-2 data for a PDF.
         /// </summary>

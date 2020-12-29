@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -163,9 +163,9 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         {
             return Task.FromResult<IEnumerable<Student.Entities.ApplicationInfluence>>(new List<Student.Entities.ApplicationInfluence>()
                 {
-                    new Domain.Student.Entities.ApplicationInfluence("CT", "Campus Tour"),
-            new Domain.Student.Entities.ApplicationInfluence("BR", "Brochure"),
-            new Domain.Student.Entities.ApplicationInfluence("WS", "Website")
+                    new Domain.Student.Entities.ApplicationInfluence("8C3B805D-CFE6-483B-86C3-4C20562F8C15", "CT", "Campus Tour"),
+            new Domain.Student.Entities.ApplicationInfluence("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "BR", "Brochure"),
+            new Domain.Student.Entities.ApplicationInfluence("0C3B805D-CFE6-483B-86C3-4C20562F8C15", "WS", "Website")
                 });
         }
 
@@ -239,15 +239,15 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 });
         }
 
-        public Task<IEnumerable<Student.Entities.CareerGoal>> GetCareerGoalsAsync()
+        public Task<IEnumerable<Student.Entities.CareerGoal>> GetCareerGoalsAsync(bool ignoreCache= false)
         {
             return Task.FromResult<IEnumerable<Student.Entities.CareerGoal>>(new List<Student.Entities.CareerGoal>()
                 {
-                    new Student.Entities.CareerGoal("ADAS", "Administrative Assistant"),
-                    new Student.Entities.CareerGoal("INFT", "Information Technology"),
-                    new Student.Entities.CareerGoal("PSYC", "Psychology"),
-                    new Student.Entities.CareerGoal("NURS", "Nursing"),
-                    new Student.Entities.CareerGoal("AUTO", "Auto Repair")
+                    new Student.Entities.CareerGoal("1a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fba", "ADAS", "Administrative Assistant"),
+                    new Student.Entities.CareerGoal("2a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbb", "INFT", "Information Technology"),
+                    new Student.Entities.CareerGoal("3a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "PSYC", "Psychology"),
+                    new Student.Entities.CareerGoal("4a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbd", "NURS", "Nursing"),
+                    new Student.Entities.CareerGoal("5a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbe", "AUTO", "Auto Repair")
                 });
         }
 
@@ -261,6 +261,55 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     new Student.Entities.Ccd("ccd3", "Ccd 3"),
                     new Student.Entities.Ccd("ccd4", "Ccd 4")
                 });
+        }
+        
+        /// <summary>
+        /// Get All CIP codes for cip-codes API (HEDM)
+        /// </summary>
+        /// <returns>List of CipCode entities</returns>
+        public Task<IEnumerable<CipCode>> GetCipCodesAsync(bool ignoreCache = false)
+        {
+            return Task.FromResult<IEnumerable<Student.Entities.CipCode>>(new List<Student.Entities.CipCode>()
+                {
+                    new Student.Entities.CipCode("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1", 2020),
+                    new Student.Entities.CipCode("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2", 2020),
+                    new Student.Entities.CipCode("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3", 2020),
+                    new Student.Entities.CipCode("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4", 2020)
+                });
+        }
+
+        /// <summary>
+        /// Get guid for Cip code
+        /// </summary>
+        /// <param name="code">Cip code</param>
+        /// <returns>Guid</returns>
+        public Task<string> GetCipCodesGuidAsync(string code)
+        {
+            var cipCodeList = (new List<Student.Entities.CipCode>()
+                {
+                    new Student.Entities.CipCode("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1", 2020),
+                    new Student.Entities.CipCode("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2", 2020),
+                    new Student.Entities.CipCode("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3", 2020),
+                    new Student.Entities.CipCode("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4", 2020)
+                });
+            return Task.FromResult(cipCodeList.FirstOrDefault(c => c.Code == code).Guid);
+        }
+
+        /// <summary>
+        /// Get code for Cip code guid
+        /// </summary>
+        /// <param name="code">Cip code guid</param>
+        /// <returns>code</returns>
+        public Task<string> GetCipCodesFromGuidAsync(string guid)
+        {
+            var cipCodeList = (new List<Student.Entities.CipCode>()
+                {
+                    new Student.Entities.CipCode("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1", 2020),
+                    new Student.Entities.CipCode("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2", 2020),
+                    new Student.Entities.CipCode("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3", 2020),
+                    new Student.Entities.CipCode("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4", 2020)
+                });
+            return Task.FromResult(cipCodeList.FirstOrDefault(c => c.Guid == guid).Code);
         }
 
         public Task<IEnumerable<Student.Entities.ClassLevel>> GetClassLevelsAsync()
@@ -424,6 +473,22 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 });
         }
 
+        public Task<IEnumerable<GradeSubscheme>> GetGradeSubschemesAsync()
+        {
+            return this.GetGradeSubschemesAsync(false);
+        }
+
+        public Task<IEnumerable<Student.Entities.GradeSubscheme>> GetGradeSubschemesAsync(bool ignoreCache)
+        {
+            return Task.FromResult<IEnumerable<Student.Entities.GradeSubscheme>>(new List<Student.Entities.GradeSubscheme>()
+                {
+                    new Student.Entities.GradeSubscheme("CE", "Continuing Education"),
+                    new Student.Entities.GradeSubscheme("GR", "Graduate"),
+                    new Student.Entities.GradeSubscheme("UG", "Undergraduate"),
+                    new Student.Entities.GradeSubscheme("TR", "Transfer")
+                });
+        }
+
         public Task<IEnumerable<Student.Entities.GradeScheme>> GetGradeSchemesAsync()
         {
             return this.GetGradeSchemesAsync(false);
@@ -551,6 +616,17 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     new Student.Entities.MealPlan("5aeebc5c-c973-4f83-be4b-f64c95002124", "CODE2", "DESC2"),
                     new Student.Entities.MealPlan("27178aab-a6e8-4d1e-ae27-eca1f7b33363", "CODE3", "DESC3")
                 });
+        }
+
+        public Task<string> GetMealPlanGuidAsync(string code)
+        {
+            var mealPlans = (new List<Student.Entities.MealPlan>()
+                {
+                    new Student.Entities.MealPlan("bb66b971-3ee0-4477-9bb7-539721f93434", "CODE1", "DESC1"),
+                    new Student.Entities.MealPlan("5aeebc5c-c973-4f83-be4b-f64c95002124", "CODE2", "DESC2"),
+                    new Student.Entities.MealPlan("27178aab-a6e8-4d1e-ae27-eca1f7b33363", "CODE3", "DESC3")
+                });
+            return Task.FromResult(mealPlans.FirstOrDefault(c => c.Code == code).Guid);
         }
 
         public Task<IEnumerable<Student.Entities.MealType>> GetMealTypesAsync(bool ignoreCache)
@@ -793,6 +869,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     new Student.Entities.StudentLoad("L", "Less than Half Time")
                 });
         }
+        public Task<string> GetUnidataFormattedDate(string date)
+        {
+            throw new NotImplementedException();
+        }
 
         public Task<IEnumerable<Student.Entities.NonAcademicAttendanceEventType>> GetNonAcademicAttendanceEventTypesAsync(bool ignoreCache)
         {
@@ -879,6 +959,18 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     new Student.Entities.TestSource("eh54668d-50d9-416c-81e9-2318e88571a1", "SF", "Self Reported"),
                     new Student.Entities.TestSource("3fgd2bea-8948-439b-b5c5-779d84724a38", "LSAT", "LSAT"),
                     new Student.Entities.TestSource("22f74c63-df5b-4e56-8ef0-e871ccc789e8", "ACT", "ACT")
+                });
+        }
+
+        //Domain.Student.Entities.StudentCohort
+        public Task<IEnumerable<Student.Entities.StudentCohort>> GetAllStudentCohortAsync(bool ignoreCache)
+        {
+            return Task.FromResult<IEnumerable<Student.Entities.StudentCohort>>(new List<Student.Entities.StudentCohort>()
+                {
+                    new Student.Entities.StudentCohort("c5bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "HS", "High School Transcript"){ CohortType = "FED" },
+                    new Student.Entities.StudentCohort("eh54668d-50d9-416c-81e9-2318e88571a1", "SF", "Self Reported"),
+                    new Student.Entities.StudentCohort("3fgd2bea-8948-439b-b5c5-779d84724a38", "LSAT", "LSAT"),
+                    new Student.Entities.StudentCohort("22f74c63-df5b-4e56-8ef0-e871ccc789e8", "ACT", "ACT"){ CohortType = "FED" }
                 });
         }
 
@@ -992,13 +1084,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         {
             throw new NotImplementedException();
         }
-
-
-        public Task<IEnumerable<StudentCohort>> GetAllStudentCohortAsync(bool bypassCache)
-        {
-            throw new NotImplementedException();
-        }
-
 
         public Task<IEnumerable<StudentClassification>> GetAllStudentClassificationAsync(bool bypassCache)
         {
@@ -1352,12 +1437,154 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             throw new NotImplementedException();
         }
 
+        public Task<string> GetApplicationInfluenceGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetCareerGoalGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<string> GetApplicationSourcesGuidAsync(string code)
         {
             throw new NotImplementedException();
         }
 
         public Task<IEnumerable<GradingTerm>> GetGradingTermsAsync(bool bypassCache = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<AdmissionDecisionType> GetAdmissionDecisionTypeByGuidAsync(string guid)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetStudentCohortGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetSectionTitleTypesGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetSectionDescriptionTypesGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Returns all education goals
+        /// </summary>
+        /// <param name="ignoreCache">Flag indicating whether or not to bypass the cache</param>
+        /// <returns>Collection of <see cref="EducationGoal">education goals</see></returns>
+        public Task<IEnumerable<EducationGoal>> GetAllEducationGoalsAsync(bool bypassCache = false)
+        {
+            return Task.FromResult<IEnumerable<EducationGoal>>(new List<EducationGoal>()
+                {
+                    new EducationGoal("BA", "Bachelor's Degree"),
+                    new EducationGoal("MA", "Master's Degree"),
+                });
+        }
+
+        /// <summary>
+        /// Returns all registration reasons
+        /// </summary>
+        /// <param name="ignoreCache">Flag indicating whether or not to bypass the cache</param>
+        /// <returns>Collection of <see cref="RegistrationReason">registration reasons</see></returns>
+        public Task<IEnumerable<RegistrationReason>> GetRegistrationReasonsAsync(bool bypassCache = false)
+        {
+            return Task.FromResult<IEnumerable<RegistrationReason>>(new List<RegistrationReason>()
+                {
+                    new RegistrationReason("CURRENTJOB", "Need for my current job"),
+                    new RegistrationReason("FUN", "Just for fun"),
+                });
+        }
+
+        /// <summary>
+        /// Returns all registration marketing sources
+        /// </summary>
+        /// <param name="ignoreCache">Flag indicating whether or not to bypass the cache</param>
+        /// <returns>Collection of <see cref="RegistrationMarketingSource">registration marrketing sources</see></returns>
+        public Task<IEnumerable<RegistrationMarketingSource>> GetRegistrationMarketingSourcesAsync(bool bypassCache = false)
+        {
+            return Task.FromResult<IEnumerable<RegistrationMarketingSource>>(new List<RegistrationMarketingSource>()
+                {
+                    new RegistrationMarketingSource("NEWSAD", "From a newspaper ad"),
+                    new RegistrationMarketingSource("WEB", "I found it on the web"),
+                });
+        }
+
+        public Task<string> GetAccountReceivableTypesGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetAccountReceivableTypesCodeFromGuidAsync(string guid)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetDistrMethodGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetDistrMethodCodeFromGuidAsync(string guid)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<List<string>> GetHeadcountInclusionListAsync(bool ignoreCache = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetAdvisorTypeGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<ApplicationInfluence>> GetApplicationInfluencesAsync(bool ignoreCache)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<EducationGoals>> GetEducationGoalsAsync(bool ignoreCache)
+        {
+            return Task.FromResult<IEnumerable<Student.Entities.EducationGoals>>(new List<Student.Entities.EducationGoals>()
+                {
+                    new EducationGoals("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "AT", "Athletic"),
+                    new EducationGoals("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "AC", "Academic"),
+                    new EducationGoals("d2253ac7-9931-4560-b42f-1fccd43c952e", "CU", "Cultural")
+                });
+        }
+
+        public Task<string> GetEducationGoalGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetFinancialAidYearsGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<FinancialAidYear> GetFinancialAidYearAsync( string sourceGuid )
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<FinancialAidMaritalStatus>> GetFinancialAidMaritalStatusesAsync( bool bypassCache = false, params string[] years )
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<FinancialAidMaritalStatus> GetFinancialAidMaritalStatusAsync( string year, string code )
         {
             throw new NotImplementedException();
         }

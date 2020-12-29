@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -16,6 +16,9 @@ using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Tests;
 using Ellucian.Data.Colleague;
+using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Security;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -33,6 +36,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         private Mock<IReferenceDataRepository> _referenceRepositoryMock;
         private IEnumerable<Domain.Base.Entities.SourceContext> _sourceContextsCollection;
 
+        private Mock<IAdapterRegistry> _adapterRegistryMock;
+        private IAdapterRegistry _adapterRegistry;
+        private ICurrentUserFactory _currentStudentFactory;
+        private IConfigurationRepository _configurationRepository;
+        private Mock<IConfigurationRepository> _configurationRepositoryMock;
+        private Mock<IRoleRepository> _roleRepoMock;
+        private IRoleRepository _roleRepo;
+
         [TestInitialize]
         public async void Initialize()
         {
@@ -44,6 +55,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             _addressChangeSourceCollection = new TestAddressChangeSourceRepository().GetAddressChangeSource().ToList();
             _remarkCodeCollection = new TestRemarkCodeRepository().GetRemarkCode().ToList();
             _sourceContextsCollection = new TestSourceContextRepository().GetSourceContexts();
+
+            _adapterRegistryMock = new Mock<IAdapterRegistry>();
+            _adapterRegistry = _adapterRegistryMock.Object;
+            _configurationRepositoryMock = new Mock<IConfigurationRepository>();
+            _configurationRepository = _configurationRepositoryMock.Object;
+            _roleRepoMock = new Mock<IRoleRepository>();
+            _roleRepo = _roleRepoMock.Object;
 
 
             _studentReferenceRepositoryMock.Setup(repo => repo.GetTestSourcesAsync(It.IsAny<bool>()))
@@ -59,8 +77,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             _referenceRepositoryMock.Setup(repo => repo.GetSourceContextsAsync(It.IsAny<bool>()))
              .ReturnsAsync(_sourceContextsCollection);
 
-            _sourceService = new SourceService(_studentReferenceRepositoryMock.Object,
-                _referenceRepositoryMock.Object, _loggerMock.Object);
+            _currentStudentFactory = new StudentServiceTests.CurrentUserSetup.StudentUserFactory();            
+            _sourceService = new SourceService(_adapterRegistry, _studentReferenceRepositoryMock.Object, _referenceRepositoryMock.Object, _currentStudentFactory, _configurationRepository, _roleRepo, _loggerMock.Object);
         }
 
         [TestCleanup]

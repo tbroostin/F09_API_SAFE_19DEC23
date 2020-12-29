@@ -115,5 +115,36 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 throw CreateHttpResponseException("Unable to get the budget adjustment configuration.", HttpStatusCode.BadRequest);
             }
         }
+
+        /// <summary>
+        /// Get fiscal year configuration information necessary to validate fiscal year dates used in finance query.
+        /// </summary>
+        /// <returns>GlFiscalYearConfiguration DTO</returns>
+        /// <accessComments>
+        /// No permission is needed.
+        /// </accessComments> 
+        public async Task<GlFiscalYearConfiguration> GetGlFiscalYearConfigurationAsync()
+        {
+            try
+            {
+                return await glConfigurationService.GetGlFiscalYearConfigurationAsync();
+            }
+            catch (ConfigurationException cnex)
+            {
+                logger.Error(cnex, cnex.Message);
+                throw CreateHttpResponseException("Invalid configuration.", HttpStatusCode.NotFound);
+            }
+            catch (ArgumentNullException anex)
+            {
+                logger.Error(anex, anex.Message);
+                throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
+            }
+            // Application exceptions will be caught below.
+            catch (Exception ex)
+            {
+                logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException("Unable to get the gl fiscal year configuration.", HttpStatusCode.BadRequest);
+            }
+        }
     }
 }

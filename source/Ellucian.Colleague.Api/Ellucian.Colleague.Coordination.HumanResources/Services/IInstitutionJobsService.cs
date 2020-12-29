@@ -38,7 +38,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns></returns>
         Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.InstitutionJobs3>, int>> GetInstitutionJobs3Async(int offset, int limit,
           string person = "", string employer = "", string position = "", string department = "", string startOn = "",
-          string endOn = "", string status = "", string classification = "", string preference = "", bool bypassCache = false);
+          string endOn = "", string status = "", string classification = "", string preference = "", bool bypassCache = false, Dictionary<string, string> filterQualifiers = null);
 
 
         /// <summary>

@@ -68,13 +68,5 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
         /// <param name="id"></param>
         /// <returns></returns>
         Task<GuidLookupResult> GetInfoFromGuidAsync(string id);
-
-        /// <summary>
-        /// Get the correct GUID for the job.id (PERPOS entity record)
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="entity"></param>
-        /// <returns></returns>
-        Task<string> GetJobGuidFromIdAsync(string key, string entity);
     }
 }

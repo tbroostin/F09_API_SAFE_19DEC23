@@ -1,9 +1,6 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2019 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Domain.HumanResources.Entities
 {
@@ -121,12 +118,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// <param name="id"></param>
         /// <param name="personId"></param>
         /// <param name="positionId"></param>
+        /// <param name="personPositionId"></param>
         /// <param name="positionPayDefaultId"></param>
         /// <param name="payClassId"></param>
+        /// <param name="payCycleId"></param>
         /// <param name="regularWorkEarningsTypeId"></param>
         /// <param name="startDate"></param>
-        // <param name="earningsTypeGroupId"></param>
-        /// <param name="earningsTypeGroupEntries"></param>
+        /// <param name="earningsTypeGroupId"></param>
         public PersonPositionWage(
             string id,
             string personId,
@@ -137,14 +135,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             string payCycleId,
             string regularWorkEarningsTypeId,
             DateTime startDate,
-            string earningsTypeGroupId)
-            //List<EarningsTypeGroup> earningsTypeGroupEntries)
+            string earningsTypeGroupId)            
         {
-            if (string.IsNullOrEmpty(id))
+            if (string.IsNullOrEmpty(id)) 
             {
                 throw new ArgumentNullException("id");
             }
-            if (string.IsNullOrEmpty(personId))
+            if (string.IsNullOrEmpty(personId)) 
             {
                 throw new ArgumentNullException("personId");
             }
@@ -152,23 +149,23 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             {
                 throw new ArgumentNullException("positionId");
             }
-            if (string.IsNullOrEmpty(personPositionId))
+            if (string.IsNullOrEmpty(personPositionId)) 
             {
                 throw new ArgumentNullException("personPositionId");
             }
-            if (string.IsNullOrEmpty(positionPayDefaultId))
+            if (string.IsNullOrEmpty(positionPayDefaultId)) 
             {
                 throw new ArgumentNullException("positionPayDefaultId");
             }          
-            if (string.IsNullOrEmpty(payClassId))
+            if (string.IsNullOrEmpty(payClassId)) 
             {
                 throw new ArgumentNullException("payClassId");
             }
-            if (string.IsNullOrEmpty(payCycleId))
+            if (string.IsNullOrEmpty(payCycleId)) 
             {
                 throw new ArgumentNullException("payCycleId");
             }
-            if (string.IsNullOrEmpty(regularWorkEarningsTypeId))
+            if (string.IsNullOrEmpty(regularWorkEarningsTypeId)) 
             {
                 throw new ArgumentNullException("regularWorkEarningsTypeId");
             }

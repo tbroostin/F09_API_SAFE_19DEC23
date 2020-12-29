@@ -49,11 +49,95 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// Gets all financial-aid-funds
         /// </summary>
         /// <returns>Collection of FinancialAidFunds DTO objects</returns>
-        public async Task<Tuple<IEnumerable<Dtos.FinancialAidFunds>, int>> GetFinancialAidFundsAsync(int offset, int limit, bool bypassCache = false)
+        public async Task<Tuple<IEnumerable<Dtos.FinancialAidFunds>, int>> GetFinancialAidFundsAsync(int offset, int limit, Dtos.Filters.FinancialAidFundsFilter criteriaFilter, bool bypassCache = false)
         {
             var financialAidFundsCollection = new List<Dtos.FinancialAidFunds>();
 
-            var pageOfItems = await _fundRepository.GetFinancialAidFundsAsync(offset, limit, bypassCache);
+            string code = "", source = "", aidType = "", awardCategory = "";
+            List<string> classifications = new List<string>();
+            if (criteriaFilter != null)
+            {
+                if (!string.IsNullOrEmpty(criteriaFilter.Code)) code = criteriaFilter.Code;
+                if (criteriaFilter.Source != Dtos.EnumProperties.FinancialAidFundsSource.NotSet) source = criteriaFilter.Source.ToString();
+                if (criteriaFilter.AidType != Dtos.EnumProperties.FinancialAidFundsAidType.NotSet) aidType = criteriaFilter.AidType.ToString();
+                var classificationGuids = criteriaFilter.Classifications;
+
+                if (classificationGuids != null && classificationGuids.Any())
+                {
+                    var financialAidFundClassifications = await _referenceDataRepository.GetFinancialAidFundClassificationsAsync(bypassCache);
+
+                    if (financialAidFundClassifications != null && financialAidFundClassifications.Any())
+                    { 
+                        foreach (var classGuid in classificationGuids)
+                        {
+                            if (classGuid != null && !string.IsNullOrEmpty(classGuid.Id))
+                            {
+                                var faClass = financialAidFundClassifications.Where(a => a.Guid == classGuid.Id).FirstOrDefault();
+
+                                if (faClass != null && !string.IsNullOrEmpty(faClass.FundingTypeCode))
+                                {
+                                    classifications.Add(faClass.FundingTypeCode);
+                                }
+                                else
+                                {
+                                    return new Tuple<IEnumerable<FinancialAidFunds>, int>(new List<Dtos.FinancialAidFunds>(), 0);
+                                }
+                            }
+                        }
+                    }
+
+                    if (classifications == null || !classifications.Any())
+                    {
+                        return new Tuple<IEnumerable<FinancialAidFunds>, int>(new List<Dtos.FinancialAidFunds>(), 0);
+                    }
+                }
+
+                var categories = criteriaFilter.Category;
+                if (categories != null)
+                {
+                    var financialAidFundAwardCategories = await FinancialAidFundCategories(bypassCache);
+                    if (financialAidFundAwardCategories != null && financialAidFundAwardCategories.Any())
+                    {
+                        if (categories.CategoryName != null && categories.CategoryName != Dtos.EnumProperties.FinancialAidFundAidCategoryType.NotSet)
+                        {
+                            var categoryName = ConvertFinancialAidFundsAwardCategoryDtoEnumToFinancialAidFundsCategoryDomainEnum(categories.CategoryName);
+                            var awardCategories = financialAidFundAwardCategories.Where(a => a.AwardCategoryName == categoryName);
+                            if (awardCategories != null && awardCategories.Any())
+                            {
+                                foreach (var faCat in awardCategories)
+                                {
+                                    awardCategory = string.Concat(awardCategory, "'", faCat.Code, "'");
+                                }
+                            }
+                            else
+                            {
+                                return new Tuple<IEnumerable<FinancialAidFunds>, int>(new List<Dtos.FinancialAidFunds>(), 0);
+                            }
+                        }
+                        else
+                        {
+                            if (categories != null && categories.Detail != null && !string.IsNullOrEmpty(categories.Detail.Id))
+                            {
+                                var faCat = financialAidFundAwardCategories.Where(a => a.Guid == categories.Detail.Id).FirstOrDefault();
+                                if (faCat != null)
+                                {
+                                    awardCategory = string.Concat("'", faCat.Code, "'");
+                                }
+                                else
+                                {
+                                    return new Tuple<IEnumerable<FinancialAidFunds>, int>(new List<Dtos.FinancialAidFunds>(), 0);
+                                }
+                            }
+                        }
+                    }
+                    if (string.IsNullOrEmpty(awardCategory))
+                    {
+                        return new Tuple<IEnumerable<FinancialAidFunds>, int>(new List<Dtos.FinancialAidFunds>(), 0);
+                    }
+                }
+            }
+
+            var pageOfItems = await _fundRepository.GetFinancialAidFundsAsync(offset, limit, code, source, aidType, classifications, awardCategory, bypassCache);
 
             var financialAidFundsEntities = pageOfItems.Item1;
             int totalRecords = pageOfItems.Item2;
@@ -98,13 +182,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 return await ConvertFinancialAidFundsEntityToDto(entity, financialAidFundFinancials, true);
             }
-            catch (KeyNotFoundException ex)
+            catch (Exception)
             {
-                throw new KeyNotFoundException("financial-aid-funds not found for GUID " + guid, ex);
-            }
-            catch (InvalidOperationException ex)
-            {
-                throw new KeyNotFoundException("financial-aid-funds not found for GUID " + guid, ex);
+                IntegrationApiExceptionAddError(string.Format("financial-aid-funds not found for GUID '{0}'", guid), "GUID.Not.Found", guid, httpStatusCode: System.Net.HttpStatusCode.NotFound);
+                throw IntegrationApiException;
             }
         }
 
@@ -309,7 +390,87 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     return Dtos.EnumProperties.FinancialAidFundAidCategoryType.NonGovernmental;
             }
         }
-   
+
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
+        /// <summary>
+        /// Converts a FinancialAidFundsSource domain enumeration value to its corresponding FinancialAidFundsSource DTO enumeration value
+        /// </summary>
+        /// <param name="source">FinancialAidFundsSource domain enumeration value</param>
+        /// <returns>FinancialAidFundsSource DTO enumeration value</returns>
+        private FinancialAidFundAidCategoryType ConvertFinancialAidFundsAwardCategoryDtoEnumToFinancialAidFundsCategoryDomainEnum(Dtos.EnumProperties.FinancialAidFundAidCategoryType? source)
+        {
+            switch (source)
+            {
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.AcademicCompetitivenessGrant:
+                    return FinancialAidFundAidCategoryType.AcademicCompetitivenessGrant;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.BureauOfIndianAffairsFederalGrant:
+                    return FinancialAidFundAidCategoryType.BureauOfIndianAffairsFederalGrant;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.FederalPerkinsLoan:
+                    return FinancialAidFundAidCategoryType.FederalPerkinsLoan;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.FederalSubsidizedLoan:
+                    return FinancialAidFundAidCategoryType.FederalSubsidizedLoan;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.FederalSupplementaryEducationalOpportunityGrant:
+                    return FinancialAidFundAidCategoryType.FederalSupplementaryEducationalOpportunityGrant;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.FederalSupplementaryLoanForParent:
+                    return FinancialAidFundAidCategoryType.FederalSupplementaryLoanForParent;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.FederalUnsubsidizedLoan:
+                    return FinancialAidFundAidCategoryType.FederalUnsubsidizedLoan;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.FederalWorkStudyProgram:
+                    return FinancialAidFundAidCategoryType.FederalWorkStudyProgram;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.GeneralTitleIVloan:
+                    return FinancialAidFundAidCategoryType.GeneralTitleIVloan;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.GraduatePlusLoan:
+                    return FinancialAidFundAidCategoryType.GraduatePlusLoan;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.GraduateTeachGrant:
+                    return FinancialAidFundAidCategoryType.GraduateTeachingGrant;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.HealthEducationAssistanceLoan:
+                    return FinancialAidFundAidCategoryType.HealthEducationAssistanceLoan;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.HealthProfessionalStudentLoan:
+                    return FinancialAidFundAidCategoryType.HealthProfessionalStudentLoan;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.IncomeContingentLoan:
+                    return FinancialAidFundAidCategoryType.IncomeContingentLoan;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.IraqAfghanistanServiceGrant:
+                    return FinancialAidFundAidCategoryType.IraqAfghanistanServiceGrant;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.LeveragingEducationalAssistancePartnership:
+                    return FinancialAidFundAidCategoryType.LeveragingEducationalAssistancePartnership;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.LoanForDisadvantagesStudent:
+                    return FinancialAidFundAidCategoryType.LoanForDisadvantagesStudent;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.NationalHealthServicesCorpsScholarship:
+                    return FinancialAidFundAidCategoryType.NationalHealthServicesCorpsScholarship;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.NationalSmartGrant:
+                    return FinancialAidFundAidCategoryType.NationalSmartGrant;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.NotSet:
+                    return FinancialAidFundAidCategoryType.NotSet;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.NursingStudentLoan:
+                    return FinancialAidFundAidCategoryType.NursingStudentLoan;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.ParentPlusLoan:
+                    return FinancialAidFundAidCategoryType.ParentPlusLoan;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.PaulDouglasTeacherScholarship:
+                    return FinancialAidFundAidCategoryType.PaulDouglasTeacherScholarship;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.PellGrant:
+                    return FinancialAidFundAidCategoryType.PellGrant;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.PrimaryCareLoan:
+                    return FinancialAidFundAidCategoryType.PrimaryCareLoan;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.RobertCByrdScholarshipProgram:
+                    return FinancialAidFundAidCategoryType.RobertCByrdScholarshipProgram;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.RotcScholarship:
+                    return FinancialAidFundAidCategoryType.RotcScholarship;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.StateStudentIncentiveGrant:
+                    return FinancialAidFundAidCategoryType.StateStudentIncentiveGrant;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.StayInSchoolProgram:
+                    return FinancialAidFundAidCategoryType.StayInSchoolProgram;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.UndergraduateTeachGrant:
+                    return FinancialAidFundAidCategoryType.UndergraduateTeachingGrant;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.VaHealthProfessionsScholarship:
+                    return FinancialAidFundAidCategoryType.VaHealthProfessionsScholarship;
+                case Dtos.EnumProperties.FinancialAidFundAidCategoryType.NonGovernmental:
+                    return FinancialAidFundAidCategoryType.NonGovernmental;
+
+                default:
+                    return FinancialAidFundAidCategoryType.NotSet;
+            }
+        }
+
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Converts a FinancialAidFundsSource domain enumeration value to its corresponding FinancialAidFundsSource DTO enumeration value

@@ -72,7 +72,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.UserFactories
             }
         }
 
-        public class PersonRelationshipUserFactory : ICurrentUserFactory
+        public class PersonalRelationshipUserFactory : ICurrentUserFactory
         {
             public ICurrentUser CurrentUser
             {
@@ -86,7 +86,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.UserFactories
                         SecurityToken = "321",
                         SessionTimeout = 30,
                         UserName = "ILP",
-                        Roles = new List<string>() { "VIEW.PERSON.RELATIONSHIPS", "VIEW.NONPERSON.RELATIONSHIPS", "UPDATE.PERSON.RELATIONSHIPS", "DELETE.PERSON.RELATIONSHIPS" },
+                        Roles = new List<string>() { "VIEW.RELATIONSHIP", "VIEW.NONPERSON.RELATIONSHIPS", "UPDATE.RELATIONSHIP", "DELETE.RELATIONSHIP", "PROCESS.RELATIONSHIP.REQUEST" },
                         SessionFixationId = "abc123"
                     });
                 }
@@ -198,6 +198,27 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.UserFactories
                         SessionTimeout = 30,
                         UserName = "JoeCounselor",
                         Roles = new List<string>() { "FINANCE ADMIN" },
+                        SessionFixationId = "xyz987"
+                    });
+                }
+            }
+        }
+
+        public class LanguageUser : ICurrentUserFactory
+        {
+            public ICurrentUser CurrentUser
+            {
+                get
+                {
+                    return new CurrentUser(new Claims()
+                    {
+                        ControlId = "321",
+                        Name = "Joe",
+                        PersonId = "0718745",
+                        SecurityToken = "9USSD9d9sdD.DS9983",
+                        SessionTimeout = 30,
+                        UserName = "JoeLanguage",
+                        Roles = new List<string>() { "UPDATE.LANGUAGE" },
                         SessionFixationId = "xyz987"
                     });
                 }

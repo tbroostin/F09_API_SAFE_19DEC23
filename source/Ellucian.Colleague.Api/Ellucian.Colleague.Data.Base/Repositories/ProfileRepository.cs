@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -207,7 +207,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     catch (Exception ex)
                     {
                         // Just log there was a problem and skip this address
-                        logger.Info("Error occurred processing address " + addressId + " for person " + personId + ". Message: " + ex.Message + ". Skipping address.");
+                        logger.Info("Error occurred processing address for person.");
+                        logger.Error(ex.Message);
                     }
                 }
             }
@@ -232,7 +233,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             catch (Exception ex)
             {
-                logger.Info("Error building phone data for person " + personId + ". Message: " + ex.Message);
+                logger.Info("Error building phone data for person");
+                logger.Error("Error building phone data for person: " + personId + Environment.NewLine + ex.Message);
             }
 
             return phoneNumber;
@@ -324,13 +326,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             if (profileUpdateResponse.AErrorOccurred == "3")
             {
-                logger.Info("No changes detected, no update made to person profile for " + profile.Id);
+                logger.Info("No changes detected, no update made to person profile for " + profile.Id); //is profile.Id PII?
             }
             else if (!string.IsNullOrEmpty(profileUpdateResponse.AErrorOccurred) && profileUpdateResponse.AErrorOccurred != "0")
             {
                 var errorMessage = "Error(s) occurred updating person profile '" + profile.Id + "': ";
                 errorMessage += profileUpdateResponse.AMsg;
-                logger.Error(errorMessage.ToString());
+                logger.Error(errorMessage);
                 throw new InvalidOperationException("Error occurred updating person profile");
             }
 
@@ -359,7 +361,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     var errorMessage = "Error(s) occurred updating confirmations '" + profile.Id + "':";
                     errorMessage += updateResponse.AMsg;
-                    logger.Error(errorMessage.ToString());
+                    logger.Error(errorMessage);
                     throw new InvalidOperationException("Error occurred updating confirmations");
                 }
             }
@@ -470,9 +472,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             var country = countries.Where(v => v.Code == addressData.Country).FirstOrDefault();
                             countryDesc = country != null ? country.Description : addressData.Country;
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            logger.Info("unable to find country entry for country " + addressData.Country);
+                            logger.Info("Unable to find country entry for country.");
+                            logger.Error(ex.Message);
                         }
                     }
                     address.AddressLabel = AddressProcessor.BuildAddressLabel(address.AddressModifier, addressData.AddressLines, addressData.City, addressData.State, addressData.Zip, addressData.Country, countryDesc);
@@ -493,7 +496,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             catch (Exception ex)
             {
-                logger.Info("Error occurred while processing address: " + addressData.Recordkey + " for person " + person.Recordkey + ". Address skipped. Message: " + ex.Message);
+                logger.Error(ex.Message);
                 return null;
             }
         }
@@ -524,7 +527,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         }
                         catch (Exception ex)
                         {
-                            LogDataError("Person personal phone information", personId, phoneData, ex);
+                            logger.Error(ex, "Unable to add phones for person {0}. Possible corrupt phone data.", personId);
                         }
                     }
                 }
@@ -558,8 +561,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                         var phoneError = "Person local phone information is invalid. PersonId: " + personId;
 
                                         // Log the original exception
-                                        logger.Error(ex.ToString());
-                                        logger.Info(phoneError);
+                                        logger.Error(ex, phoneError);
                                     }
                                 }
                             }
@@ -580,8 +582,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                         {
                                             var phoneError = "Person address phone information is invalid. PersonId: " + personId;
                                             // Log the original exception
-                                            logger.Error(ex.ToString());
-                                            logger.Info(phoneError);
+                                            logger.Error(ex, phoneError);
                                         }
                                     }
                                 }
@@ -589,7 +590,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         }
                         catch (Exception ex)
                         {
-                            logger.Info("Exception occurred while trying to process phones for person " + personId + " address " + addressId + " message: " + ex.Message);
+                            logger.Error(ex, "Exception occurred while trying to process phones for person " + personId + " address " + addressId);
                         }
                     }
                 }

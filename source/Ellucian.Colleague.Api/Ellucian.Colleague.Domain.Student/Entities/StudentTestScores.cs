@@ -1,9 +1,7 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Collections.ObjectModel;
 
 namespace Ellucian.Colleague.Domain.Student.Entities
 {
@@ -88,7 +86,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// Test Source
         /// </summary>
         public string ApplicationTestSource { get; set; }
-     
+
+        // <summary> 
+        /// Status code special processing 2
+        /// </summary
+         public string StatusCodeSpProcessing2 { get; set; }
 
         public StudentTestScores(string guid, string studentId, string code, string description, DateTime dateTaken)
         {

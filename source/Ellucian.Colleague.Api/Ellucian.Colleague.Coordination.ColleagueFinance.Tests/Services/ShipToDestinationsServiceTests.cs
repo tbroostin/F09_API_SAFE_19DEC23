@@ -19,13 +19,15 @@ using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
-{    
+{
     [TestClass]
     public class ShipToDestinationsServiceTests : CurrentUserSetup
     {
         private const string shipToDestinationsGuid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc";
         private const string shipToDestinationsCode = "AT";
+        private const string shipToCodesCode = "MC";
         private ICollection<ShipToDestination> _shipToDestinationsCollection;
+        private IEnumerable<ShipToCode> _shipToCodesCollection;
         private ShipToDestinationsService _shipToDestinationsService;
         private Mock<IAdapterRegistry> adapterRegistryMock;
         private IAdapterRegistry adapterRegistry;
@@ -70,10 +72,20 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new ShipToDestination("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "AC", "Academic"),
                     new ShipToDestination("d2253ac7-9931-4560-b42f-1fccd43c952e", "CU", "Cultural")
                 };
+            _shipToCodesCollection = new List<ShipToCode>()
+                {
+                    new ShipToCode("CD","Datatel - Central Dist. Office"),
+                    new ShipToCode("DT","Datatel - Downtown"),
+                    new ShipToCode("EC","Datatel - Extension Center"),
+                    new ShipToCode("MC","Datatel - Main Campus")
+                };
 
-           
+
             _cfReferenceRepositoryMock.Setup(repo => repo.GetShipToDestinationsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_shipToDestinationsCollection);
+
+            _cfReferenceRepositoryMock.Setup(repo => repo.GetShipToCodesAsync())
+                .ReturnsAsync(_shipToCodesCollection);
 
             // Mock the reference repository for country
             countries = new List<Domain.Base.Entities.Country>()
@@ -138,7 +150,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Assert.IsNotNull(result.Id);
             Assert.IsNotNull(result.Code);
             Assert.IsNull(result.Description);
-           
+
         }
 
         [TestMethod]
@@ -150,25 +162,25 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Assert.AreEqual(expectedResults.Guid, actualResult.Id);
             Assert.AreEqual(expectedResults.Description, actualResult.Title);
             Assert.AreEqual(expectedResults.Code, actualResult.Code);
-            
+
         }
 
         [TestMethod]
-        [ExpectedException(typeof (KeyNotFoundException))]
+        [ExpectedException(typeof(KeyNotFoundException))]
         public async Task ShipToDestinationsService_GetShipToDestinationsByGuidAsync_Empty()
         {
             await _shipToDestinationsService.GetShipToDestinationsByGuidAsync("");
         }
 
         [TestMethod]
-        [ExpectedException(typeof (KeyNotFoundException))]
+        [ExpectedException(typeof(KeyNotFoundException))]
         public async Task ShipToDestinationsService_GetShipToDestinationsByGuidAsync_Null()
         {
             await _shipToDestinationsService.GetShipToDestinationsByGuidAsync(null);
         }
 
         [TestMethod]
-        [ExpectedException(typeof (KeyNotFoundException))]
+        [ExpectedException(typeof(KeyNotFoundException))]
         public async Task ShipToDestinationsService_GetShipToDestinationsByGuidAsync_InvalidId()
         {
             _cfReferenceRepositoryMock.Setup(repo => repo.GetShipToDestinationsAsync(It.IsAny<bool>()))
@@ -187,7 +199,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Assert.AreEqual(expectedResults.Guid, actualResult.Id);
             Assert.AreEqual(expectedResults.Description, actualResult.Title);
             Assert.AreEqual(expectedResults.Code, actualResult.Code);
-            
+
         }
 
         [TestMethod]
@@ -199,7 +211,32 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Assert.IsNotNull(result.Code);
             Assert.IsNull(result.Description);
             Assert.IsNotNull(result.Title);
-            
+
+        }
+
+        [TestMethod]
+        public async Task ShipToDestinationsService_GetShipToCodesAsync()
+        {
+            var results = await _shipToDestinationsService.GetShipToCodesAsync();
+            Assert.IsTrue(results is IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.ShipToCode>);
+            Assert.IsNotNull(results);
+        }
+
+        [TestMethod]
+        public async Task ShipToDestinationsService_GetShipToCodesAsync_Count()
+        {
+            var results = await _shipToDestinationsService.GetShipToCodesAsync();
+            Assert.AreEqual(4, results.Count());
+        }
+
+        [TestMethod]
+        public async Task ShipToDestinationsService_GetShipToCodesAsync_Properties()
+        {
+            var result =
+                (await _shipToDestinationsService.GetShipToCodesAsync()).FirstOrDefault(x => x.Code == shipToCodesCode);
+            Assert.IsNotNull(result.Code);
+            Assert.IsNotNull(result.Description);
+
         }
     }
 }

@@ -1030,7 +1030,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 
             Assert.AreEqual(webW2cOnlineDataContract.Ww2coFirstName, actualDomainEntity.EmployeeFirstName);
             Assert.AreEqual(webW2cOnlineDataContract.Ww2coLastName, actualDomainEntity.EmployeeLastName);
-            Assert.AreEqual(webW2cOnlineDataContract.Ww2coMiddleName, actualDomainEntity.EmployeeMiddleName);
             Assert.AreEqual(webW2cOnlineDataContract.Ww2coSuffix, actualDomainEntity.EmployeeSuffix);
             Assert.AreEqual(webW2cOnlineDataContract.Ww2coEmplyeAddrLine1, actualDomainEntity.EmployeeAddressLine1);
             Assert.AreEqual(webW2cOnlineDataContract.Ww2coEmplyeAddrLine2, actualDomainEntity.EmployeeAddressLine2);

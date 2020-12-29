@@ -50,12 +50,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>Updated message(worktask).</returns>
         public async Task<WorkTask> UpdateMessageWorklistAsync(string messageId, string personId, ExecutionState newState)
         {
-
             if (string.IsNullOrEmpty(messageId))
             {
                 throw new ArgumentException("Must specify a message");
             }
-
             List<WorkTask> taskList = new List<WorkTask>();
 
             // Build the query string based on the provided arguments
@@ -205,7 +203,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 AWorkflowDefId = workflowDefId,
                 ASubjectLine = subjectLine,
                 ASpecProcCode = processCode
-
             };
 
             CreateMsgWorklistResponse createResponse = null;
@@ -248,7 +245,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var messages = await wrkRep.GetAsync(personId, null);
             foreach (var message in messages)
             {
-                if (message.Id.Equals(createResponse.AlWorklistIds[0]))
+                if (message.Id.Equals(createResponse.AlWorklistIds[0])) //double
                 {
                     return message;
                 }

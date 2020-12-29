@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -114,5 +114,9 @@ namespace Ellucian.Colleague.Domain.Finance.Entities.AccountActivity
                 return null;
             }
         }
+        /// <summary>
+        /// Indicates whether excess award amounts should be transmitted
+        /// </summary>
+        public bool TransmitAwardExcess { get; set; }
     }
 }

@@ -124,7 +124,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         accountingStringSubcomponents.Type = AccountingStringSubcomponentsType.Unit;
                         break;
                     case "SO":
-                        accountingStringSubcomponents.Type = AccountingStringSubcomponentsType.Object;
+                        accountingStringSubcomponents.Type = AccountingStringSubcomponentsType.Source;
                         break;
                     case "LO":
                         accountingStringSubcomponents.Type = AccountingStringSubcomponentsType.Location;

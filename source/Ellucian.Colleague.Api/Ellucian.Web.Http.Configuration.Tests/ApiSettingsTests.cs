@@ -1,8 +1,6 @@
-﻿// Copyright 2012-2014 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Collections.Generic;
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Ellucian.Web.Http.Configuration;
+using System;
 
 namespace Ellucian.Web.Http.Configuration.Tests
 {
@@ -51,6 +49,7 @@ namespace Ellucian.Web.Http.Configuration.Tests
             Assert.IsNotNull(nameOnlySettings.PhotoHeaders);
             Assert.AreEqual(5000, nameOnlySettings.BulkReadSize);
             Assert.AreEqual(TimeZoneInfo.Local.Id, nameOnlySettings.ColleagueTimeZone);
+            Assert.AreEqual(26214400, nameOnlySettings.AttachRequestMaxSize);
         }
 
         [TestMethod]
@@ -80,6 +79,5 @@ namespace Ellucian.Web.Http.Configuration.Tests
         {
             new ApiSettings(string.Empty);
         }
-
     }
 }

@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.HumanResources.Base.Tests;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 {
@@ -39,7 +40,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             public void Initialize()
             {
                 MockInitialize();
-                
+
                 _assignmentContractTypesCollection = new Collection<Ellucian.Colleague.Data.HumanResources.DataContracts.AsgmtContractTypes>()
                 {
                     new Ellucian.Colleague.Data.HumanResources.DataContracts.AsgmtContractTypes()
@@ -48,7 +49,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                         ActypDesc = "Fixed by Assignment w/ Subr"
                     }
 
-                };               
+                };
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<Ellucian.Colleague.Data.HumanResources.DataContracts.AsgmtContractTypes>("ASGMT.CONTRACT.TYPES", "", true)).ReturnsAsync(_assignmentContractTypesCollection);
                 hRRDR = new HumanResourcesReferenceDataRepository(cacheProvider, transFactory, logger);
             }
@@ -59,8 +60,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 MockCleanup();
             }
 
-           
-           [TestMethod]
+
+            [TestMethod]
             public async Task GetAssignmentContractTypesAsync()
             {
                 var result = await hRRDR.GetAssignmentContractTypesAsync(false);
@@ -338,6 +339,94 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 }
                 return valcodeResponse;
             }
+        }
+
+        /// <summary>
+        /// Test class for Beneficiary category
+        /// </summary>
+        [TestClass]
+        public class BeneficiaryCategoryTests
+        {
+            Mock<IColleagueTransactionFactory> _transFactoryMock;
+            Mock<ICacheProvider> _cacheProviderMock;
+            Mock<IColleagueDataReader> _dataAccessorMock;
+            Mock<ILogger> _loggerMock;
+            IEnumerable<BeneficiaryCategory> _allBeneficiaryCategories;
+            ApplValcodes _beneficiaryTypeValcodeResponse;
+            string _valcodeName;
+
+            HumanResourcesReferenceDataRepository _referenceDataRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = new Mock<ILogger>();
+
+                // Build beneficiary types responses used for mocking
+                _allBeneficiaryCategories = new TestBeneficiaryCategoryRepository().GetBeneficiaryCategoriesAsync();
+                _beneficiaryTypeValcodeResponse = BuildValcodeResponse(_allBeneficiaryCategories);
+
+                // Build HR reference data repository
+                _referenceDataRepo = BuildValidReferenceDataRepository();
+                _valcodeName = _referenceDataRepo.BuildFullCacheKey("BENEFICIARY.TYPES");
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                _transFactoryMock = null;
+                _dataAccessorMock = null;
+                _cacheProviderMock = null;
+                _beneficiaryTypeValcodeResponse = null;
+                _allBeneficiaryCategories = null;
+                _referenceDataRepo = null;
+            }
+
+            [TestMethod]
+            public async Task GetsBeneficiaryCategoryAsync()
+            {
+                var beneficiaryCategories = await _referenceDataRepo.GetBeneficiaryCategoriesAsync();
+                for (int i = 0; i < beneficiaryCategories.Count(); i++)
+                {
+                    Assert.AreEqual(_allBeneficiaryCategories.ElementAt(i).Code, beneficiaryCategories.ElementAt(i).Code);
+                    Assert.AreEqual(_allBeneficiaryCategories.ElementAt(i).Description, beneficiaryCategories.ElementAt(i).Description);
+                }
+            }
+
+            private HumanResourcesReferenceDataRepository BuildValidReferenceDataRepository()
+            {
+                // transaction factory mock
+                _transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                // Cache Provider Mock
+                _cacheProviderMock = new Mock<ICacheProvider>();
+                // Set up data accessor for mocking 
+                _dataAccessorMock = new Mock<IColleagueDataReader>();
+
+                // Set up dataAccessorMock as the object for the DataAccessor
+                _transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(_dataAccessorMock.Object);
+
+                // Setup response to beneficiary type valcode read
+                _dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("HR.VALCODE", "BENEFICIARY.TYPES", It.IsAny<bool>())).ReturnsAsync(_beneficiaryTypeValcodeResponse);
+                _cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                // Construct repository
+                _referenceDataRepo = new HumanResourcesReferenceDataRepository(_cacheProviderMock.Object, _transFactoryMock.Object, _loggerMock.Object);
+
+                return _referenceDataRepo;
+            }
+
+            private ApplValcodes BuildValcodeResponse(IEnumerable<BeneficiaryCategory> beneficiaryCategories)
+            {
+                ApplValcodes valcodeResponse = new ApplValcodes();
+                valcodeResponse.ValsEntityAssociation = new List<ApplValcodesVals>();
+                foreach (var item in beneficiaryCategories)
+                {
+                    valcodeResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, item.ProcessingCode, item.Code, "", "", ""));
+                }
+                return valcodeResponse;
+            }
+
         }
 
         /// <summary>
@@ -983,20 +1072,25 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 recordLookupResult = new RecordKeyLookupResult() { Guid = guid };
                 recordLookupDict = new Dictionary<string, RecordKeyLookupResult>();
 
-                dataReaderMock.SetupSequence(acc => acc.SelectAsync(It.IsAny<GuidLookup[]>()))
-                    .Returns(Task.FromResult(new Dictionary<string, GuidLookupResult>() { { guid, new GuidLookupResult() { Entity = "DEPTS", PrimaryKey = id, SecondaryKey = sid } } }))
-                    .Returns(Task.FromResult(new Dictionary<string, GuidLookupResult>() { { guid2, new GuidLookupResult() { Entity = "DEPTS", PrimaryKey = id2, SecondaryKey = sid2 } } }))
-                    .Returns(Task.FromResult(new Dictionary<string, GuidLookupResult>() { { guid3, new GuidLookupResult() { Entity = "DEPTS", PrimaryKey = id3, SecondaryKey = sid3 } } }));
-                dataReaderMock.SetupSequence(ep => ep.SelectAsync(It.IsAny<RecordKeyLookup[]>()))
-                    .Returns(Task.FromResult(new Dictionary<string, RecordKeyLookupResult>() { { "DEPTS+" + id + "+" + sid, new RecordKeyLookupResult() { Guid = guid } } }))
-                    .Returns(Task.FromResult(new Dictionary<string, RecordKeyLookupResult>() { { "DEPTS+" + id2 + "+" + sid, new RecordKeyLookupResult() { Guid = guid2 } } }))
-                    .Returns(Task.FromResult(new Dictionary<string, RecordKeyLookupResult>() { { "DEPTS+" + id3 + "+" + sid, new RecordKeyLookupResult() { Guid = guid3 } } }));
-                
-                dataReaderMock.Setup(d => d.SelectAsync("DEPTS", "WITH DEPTS.TYPE NE 'A'"))
+                var bulkRecordKeyLookupResults = new Dictionary<string, RecordKeyLookupResult> {
+                    { "DEPTS+" + id, new RecordKeyLookupResult() {Guid = guid } },
+                    { "DEPTS+" + id2, new RecordKeyLookupResult() {Guid = guid2 } },
+                    { "DEPTS+" + id3, new RecordKeyLookupResult() {Guid = guid3 } }
+                };
+                dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(bulkRecordKeyLookupResults);
+
+                var bulkResult = new Dictionary<string, GuidLookupResult>();
+                bulkResult[guid] = new GuidLookupResult() { Entity = "DEPTS", PrimaryKey = id, SecondaryKey = sid };
+                bulkResult[guid2] = new GuidLookupResult() { Entity = "DEPTS", PrimaryKey = id2, SecondaryKey = sid2 };
+                bulkResult[guid3] = new GuidLookupResult() { Entity = "DEPTS", PrimaryKey = id3, SecondaryKey = sid3 };
+
+                dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(bulkResult);
+
+                dataReaderMock.Setup(d => d.SelectAsync("DEPTS", ""))
                     .Returns<string, string>((f, c) => Task.FromResult(testDataRepository.GetEmploymentDepartments() == null ? null :
                         testDataRepository.GetEmploymentDepartments().Select(dtype => dtype.Guid).ToArray()));
 
-                dataReaderMock.Setup(d => d.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Depts>(It.IsAny<string[]>(), It.IsAny<bool>()))
+                dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.Depts>(It.IsAny<string[]>(), It.IsAny<bool>()))
                     .Returns<string[], bool>((ids, b) =>
                         Task.FromResult(testDataRepository.GetEmploymentDepartments() == null ? null :
                             new Collection<Ellucian.Colleague.Data.Base.DataContracts.Depts>(testDataRepository.GetEmploymentDepartments()
@@ -1878,6 +1972,23 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             }
 
             [TestMethod]
+            public async Task GetsEmploymentStatusEndingReasonsGuidAsync()
+            {
+                var employmentStatusEndingReasonsGuid = await referenceDataRepo.GetEmploymentStatusEndingReasonsGuidAsync(allEmploymentStatusEndingReason.ElementAt(0).Code);
+
+                Assert.IsNotNull(employmentStatusEndingReasonsGuid);
+                Assert.AreEqual(allEmploymentStatusEndingReason.ElementAt(0).Guid, employmentStatusEndingReasonsGuid);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task GetsEmploymentStatusEndingReasonsGuidAsync_Invalid()
+            {
+                await referenceDataRepo.GetEmploymentStatusEndingReasonsGuidAsync("invalid");
+            }
+
+
+            [TestMethod]
             public async Task GetsEmploymentStatusEndingReasonsNonCacheAsync()
             {
                 var EmploymentStatusEndingReasons = await referenceDataRepo.GetEmploymentStatusEndingReasonsAsync(true);
@@ -2163,39 +2274,24 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     records.Add(record);
 
                 }
-                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<Paycycle>("PAYCYCLE", It.IsAny<GuidLookup[]>(), It.IsAny<bool>())).ReturnsAsync(records);
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<Paycycle>("PAYCYCLE", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(records);
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<Paycycle>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(records);
 
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                  x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
                  .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
 
-
-                dataAccessorMock.Setup(acc => acc.SelectAsync("LDM.GUID", It.IsAny<string>())).ReturnsAsync(ldmGuidPaycyle.ToArray());
-
-                dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
-                {
-                    var result = new Dictionary<string, RecordKeyLookupResult>();
-                    foreach (var recordKeyLookup in recordKeyLookups)
-                    {
-                        var record = _allPayCycles.Where(e => e.Code == recordKeyLookup.PrimaryKey).FirstOrDefault();
-                        result.Add(record.Guid,
-                            new RecordKeyLookupResult() { Guid = record.Guid });
-                    }
-                    return Task.FromResult(result);
-                });
-
-                dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<GuidLookup[]>())).Returns<GuidLookup[]>(recordKeyLookups =>
-                {
-                    var result = new Dictionary<string, GuidLookupResult>();
-                    foreach (var recordKeyLookup in recordKeyLookups)
-                    {
-                        var record = _allPayCycles.Where(e => e.Guid == recordKeyLookup.Guid).FirstOrDefault();
-                        result.Add(record.Guid,
-                          new GuidLookupResult() { PrimaryKey = record.Code });
-                    }
-                    return Task.FromResult(result);
-                });
+                //dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
+                //{
+                //    var result = new Dictionary<string, RecordKeyLookupResult>();
+                //    foreach (var recordKeyLookup in recordKeyLookups)
+                //    {
+                //        var record = _allPayCycles.Where(e => e.Code == recordKeyLookup.PrimaryKey).FirstOrDefault();
+                //        result.Add(record.Guid,
+                //            new RecordKeyLookupResult() { Guid = record.Guid });
+                //    }
+                //    return Task.FromResult(result);
+                //});
 
                 return new HumanResourcesReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object,
                      loggerMock.Object);
@@ -3193,7 +3289,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 {
                     PmZeroBendedOnStub = "Y",
                     PmInstitutionName = "Ellucian University",
-                    PmInstitutionAddress = new List<string>() { "2003 Edmund Halley Dr.", "Ste 500"},
+                    PmInstitutionAddress = new List<string>() { "2003 Edmund Halley Dr.", "Ste 500" },
                     PmInstitutionCity = "Reston",
                     PmInstitutionState = "VA",
                     PmInstitutionZipcode = "20191"

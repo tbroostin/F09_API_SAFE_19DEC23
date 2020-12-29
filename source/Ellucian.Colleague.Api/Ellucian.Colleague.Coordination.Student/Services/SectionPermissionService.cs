@@ -55,7 +55,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (!IsSectionFaculty(section))
             {
                 var message = "Current user is not a faculty of requested section " + sectionId + " and therefore cannot access waivers";
-                logger.Info(message);
+                logger.Error(message);
                 throw new PermissionsException(message);
             }
             try
@@ -73,7 +73,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to read student petitions from repository using section id " + sectionId + "Exception message: " + ex.Message;
-                logger.Info(message);
+                logger.Error(message);
                 throw new Exception(message);
             }
             return sectionPermissionDto;
@@ -223,13 +223,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (KeyNotFoundException)
             {
-                logger.Info("StudentPetition not found in repository for petition Id " + studentPetitionId + " and type " + type.ToString() + " and section Id " + sectionId);
+                logger.Error("StudentPetition not found in repository for petition Id " + studentPetitionId + " and type " + type.ToString() + " and section Id " + sectionId);
                 throw;
             }
             catch (Exception ex)
             {
                 var message = "Exception occurred getting student petition from repository using student petition id " + studentPetitionId + " and type of " + type.ToString() + " Exception message: " + ex.Message;
-                logger.Info(message);
+                logger.Error(message);
                 throw new Exception(message);
             }
 
@@ -275,7 +275,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (section == null)
                 {
                     var message = "Repository returned a null section for Id " + sectionId;
-                    logger.Info(message);
+                    logger.Error(message);
                     throw new KeyNotFoundException(message);
                 }
                 return section;
@@ -283,19 +283,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (ArgumentNullException aex)
             {
                 var message = "Section ID must be specified.";
-                logger.Info(message);
+                logger.Error(message);
                 throw aex;
             }
             catch (KeyNotFoundException kex)
             {
                 var message = "sectionId " + sectionId + " not found in repository. Exception message: " + kex.Message;
-                logger.Info(message);
+                logger.Error(message);
                 throw kex;
             }
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to read section from repository using id " + sectionId + "Exception message: " + ex.ToString();
-                logger.Info(message);
+                logger.Error(message);
                 throw new Exception(ex.Message);
             }
         }

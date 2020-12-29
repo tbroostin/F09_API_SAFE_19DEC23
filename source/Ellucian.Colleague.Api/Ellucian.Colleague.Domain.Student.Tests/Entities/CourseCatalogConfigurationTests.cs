@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Student.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -78,6 +78,34 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 Assert.IsFalse(config.ShowCourseSectionFeeInformation);
                 config.ShowCourseSectionFeeInformation = true;
                 Assert.IsTrue(config.ShowCourseSectionFeeInformation);
+            }
+
+            [TestMethod]
+            public void CourseCatalogConfiguration_ShowCourseSectionBookInformation_Get_Set()
+            {
+                var config = new CourseCatalogConfiguration(startDate, endDate);
+                Assert.IsNotNull(config);
+                Assert.IsFalse(config.ShowCourseSectionBookInformation);
+                config.ShowCourseSectionBookInformation = true;
+                Assert.IsTrue(config.ShowCourseSectionBookInformation);
+            }
+
+            [TestMethod]
+            public void CourseCatalogConfiguration_DefaultSelfServiceCourseCatalogSearchView_Get_Set()
+            {
+                var config = new CourseCatalogConfiguration(startDate, endDate);
+                Assert.AreEqual(SelfServiceCourseCatalogSearchView.SubjectSearch, config.DefaultSelfServiceCourseCatalogSearchView);
+                config.DefaultSelfServiceCourseCatalogSearchView = SelfServiceCourseCatalogSearchView.AdvancedSearch;
+                Assert.AreEqual(SelfServiceCourseCatalogSearchView.AdvancedSearch, config.DefaultSelfServiceCourseCatalogSearchView);
+            }
+
+            [TestMethod]
+            public void CourseCatalogConfiguration_DefaultSelfServiceCourseCatalogSearchResultView_Get_Set()
+            {
+                var config = new CourseCatalogConfiguration(startDate, endDate);
+                Assert.AreEqual(SelfServiceCourseCatalogSearchResultView.CatalogListing, config.DefaultSelfServiceCourseCatalogSearchResultView);
+                config.DefaultSelfServiceCourseCatalogSearchResultView = SelfServiceCourseCatalogSearchResultView.SectionListing;
+                Assert.AreEqual(SelfServiceCourseCatalogSearchResultView.SectionListing, config.DefaultSelfServiceCourseCatalogSearchResultView);
             }
         }
 

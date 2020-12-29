@@ -103,6 +103,12 @@ namespace Ellucian.Web.Http.Filters
                                 }
                             }
 
+                            if (filterConverter.ContainsFilterProperties())
+                            {
+                                var filterPropertyName = "FilterProperties";
+                                actionExecutedContext.Request.Properties.Add(filterPropertyName, filterConverter.GetFilterProperties);
+                            }
+
                             var contextPropertyName = string.Format("FilterObject{0}", this.FilterGroupName);
                             actionExecutedContext.Request.Properties.Add(contextPropertyName, filterObj);
                         }

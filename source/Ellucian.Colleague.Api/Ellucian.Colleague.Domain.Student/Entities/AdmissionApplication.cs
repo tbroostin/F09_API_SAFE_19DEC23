@@ -1,10 +1,7 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Domain.Student.Entities
 {
@@ -55,6 +52,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities
 
         public string ApplicationSource { get; set; }
 
+        public string PersonSource { get; set; }
+
         public string ApplicationAdmissionsRep { get; set; }
 
         public string ApplicationAdmitStatus { get; set; }
@@ -66,6 +65,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public string ApplicationStudentLoadIntent { get; set; }
 
         public string ApplicationAcadProgram { get; set; }
+
+        public string ApplicationAcadProgramGuid { get; set; }
 
         public List<string> ApplicationStprAcadPrograms { get; set; }
 
@@ -84,5 +85,12 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public DateTime? WithdrawnOn { get; set; }
         public DateTime? AdmittedOn { get; set; }
         public DateTime? MatriculatedOn { get; set; }
+        public string ApplicationAcadLevel { get; set; }
+        public List<ApplicationDiscipline> ApplicationDisciplines { get; set; }
+        public List<string> ApplicationCredentials { get; set; }
+        public string ApplicationProgramOwner { get; set; }
+        public string EducationalGoal { get; set; }
+        public List<string> CareerGoals { get; set; }
+        public List<string> Influences { get; set; }
     }
 }

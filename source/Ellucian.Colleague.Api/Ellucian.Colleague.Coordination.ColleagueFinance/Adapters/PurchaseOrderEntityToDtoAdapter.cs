@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -45,9 +45,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
             purchaseOrderDto.RequestorName = Source.RequestorName;
             purchaseOrderDto.ApType = Source.ApType;
             purchaseOrderDto.ShipToCodeName = Source.ShipToCodeName;
+            purchaseOrderDto.DefaultCommodityCode = Source.DefaultCommodityCode;
+            purchaseOrderDto.ShipToCode = Source.ShipToCode;
             purchaseOrderDto.Comments = Source.Comments;
             purchaseOrderDto.InternalComments = Source.InternalComments;
-
+            purchaseOrderDto.CommodityCode = Source.CommodityCode;
+            purchaseOrderDto.PrepayVoucherId = Source.PrepayVoucherId;
+            
             purchaseOrderDto.Requisitions = new List<string>();
             foreach (var req in Source.Requisitions)
             {
@@ -59,6 +63,25 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
             {
                 purchaseOrderDto.Vouchers.Add(vou);
             }
+            
+            purchaseOrderDto.AcceptedItems = new List<string>();
+            if (Source.AcceptedItemsId != null && Source.AcceptedItemsId.Any())
+            {
+                foreach (var acceptedItem in Source.AcceptedItemsId)
+                {
+                    purchaseOrderDto.AcceptedItems.Add(acceptedItem);
+                }
+            }
+
+            purchaseOrderDto.ConfirmationEmailAddresses = new List<string>();
+            if ((Source.ConfirmationEmailAddresses != null) && (Source.ConfirmationEmailAddresses.Count > 0))
+            {
+                foreach (var item in Source.ConfirmationEmailAddresses)
+                {
+                    purchaseOrderDto.ConfirmationEmailAddresses.Add(item);
+                }
+            }
+
 
             // Translate the domain status into the DTO status
             switch (Source.Status)
@@ -103,6 +126,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
             var lineItemDtoAdapter = new LineItemEntityToDtoAdapter(adapterRegistry, logger);
             var lineItemGlDistributionDtoAdapter = new LineItemGlDistributionEntityToDtoAdapter(adapterRegistry, logger);
             var lineItemTaxesDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.LineItemTax, Dtos.ColleagueFinance.LineItemTax>(adapterRegistry, logger);
+            var lineItemReqTaxesDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.LineItemReqTax, Dtos.ColleagueFinance.LineItemReqTax>(adapterRegistry, logger);
             var approverDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.Approver, Dtos.ColleagueFinance.Approver>(adapterRegistry, logger);
 
             // Convert the purchase order line item domain entities into DTOS
@@ -127,6 +151,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
 
                     // Add the line item taxes DTOs to the line item DTO
                     lineItemDto.LineItemTaxes.Add(lineItemTaxesDto);
+                }
+
+                // Now convert each line item tax domain entity into a DTO
+                foreach (var lineItemReqTax in lineItem.ReqLineItemTaxCodes)
+                {
+                    var lineItemReqTaxesDto = lineItemReqTaxesDtoAdapter.MapToType(lineItemReqTax);
+
+                    // Add the line item taxes DTOs to the line item DTO
+                    lineItemDto.ReqLineItemTaxCodes.Add(lineItemReqTaxesDto);
                 }
 
                 // Add the purchaseOrder line item DTO to the purchaseOrder DTO

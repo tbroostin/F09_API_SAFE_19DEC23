@@ -1,6 +1,7 @@
 ﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
 
 using System;
+using System.Collections.Generic;
 using Ellucian.Colleague.Domain.Entities;
 
 namespace Ellucian.Colleague.Domain.Base.Entities
@@ -21,6 +22,11 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         ///  Allow entry of code on purchase orders and vouchers
         /// </summary>
         public bool AppurEntryFlag { get; set; }
+
+        /// <summary>
+        /// The first date that the tax code is effective.
+        /// </summary>
+        public List<DateTime?> ApTaxEffectiveDates { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommerceTaxCode"/> class.

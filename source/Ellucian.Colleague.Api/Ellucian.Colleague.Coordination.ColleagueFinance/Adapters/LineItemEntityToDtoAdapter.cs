@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -30,6 +30,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
         {
             // Copy line item properties.
             var lineItemDto = new LineItem();
+            lineItemDto.Id = Source.Id;
             lineItemDto.Description = Source.Description;
             lineItemDto.Quantity = Source.Quantity;
             lineItemDto.Price = Source.Price;
@@ -43,8 +44,51 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
             lineItemDto.TaxFormCode = Source.TaxFormCode;
             lineItemDto.TaxFormLocation = Source.TaxFormLocation;
             lineItemDto.Comments = Source.Comments;
+            lineItemDto.CommodityCode = Source.CommodityCode;
+            lineItemDto.FixedAssetsFlag = Source.FixedAssetsFlag;
+            lineItemDto.TradeDiscountAmount = Source.TradeDiscountAmount;
+            lineItemDto.TradeDiscountPercentage = Source.TradeDiscountPercentage;
+            lineItemDto.ReqLineItemTaxCodes = new List<LineItemReqTax>();
             lineItemDto.GlDistributions = new List<LineItemGlDistribution>();
             lineItemDto.LineItemTaxes = new List<LineItemTax>();
+            
+            // Translate the domain status into the DTO status
+            switch (Source.LineItemStatus)
+            {
+                case Ellucian.Colleague.Domain.ColleagueFinance.Entities.LineItemStatus.Accepted:
+                    lineItemDto.LineItemStatus = LineItemStatus.Accepted;
+                    break;
+                case Ellucian.Colleague.Domain.ColleagueFinance.Entities.LineItemStatus.Backordered:
+                    lineItemDto.LineItemStatus = LineItemStatus.Backordered;
+                    break;
+                case Ellucian.Colleague.Domain.ColleagueFinance.Entities.LineItemStatus.Closed:
+                    lineItemDto.LineItemStatus = LineItemStatus.Closed;
+                    break;
+                case Ellucian.Colleague.Domain.ColleagueFinance.Entities.LineItemStatus.Invoiced:
+                    lineItemDto.LineItemStatus = LineItemStatus.Invoiced;
+                    break;
+                case Ellucian.Colleague.Domain.ColleagueFinance.Entities.LineItemStatus.Outstanding:
+                    lineItemDto.LineItemStatus = LineItemStatus.Outstanding;
+                    break;
+                case Ellucian.Colleague.Domain.ColleagueFinance.Entities.LineItemStatus.Paid:
+                    lineItemDto.LineItemStatus = LineItemStatus.Paid;
+                    break;
+                case Ellucian.Colleague.Domain.ColleagueFinance.Entities.LineItemStatus.Reconciled:
+                    lineItemDto.LineItemStatus = LineItemStatus.Reconciled;
+                    break;
+                case Ellucian.Colleague.Domain.ColleagueFinance.Entities.LineItemStatus.Voided:
+                    lineItemDto.LineItemStatus = LineItemStatus.Voided;
+                    break;
+                case Ellucian.Colleague.Domain.ColleagueFinance.Entities.LineItemStatus.Hold:
+                    lineItemDto.LineItemStatus = LineItemStatus.Hold;
+                    break;
+                default:
+                    {
+                        // if we get here, we have no status associated to the line item
+                        lineItemDto.LineItemStatus = LineItemStatus.None;                       
+                        break;
+                    }
+            }
 
             return lineItemDto;
         }

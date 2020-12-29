@@ -85,6 +85,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns>EmploymentPerformanceReviews DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.EmploymentPerformanceReviews> GetEmploymentPerformanceReviewsByGuidAsync(string guid)
         {
+            CheckUserEmploymentPerformanceReviewsViewPermissions();
             try
             {
                 var entity = await _employmentPerformanceReviewRepository.GetEmploymentPerformanceReviewByIdAsync(guid);
@@ -244,7 +245,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             employmentPerformanceReviews.Id = source.Guid;
             var personGuid = await _employmentPerformanceReviewRepository.GetGuidFromIdAsync(source.PersonId, "PERSON");
             employmentPerformanceReviews.Person = new GuidObject2(personGuid);
-            var jobGuid = await _employmentPerformanceReviewRepository.GetJobGuidFromIdAsync(source.PerposId, "PERPOS");
+            var jobGuid = await _employmentPerformanceReviewRepository.GetGuidFromIdAsync(source.PerposId, "PERPOS");
             employmentPerformanceReviews.Job = new GuidObject2(jobGuid);
             employmentPerformanceReviews.CompletedOn = (DateTime) source.CompletedDate;
             var typeEntities = await GetAllEmploymentPerformanceReviewTypesAsync(bypassCache);
@@ -361,7 +362,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         private void CheckUserEmploymentPerformanceReviewsViewPermissions()
         {
             // access is ok if the current user has the view employment-performance-reviews permission
-            if (!HasPermission(HumanResourcesPermissionCodes.ViewEmploymentPerformanceReview))
+            if (!HasPermission(HumanResourcesPermissionCodes.ViewEmploymentPerformanceReview) && !HasPermission(HumanResourcesPermissionCodes.CreateUpdateEmploymentPerformanceReview))
             {
                 logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view employment-performance-reviews.");
                 throw new PermissionsException("User is not authorized to view employment-performance-reviews.");

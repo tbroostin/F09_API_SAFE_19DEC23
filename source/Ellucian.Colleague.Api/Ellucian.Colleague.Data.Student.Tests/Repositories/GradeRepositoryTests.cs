@@ -1,12 +1,10 @@
-﻿// Copyright 2014-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
 using Ellucian.Colleague.Domain.Student.Entities;
-using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Data.Colleague;
-using Ellucian.Data.Colleague.Repositories;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System;
@@ -17,7 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
-{ 
+{
     [TestClass]
     public class GradeRepositoryTests : BaseRepositorySetup
     {
@@ -83,6 +81,9 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 // Grade priority is set to 0 if incoming value is null.
                 Assert.AreEqual(testGrade.GradePriority == null? 0 : testGrade.GradePriority, grade.GradePriority);
                 Assert.AreEqual(testGrade.ExcludeFromFacultyGrading, grade.ExcludeFromFacultyGrading);
+                Assert.AreEqual(testGrade.IncludeInWebFinalGradesList, grade.IncludeInWebFinalGradesList);
+                Assert.AreEqual(testGrade.IncludeInWebMidtermGradesList, grade.IncludeInWebMidtermGradesList);
+                Assert.AreEqual(testGrade.CanBeUsedAfterDropGradeRequiredDate, grade.CanBeUsedAfterDropGradeRequiredDate);
             }
         }
 
@@ -106,6 +107,9 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(testGrade.ComparisonGrade == null ? null : testGrade.ComparisonGrade.ComparisonGradeSchemeCode, grade.ComparisonGrade == null ? null : grade.ComparisonGrade.ComparisonGradeSchemeCode);
                 // Grade priority is set to 0 if incoming value is null.
                 Assert.AreEqual(testGrade.GradePriority == null ? 0 : testGrade.GradePriority, grade.GradePriority);
+                Assert.AreEqual(testGrade.IncludeInWebFinalGradesList, grade.IncludeInWebFinalGradesList);
+                Assert.AreEqual(testGrade.IncludeInWebMidtermGradesList, grade.IncludeInWebMidtermGradesList);
+                Assert.AreEqual(testGrade.CanBeUsedAfterDropGradeRequiredDate, grade.CanBeUsedAfterDropGradeRequiredDate);
             }
         }
 
@@ -130,6 +134,9 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // Grade priority is set to 0 if incoming value is null.
                 Assert.AreEqual(testGrade.GradePriority == null ? 0 : testGrade.GradePriority, grade.GradePriority);
+                Assert.AreEqual(testGrade.IncludeInWebFinalGradesList, grade.IncludeInWebFinalGradesList);
+                Assert.AreEqual(testGrade.IncludeInWebMidtermGradesList, grade.IncludeInWebMidtermGradesList);
+                Assert.AreEqual(testGrade.CanBeUsedAfterDropGradeRequiredDate, grade.CanBeUsedAfterDropGradeRequiredDate);
             }
         }
 
@@ -188,6 +195,9 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             // Grade priority is set to 0 if incoming value is null.
             Assert.AreEqual(grade.GradePriority == null ? 0 : grade.GradePriority, grade_element.GradePriority);
+            Assert.AreEqual(grade.IncludeInWebFinalGradesList, grade_element.IncludeInWebFinalGradesList);
+            Assert.AreEqual(grade.IncludeInWebMidtermGradesList, grade_element.IncludeInWebMidtermGradesList);
+            Assert.AreEqual(grade.CanBeUsedAfterDropGradeRequiredDate, grade_element.CanBeUsedAfterDropGradeRequiredDate);
         }
 
         [TestMethod]
@@ -251,14 +261,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public async Task GradeController_GetHedmById_NullId()
+        public async Task GradeRepo_GetHedmById_NullId()
         {
             await gradeRepo.GetHedmGradeByIdAsync(null);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public async Task GradeController_GetHedmById_EmptyId()
+        public async Task GradeRepo_GetHedmById_EmptyId()
         {
             await gradeRepo.GetHedmGradeByIdAsync("");
         }
@@ -411,6 +421,9 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 repoGrade.GrdRepeatValue = grade.GradePriority;
 
                 repoGrade.GrdComparisonGrade = (grade.ComparisonGrade == null) ? null : grade.ComparisonGrade.ComparisonGradeId;
+                repoGrade.GrdUseInFinalGrdList = grade.IncludeInWebFinalGradesList ? "Y" : "N";
+                repoGrade.GrdUseInMidtermGrdList = grade.IncludeInWebMidtermGradesList ? "Y" : "N";
+                repoGrade.GrdUseAfterDropGrdReqd = grade.CanBeUsedAfterDropGradeRequiredDate ? "Y" : "N";
                 gradeData.Add(repoGrade);
             }
 
@@ -443,7 +456,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             // line will be affected if the grades Trasfer A and Trasfer Pass are changed in the TestGradeRepository.
             if (repoGrade.Recordkey != "1" && repoGrade.Recordkey != "2")
                 repoGrade.GrdComparisonGrade = grade.ComparisonGrade.ComparisonGradeId;
-            
+
+            repoGrade.GrdUseInFinalGrdList = grade.IncludeInWebFinalGradesList ? "Y" : "N";
+            repoGrade.GrdUseInMidtermGrdList = grade.IncludeInWebMidtermGradesList ? "Y" : "N";
+            repoGrade.GrdUseAfterDropGrdReqd = grade.CanBeUsedAfterDropGradeRequiredDate ? "Y" : "N";
+
             gradeData = repoGrade;
 
             return gradeData;

@@ -1,4 +1,6 @@
-﻿using System;
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,6 +17,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance
         /// <summary>
         /// The IncludedYearsFor1099mi indicates the comma seperated years for which 1099MI form can be generated
         /// </summary>
-        public const string IncludedYearsFor1099mi = "2017, 2016, 2015, 2011, 2010, 2012, 2014, 2013, 2018, 2009";
+        public const string IncludedYearsFor1099mi = "2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2009, 2008";
+
+        /// <summary>
+        /// The IncludedYearsFor1099nec indicates the comma seperated years for which 1099NEC form can be generated
+        /// </summary>
+        public const string IncludedYearsFor1099nec = "2020";
     }
 }

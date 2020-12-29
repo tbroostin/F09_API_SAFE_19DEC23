@@ -1,4 +1,4 @@
-﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -102,8 +102,7 @@ namespace Ellucian.Colleague.Dtos
         /// <summary>
         /// Various academic periods related to a student's progression in a program.
         /// </summary>
-        [JsonProperty("academicPeriods", DefaultValueHandling = DefaultValueHandling.Ignore)]
-        [FilterProperty("criteria")]
+        [JsonProperty("academicPeriods", DefaultValueHandling = DefaultValueHandling.Ignore)]      
         public StudentAcademicProgramsAcademicPeriods AcademicPeriods { get; set; }
 
         /// <summary>

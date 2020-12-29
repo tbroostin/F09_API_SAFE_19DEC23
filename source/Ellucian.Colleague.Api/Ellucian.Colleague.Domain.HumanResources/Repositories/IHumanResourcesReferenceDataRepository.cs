@@ -1,4 +1,5 @@
-﻿//Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -117,6 +118,14 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
         /// <returns>Collection of <see cref="EmploymentStatusEndingReason"/></returns>
         Task<IEnumerable<EmploymentStatusEndingReason>> GetEmploymentStatusEndingReasonsAsync(bool bypassCache);
 
+        /// <summary>
+        /// Get guid for employment status ending reasons code
+        /// </summary>
+        /// <param name="code">AcadCredentials code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetEmploymentStatusEndingReasonsGuidAsync(string code);
+
+
         ///// <summary>
         ///// Get a collection of institution job supervisors
         ///// </summary>
@@ -210,5 +219,18 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
         /// </summary>
         /// <returns>Dictionary of EarningsTypeGroups where the key is the EarningsTypeGroup id </returns>
         Task<IDictionary<string, EarningsTypeGroup>> GetEarningsTypesGroupsAsync();
+
+        /// <summary>
+        /// Gets all beneficiary categories
+        /// </summary>
+        /// <returns>List of Beneficiary Category Objects</returns>
+        Task<IEnumerable<BeneficiaryCategory>> GetBeneficiaryCategoriesAsync();
+
+        /// <summary>
+        /// Get all TimeUnits from HR.VALCODES
+        /// </summary>
+        /// <param name="ignoreCache"></param>
+        /// <returns>Collection of TimeUnits Entities</returns>
+        Task<IEnumerable<TimeUnits>> GetTimeUnitsAsync(bool ignoreCache);
     }
 }

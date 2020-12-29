@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -30,6 +30,10 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         Task<string> GetRequisitionsIdFromGuidAsync(string id);
         Task<IDictionary<string, string>> GetProjectReferenceIds(string[] projectIds);
         Task<IDictionary<string, string>> GetProjectIdsFromReferenceNo(string[] projectRefNo);
+        Task<IEnumerable<RequisitionSummary>> GetRequisitionsSummaryByPersonIdAsync(string personId);
+        Task<RequisitionCreateUpdateResponse> CreateRequisitionsAsync(RequisitionCreateUpdateRequest createUpdateRequest);
+        Task<RequisitionCreateUpdateResponse> UpdateRequisitionsAsync(RequisitionCreateUpdateRequest createUpdateRequest, Requisition originalRequisition);
+        Task<RequisitionDeleteResponse> DeleteRequisitionsAsync(RequisitionDeleteRequest deleteRequest);
 
     }
 }

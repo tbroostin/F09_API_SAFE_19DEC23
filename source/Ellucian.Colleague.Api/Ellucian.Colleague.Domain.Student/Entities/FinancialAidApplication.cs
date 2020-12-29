@@ -23,6 +23,41 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public string AwardYear { get { return _AwardYear; } }
         private readonly string _AwardYear;
 
+        public string AwardYearShortValue
+        {
+            get
+            {
+                int yr;
+                if( int.TryParse( this._AwardYear, out yr ) && !string.IsNullOrEmpty( this.AwardYear ) )
+                {
+                    switch( this.AwardYear )
+                    {
+                        case "2010":
+                        case "2011":
+                        case "2012":
+                        case "2013":
+                            return "10";
+                        case "2014":
+                        case "2015":
+                        case "2016":
+                        case "2017":
+                            return "14";
+                        case "2018":
+                        case "2019":
+                            return "18";
+                        case "2020":
+                            return "20";
+                        default:
+                            return "10";
+                    }
+                }
+                else
+                {
+                    return "10";
+                }
+            }
+        }
+
         /// <summary>
         /// The Colleague PERSON Id this application applies to
         /// </summary>

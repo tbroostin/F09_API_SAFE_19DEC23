@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -44,6 +44,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
             requisitionDto.MaintenanceDate = Source.MaintenanceDate;
             requisitionDto.RequestorName = Source.RequestorName;
             requisitionDto.ShipToCode = Source.ShipToCode;
+            requisitionDto.CommodityCode = Source.CommodityCode;
             requisitionDto.StatusDate = Source.StatusDate;
             requisitionDto.VendorId = Source.VendorId;
             requisitionDto.VendorName = Source.VendorName;
@@ -74,6 +75,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
                     break;
             }
 
+            requisitionDto.ConfirmationEmailAddresses = new List<string>();
+            if ((Source.ConfirmationEmailAddresses != null) && (Source.ConfirmationEmailAddresses.Count > 0))
+            {
+                foreach (var item in Source.ConfirmationEmailAddresses)
+                {
+                    requisitionDto.ConfirmationEmailAddresses.Add(item);
+                }
+            }
+
             requisitionDto.LineItems = new List<Dtos.ColleagueFinance.LineItem>();
             requisitionDto.Approvers = new List<Dtos.ColleagueFinance.Approver>();
 
@@ -81,6 +91,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
             var lineItemDtoAdapter = new LineItemEntityToDtoAdapter(adapterRegistry, logger);
             var lineItemGlDistributionDtoAdapter = new LineItemGlDistributionEntityToDtoAdapter(adapterRegistry, logger);
             var lineItemTaxesDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.LineItemTax, Dtos.ColleagueFinance.LineItemTax>(adapterRegistry, logger);
+            var lineItemReqTaxesDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.LineItemReqTax, Dtos.ColleagueFinance.LineItemReqTax>(adapterRegistry, logger);
             var approverDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.Approver, Dtos.ColleagueFinance.Approver>(adapterRegistry, logger);
 
             // Convert the requisition line item domain entities into DTOS
@@ -105,6 +116,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
 
                     // Add the line item taxes DTOs to the line item DTO
                     lineItemDto.LineItemTaxes.Add(lineItemTaxesDto);
+                }
+
+                // Now convert each line item tax domain entity into a DTO
+                foreach (var lineItemReqTax in lineItem.ReqLineItemTaxCodes)
+                {
+                    var lineItemReqTaxesDto = lineItemReqTaxesDtoAdapter.MapToType(lineItemReqTax);
+
+                    // Add the line item taxes DTOs to the line item DTO
+                    lineItemDto.ReqLineItemTaxCodes.Add(lineItemReqTaxesDto);
                 }
 
                 // Add the requisition line item DTO to the requisition DTO

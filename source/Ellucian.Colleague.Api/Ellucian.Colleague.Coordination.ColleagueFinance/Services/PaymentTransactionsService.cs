@@ -19,6 +19,7 @@ using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 {
@@ -28,7 +29,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
         private readonly IReferenceDataRepository _referenceDataRepository;
         private readonly IPaymentTransactionsRepository _paymentTransactionsRepository;
-        private readonly IAccountsPayableInvoicesRepository _accountsPayableInvoicesRepository;
         private readonly IInstitutionRepository _institutionRepository;
         private readonly IColleagueFinanceReferenceDataRepository _colleagueFinanceReferenceDataRepository;
         private readonly IAddressRepository _addressRepository;
@@ -37,8 +37,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
         public PaymentTransactionsService(
             IPaymentTransactionsRepository paymentTransactionsRepository,
-             IPersonRepository personRepository,
-            IAccountsPayableInvoicesRepository accountsPayableInvoicesRepository,
+            IPersonRepository personRepository,
             IReferenceDataRepository referenceDataRepository,
             IInstitutionRepository institutionRepository,
             IColleagueFinanceReferenceDataRepository colleagueFinanceReferenceDataRepository,
@@ -50,27 +49,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, configurationRepository: configurationRepository)
         {
-            _paymentTransactionsRepository = paymentTransactionsRepository;
-            _accountsPayableInvoicesRepository = accountsPayableInvoicesRepository;
+            _paymentTransactionsRepository = paymentTransactionsRepository;         
             _referenceDataRepository = referenceDataRepository;
             _institutionRepository = institutionRepository;
             _colleagueFinanceReferenceDataRepository = colleagueFinanceReferenceDataRepository;
             _addressRepository = addressRepository;
             _personRepository = personRepository;
         }
-
-
-        /*private IEnumerable<Domain.Base.Entities.Institution> _institutions;
-        /// <summary>
-        /// Gets institutions.
-        /// </summary>
-        /// <param name="bypassCache"></param>
-        /// <returns></returns>
-        private async Task<IEnumerable<Domain.Base.Entities.Institution>> GetInstitutionsAsync(bool bypassCache)
-        {
-            return _institutions ?? (_institutions = await _institutionRepository.GetAllInstitutionsAsync(bypassCache));
-        }
-        */
 
         private IEnumerable<Domain.Base.Entities.Country> _countries = null;
         private async Task<IEnumerable<Domain.Base.Entities.Country>> GetAllCountriesAsync(bool bypassCache)
@@ -103,52 +88,134 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="documentTypeValue">invoice or refund</param>
         /// <param name="bypassCache">Flag to bypass cache</param>
         /// <returns>Collection of <see cref="PaymentTransactions">paymentTransactions</see> objects</returns>          
-        public async Task<Tuple<IEnumerable<Dtos.PaymentTransactions>, int>> GetPaymentTransactionsAsync(int offset, int limit, 
-            string documentGuid, InvoiceTypes documentTypeValue, bool bypassCache = false)
+        public async Task<Tuple<IEnumerable<Dtos.PaymentTransactions>, int>> GetPaymentTransactionsAsync(int offset, int limit,
+            string documentGuid, InvoiceTypes documentTypeValue, Dtos.PaymentTransactions criteriaFilter, bool bypassCache = false)
         {
             this.CheckViewPaymentTransactionsPermission();
-
-            var paymentTransactionsCollection = new List<Ellucian.Colleague.Dtos.PaymentTransactions>();
-
-            var documentId = string.Empty;
-            var invoiceOrRefund = InvoiceOrRefund.NotSet;
-            if (!string.IsNullOrEmpty(documentGuid))
+            var docNumber = string.Empty;
+            var refPoDoc = new List<string>();
+            var refBpoDoc = new List<string>();
+            var refRecDoc = new List<string>();
+            if (criteriaFilter != null)
             {
-                documentId = await _accountsPayableInvoicesRepository.GetAccountsPayableInvoicesIdFromGuidAsync(documentGuid);
-                if (string.IsNullOrEmpty(documentId))
+                docNumber = criteriaFilter.DocumentNumber;
+                if (criteriaFilter.PaymentsFor != null && criteriaFilter.PaymentsFor.Any())
                 {
-                    return new Tuple<IEnumerable<Dtos.PaymentTransactions>, int>( new List<Dtos.PaymentTransactions>(), 0);
-                }
-                if (documentTypeValue == InvoiceTypes.NotSet)
-                {
-                    return new Tuple<IEnumerable<Dtos.PaymentTransactions>, int>(new List<Dtos.PaymentTransactions>(), 0);
-                }
-                invoiceOrRefund = ConvertInvoiceTypesDtoEnumToInvoiceOrRefundEnum(documentTypeValue);
-                if (invoiceOrRefund == InvoiceOrRefund.NotSet)
-                {
-                    return new Tuple<IEnumerable<Dtos.PaymentTransactions>, int>(new List<Dtos.PaymentTransactions>(), 0);
-                }
-            }
-
-            var paymentTransactionsEntities = await _paymentTransactionsRepository.GetPaymentTransactionsAsync(offset, limit, documentId, invoiceOrRefund);
-            var totalRecords = paymentTransactionsEntities.Item2;
-
-            if (paymentTransactionsEntities.Item1 != null)
-            {
-                var institutionIds = paymentTransactionsEntities.Item1.Select(x => x.Id).ToArray();
-
-                var institutions = await _institutionRepository.GetInstitutionsFromListAsync(institutionIds);
-
-                foreach (var paymentTransactionEntity in paymentTransactionsEntities.Item1)
-                {
-                    if (paymentTransactionEntity.Guid != null)
+                    foreach (var doc in criteriaFilter.PaymentsFor)
                     {
-                        var paymentTransactionDto = await ConvertPaymentTransactionsEntityToDtoAsync(paymentTransactionEntity, institutions, bypassCache);
-                        paymentTransactionsCollection.Add(paymentTransactionDto);
+                        if (doc.Document != null && doc.Document.ReferenceDocument != null && doc.Document.ReferenceDocument.PurchaseOrder != null && !string.IsNullOrEmpty(doc.Document.ReferenceDocument.PurchaseOrder.Id))
+                        {
+                            var poId = await _paymentTransactionsRepository.GetIdFromGuidAsync(doc.Document.ReferenceDocument.PurchaseOrder.Id, "PURCHASE.ORDERS");
+                            if (!string.IsNullOrEmpty(poId))
+                                refPoDoc.Add(poId);
+                            else
+                                return new Tuple<IEnumerable<Dtos.PaymentTransactions>, int>(new List<Dtos.PaymentTransactions>(), 0);
+                        }
+                        if (doc.Document != null && doc.Document.ReferenceDocument != null && doc.Document.ReferenceDocument.BlanketPurchaseOrder != null && !string.IsNullOrEmpty(doc.Document.ReferenceDocument.BlanketPurchaseOrder.Id))
+                        {
+                            var bpoId = await _paymentTransactionsRepository.GetIdFromGuidAsync(doc.Document.ReferenceDocument.BlanketPurchaseOrder.Id, "BPO");
+                            if (!string.IsNullOrEmpty(bpoId))
+                                refBpoDoc.Add(bpoId);
+                            else
+                                return new Tuple<IEnumerable<Dtos.PaymentTransactions>, int>(new List<Dtos.PaymentTransactions>(), 0);
+
+                        }
+                        if (doc.Document != null && doc.Document.ReferenceDocument != null && !string.IsNullOrEmpty(doc.Document.ReferenceDocument.RecurringVoucher))
+                        {
+                            refRecDoc.Add(doc.Document.ReferenceDocument.RecurringVoucher);
+                        }
+                        if (doc.Document != null && doc.Document.ReferenceDocument != null && doc.Document.ReferenceDocument.PurchasingArrangement != null && !string.IsNullOrEmpty(doc.Document.ReferenceDocument.PurchasingArrangement.Id))
+                        {
+                            return new Tuple<IEnumerable<Dtos.PaymentTransactions>, int>(new List<Dtos.PaymentTransactions>(), 0);
+                        }
                     }
                 }
+
             }
-            return new Tuple<IEnumerable<Dtos.PaymentTransactions>, int>(paymentTransactionsCollection, totalRecords);
+            try
+            {
+
+                var paymentTransactionsCollection = new List<Ellucian.Colleague.Dtos.PaymentTransactions>();
+                var totalRecords = 0;
+
+                var documentId = string.Empty;
+                var invoiceOrRefund = InvoiceOrRefund.NotSet;
+                Tuple<IEnumerable<PaymentTransaction>, int> paymentTransactionsEntities = null;
+                if (!string.IsNullOrEmpty(documentGuid))
+                {
+                    documentId = await _paymentTransactionsRepository.GetIdFromGuidAsync(documentGuid, "VOUCHERS");
+                    if (string.IsNullOrEmpty(documentId))
+                    {
+                        return new Tuple<IEnumerable<Dtos.PaymentTransactions>, int>(new List<Dtos.PaymentTransactions>(), 0);
+                    }
+                    if (documentTypeValue == InvoiceTypes.NotSet)
+                    {
+                        return new Tuple<IEnumerable<Dtos.PaymentTransactions>, int>(new List<Dtos.PaymentTransactions>(), 0);
+                    }
+                    invoiceOrRefund = ConvertInvoiceTypesDtoEnumToInvoiceOrRefundEnum(documentTypeValue);
+                    if (invoiceOrRefund == InvoiceOrRefund.NotSet)
+                    {
+                        return new Tuple<IEnumerable<Dtos.PaymentTransactions>, int>(new List<Dtos.PaymentTransactions>(), 0);
+                    }
+                }
+
+                try
+                {
+                    paymentTransactionsEntities = await _paymentTransactionsRepository.GetPaymentTransactionsAsync(offset, limit, documentId, invoiceOrRefund, docNumber, refPoDoc, refBpoDoc, refRecDoc);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex);
+                }
+                if (paymentTransactionsEntities != null)
+                {
+
+                    totalRecords = paymentTransactionsEntities.Item2;
+
+                    if (paymentTransactionsEntities != null && paymentTransactionsEntities.Item1 != null)
+                    {
+                        var institutionIds = paymentTransactionsEntities.Item1.Select(x => x.Vendor).ToArray();
+
+                        var institutions = await _institutionRepository.GetInstitutionsFromListAsync(institutionIds);
+
+                        var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(paymentTransactionsEntities.Item1.Select(x => x.Vendor).ToArray());
+
+                        var associatedVouchers = paymentTransactionsEntities.Item1.SelectMany(x => x.Vouchers);
+                        Dictionary<string, string> poGuidCollection = null;
+                        Dictionary<string, string> bpoGuidCollection = null;
+                        if (associatedVouchers != null && associatedVouchers.Any())
+                        {
+                            var PoIds = associatedVouchers.Where(cv => !string.IsNullOrEmpty(cv.PurchaseOrderId)).Select(cd => cd.PurchaseOrderId).Distinct();
+                            poGuidCollection = await _paymentTransactionsRepository.GetGuidsCollectionAsync(PoIds.ToArray(), "PURCHASE.ORDERS");
+                            var BpoIds = associatedVouchers.Where(cv => !string.IsNullOrEmpty(cv.BlanketPurchaseOrderId)).Select(cd => cd.BlanketPurchaseOrderId).Distinct();
+                            bpoGuidCollection = await _paymentTransactionsRepository.GetGuidsCollectionAsync(BpoIds.ToArray(), "BPO");
+                        }
+
+                        foreach (var paymentTransactionEntity in paymentTransactionsEntities.Item1)
+                        {
+                            if (paymentTransactionEntity.Guid != null)
+                            {
+                                var paymentTransactionDto = await ConvertPaymentTransactionsEntityToDtoAsync(paymentTransactionEntity, institutions, personGuidCollection, poGuidCollection, bpoGuidCollection, bypassCache);
+                                paymentTransactionsCollection.Add(paymentTransactionDto);
+                            }
+                        }
+
+                    }
+                }
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+                return new Tuple<IEnumerable<Dtos.PaymentTransactions>, int>(paymentTransactionsCollection, totalRecords);
+            }
+            catch (IntegrationApiException ex)
+            {
+                throw ex;
+            }
+            catch (RepositoryException ex)
+            {
+                throw ex;
+            }
         }
 
         /// <summary>
@@ -166,35 +233,58 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             this.CheckViewPaymentTransactionsPermission();
 
             try
-            {
+            {                
                 var paymentTransactions = await _paymentTransactionsRepository.GetPaymentTransactionsByGuidAsync(guid);
-                
-                var institutions = await _institutionRepository.GetInstitutionsFromListAsync(new string[] { paymentTransactions.Id } );
-                return await ConvertPaymentTransactionsEntityToDtoAsync(paymentTransactions, institutions, bypassCache);
+                Dictionary<string, string> personGuidCollection = null;
+                var institutions = new List<Institution>();
+                Dictionary<string, string> poGuidCollection = null;
+                Dictionary<string, string> bpoGuidCollection = null;
+                if (paymentTransactions != null)
+                {
+                    if (!string.IsNullOrEmpty(paymentTransactions.Vendor))
+                    {
+                        personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(new string[] { paymentTransactions.Vendor });
+                        institutions = (await _institutionRepository.GetInstitutionsFromListAsync(new string[] { paymentTransactions.Vendor })).ToList();
+                    }
+                                        
+                    var associatedVouchers = paymentTransactions.Vouchers;
+
+                    if (associatedVouchers != null && associatedVouchers.Any())
+                    {
+                        var PoIds = associatedVouchers.Where(cv => !string.IsNullOrEmpty(cv.PurchaseOrderId)).Select(cd => cd.PurchaseOrderId).Distinct();
+                        poGuidCollection = await _paymentTransactionsRepository.GetGuidsCollectionAsync(PoIds.ToArray(), "PURCHASE.ORDERS");
+                        var BpoIds = associatedVouchers.Where(cv => !string.IsNullOrEmpty(cv.BlanketPurchaseOrderId)).Select(cd => cd.BlanketPurchaseOrderId).Distinct();
+                        bpoGuidCollection = await _paymentTransactionsRepository.GetGuidsCollectionAsync(BpoIds.ToArray(), "BPO");
+                    }
+                }
+                var response =  await ConvertPaymentTransactionsEntityToDtoAsync(paymentTransactions, institutions, personGuidCollection, poGuidCollection, bpoGuidCollection, bypassCache);
+
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+                return response;
             }
             catch (KeyNotFoundException ex)
             {
-                throw new KeyNotFoundException("No Payment Transaction was found for guid  " + guid, ex);
+                throw new KeyNotFoundException("No payment-transactions was found for guid  " + guid, ex);
+
+                //IntegrationApiExceptionAddError("No payment-transactions was found for GUID " + guid, "GUID.Not.Found", guid, string.Empty, System.Net.HttpStatusCode.NotFound);
+                //throw IntegrationApiException;
             }
-            catch (InvalidOperationException ex)
+            catch (IntegrationApiException ex)
             {
-                throw new InvalidOperationException("No Payment Transaction was found for guid  " + guid, ex);
+                throw ex;
             }
             catch (RepositoryException ex)
             {
-                throw new RepositoryException("No Payment Transaction was found for guid  " + guid, ex);
+                throw ex;
             }
-            catch (ArgumentException ex)
+            catch (Exception ex) 
             {
-                throw new ArgumentException(ex.Message, ex);
-            }
-            catch (ApplicationException ae)
-            {
-                throw new ApplicationException(ae.Message);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("No Payment Transaction was found for guid  " + guid, ex);
+                IntegrationApiExceptionAddError(ex.Message, "Global.Internal.Error", guid);
+
+                throw IntegrationApiException;
             }
         }
 
@@ -207,18 +297,28 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="source">Checks domain entity</param>
         /// <returns>PaymentTransactions DTO</returns>
         private async Task<Ellucian.Colleague.Dtos.PaymentTransactions> ConvertPaymentTransactionsEntityToDtoAsync(Domain.ColleagueFinance.Entities.PaymentTransaction source,
-            IEnumerable<Domain.Base.Entities.Institution> institutions, bool bypassCache = false)
+            IEnumerable<Domain.Base.Entities.Institution> institutions, Dictionary<string, string> personGuidCollection, Dictionary<string, string> poGuidCollection, Dictionary<string, string> bpoGuidCollection, bool bypassCache = false)
         {
             var paymentTransactions = new Ellucian.Colleague.Dtos.PaymentTransactions();
             CurrencyIsoCode currency = GetCurrencyIsoCode(source.CurrencyCode, source.HostCountry);
-
-            paymentTransactions.Id = source.Guid;
+            if (string.IsNullOrEmpty(source.Guid))
+            {
+                IntegrationApiExceptionAddError("Could not find a GUID for payment transactions entity.", "GUID.Not.Found", id: source.Id);
+            }
+            else
+            {
+                paymentTransactions.Id = source.Guid;
+            }
             paymentTransactions.DocumentNumber = source.Id;
             if (!(string.IsNullOrEmpty(source.ReferenceNumber)))
             {
                 paymentTransactions.ReferenceNumber = source.ReferenceNumber;
             }
             paymentTransactions.PaymentMethod = ConvertPaymentMethodDomainEnumToPaymentMethodDtoEnum(source.PaymentMethod);
+            if (paymentTransactions.PaymentMethod == Dtos.EnumProperties.PaymentMethod.NotSet)
+            {
+                IntegrationApiExceptionAddError("Invalid payment method.", "Bad.Data", source.Guid, source.Id);
+            }
             paymentTransactions.PaymentDate = source.Date;
 
             paymentTransactions.Status = ConvertPaymentTransactionsStatusDomainEnumToPaymentTransactionsStatusDtoEnum(source.VoucherStatus);
@@ -237,49 +337,215 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var paymentsFor = new List<PaymentsForDtoProperty>();
             if (source.PaymentMethod == Domain.ColleagueFinance.Entities.PaymentMethod.Check || source.PaymentMethod == Domain.ColleagueFinance.Entities.PaymentMethod.Directdeposit)
             {
-                if (source.VoucherAmountAndCurrency != null && source.VoucherAmountAndCurrency.Any())
+                if (source.Vouchers != null && source.Vouchers.Any())
                 {
-
-                    foreach (var voucherAmountAndCurrency in source.VoucherAmountAndCurrency)
+                    foreach (var vou in source.Vouchers)
                     {
-                        var id = await _accountsPayableInvoicesRepository.GetAccountsPayableInvoicesGuidFromIdAsync(voucherAmountAndCurrency.Key);
-                        var amountAndCurrency = voucherAmountAndCurrency.Value;
-                        if ((!string.IsNullOrEmpty(id)) && (amountAndCurrency != null))
+                        var id = vou.Guid;
+                        if (string.IsNullOrEmpty(id))
                         {
-                            var paymentsForDtoProperty = new PaymentsForDtoProperty();
-                            paymentsForDtoProperty.Document = new InvoiceDtoProperty();
-
-                            paymentsForDtoProperty.Document.Invoice = new GuidObject2(id);
-
-                            paymentsForDtoProperty.Amount = new Amount2DtoProperty()
+                            IntegrationApiExceptionAddError("Unable to find guid for voucher id '" + vou.Id + "'.", "GUID.Not.Found", source.Guid, source.Id);
+                        }
+                        else
+                        {
+                            var amountAndCurrency = vou.VoucherInvoiceAmt;
+                            if ((!string.IsNullOrEmpty(id)) && (amountAndCurrency != null))
                             {
-                                Currency = GetCurrencyIsoCode(amountAndCurrency.Currency.ToString(), source.HostCountry),
-                                Value = amountAndCurrency.Value
-                            };
-                            paymentsFor.Add(paymentsForDtoProperty);
+                                var paymentsForDtoProperty = new PaymentsForDtoProperty();
+                                paymentsForDtoProperty.Document = new InvoiceDtoProperty();
+
+                                paymentsForDtoProperty.Document.Invoice = new GuidObject2(id);
+
+                                paymentsForDtoProperty.Amount = new Amount2DtoProperty()
+                                {
+                                    Currency = GetCurrencyIsoCode(amountAndCurrency.Currency.ToString(), source.HostCountry),
+                                    Value = amountAndCurrency.Value
+                                };
+                                if (!string.IsNullOrEmpty(vou.PurchaseOrderId))
+                                {
+                                    var poGuid = string.Empty;
+                                    if (poGuidCollection == null)
+                                    {
+                                        IntegrationApiExceptionAddError(string.Concat("Purchase Order guid not found for purchase order Id: '", vou.PurchaseOrderId, "'"), "GUID.Not.Found"
+                                            , source.Guid, source.Id);
+                                    }
+                                    else
+                                    {
+                                        poGuidCollection.TryGetValue(vou.PurchaseOrderId, out poGuid);
+                                        if (string.IsNullOrEmpty(poGuid))
+                                        {
+                                            IntegrationApiExceptionAddError(string.Concat("Purchase Order guid not found for purchase order Id: '", vou.PurchaseOrderId, "'"), "GUID.Not.Found"
+                                                , source.Guid, source.Id);
+                                        }
+                                        else
+                                        {
+                                            var refdoc = new LineItemReferenceDocumentDtoProperty2();
+                                            refdoc.PurchaseOrder = new GuidObject2(poGuid);
+                                            paymentsForDtoProperty.Document.ReferenceDocument = refdoc;
+                                        }
+                                    }
+                                }
+                                if (!string.IsNullOrEmpty(vou.BlanketPurchaseOrderId))
+                                {
+                                    var bpoGuid = string.Empty;
+                                    if (bpoGuidCollection == null)
+                                    {
+                                        IntegrationApiExceptionAddError(string.Concat("Blanket Purchase Order guid not found for BPO Id: '", vou.BlanketPurchaseOrderId, "'"), "GUID.Not.Found"
+                                            , source.Guid, source.Id);
+                                    }
+                                    else
+                                    {
+                                        bpoGuidCollection.TryGetValue(vou.BlanketPurchaseOrderId, out bpoGuid);
+                                        if (string.IsNullOrEmpty(bpoGuid))
+                                        {
+                                            IntegrationApiExceptionAddError(string.Concat("Blanket Purchase Order guid not found for BPO Id: '", vou.BlanketPurchaseOrderId, "'"), "GUID.Not.Found"
+                                                , source.Guid, source.Id);
+                                        }
+                                        else
+                                        {
+                                            var refdoc = new LineItemReferenceDocumentDtoProperty2();
+                                            refdoc.BlanketPurchaseOrder = new GuidObject2(bpoGuid);
+                                            paymentsForDtoProperty.Document.ReferenceDocument = refdoc;
+                                        }
+                                    }
+                                }
+                                if (!string.IsNullOrEmpty(vou.RecurringVoucherId))
+                                {
+                                    var refdoc = new LineItemReferenceDocumentDtoProperty2();
+                                    refdoc.RecurringVoucher = vou.RecurringVoucherId;
+                                    paymentsForDtoProperty.Document.ReferenceDocument = refdoc;
+
+                                }
+                                // add line items detail
+                                if (vou.LineItems != null & vou.LineItems.Any())
+                                {
+                                    var itemDtoList = new List<PaymentTransactionsLineItemDtoProperty>();
+                                    foreach (var item in vou.LineItems)
+                                    {
+                                        var itemDto = new PaymentTransactionsLineItemDtoProperty();
+                                        itemDto.LineItemNumber = item.Id;
+                                        itemDto.Amount = new Amount2DtoProperty()
+                                        {
+                                            Currency = GetCurrencyIsoCode(amountAndCurrency.Currency.ToString(), source.HostCountry),
+                                            Value = item.ExtendedPrice
+                                        };
+                                        itemDtoList.Add(itemDto);
+                                    }
+                                    paymentsForDtoProperty.Document.LineItems = itemDtoList;
+                                }
+                                paymentsFor.Add(paymentsForDtoProperty);
+                            }
                         }
                     }
                 }
             }
             else
-            {                
-                var id = await _paymentTransactionsRepository.GetGuidFromIdAsync("VOUCHERS", source.Id);
-                if (!string.IsNullOrEmpty(id))
+            {
+                if (source.Vouchers != null && source.Vouchers.Any())
                 {
-                    var paymentsForDtoProperty = new PaymentsForDtoProperty();
-                    paymentsForDtoProperty.Document = new InvoiceDtoProperty();
-
-                    paymentsForDtoProperty.Document.Refund = new GuidObject2(id);
-
-                    paymentsForDtoProperty.Amount = new Amount2DtoProperty()
+                    foreach (var vou in source.Vouchers)
                     {
-                        Currency = currency,
-                        Value = source.PaymentAmount
-                    };
-                    paymentsFor.Add(paymentsForDtoProperty);
-                }
+                        var id = vou.Guid;
+                        if (string.IsNullOrEmpty(id))
+                        {
+                            IntegrationApiExceptionAddError("Unable to find guid for voucher id '" + vou.Id + "'.", "GUID.Not.Found", source.Guid, source.Id);
+                        }
+                        else
+                        {
+                            var amountAndCurrency = vou.VoucherInvoiceAmt;
+                            var paymentsForDtoProperty = new PaymentsForDtoProperty();
+                            paymentsForDtoProperty.Document = new InvoiceDtoProperty();
+
+                            paymentsForDtoProperty.Document.Refund = new GuidObject2(id);
+
+                            paymentsForDtoProperty.Amount = new Amount2DtoProperty()
+                            {
+                                Currency = currency,
+                                Value = source.PaymentAmount
+                            };
+                            // this is commented out as the voucher refund does not have reference document property yet in the model but could be added in the future. 
+                            //if (!string.IsNullOrEmpty(vou.PurchaseOrderId))
+                            //{
+                            //    var poGuid = string.Empty;
+                            //    if (poGuidCollection == null)
+                            //    {
+                            //        IntegrationApiExceptionAddError(string.Concat("Purchase Order guid not found for purchase order Id: '", vou.PurchaseOrderId, "'"), "GUID.Not.Found"
+                            //            , source.Guid, source.Id);
+                            //    }
+                            //    else
+                            //    {
+                            //        poGuidCollection.TryGetValue(vou.PurchaseOrderId, out poGuid);
+                            //        if (string.IsNullOrEmpty(poGuid))
+                            //        {
+                            //            IntegrationApiExceptionAddError(string.Concat("Purchase Order guid not found for purchase order Id: '", vou.PurchaseOrderId, "'"), "GUID.Not.Found"
+                            //                , source.Guid, source.Id);
+                            //        }
+                            //        else
+                            //        {
+                            //            var refdoc = new LineItemReferenceDocumentDtoProperty2();
+                            //            refdoc.PurchaseOrder = new GuidObject2(poGuid);
+                            //            paymentsForDtoProperty.Document.ReferenceDocument = refdoc;
+                            //        }
+                            //    }
+                            //}
+                            //if (!string.IsNullOrEmpty(vou.BlanketPurchaseOrderId))
+                            //{
+                            //    var bpoGuid = string.Empty;
+                            //    if (bpoGuidCollection == null)
+                            //    {
+                            //        IntegrationApiExceptionAddError(string.Concat("Blanket Purchase Order guid not found for BPO Id: '", vou.BlanketPurchaseOrderId, "'"), "GUID.Not.Found"
+                            //            , source.Guid, source.Id);
+                            //    }
+                            //    else
+                            //    {
+                            //        bpoGuidCollection.TryGetValue(vou.BlanketPurchaseOrderId, out bpoGuid);
+                            //        if (string.IsNullOrEmpty(bpoGuid))
+                            //        {
+                            //            IntegrationApiExceptionAddError(string.Concat("Blanket Purchase Order guid not found for BPO Id: '", vou.BlanketPurchaseOrderId, "'"), "GUID.Not.Found"
+                            //                , source.Guid, source.Id);
+                            //        }
+                            //        else
+                            //        {
+                            //            var refdoc = new LineItemReferenceDocumentDtoProperty2();
+                            //            refdoc.BlanketPurchaseOrder = new GuidObject2(bpoGuid);
+                            //            paymentsForDtoProperty.Document.ReferenceDocument = refdoc;
+                            //        }
+                            //    }
+                            //}
+                            //if (!string.IsNullOrEmpty(vou.RecurringVoucherId))
+                            //{
+                            //    var refdoc = new LineItemReferenceDocumentDtoProperty2();
+                            //    refdoc.RecurringVoucher = vou.RecurringVoucherId;
+                            //    paymentsForDtoProperty.Document.ReferenceDocument = refdoc;
+
+                            //}
+                            //// add line items detail
+                            //if (vou.LineItems != null & vou.LineItems.Any())
+                            //{
+                            //    var itemDtoList = new List<PaymentTransactionsLineItemDtoProperty>();
+                            //    foreach (var item in vou.LineItems)
+                            //    {
+                            //        var itemDto = new PaymentTransactionsLineItemDtoProperty();
+                            //        itemDto.LineItemNumber = item.Id;
+                            //        itemDto.Amount = new Amount2DtoProperty()
+                            //        {
+                            //            Currency = GetCurrencyIsoCode(amountAndCurrency.Currency.ToString(), source.HostCountry),
+                            //            Value = item.ExtendedPrice
+                            //        };
+                            //        itemDtoList.Add(itemDto);
+                            //    }
+                            //    paymentsForDtoProperty.Document.LineItems = itemDtoList;
+                            //}
+                            paymentsFor.Add(paymentsForDtoProperty);
+                        }
+                    }
+                }            
+                
             }
-            if (paymentsFor.Any())
+        
+               
+            
+            if (paymentsFor != null && paymentsFor.Any())
                 paymentTransactions.PaymentsFor = paymentsFor;
 
             paymentTransactions.Amount = new Amount2DtoProperty()
@@ -291,53 +557,73 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             if (!(string.IsNullOrEmpty(source.Vendor)))
             {
                 var manualVendorDetails = new PayeeDetailsDtoProperty();
-                var personGuid = await _personRepository.GetPersonGuidFromIdAsync(source.Vendor);
-                if (string.IsNullOrEmpty(personGuid))
+                var personGuid = string.Empty;
+                if (personGuidCollection == null)
                 {
-                    throw new KeyNotFoundException(string.Concat("Unable to locate guid for PERSON id: ", source.Id));
-                }
-
-                var ledgerActivityReference = new LedgerActivityReference();
-
-                Institution institution = null;
-                if (institutions != null && institutions.Any())
-                    institution = institutions.FirstOrDefault(i => i.Id.Equals(source.Id));
-               
-                if (source.IsOrganization && institution == null)
-                {
-                    ledgerActivityReference.Organization = new GuidObject2(personGuid);
-                }
-                else if (institution != null)
-                {
-                    ledgerActivityReference.Institution = new GuidObject2(personGuid);
+                    IntegrationApiExceptionAddError(string.Concat("Person guid not found for Person Id: '", source.Vendor, "'"), "GUID.Not.Found"
+                        , source.Guid, source.Id);
                 }
                 else
                 {
-                    ledgerActivityReference.Person = new GuidObject2(personGuid);
-                }
-                manualVendorDetails.Payee = ledgerActivityReference;
-
-                if ((source.MiscName != null) && (source.MiscName.Any()))
-                {
-                    string name = string.Empty;
-                    foreach (var vouName in source.MiscName)
+                    personGuidCollection.TryGetValue(source.Vendor, out personGuid);
+                    if (string.IsNullOrEmpty(personGuid))
                     {
-                        if (!string.IsNullOrEmpty(name))
-                        {
-                            name = string.Concat(name, " ");
-                        }
-                        name = string.Concat(name, vouName);
+                        IntegrationApiExceptionAddError(string.Concat("Person guid not found for Person Id: '", source.Vendor, "'"), "GUID.Not.Found"
+                            , source.Guid, source.Id);
                     }
+                    else
+                    {
+                        var ledgerActivityReference = new LedgerActivityReference();
+                        Institution institution = null;
+                        if (institutions != null && institutions.Any())
+                            institution = institutions.FirstOrDefault(i => i.Id.Equals(source.Vendor));
 
-                    manualVendorDetails.Name = name;
-                }
-                if ((source.Address != null) && (source.Address.Any()))
-                {
-                    manualVendorDetails.AddressLines = source.Address;
-                    manualVendorDetails.Place = await BuildAddressPlaceDtoAsync(source);
-                }
+                        if (source.IsOrganization && institution == null)
+                        {
+                            ledgerActivityReference.Organization = new GuidObject2(personGuid);
+                        }
+                        else if (institution != null)
+                        {
+                            ledgerActivityReference.Institution = new GuidObject2(personGuid);
+                        }
+                        else
+                        {
+                            ledgerActivityReference.Person = new GuidObject2(personGuid);
+                        }
+                        manualVendorDetails.Payee = ledgerActivityReference;
+                        if ((source.MiscName != null) && (source.MiscName.Any()))
+                        {
+                            string name = string.Empty;
+                            foreach (var vouName in source.MiscName)
+                            {
+                                if (!string.IsNullOrEmpty(name))
+                                {
+                                    name = string.Concat(name, " ");
+                                }
+                                name = string.Concat(name, vouName);
+                            }
 
-                paymentTransactions.PayeeDetails = manualVendorDetails;
+                            manualVendorDetails.Name = name;
+                        }
+                        if ((source.Address != null) && (source.Address.Any()))
+                        {
+                            manualVendorDetails.AddressLines = source.Address;
+                            try
+                            {
+                                manualVendorDetails.Place = await BuildAddressPlaceDtoAsync(source);
+                            }
+                            catch (Exception ex)
+                            {
+                                {
+                                    IntegrationApiExceptionAddError(ex.Message, "Bad.Data",
+                                        source.Guid, source.Id);
+                                }
+                            }
+                        }
+
+                        paymentTransactions.PayeeDetails = manualVendorDetails;
+                    }
+                }
             }
             return paymentTransactions;
         }
@@ -509,7 +795,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (!hasPermission)
             {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view Payment-Transactions.");
+                IntegrationApiExceptionAddError("User '" + CurrentUser.UserId + "' is not authorized to view payment-transactions.", "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
+                throw IntegrationApiException;
             }
         }
 

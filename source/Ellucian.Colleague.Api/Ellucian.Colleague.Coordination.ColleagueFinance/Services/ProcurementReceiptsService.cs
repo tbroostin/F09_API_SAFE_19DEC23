@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -76,16 +76,36 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// </summary>
         /// <param name="offset">Offset for paging results</param>
         /// <param name="limit">Limit for paging results</param>
+        /// <param name="filters">Filters</param>
         /// <param name="bypassCache">Flag to bypass cache</param>
         /// <returns>Collection of <see cref="ProcurementReceipts">procurementReceipts</see> objects</returns>          
-        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.ProcurementReceipts>, int>> GetProcurementReceiptsAsync(int offset, int limit, bool bypassCache = false)
+        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.ProcurementReceipts>, int>> GetProcurementReceiptsAsync(int offset, int limit, Dtos.ProcurementReceipts filters, bool bypassCache = false)
         {
             CheckViewProcurementReceiptsPermission();
 
             var procurementReceiptsCollection = new List<Ellucian.Colleague.Dtos.ProcurementReceipts>();
 
+            var purchaseOrderID = string.Empty;
+            if (filters != null && filters.PurchaseOrder != null && !string.IsNullOrEmpty(filters.PurchaseOrder.Id))
+            {
+                try
+                {
+                    purchaseOrderID = await purchaseOrderRepository.GetPurchaseOrdersIdFromGuidAsync(filters.PurchaseOrder.Id);
+                    if (string.IsNullOrEmpty(purchaseOrderID))
+                    {
+                        return new Tuple<IEnumerable<Dtos.ProcurementReceipts>, int>(procurementReceiptsCollection, 0);
+                    }
+                }
+                catch (Exception)
+                {
+                    return new Tuple<IEnumerable<Dtos.ProcurementReceipts>, int>(procurementReceiptsCollection, 0);
+                }
+            }
+
             var procurementReceiptsEntities =
-                     await purchaseOrderReceiptsRepository.GetPurchaseOrderReceiptsAsync(offset, limit);
+                     await purchaseOrderReceiptsRepository.GetPurchaseOrderReceiptsAsync(offset, limit, purchaseOrderID);
+        
+
             var totalRecords = procurementReceiptsEntities.Item2;
             if (procurementReceiptsEntities != null && procurementReceiptsEntities.Item1.Any())
             {
@@ -166,6 +186,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             Dtos.ProcurementReceipts dtoProcurementReceipts = null;
             // verify the user has the permission to create a ProcurementReceipts
             CheckCreateProcurementReceiptsPermission();
+            //extensibility
+            purchaseOrderReceiptsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
             try
             {
@@ -225,6 +247,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             if (!string.IsNullOrEmpty(source.PackingSlip))
             {
                 dto.PackingSlipNumber = source.PackingSlip;
+            }
+
+            if (!string.IsNullOrEmpty(source.PoNo) && !string.IsNullOrEmpty(source.Recordkey))
+            {
+                dto.ReceiptNumber = string.Format("{0}*{1}", source.PoNo, source.Recordkey);
             }
 
             if (source.ReceiptItems != null && source.ReceiptItems.Any())
@@ -358,6 +385,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 throw new Exception("There are no outstanding items to accept, and no accepted items to adjust. No receiving actions are possible on this purchase order at this time.");
             }
+
             procurementReceiptsEntity.PoId = purchaseOrder.Id;
 
             if (!(string.IsNullOrEmpty(purchaseOrder.CurrencyCode)))
@@ -637,7 +665,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
         private void CheckViewProcurementReceiptsPermission()
         {
-            var hasPermission = HasPermission(ColleagueFinancePermissionCodes.ViewProcurementReceipts);
+            var hasPermission = HasPermission(ColleagueFinancePermissionCodes.ViewProcurementReceipts) || HasPermission(ColleagueFinancePermissionCodes.CreateProcurementReceipts);
 
             if (!hasPermission)
             {

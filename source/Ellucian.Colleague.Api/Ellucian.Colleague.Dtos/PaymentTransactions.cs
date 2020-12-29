@@ -6,6 +6,7 @@ using Ellucian.Colleague.Dtos.Converters;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Newtonsoft.Json;
 using Ellucian.Colleague.Dtos.DtoProperties;
+using Ellucian.Colleague.Dtos.Attributes;
 
 namespace Ellucian.Colleague.Dtos
 {
@@ -18,6 +19,7 @@ namespace Ellucian.Colleague.Dtos
         /// <summary>
         /// The document number associated with the payment transaction (i.e. check number, payment transaction number).
         /// </summary>
+        [FilterProperty("criteria")]
         [JsonProperty("documentNumber", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public string DocumentNumber { get; set; }
 

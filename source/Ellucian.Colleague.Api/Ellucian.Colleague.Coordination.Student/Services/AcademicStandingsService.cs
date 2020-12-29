@@ -1,23 +1,27 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
-using System;
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Web.Dependency;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Student.Entities;
+using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Security;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Repositories;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
     [RegisterType]
-    public class AcademicStandingsService :IAcademicStandingsService
+    public class AcademicStandingsService : BaseCoordinationService, IAcademicStandingsService
     {
         private readonly IStudentReferenceDataRepository _studentReferenceDataRepository;
         private readonly ILogger _logger;
 
-        public AcademicStandingsService(IStudentReferenceDataRepository studentReferenceDataRepository, ILogger logger)
+        public AcademicStandingsService(IAdapterRegistry adapterRegistry, IStudentReferenceDataRepository studentReferenceDataRepository, ICurrentUserFactory currentUserFactory, IConfigurationRepository configurationRepository,
+                                         IRoleRepository roleRepository, ILogger logger) : base(adapterRegistry, currentUserFactory, roleRepository, logger, null, configurationRepository)
         {
             _studentReferenceDataRepository = studentReferenceDataRepository;
             _logger = logger;

@@ -11,7 +11,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Ellucian.Colleague.Data.Student.Tests</RootNamespace>
     <AssemblyName>Ellucian.Colleague.Data.Student.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <TargetFrameworkProfile />
@@ -36,57 +36,44 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Ellucian.Colleague.Configuration, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Configuration.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Ellucian.Colleague.Configuration, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Colleague.Configuration.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Domain, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Domain.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Ellucian.Colleague.Domain, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Colleague.Domain.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Legacy, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Legacy.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Ellucian.Colleague.Legacy, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Colleague.Legacy.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Property, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Property.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Ellucian.Colleague.Property, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Colleague.Property.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Data.Colleague, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Data.Colleague.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Ellucian.Data.Colleague, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Data.Colleague.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Dmi.Client, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Dmi.Client.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Ellucian.Dmi.Client, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Dmi.Client.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Dmi.Runtime, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Dmi.Runtime.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Ellucian.Dmi.Runtime, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Dmi.Runtime.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Logging, Version=1.0.0.1, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.240\lib\net451\Ellucian.Logging.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.248\lib\net451\Ellucian.Logging.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Web.Cache, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Web.Cache.1.0.0.184\lib\net451\Ellucian.Web.Cache.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Ellucian.Web.Cache.1.0.0.188\lib\net451\Ellucian.Web.Cache.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Web.License, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Web.License.1.0.0.178\lib\net451\Ellucian.Web.License.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Ellucian.Web.License.1.0.0.181\lib\net451\Ellucian.Web.License.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Web.Security, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Web.Security.1.0.0.206\lib\net451\Ellucian.Web.Security.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Ellucian.Web.Security.1.0.0.209\lib\net451\Ellucian.Web.Security.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Web.Utility, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.181\lib\net451\Ellucian.Web.Utility.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.184\lib\net451\Ellucian.Web.Utility.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.WebServices.Core.Config.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.WebServices.Core.Config.dll</HintPath>
     </Reference>
     <Reference Include="KellermanSoftware.Compare-NET-Objects, Version=2.1.0.0, Culture=neutral, PublicKeyToken=d970ace04cc85217, processorArchitecture=MSIL">
       <HintPath>..\packages\CompareNETObjects.2.01.0.0\lib\net451\KellermanSoftware.Compare-NET-Objects.dll</HintPath>
@@ -134,7 +121,12 @@
     <Reference Include="slf4net">
       <HintPath>..\packages\slf4net.0.1.32.1\lib\net35\slf4net.dll</HintPath>
     </Reference>
-    <Reference Include="System" />
+    <Reference Include="System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\System.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ComponentModel.DataAnnotations, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\System.ComponentModel.DataAnnotations.dll</HintPath>
+    </Reference>
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -144,6 +136,9 @@
       <HintPath>..\packages\System.IdentityModel.Tokens.Jwt.4.0.1\lib\net45\System.IdentityModel.Tokens.Jwt.dll</HintPath>
     </Reference>
     <Reference Include="System.Runtime.Caching" />
+    <Reference Include="System.Runtime.Serialization, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\System.Runtime.Serialization.dll</HintPath>
+    </Reference>
     <Reference Include="System.Threading.Tasks.Dataflow, Version=4.5.24.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.Tpl.Dataflow.4.5.24\lib\portable-net45+win8+wpa81\System.Threading.Tasks.Dataflow.dll</HintPath>
@@ -164,13 +159,24 @@
     <Compile Include="AcademicCreditRuleAdapterTests.cs" />
     <Compile Include="CourseRuleAdapterTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Repositories\BaseStudentRepositoryTests.cs" />
+    <Compile Include="Repositories\InstantEnrollmentRepositoryTests.cs" />
+    <Compile Include="Repositories\RetentionAlertRepositoryTests.cs" />
+    <Compile Include="Repositories\StudentAcademicCredentialsRepositoryTests.cs" />
     <Compile Include="Repositories\AcademicCredentialsRepositoryTests.cs" />
     <Compile Include="Repositories\AcademicCreditRepositoryTests.cs" />
     <Compile Include="Repositories\AdmissionApplicationSupportingItemsRepositoryTests.cs" />
     <Compile Include="Repositories\ApplicationStatusRepositoryTests.cs" />
     <Compile Include="Repositories\FinancialAidApplicationOutcomeRepositoryTests.cs" />
+    <Compile Include="Repositories\PlanningStudentRepositoryTests.cs" />
+    <Compile Include="Repositories\ProspectOpportunitiesRepositoryTests.cs" />
     <Compile Include="Repositories\RecruiterRepositoryTests.cs" />
+    <Compile Include="Repositories\StudentCohortAssignmentsRepositoryTests.cs" />
+    <Compile Include="Repositories\StudentDegreePlanRepositoryTests.cs" />
     <Compile Include="Repositories\StudentGradePointAveragesRepositoryTests.cs" />
+    <Compile Include="Repositories\StudentAcademicPeriodRepositoryTests.cs" />
+    <Compile Include="Repositories\StudentQuickRegistrationRepositoryTests.cs" />
+    <Compile Include="Repositories\StudentTransferWorkRepositoryTest.cs" />
     <Compile Include="Repositories\StudentUnverifiedGradesRepositoryTests.cs" />
     <Compile Include="Repositories\FinancialAidFundRepositoryTests.cs" />
     <Compile Include="Repositories\StudentTranscriptGradesRepositoryTests.cs" />
@@ -182,7 +188,6 @@
     <Compile Include="Repositories\AdmissionApplicationsRepositoryTests.cs" />
     <Compile Include="Repositories\ApplicantRepositoryTests.cs" />
     <Compile Include="Repositories\HousingRequestRepositoryTests.cs" />
-    <Compile Include="Repositories\InstitutionsAttendRepositoryTests.cs" />
     <Compile Include="Repositories\MealPlanAssignmentRepositoryTests.cs" />
     <Compile Include="Repositories\MealPlanReqsIntgRepositoryTests.cs" />
     <Compile Include="Repositories\NonAcademicEventRepositoryTests.cs" />
@@ -233,6 +238,7 @@
     <Compile Include="Repositories\StudentRequestRepositoryTests.cs" />
     <Compile Include="Repositories\NonAcademicAttendanceRepositoryTests.cs" />
     <Compile Include="RuleCoverageTests.cs" />
+    <Compile Include="TestFacultyRepository.cs" />
     <Compile Include="TestStudentCourseSecRepository.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -247,10 +253,6 @@
     <ProjectReference Include="..\Ellucian.Colleague.Data.Base\Ellucian.Colleague.Data.Base.csproj">
       <Project>{C3B126A1-5FFA-40A5-9826-FC22E1CCB2EC}</Project>
       <Name>Ellucian.Colleague.Data.Base</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Ellucian.Colleague.Data.FinancialAid\Ellucian.Colleague.Data.FinancialAid.csproj">
-      <Project>{a82741bc-a38c-46cf-b903-c14d5188c7aa}</Project>
-      <Name>Ellucian.Colleague.Data.FinancialAid</Name>
     </ProjectReference>
     <ProjectReference Include="..\Ellucian.Colleague.Data.Student\Ellucian.Colleague.Data.Student.csproj">
       <Project>{3b07ea69-83f6-4ab5-bc87-223e411a6acc}</Project>

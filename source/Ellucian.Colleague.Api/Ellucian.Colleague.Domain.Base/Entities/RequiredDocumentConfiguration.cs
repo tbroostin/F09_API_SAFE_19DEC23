@@ -1,10 +1,5 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Domain.Base.Entities
 {
@@ -17,40 +12,41 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// <summary>
         /// Suppress instance text after description
         /// </summary>
-        public bool SuppressInstance { get { return _suppressInstance; } }
-        private bool _suppressInstance;
+        public bool SuppressInstance { get; set; }
 
         /// <summary>
         /// Primary sort field
         /// </summary>
-        public WebSortField PrimarySortField { get { return _primarySortField; } }
-        private WebSortField _primarySortField;
+        public WebSortField PrimarySortField { get; set; }
+
 
         /// <summary>
         /// Secondary sort field
         /// </summary>
-        public WebSortField SecondarySortField { get { return _secondarySortField; } }
-        private WebSortField _secondarySortField;
+        public WebSortField SecondarySortField { get; set; }
+
 
         /// <summary>
         /// Display text for blank status
         /// </summary>
-        public string TextForBlankStatus { get { return _textForBlankStatus; } }
-        private string _textForBlankStatus;
+        public string TextForBlankStatus { get; set; }
 
         /// <summary>
         /// Display text for blank due date
         /// </summary>
-        public string TextForBlankDueDate { get { return _textForBlankDueDate; } }
-        private string _textForBlankDueDate;
+        public string TextForBlankDueDate { get; set;  }
 
-        public RequiredDocumentConfiguration(bool suppressInstance, WebSortField primarySortField, WebSortField secondarySortField, string textForBlankStatus, string textForBlankDueDate)
+
+        /// <summary>
+        /// Office Code to Attachment Collection Mapping used for Required Documents
+        /// </summary>
+        public RequiredDocumentCollectionMapping RequiredDocumentCollectionMapping { get; set; }
+
+        public RequiredDocumentConfiguration()
         {
-            _suppressInstance = suppressInstance;
-            _primarySortField = primarySortField;
-            _secondarySortField = secondarySortField;
-            _textForBlankStatus = textForBlankStatus;
-            _textForBlankDueDate = textForBlankDueDate;
+            // For clarity
+            SuppressInstance = false;
         }
+
     }
 }

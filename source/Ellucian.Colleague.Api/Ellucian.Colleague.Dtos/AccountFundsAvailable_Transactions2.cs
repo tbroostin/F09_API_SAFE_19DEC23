@@ -38,7 +38,7 @@ namespace Ellucian.Colleague.Dtos
         /// The type of the general ledger transaction (e.g. journal entry, encumbrance, budget).
         /// </summary>      
         [JsonProperty("type")]
-        public AccountFundsAvailable_TransactionsType Type { get; set; }
+        public AccountFundsAvailable_TransactionsType2 Type { get; set; }
 
         /// <summary>
         /// The date on which the transaction is to occur.

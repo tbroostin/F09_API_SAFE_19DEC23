@@ -2,10 +2,7 @@
 
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Serialization;
-using System.Text;
 
 namespace Ellucian.Colleague.Dtos.DtoProperties
 {
@@ -21,6 +18,7 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         [DataMember(Name = "withdrawnOn", EmitDefaultValue = false)]
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public DateTime? WithdrawnOn { get; set; }
+        
         /// <summary>
         /// The application withdrawal reason.
         /// </summary>

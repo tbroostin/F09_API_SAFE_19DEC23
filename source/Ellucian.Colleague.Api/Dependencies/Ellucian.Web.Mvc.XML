@@ -862,6 +862,15 @@
             The hidden state
             </value>
         </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Page.Disabled">
+            <summary>
+            Indicates if this page is disabled for all users. This differs from hidden in that the page is not only
+            hidden on the menus and breadcrumbs but in addition it cannot be accessed via url.
+            </summary>
+            <value>
+            The disabled state
+            </value>
+        </member>
         <member name="P:Ellucian.Web.Mvc.Models.Page.Subpages">
             <summary>
             The set of subpages found on this page
@@ -1122,6 +1131,104 @@
             <value>
             Client Privacy Policy
             </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.SelfServiceFormAuthentication">
+            <summary>
+            Whether or not to use the Self Service Form Authentication
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.GlobalMessage">
+            <summary>
+            Gets or sets the value of the Global Message
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.UseCloudThemeEditor">
+            <summary>
+            Whether or not to use the cloud theme editor
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.CloudThemeEditorBaseUrl">
+            <summary>
+            The base url of the ellucian cloud theme editor
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.ClientApiId">
+            <summary>
+            The client's cloud theme editor API id
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.ClientThemeName">
+            <summary>
+            The client's cloud theme editor theme name
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.ClientThemeTemplateName">
+            <summary>
+            The client's cloud theme editor template name
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.UseRecaptcha">
+            <summary>
+            Whether or not to use recaptcha
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.RecaptchaSiteKey">
+            <summary>
+            Recaptcha Site Key
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.RecaptchaSecretKey">
+            <summary>
+            Recaptcha Secret Key
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.SecuritySystemLoginUsername">
+            <summary>
+            Username used by security operations (e.g. password reset in Self-Service)
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.SecuritySystemLoginPassword">
+            <summary>
+            The password used by security operations (e.g. password reset in Self-Service)
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.SpecialIconPath">
+            <summary>
+            Special Icon Path
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.OverridePlanningRegistrationWithBaselineRegistration">
+            <summary>
+            Use Baseline Registration instead of Planning (if licensed)
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.UseMalwareScanner">
+            <summary>
+            Whether or not to use a malware scanner while uploading attachments
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.MalwareScannerTypes">
+            <summary>
+            Get/Set malware scanner types
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.MalwareScannerType">
+            <summary>
+            Gets or sets the selected malware scanner type
+            </summary>
+            <value>
+            The selected scanner type
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.MalwareScannerExePath">
+            <summary>
+            Full directory path to the malware scanner executable
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.MalwareScannerArgTemplate">
+            <summary>
+            Additional arguments to be passed to the malware scanner
+            </summary>
         </member>
         <member name="T:Ellucian.Web.Mvc.Models.Site">
             <summary>
@@ -1394,6 +1501,11 @@
             The portal cookie identifier
             </summary>
         </member>
+        <member name="F:Ellucian.Web.Mvc.Session.SessionCookieManager.AuthMethodCookieId">
+            <summary>
+            The authentication method cookie identifier
+            </summary>
+        </member>
         <member name="M:Ellucian.Web.Mvc.Session.SessionCookieManager.BuildJwtAuthenticationCookies(Microsoft.IdentityModel.Claims.IClaimsPrincipal,System.String)">
             <summary>
             Builds the JWT authentication cookie.
@@ -1428,6 +1540,19 @@
             </summary>
             <param name="httpContext">The HTTP context.</param>
             <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Session.SessionCookieManager.BuildAuthMethodCookie(System.String)">
+            <summary>
+            Builds the authentication method cookie
+            </summary>
+            <param name="authMethod">Authentication method value</param>
+            <returns>Cookie with authentication method</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Session.SessionCookieManager.GetAuthenticationMethodFromCookie(System.Web.HttpContextBase)">
+            <summary>
+            Gets the user's authentication method (if present) from the cookies in the given http context.
+            </summary>
+            <returns>The string value of the authentication method cookie, if present. If the cookie is not present, returns null.</returns>
         </member>
         <member name="M:Ellucian.Web.Mvc.Session.SessionCookieManager.BuildPrincipalFromJwtCookie(System.Web.HttpContext)">
             <summary>
@@ -1542,6 +1667,22 @@
             Restores the backup copy of the theme, if available.
             </summary>
             <returns>True if the backup was restored</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Utility.EncryptionUtility.Protect(System.String)">
+            <summary>
+            Encrypts a string using the MachineKey API
+            then converts to base 64 encoding
+            </summary>
+            <param name="text">String to protect</param>
+            <returns>protected string</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Utility.EncryptionUtility.Unprotect(System.String)">
+            <summary>
+            Decrypts a protected string using the MachineKeyAPI
+            then converts from base 64 encoding
+            </summary>
+            <param name="base64EncodedProtected">Base 64 encoded protected string</param>
+            <returns>unprotected string</returns>
         </member>
     </members>
 </doc>

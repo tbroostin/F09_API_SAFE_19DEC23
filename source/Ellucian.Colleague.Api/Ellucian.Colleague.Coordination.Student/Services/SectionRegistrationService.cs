@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Entities;
@@ -192,79 +192,163 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         #region V16.0.0
         public async Task<Tuple<IEnumerable<Dtos.SectionRegistration4>, int>> GetSectionRegistrations3Async(int offset, int limit, SectionRegistration4 criteria,
-            string academicPeriod, string sectionInstructor, bool bypassCache = false)
+            string academicPeriod, string sectionInstructor, Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter registrationStatusesByAcademicPeriodFilter, bool bypassCache = false)
         {
             // get user permissions
             CheckUserRegistrationViewPermissions();
+
+            int totalCount = 0;
+
+            #region Filters
+
             SectionRegistrationResponse sectReg = new SectionRegistrationResponse(new List<RegistrationMessage>());
             string acadPeriodNewValue = string.Empty, sectInstructorNewValue = string.Empty;
             var sectRegistrationList = new List<Dtos.SectionRegistration4>();
-            int totalCount = 0;
+            Tuple<string, List<string>> registrationStatusesByAcademicPeriod = null;
 
-            if (criteria != null && criteria.Section != null && !string.IsNullOrEmpty(criteria.Section.Id))
+            #region criteriaFilter
+
+            if (criteria != null)
             {
-                try
+                if (criteria.Section != null && !string.IsNullOrEmpty(criteria.Section.Id))
                 {
-                    sectReg.SectionId = await _sectionRepository.GetSectionIdFromGuidAsync(criteria.Section.Id);
+                    try
+                    {
+                        sectReg.SectionId = await _sectionRepository.GetSectionIdFromGuidAsync(criteria.Section.Id);
+                    }
+                    catch { }
                     if (string.IsNullOrEmpty(sectReg.SectionId))
                     {
                         return new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(sectRegistrationList, 0);
                     }
                 }
-                catch (Exception)
+                if (criteria.Registrant != null && !string.IsNullOrEmpty(criteria.Registrant.Id))
                 {
-                    return new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(sectRegistrationList, 0);
-                }
-            }
-            if (criteria != null && criteria.Registrant != null && !string.IsNullOrEmpty(criteria.Registrant.Id))
-            {
-                try
-                {
-                    sectReg.StudentId = await _personRepository.GetPersonIdFromGuidAsync(criteria.Registrant.Id);
+                    try
+                    {
+                        sectReg.StudentId = await _personRepository.GetPersonIdForNonCorpOnly(criteria.Registrant.Id);
+                    }
+                    catch { }
                     if (string.IsNullOrEmpty(sectReg.StudentId))
                     {
                         return new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(sectRegistrationList, 0);
                     }
                 }
-                catch (Exception)
-                {
-                    return new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(sectRegistrationList, 0);
-                }
             }
+
+            #endregion
+
+            #region academicPeriodFilter
+
             if (!string.IsNullOrEmpty(academicPeriod))
             {
+                Domain.Student.Entities.AcademicPeriod acadPeriod = null; 
                 try
                 {
-                    var acadPeriod = (AcademicPeriods(bypassCache)).FirstOrDefault(ap => ap.Guid.Equals(academicPeriod, StringComparison.OrdinalIgnoreCase));
-                    if (acadPeriod == null || string.IsNullOrEmpty(acadPeriod.Code))
-                    {
-                        return new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(sectRegistrationList, 0);
-                    }
-                    acadPeriodNewValue = acadPeriod.Code;
+                    acadPeriod = (AcademicPeriods(bypassCache)).FirstOrDefault(ap => ap.Guid.Equals(academicPeriod, StringComparison.OrdinalIgnoreCase));
                 }
-                catch (Exception)
+                catch { }
+                if (acadPeriod == null || string.IsNullOrEmpty(acadPeriod.Code))
                 {
                     return new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(sectRegistrationList, 0);
                 }
+                acadPeriodNewValue = acadPeriod.Code;
             }
+
+            #endregion
+
+            #region sectionInstructorFilter
+
             if (!string.IsNullOrEmpty(sectionInstructor))
             {
                 try
                 {
-                    sectInstructorNewValue = await _personRepository.GetPersonIdFromGuidAsync(sectionInstructor);
-                    if (string.IsNullOrEmpty(sectInstructorNewValue))
-                    {
-                        return new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(sectRegistrationList, 0);
-                    }
-
+                    sectInstructorNewValue = await _personRepository.GetPersonIdForNonCorpOnly(sectionInstructor);
                 }
-                catch (Exception)
+                catch { }
+                if (string.IsNullOrEmpty(sectInstructorNewValue))
                 {
                     return new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(sectRegistrationList, 0);
                 }
             }
 
-            var responses = await _sectionRegistrationRepository.GetSectionRegistrations2Async(offset, limit, sectReg, acadPeriodNewValue, sectInstructorNewValue);
+            #endregion
+
+            #region registrationStatusesByAcademicPeriodFilter
+
+
+            if (registrationStatusesByAcademicPeriodFilter != null)
+            {
+                if ((registrationStatusesByAcademicPeriodFilter.AcademicPeriod) != null && (registrationStatusesByAcademicPeriodFilter.Statuses == null))
+                {
+                    IntegrationApiExceptionAddError("Both the academicPeriod and one or more registration statuses must be specified for the registrationStatusesByAcademicPeriod query.");
+                    throw IntegrationApiException;
+                }
+                if ((registrationStatusesByAcademicPeriodFilter.AcademicPeriod) == null && (registrationStatusesByAcademicPeriodFilter.Statuses != null))
+                {
+                    IntegrationApiExceptionAddError("Both the academicPeriod and one or more registration statuses must be specified for the registrationStatusesByAcademicPeriod query.");
+                    throw IntegrationApiException;
+                }
+
+
+                if ((registrationStatusesByAcademicPeriodFilter.AcademicPeriod != null) && (registrationStatusesByAcademicPeriodFilter.Statuses != null))
+                {
+                    string acadPeriodCode = string.Empty;
+                    var statusCodeCollection = new List<string>();
+
+                    if (string.IsNullOrEmpty(registrationStatusesByAcademicPeriodFilter.AcademicPeriod.Id))
+                    {
+                        return new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(sectRegistrationList, 0);
+                    }
+                    IEnumerable<Domain.Student.Entities.AcademicPeriod> academicPeriods = null;
+                    try
+                    {
+                        academicPeriods = this.AcademicPeriods(bypassCache);
+                    }
+                    catch { }
+                    if (academicPeriods == null)
+                    {
+                        return new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(sectRegistrationList, 0);
+                    }
+                    var acadPeriod = academicPeriods.FirstOrDefault(ap =>
+                        ap.Guid.Equals(registrationStatusesByAcademicPeriodFilter.AcademicPeriod.Id, StringComparison.OrdinalIgnoreCase));
+                    if (acadPeriod == null)
+                    {
+                        return new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(sectRegistrationList, 0);
+                    }
+                    acadPeriodCode = acadPeriod.Code;
+
+                    if (registrationStatusesByAcademicPeriodFilter.Statuses.Count == 0)
+                    {
+                        return new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(sectRegistrationList, 0);
+                    }
+                    var statusCollection = await GetSectionRegistrationStatusesAsync(bypassCache);
+
+                    foreach (var status in registrationStatusesByAcademicPeriodFilter.Statuses)
+                    {
+                        if ((status.Detail == null) || (string.IsNullOrEmpty(status.Detail.Id)))
+                        {
+                            return new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(sectRegistrationList, 0);
+                        }
+
+                        var statusItem = statusCollection.FirstOrDefault(sc =>
+                          sc.Guid.Equals(status.Detail.Id, StringComparison.OrdinalIgnoreCase));
+
+                        if (statusItem == null)
+                        {
+                            return new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(sectRegistrationList, 0);
+                        }
+                        statusCodeCollection.Add(statusItem.Code);
+                    }
+                    registrationStatusesByAcademicPeriod = new Tuple<string, List<string>>(acadPeriodCode, statusCodeCollection);
+                }
+            }
+            #endregion
+
+
+            #endregion
+
+            var responses = await _sectionRegistrationRepository.GetSectionRegistrations3Async(offset, limit, sectReg, acadPeriodNewValue, sectInstructorNewValue, registrationStatusesByAcademicPeriod);
             //No records
             if (!responses.Item1.Any())
             {
@@ -292,8 +376,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var recordKey = response.StudentAcadCredKey;
                 if (string.IsNullOrEmpty(recordKey))
                 {
-                    // throw new KeyNotFoundException(string.Format("Invalid GUID for section registration: {0}.", guid));
-                    IntegrationApiExceptionAddError(string.Format("Invalid GUID for section registration: {0}.", response.Guid), "sectionRegistrations.id");
+                    IntegrationApiExceptionAddError(string.Format("Invalid GUID for section registration: '{0}'.", response.Guid), "GUID.Not.Found",
+                    string.IsNullOrEmpty(response.Guid) ? "" : response.Guid, string.IsNullOrEmpty(recordKey) ? "" : recordKey);
                     throw IntegrationApiException;
                 }
                 // convert response to SectionRegistration
@@ -329,13 +413,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var recordKey = await _sectionRegistrationRepository.GetSectionRegistrationIdFromGuidAsync(guid);
             if (string.IsNullOrEmpty(recordKey))
             {
-                // throw new KeyNotFoundException(string.Format("Invalid GUID for section registration: {0}.", guid));
-                IntegrationApiExceptionAddError(string.Format("Invalid GUID for section registration: {0}.", guid), "guid");
+                IntegrationApiExceptionAddError(string.Format("Invalid GUID for section registration: '{0}'.", guid), "GUID.Not.Found", 
+                    string.IsNullOrEmpty(guid) ? "" : guid, string.IsNullOrEmpty(recordKey) ? "" : recordKey);
                 throw IntegrationApiException;
             }
 
             // process the request
-            var response = await _sectionRegistrationRepository.GetSectionRegistrationByIdAsync(recordKey);
+            var response = await _sectionRegistrationRepository.GetSectionRegistrationById2Async(recordKey);
 
             //Get all person ids
             var personIds = new[] { response.StudentId };
@@ -461,20 +545,27 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (source.Ceus.HasValue || source.Credit.HasValue)
                 dto.Credit = ConvertResponseToSectionRegistrationCredit(source);
 
-            //gradingOption
-            var gradeSchemeGuid = ConvertCodeToGuid(await GradeSchemesAsync(), source.GradeScheme);
-            if (string.IsNullOrEmpty(gradeSchemeGuid))
+            // gradingOption
+            // Since courses and sections don't require grade schemes and an STC record may
+            // not have this data, we need to check for existance of a grade scheme before
+            // attempting to get the guid.
+            if (!string.IsNullOrEmpty(source.GradeScheme))
             {
-                IntegrationApiExceptionAddError(string.Format("Invalid Grade Scheme or missing GUID for grade scheme code '{0}'.",source.GradeScheme),
-                    "sectionRegistrations.gradeOption.gradeScheme.id", source.Guid, source.StudentAcadCredKey);
-            }
-            else
-            {
-                dto.GradingOption = new SectionRegistrationTranscript2()
+                var gradeScheme = (await GradeSchemesAsync()).Where(gs => gs != null && gs.Code == source.GradeScheme).FirstOrDefault();
+                var gradeSchemeGuid = gradeScheme != null ? gradeScheme.Guid : null;
+                if (string.IsNullOrEmpty(gradeSchemeGuid))
                 {
-                    GradeScheme = new GuidObject2(gradeSchemeGuid),
-                    Mode = ConvertToGradingOptionMode(source, bypassCache)
-                };
+                    IntegrationApiExceptionAddError(string.Format("Invalid Grade Scheme or missing GUID for grade scheme code '{0}'.", source.GradeScheme),
+                        "sectionRegistrations.gradeOption.gradeScheme.id", source.Guid, source.StudentAcadCredKey);
+                }
+                else
+                {
+                    dto.GradingOption = new SectionRegistrationTranscript2()
+                    {
+                        GradeScheme = new GuidObject2(gradeSchemeGuid),
+                        Mode = ConvertToGradingOptionMode(source, bypassCache)
+                    };
+                }
             }
 
             //Involvement 
@@ -1169,7 +1260,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var repoError = new RepositoryException("Errors Occurred in section-registrations update.");
                 foreach(var error in ex.Errors)
                 {
-                    repoError.AddError(new RepositoryError(error.Code, error.Message));
+                    var errorCode = string.IsNullOrEmpty(error.Code) ? "" : error.Code;
+                    repoError.AddError(new RepositoryError(errorCode, error.Message));
                 }
                 throw repoError;
             }
@@ -2331,6 +2423,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (registrationDto.SectionRegistrationGrades != null)
             {
+                var gradeTypeIds = registrationDto.SectionRegistrationGrades
+                   .Where(x => x.SectionGradeType != null && !string.IsNullOrEmpty(x.SectionGradeType.Id))
+                   .GroupBy(g => g.SectionGradeType.Id)
+                   .Where(w => w.Count() > 1)
+                   .ToList();
+
+                if (gradeTypeIds != null && gradeTypeIds.Any())
+                {
+                    throw new InvalidOperationException(string.Format("The grades array includes a duplicated grade type '{0}'.", gradeTypeIds.FirstOrDefault().Key));
+                }
+
                 foreach (var sectionRegistrationGrade in registrationDto.SectionRegistrationGrades)
                 {
                     //Check if the grades in registrationDto are valid
@@ -2605,6 +2708,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (registrationDto.SectionRegistrationGrades != null)
             {
+                var gradeTypeIds = registrationDto.SectionRegistrationGrades
+                   .Where(x => x.SectionGradeType != null && !string.IsNullOrEmpty(x.SectionGradeType.Id))
+                   .GroupBy(g => g.SectionGradeType.Id)
+                   .Where(w => w.Count() > 1)
+                   .ToList();
+
+                if (gradeTypeIds != null && gradeTypeIds.Any())
+                {
+                    throw new InvalidOperationException(string.Format("The grades array includes a duplicated grade type '{0}'.", gradeTypeIds.FirstOrDefault().Key));
+                }
+
                 foreach (var sectionRegistrationGrade in registrationDto.SectionRegistrationGrades)
                 {
                     //Check if the grades in registrationDto are valid
@@ -3314,7 +3428,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>SectionRegistration Object <see cref="Dtos.SectionRegistration2"/></returns>
         private async Task<Dtos.SectionRegistration2> ConvertResponsetoDto2(SectionRegistrationResponse source)
         {
-            var gradeSchemeGuid = ConvertCodeToGuid(await GradeSchemesAsync(), source.GradeScheme);
+            var gradeScheme = (await GradeSchemesAsync()).Where(gs => gs != null && gs.Code == source.GradeScheme).FirstOrDefault();
+            var gradeSchemeGuid = gradeScheme != null ? gradeScheme.Guid : null;
             var dto = new Dtos.SectionRegistration2();
             dto.Approvals = new List<Dtos.Approval2>() { new Dtos.Approval2() { ApprovalType = Dtos.ApprovalType2.All, ApprovalEntity = Dtos.ApprovalEntity.System } };
             dto.Id = source.Guid;
@@ -3384,7 +3499,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>SectionRegistration Object <see cref="Dtos.SectionRegistration2"/></returns>
         private async Task<Dtos.SectionRegistration3> ConvertResponsetoDto3(SectionRegistrationResponse source)
         {
-            var gradeSchemeGuid = ConvertCodeToGuid(await GradeSchemesAsync(), source.GradeScheme);
+            var gradeScheme = (await GradeSchemesAsync()).Where(gs => gs != null && gs.Code == source.GradeScheme).FirstOrDefault();
+            var gradeSchemeGuid = gradeScheme != null ? gradeScheme.Guid : null;
             var dto = new Dtos.SectionRegistration3();
             dto.Approvals = new List<Dtos.Approval2>() { new Dtos.Approval2() { ApprovalType = Dtos.ApprovalType2.All, ApprovalEntity = Dtos.ApprovalEntity.System } };
             dto.Id = source.Guid;
@@ -4216,7 +4332,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (acadGradeSchemes != null && acadGradeSchemes.Any())
             {
                 //get Grade schemes
-                gradeSchemes = (await GradeSchemesAsync(bypassCache)).Where(i => acadGradeSchemes.Contains(i.Code)).ToList();
+                gradeSchemes = (await GradeSchemesAsync(bypassCache)).ToList();
                 //get grade definitions
                 grades = (await GetGradeHedmAsync(bypassCache)).Where(g => acadGradeSchemes.Contains(g.GradeSchemeCode) && g.ExcludeFromFacultyGrading == false).ToList();
             }
@@ -4424,7 +4540,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     };
                 }
                 //dto.grades
-                if (grades != null && grades.Any())
+                if (grades != null && grades.Any() && grdScheme != null)
                 {
                     var grds = grades.Where(grd => grd.GradeSchemeCode.Equals(grdScheme.Code, StringComparison.OrdinalIgnoreCase)).ToList();
                     if (grds != null && grds.Any())
@@ -4436,7 +4552,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             SectionRegistrationsGradeOptionsGrades dtoGrade = new SectionRegistrationsGradeOptionsGrades()
                             {
                                 Grade = new GuidObject2(grd.Guid),
-                                Value = grd.GradeValue.HasValue ? grd.GradeValue.Value.ToString() : null
+                                Value = grd.LetterGrade
                             };
 
                             //grades.incompleteGradeDetails.finalGradeDefault.id

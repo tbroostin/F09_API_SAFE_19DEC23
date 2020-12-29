@@ -21,5 +21,10 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// Amount of money being moved into the account.
         /// </summary>
         public decimal ToAmount { get; set; }
+
+        /// <summary>
+        /// Boolean to determine if the adjustment line should be hidden from the user.
+        /// </summary>
+        public bool Hidden { get; set; }
     }
 }

@@ -1,7 +1,5 @@
-﻿using System;
+﻿// Copyright 2013-2019 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Ellucian.Colleague.Dtos.Student
 {
@@ -19,5 +17,11 @@ namespace Ellucian.Colleague.Dtos.Student
         /// The ID of the related registration payment control
         /// </summary>
         public string PaymentControlId { get; set; }
+
+        /// <summary>
+        /// List of identifiers for course sections for which the student was successfully registered
+        /// </summary>
+        public List<string> RegisteredSectionIds { get; set; }
+
     }
 }

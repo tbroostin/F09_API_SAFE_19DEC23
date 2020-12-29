@@ -59,12 +59,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 new ApplicationStatusCategory(code, string.Empty);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public void ApplicationStatusCategory_DescNullException()
-            {
-                new ApplicationInfluence(code, null);
-            }
+           
 
         }
     }

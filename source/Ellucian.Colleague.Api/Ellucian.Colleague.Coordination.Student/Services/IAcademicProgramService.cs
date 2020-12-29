@@ -52,8 +52,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
          /// <param name="academicCatalog">academicCatalog guid from filter</param>
         /// <param name="bypassCache">Flag to bypass cache</param>
         /// <returns>Collection of <see cref="Dtos.AcademicProgram4">academicPrograms</see> objects</returns>          
-        Task<IEnumerable<Ellucian.Colleague.Dtos.AcademicProgram4>> GetAcademicPrograms4Async(string academicCatalog, bool bypassCache);
-
+        Task<IEnumerable<Ellucian.Colleague.Dtos.AcademicProgram4>> GetAcademicPrograms4Async(string academicCatalog = "", string recruitmentProgram = "", Dtos.AcademicProgram4 criteria = null, bool bypassCache = false);
+        
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Get an academic period from its GUID

@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -116,7 +116,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
                 employeeLeavePlans = new List<EmployeeLeavePlan>();
                 employeeLeavePlans.Add(new EmployeeLeavePlan("foo", "0003914", DateTime.Today, null, "1", "vacation", DateTime.Today, null,
-                    LeaveTypeCategory.Vacation, "VAC", "Vacation", DateTime.Today, 10.00m, 1, 1, earningTypeIdList, true));
+                    LeaveTypeCategory.Vacation, "VAC", "Vacation", DateTime.Today, 10.00m, 1, 1, earningTypeIdList, 80, 50, 50, true));
 
             }
 
@@ -288,13 +288,20 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         public class GetEmployeeLeavePlansV2 : EmployeeLeavePlansServiceTests
         {
             public EmployeeLeavePlansService serviceUnderTest;
-
+            public string UserForAdminPermissionCheck
+            {
+                get
+                {
+                    return "0003917";
+                }
+            }
 
             public List<EmployeeLeavePlan> employeeLeavePlans = new List<EmployeeLeavePlan>()
             {
-                new EmployeeLeavePlan("1", "0003914", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly", new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1,new List<string> { "VAC", "VAC1" }, true),
-                new EmployeeLeavePlan("1", "0003915", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1,new List<string> { "VAC", "VAC1" }, true),
-                new EmployeeLeavePlan("1", "0003916", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, new List<string> { "VAC", "VAC1" },true),
+                new EmployeeLeavePlan("1", "0003914", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly", new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1,new List<string> { "VAC", "VAC1" }, 80, 50, 50, true),
+                new EmployeeLeavePlan("1", "0003915", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1,new List<string> { "VAC", "VAC1" }, 80, 50, 50, true),
+                new EmployeeLeavePlan("1", "0003916", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, new List<string> { "VAC", "VAC1" }, 80, 50, 50, true),
+                new EmployeeLeavePlan("5", "0003917", new DateTime(2017, 1, 1), null, "SICH", "Sick Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Sick, "SIC", "", new DateTime(2000,1,1), 20m, 1, 1, new List<string> { "SIC", "SICK" }, 80, 50, 50, true),
             };
 
             public Mock<ISupervisorsRepository> supervisorsRepositoryMock;
@@ -446,6 +453,53 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
                 Assert.AreEqual(employeeLeavePlans.Count, actual.Count());
 
+            }
+
+            [TestMethod]
+            public async Task GetEmployeeLeavePlansV2Async_GetEffectivePersonData_AdminAccess()
+            {
+                
+                roleRepositoryMock.Setup(r => r.Roles)
+                   .Returns(() => (employeeCurrentUserFactory.CurrentUser.Roles).Select(roleTitle =>
+                   {
+                       var role = new Domain.Entities.Role(roleTitle.GetHashCode(), roleTitle);
+
+                       role.AddPermission(new Domain.Entities.Permission(HumanResourcesPermissionCodes.ViewAllTimeHistory));
+
+                       return role;
+                   }));
+
+
+                //logged in user with ID"0003914" should be able to view any of the leave plans specified in employeeLeavePlans
+                var actual = await serviceUnderTest.GetEmployeeLeavePlansV2Async(UserForAdminPermissionCheck);
+
+                Assert.AreEqual(actual.Count(), 1);
+                Assert.AreEqual(actual.ToList()[0].EmployeeId, UserForAdminPermissionCheck);
+
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task GetEmployeeLeavePlansV2Async_GetEffectivePersonData_NoAdminAccess()
+            {
+                //logged in user with ID"0003914" should be able to view any of the leave plans specified in employeeLeavePlans
+                var actual = await serviceUnderTest.GetEmployeeLeavePlansV2Async(UserForAdminPermissionCheck);
+
+            }
+
+            [TestMethod]
+            public async Task GetEmployeeLeavePlansV2Async_PerLeaveAccrualDetails()
+            {
+                var actual = await serviceUnderTest.GetEmployeeLeavePlansV2Async();
+                var expected = employeeLeavePlans.Where(e => e.EmployeeId == employeeCurrentUserFactory.CurrentUser.PersonId).ToList();
+
+                Assert.IsNotNull(actual.First().AccrualLimit);
+                Assert.IsNotNull(actual.First().AccrualRate);
+                Assert.IsNotNull(actual.First().AccrualMaxCarryOver);
+                Assert.AreEqual(expected.First().AccrualLimit, actual.First().AccrualLimit);
+                Assert.AreEqual(expected.First().AccrualRate, actual.First().AccrualRate);
+                Assert.AreEqual(expected.First().AccrualMaxCarryOver, actual.First().AccrualMaxCarryOver);
             }
         }
 

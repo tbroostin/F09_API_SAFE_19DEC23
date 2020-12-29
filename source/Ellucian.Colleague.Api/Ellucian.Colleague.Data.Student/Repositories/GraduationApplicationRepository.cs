@@ -51,7 +51,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             AddGraduationApplicationRequest graduationApplicationRequest = new AddGraduationApplicationRequest();
             if (graduationApplication == null)
             {
-                logger.Info("You must provide the graduation application entity to add");
+                logger.Error("You must provide the graduation application entity to add");
                 throw new ArgumentNullException("graduationApplication", "You must provide the graduation application entity to add");
             }
             try
@@ -127,7 +127,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             catch (Exception ex)
             {
                 var errorMessage = string.Format("Unable to access Graduates record with studentId {0} and program Code {1}", graduationApplication.StudentId, graduationApplication.ProgramCode);
-                logger.Info(ex, errorMessage);
+                logger.Error(ex, errorMessage);
                 throw;
             }
         }
@@ -142,7 +142,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             if (string.IsNullOrEmpty(studentId) || string.IsNullOrEmpty(programCode))
             {
-                logger.Info("You must provide the student Id and program Code");
+                logger.Error("You must provide the student Id and program Code");
                 throw new ArgumentNullException("studentId-programCode", "You must provide the student Id and program Code");
             }
             var graduateApplicationId = string.Concat(studentId.ToUpper(), "*", programCode.ToUpper());
@@ -153,7 +153,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 if (graduate == null)
                 {
                     var errorMessage = string.Format("Unable to access Graduates record with student Id {0} and program Code {1} ", studentId, programCode);
-                    logger.Info(errorMessage);
+                    logger.Error(errorMessage);
                     throw new KeyNotFoundException(errorMessage);
                 }
                 var graduationApplication = BuildGraduationApplication(graduate);
@@ -162,7 +162,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             catch (Exception ex)
             {
                 var errorMessage = string.Format("Unable to access Graduates record with student Id {0} and program Code {1} ", studentId, programCode);
-                logger.Info(ex, errorMessage);
+                logger.Error(ex, errorMessage);
                 throw;
             }
 
@@ -178,7 +178,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             List<GraduationApplication> gradutionApplicationsEntityLst = new List<GraduationApplication>();
             if (string.IsNullOrEmpty(studentId))
             {
-                logger.Info("You must provide the student Id");
+                logger.Error("You must provide the student Id");
                 throw new ArgumentNullException("studentId", "You must provide the student Id");
             }
             try
@@ -187,7 +187,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 if (graduates == null)
                 {
                     var errorMessage = string.Format("Unable to access Graduates records for student Id {0}", studentId);
-                    logger.Info(errorMessage);
+                    logger.Error(errorMessage);
                     throw new KeyNotFoundException(errorMessage);
                 }
                 //map contract to entities
@@ -212,7 +212,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             catch (Exception ex)
             {
                 var errorMessage = string.Format("Unable to access Graduates records for student Id {0}", studentId);
-                logger.Info(ex, errorMessage);
+                logger.Error(ex, errorMessage);
                 throw;
             }
         }
@@ -228,13 +228,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             UpdateGraduationApplicationRequest graduationApplicationRequest = new UpdateGraduationApplicationRequest();
             if (graduationApplication == null)
             {
-                logger.Info("You must provide the graduation application entity to update");
+                logger.Error("You must provide the graduation application entity to update");
                 throw new ArgumentNullException("graduationApplication", "You must provide the graduation application entity to update");
             }
 
             if (string.IsNullOrEmpty(graduationApplication.StudentId) || string.IsNullOrEmpty(graduationApplication.ProgramCode))
             {
-                logger.Info("You must provide the student Id and program Code to update");
+                logger.Error("You must provide the student Id and program Code to update");
                 throw new ArgumentNullException("studentId-programCode", "You must provide the student Id and program Code");
             }
             try
@@ -257,6 +257,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 graduationApplicationRequest.ProgramCode = graduationApplication.ProgramCode;
                 graduationApplicationRequest.StudentId = graduationApplication.StudentId;
                 graduationApplicationRequest.PrimaryLocation = graduationApplication.PrimaryLocation;
+                graduationApplicationRequest.AGraduationTerm = graduationApplication.GraduationTerm;
                 if (graduationApplication.MilitaryStatus.HasValue)
                 {
                     switch (graduationApplication.MilitaryStatus.Value)
@@ -292,7 +293,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             catch (Exception ex)
             {
                 var errorMessage = string.Format("Unable to update Graduates record with studentId {0} and program Code {1}", graduationApplication.StudentId, graduationApplication.ProgramCode);
-                logger.Info(ex, errorMessage);
+                logger.Error(ex, errorMessage);
                 throw;
             }
         }
@@ -372,7 +373,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (graduationApplicationEligibilityResponse == null)
             {
                 var message = string.Format("CTX returned null graduation application eligibility response for student Id " + studentId);
-                logger.Info(message);
+                logger.Error(message);
             }
             else
             {
@@ -413,7 +414,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             if (graduate == null)
             {
-                logger.Info("You must provide the graduation application data contract.");
+                logger.Error("You must provide the graduation application data contract.");
                 throw new ArgumentNullException("graduationApplicationId", "You must provide the graduation application Id");
             }
             try
@@ -475,7 +476,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             catch (Exception ex)
             {
-                LogDataError("graduation application", graduate.Recordkey, graduate, ex);
+                logger.Error(ex, string.Format("An error occurred building graduation application information for graduates record {0}", graduate.Recordkey));
                 throw;
             }
         }

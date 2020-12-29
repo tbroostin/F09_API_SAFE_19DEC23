@@ -1,4 +1,5 @@
-﻿// Copyright 2012-2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -13,7 +14,6 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
-using Ellucian.Web.Utility;
 using slf4net;
 using Ellucian.Colleague.Data.Base.DataContracts;
 using System.Threading.Tasks;
@@ -401,7 +401,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (codeCache == null)
             {
                 var allCodesNoCache = await GetAsync(true);
-                if (allCodesCache == null)
+                if ( allCodesNoCache == null)
                 {
                     throw new RepositoryException(string.Concat("No Guid found, Entity:'TERMS', Record ID:'", code, "'"));
                 }
@@ -420,6 +420,93 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             return guid;
 
+        }
+
+
+
+        /// <summary>
+        /// Get code for AcademicPeriods guid
+        /// </summary>
+        /// <param name="code">AcademicPeriods guid</param>
+        /// <returns>code</returns>
+        public async Task<string> GetAcademicPeriodsCodeFromGuidAsync(string guid)
+        {
+            //get all the codes from the cache
+             string code = string.Empty;
+            if (string.IsNullOrEmpty(guid))
+                return code;
+            var allCodesCache = await GetAsync(false);
+            Term codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.RecordGuid.Equals(guid, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetAsync(true);
+                if ( allCodesNoCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No code found, Entity:'TERMS', Record ID:'", guid, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.RecordGuid.Equals(guid, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.RecordGuid))
+                    code = codeNoCache.Code;
+                else
+                    throw new RepositoryException(string.Concat("No code found, Entity:'TERMS', Record ID:'", guid, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Code))
+                    code = codeCache.Code;
+                else
+                    throw new RepositoryException(string.Concat("No code found, Entity:'TERMS', Record ID:'", guid, "'"));
+            }
+            return code;
+        }
+
+        /// <summary>
+        /// Using a collection of  ids, get a dictionary collection of associated guids
+        /// </summary>
+        /// <param name="ids">collection of  ids</param>
+        /// <returns>Dictionary consisting of a ids (key) and guids (value)</returns>
+        public async Task<Dictionary<string, string>> GetGuidsCollectionAsync( IEnumerable<string> ids )
+        {
+            if( ( ids == null ) || ( ids != null && !ids.Any() ) )
+            {
+                return new Dictionary<string, string>();
+            }
+            var guidCollection = new Dictionary<string, string>();
+            try
+            {
+                var guidLookup = ids
+                    .Where( s => !string.IsNullOrWhiteSpace( s ) )
+                    .Distinct().ToList()
+                    .ConvertAll( p => new RecordKeyLookup( "TERMS", p, false ) ).ToArray();
+
+                var recordKeyLookupResults = await DataReader.SelectAsync( guidLookup );
+
+                if( ( recordKeyLookupResults != null ) && ( recordKeyLookupResults.Any() ) )
+                {
+                    foreach( var recordKeyLookupResult in recordKeyLookupResults )
+                    {
+                        if( recordKeyLookupResult.Value != null )
+                        {
+                            var splitKeys = recordKeyLookupResult.Key.Split( new[] { "+" }, StringSplitOptions.RemoveEmptyEntries );
+                            if( !guidCollection.ContainsKey( splitKeys[ 1 ] ) )
+                            {
+                                guidCollection.Add( splitKeys[ 1 ], recordKeyLookupResult.Value.Guid );
+                            }
+                        }
+                    }
+                }
+            }
+            catch( Exception ex )
+            {
+                throw new Exception( string.Format( "Error occured while getting guids for {0}.", "TERMS" ), ex ); ;
+            }
+            return guidCollection;
         }
 
         /// <summary>

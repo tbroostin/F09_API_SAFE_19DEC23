@@ -84,11 +84,18 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                 {
                     CheckAccountPermission(personId);
                 }
-                else
+                //else
+                //{
+                //    logger.Info("Could not retrieve the receipt with the specified information");
+                //    throw new InvalidOperationException();
+                //}             
+                //F09
+                else if(!System.Text.RegularExpressions.Regex.IsMatch(paymentReceiptEntity.ErrorMessage ??"", @"(?:^[Ff]09|Updated.*payment.*source)",System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                 {
                     logger.Info("Could not retrieve the receipt with the specified information");
                     throw new InvalidOperationException();
                 }             
+                //end F09
             }
             var adapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.Payments.PaymentReceipt, Ellucian.Colleague.Dtos.Finance.Payments.PaymentReceipt>();
 

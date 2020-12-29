@@ -49,10 +49,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Return all financialAidFunds
         /// </summary>
         /// <returns>List of FinancialAidFunds <see cref="Dtos.FinancialAidFunds"/> objects representing matching financialAidFunds</returns>
-        [HttpGet]       
-        [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
+        [HttpGet]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.Filters.FinancialAidFundsFilter))]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
-        public async Task<IHttpActionResult> GetFinancialAidFundsAsync(Paging page)
+        [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
+        public async Task<IHttpActionResult> GetFinancialAidFundsAsync(Paging page, QueryStringFilter criteria)
         {
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
@@ -66,10 +68,15 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 page = new Paging(100, 0);
             }
+
+            var criteriaFilter = GetFilterObject<Dtos.Filters.FinancialAidFundsFilter>(_logger, "criteria");
+
+            if (CheckForEmptyFilterParameters())
+                return new PagedHttpActionResult<IEnumerable<Dtos.FinancialAidFunds>>(new List<Dtos.FinancialAidFunds>(), page, 0, this.Request);
+
             try
             {
-                var pageOfItems = await _financialAidFundsService.GetFinancialAidFundsAsync(page.Offset, page.Limit, bypassCache);
-
+                var pageOfItems = await _financialAidFundsService.GetFinancialAidFundsAsync(page.Offset, page.Limit, criteriaFilter, bypassCache);
 
                 AddEthosContextProperties(await _financialAidFundsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                                           await _financialAidFundsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -85,7 +92,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -115,6 +122,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="id">GUID to desired financialAidFunds</param>
         /// <returns>A financialAidFunds object <see cref="Dtos.FinancialAidFunds"/> in EEDM format</returns>
         [HttpGet]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [EedmResponseFilter]
         public async Task<Dtos.FinancialAidFunds> GetFinancialAidFundsByGuidAsync(string id)
         {
@@ -128,7 +136,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 var fund = await _financialAidFundsService.GetFinancialAidFundsByGuidAsync(id);
                 if (fund == null)
                 {
-                    throw new KeyNotFoundException("Financial Aid Fund not found for GUID " + id);
+                    throw CreateHttpResponseException(new IntegrationApiException("GUID.Not.Found", 
+                        IntegrationApiUtility.GetDefaultApiError(string.Format("financial-aid-funds not found for GUID '{0}'", id))), HttpStatusCode.NotFound);
                 }
 
                 AddEthosContextProperties(await _financialAidFundsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
@@ -144,7 +153,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {

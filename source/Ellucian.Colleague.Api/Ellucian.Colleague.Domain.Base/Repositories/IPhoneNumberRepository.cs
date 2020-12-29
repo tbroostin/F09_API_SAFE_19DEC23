@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Domain.Base.Repositories
@@ -24,7 +22,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// </summary>
         /// <param name="personIds">List of Person Ids</param>
         /// <returns>List of PhoneNumber Objects</returns>
-        IEnumerable<PhoneNumber> GetPersonPhonesByIds(List<string> personIds);
+        Task<IEnumerable<PhoneNumber>> GetPersonPhonesByIdsAsync(List<string> personIds);
         
         /// <summary>
         /// Get all Pilot primary and SMS phone numbers for a list of people.
@@ -32,6 +30,5 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="personIds">List of Person Ids</param>
         /// <returns>List of PhoneNumber Objects</returns>
         Task <IEnumerable<PilotPhoneNumber>> GetPilotPersonPhonesByIdsAsync(List<string> personIds, PilotConfiguration pilotConfiguration);
-        //IEnumerable<PilotPhoneNumber> GetPilotPersonPhonesByIds(List<string> personIds, PilotConfiguration pilotConfiguration);
     }
 }

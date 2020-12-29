@@ -32,6 +32,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
             private DateTime? effectiveEndDate;
             private Address address;
             private Phone phoneNumber;
+            private string addressGuid;
 
             [TestInitialize]
             public void Initialize()
@@ -51,6 +52,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
                 effectiveStartDate = DateTime.Now;
                 effectiveEndDate = DateTime.Now;
                 phoneNumber = new Phone("703-815-4221", "HO", null);
+                addressGuid = Guid.NewGuid().ToString();
 
                 address = new Address(addressId, personId);
 
@@ -66,12 +68,19 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
                 address.EffectiveStartDate = effectiveStartDate;
                 address.EffectiveEndDate = effectiveEndDate;
                 address.AddPhone(phoneNumber);
+                address.Guid = addressGuid;
             }
 
             [TestMethod]
             public void AddressId()
             {
                 Assert.AreEqual(addressId, address.AddressId);
+            }
+
+            [TestMethod]
+            public void GuidAddress()
+            {
+                Assert.AreEqual(addressGuid, address.Guid);
             }
 
             [TestMethod]
@@ -193,9 +202,10 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
             private string personId;
             private DateTime? effectiveStartDate;
             private DateTime? effectiveEndDate;
-            private Phone phoneNumber; 
+            private Phone phoneNumber;
             private Address address;
             private Address address2;
+            private string addressGuid;
 
             [TestInitialize]
             public void Initialize()
@@ -217,6 +227,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
                 effectiveStartDate = DateTime.Now;
                 effectiveEndDate = DateTime.Now;
                 phoneNumber = new Phone("703-815-4221", "HO", null);
+                addressGuid = Guid.NewGuid().ToString();
 
                 address = new Address(addressId, personId)
                 {
@@ -231,6 +242,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
                     County = county,
                     EffectiveStartDate = effectiveStartDate,
                     EffectiveEndDate = effectiveEndDate,
+                    Guid = addressGuid
                 };
             }
 
@@ -942,6 +954,41 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
                 };
                 address2.AddPhone(phoneNumber);
                 Assert.IsTrue(address.Equals(address2));
+            }
+
+            [TestMethod]
+            public void AddressId_Alternative_Constructor()
+            {
+
+                address2 = new Address(addressId, false)
+                {
+                    TypeCode = typeCode,
+                    AddressLines = addressLines,
+                    AddressModifier = addressModifier,
+                    City = city,
+                    State = state,
+                    PostalCode = postalCode,
+                    CountryCode = countryCode,
+                    RouteCode = routeCode,
+                    County = null,
+                    EffectiveStartDate = effectiveStartDate,
+                    EffectiveEndDate = effectiveEndDate,
+                    Guid = addressGuid
+                };
+                Assert.AreEqual(address.Guid, address2.Guid);
+                Assert.AreEqual(address.AddressId, address2.AddressId);
+                Assert.AreEqual(address.TypeCode, address2.TypeCode);
+                Assert.AreEqual(address.AddressLines, address2.AddressLines);
+                Assert.AreEqual(address.City, address2.City);
+                Assert.AreEqual(address.State, address2.State);
+                Assert.AreEqual(address.PostalCode, address2.PostalCode);
+                Assert.AreEqual(address.Country, address2.Country);
+                Assert.AreEqual(address.CountryCode, address2.CountryCode);
+                Assert.AreEqual(address.RouteCode, address2.RouteCode);
+                Assert.AreEqual(address.EffectiveEndDate, address2.EffectiveEndDate);
+                Assert.AreEqual(address.EffectiveStartDate, address2.EffectiveStartDate);
+                Assert.AreEqual(address.IsPreferredAddress, address2.IsPreferredAddress);
+
             }
         }
     }

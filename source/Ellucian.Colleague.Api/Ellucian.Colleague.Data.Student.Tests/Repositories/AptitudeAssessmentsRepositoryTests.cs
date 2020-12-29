@@ -66,6 +66,15 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
 
         [TestMethod]
+        public async Task AptitudeAssessmentsRepository_GetAptitudeAssessmentsIdFromGuidAsync()
+        {
+            var id = "3d390690-7b66-4b66-820e-7610c96c5973";
+            dataAccessorMock.Setup(acc => acc.ReadRecordAsync<NonCourses>("NON.COURSES", It.IsAny<string>(), true)).ReturnsAsync(records[0]);
+            var result = await _aptitudeAssessmentsRepository.GetAptitudeAssessmentsIdFromGuidAsync(id);
+            Assert.IsNotNull(result);
+        }
+
+        [TestMethod]
         public async Task AptitudeAssessmentsRepository_GetAptitudeAssessmentGuidsAsync_Null_Argument()
         {
             var results = await _aptitudeAssessmentsRepository.GetAptitudeAssessmentGuidsAsync(new List<string>());

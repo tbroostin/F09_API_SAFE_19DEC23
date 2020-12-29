@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -6,7 +6,6 @@ using System.Linq;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Domain.Student.Entities;
 using System.Threading.Tasks;
-
 
 namespace Ellucian.Colleague.Domain.Student.Tests
 {
@@ -212,7 +211,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
         #endregion
 
-
         public Task<SectionRegistrationResponse> Update2Async(SectionRegistrationRequest request, string guid, string personId, string sectionId, string statusCode)
         {
             throw new NotImplementedException();
@@ -240,12 +238,22 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             throw new NotImplementedException();
         }
 
+        public Task<SectionRegistrationResponse> GetSectionRegistrationById2Async(string id)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<Tuple<IEnumerable<StudentAcadCredCourseSecInfo>, int>> GetSectionRegistrationGradeOptionsAsync(int offset, int limit, StudentAcadCredCourseSecInfo criteria)
         {
             throw new NotImplementedException();
         }
 
         public Task<StudentAcadCredCourseSecInfo> GetSectionRegistrationGradeOptionsByIdAsync(string id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Tuple<IEnumerable<SectionRegistrationResponse>, int>> GetSectionRegistrations3Async(int offset, int limit, SectionRegistrationResponse sectReg, string acadPeriod, string sectionInstructor, Tuple<string, List<string>> registrationStatusesByAcademicPeriod = null)
         {
             throw new NotImplementedException();
         }

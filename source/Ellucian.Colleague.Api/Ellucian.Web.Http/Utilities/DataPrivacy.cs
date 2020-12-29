@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -50,7 +50,7 @@ namespace Ellucian.Web.Http.Utilities
                 //check length of the strings from before dataprivacy was applied to when it was to determine is anything was removed.
                 //The remove function in json.net does not return anything
                 var propertiesRemoved = orginalContentLength > jsonContainer.ToString().Length;
-                
+
                 //if properties were removed attempt to remove empty/null properties
                 if (propertiesRemoved)
                 {
@@ -125,10 +125,106 @@ namespace Ellucian.Web.Http.Utilities
                         logger.Error(ex, "Failed to clear null values");
                     }
                     return null;
-                }    
+                }
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Get array items protected by data privacy out of the source system object and add it to the partial update object
+        /// </summary>
+        /// <param name="original">original body from source system</param>
+        /// <param name="updatedObject">partial update object</param>
+        /// <param name="dataPrivacySettingList">dataPrivacySettings to examine for protected array objects</param>
+        /// <param name="logger">logger to log with</param>
+        /// <returns>updated update request if there are any array objects protected, else the original update request</returns>
+        public static JContainer ReinsertProtectedArrayItems(JObject original, JObject updatedObject, IEnumerable<string> dataPrivacySettingList, ILogger logger)
+        {
+            //if none of the dataprivacy strings contain the @ character there are no arrays having entire elements removed
+            if (!dataPrivacySettingList.Any(s => s.Contains("@")))
+                return updatedObject;
+
+            bool loggerAvailable = logger != null;
+
+            var dpArraySettingList = dataPrivacySettingList.Where(s => s.Contains("@")).ToList();
+
+            foreach (var dpSetting in dpArraySettingList)
+            {
+                try
+                {
+                    //split path by . as that is the property separator
+                    string[] splitPath = dpSetting.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
+
+                    //make sure there are elements in the string array, split is done with remove empty option
+                    if (splitPath.Any())
+                    {
+                        var splitCount = splitPath.Count();
+                        string arrayPropertyTopLevelSearchFormat = "$.{0}";
+
+                        if (splitCount == 2 && splitPath[1].StartsWith("@"))
+                        {
+                            string arrayTypeSearchFormat = "$.{0}[?(@.{1} == '{2}')]";
+                            string arg1 = splitPath[0];
+
+                            var fieldAndValue = splitPath[1].Replace("@", "").Replace("==", ".");
+
+                            var splitFieldAndValue =
+                                fieldAndValue.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
+
+                            string arg2 = splitFieldAndValue[0];
+                            string arg3 = splitFieldAndValue[1];
+
+                            var selectedTokens = original.SelectTokens(string.Format(arrayTypeSearchFormat, arg1, arg2, arg3), false);
+                            if (selectedTokens != null && selectedTokens.Any())
+                            {
+                                var updateToken = updatedObject.SelectToken(string.Format(arrayPropertyTopLevelSearchFormat, arg1), false);
+                                if (updateToken != null && updateToken.Type == JTokenType.Array)
+                                {
+                                    selectedTokens.ForEach(t => ((JArray)updateToken).Add(t));
+                                }
+                            }
+                        }
+
+                        if (splitCount > 2 && splitPath[1].StartsWith("@"))
+                        {
+                            string arrayTypeSearchFormat = "$.{0}[?(@.{1}.{2} == '{3}')]";
+
+                            string arg1 = splitPath[0];
+                            string arg2 = splitPath[1].Replace("@", "");
+
+                            var fieldAndValue = splitPath[2].Replace("==", ".");
+
+                            var splitFieldAndValue =
+                                fieldAndValue.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
+
+                            string arg3 = splitFieldAndValue[0];
+                            string arg4 = splitFieldAndValue[1];
+
+                            var selectedTokens = original.SelectTokens(string.Format(arrayTypeSearchFormat, arg1, arg2, arg3, arg4), false);
+                            if (selectedTokens != null && selectedTokens.Any())
+                            {
+                                var updateToken = updatedObject.SelectToken(string.Format(arrayPropertyTopLevelSearchFormat, arg1), false);
+                                if (updateToken != null && updateToken.Type == JTokenType.Array)
+                                {
+                                    selectedTokens.ForEach(t => ((JArray)updateToken).Add(t));
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (loggerAvailable)
+                    {
+                        logger.Error(ex.ToString());
+                    }
+
+                    return updatedObject;
+                }
+            }
+
+            return updatedObject;
         }
 
         /// <summary>
@@ -167,7 +263,7 @@ namespace Ellucian.Web.Http.Utilities
                     {
                         string arrayTypeSearchFormat = "$.{0}[?(@.{1} == '{2}')]";
                         string arg1 = splitPath[0];
-                        
+
                         if (!splitPath[1].Contains("=="))
                         {
                             if (loggerAvailable)
@@ -196,21 +292,18 @@ namespace Ellucian.Web.Http.Utilities
 
                         string formatedJsonQuery = string.Format(arrayTypeSearchFormat, arg1, arg2, arg3);
 
-                        //since we can't remove from a jsontoken collection we have to loop through and find all the possible matches one by one and remove one by one
-                        bool tokenExists = true;
-                        do
+                        var selectedTokens = jsonToModify.SelectTokens(formatedJsonQuery, false);
+                        var removeList = new List<JToken>();
+
+                        if (selectedTokens.Any())
                         {
-                            var selectedToken = jsonToModify.SelectToken(formatedJsonQuery, false);
-                            if (selectedToken != null)
-                            {
-                                selectedToken.Remove();
-                            }
-                            else
-                            {
-                                tokenExists = false;
-                            }
-                        } while (tokenExists);
-                        
+                            selectedTokens.ForEach(t => removeList.Add(t));
+                        }
+
+                        foreach (JToken el in removeList)
+                        {
+                            el.Remove();
+                        }
                         return;
                     }
 
@@ -250,21 +343,18 @@ namespace Ellucian.Web.Http.Utilities
 
                         string formatedJsonQuery = string.Format(arrayTypeSearchFormat, arg1, arg2, arg3, arg4);
 
-                        //since we can't remove from a jsontoken collection we have to loop through and find all the possible matches one by one and remove one by one
-                        bool tokenExists = true;
-                        do
+                        var selectedTokens = jsonToModify.SelectTokens(formatedJsonQuery, false);
+                        var removeList = new List<JToken>();
+
+                        if (selectedTokens.Any())
                         {
-                            var selectedToken = jsonToModify.SelectToken(formatedJsonQuery, false);
-                            if (selectedToken != null)
-                            {
-                                selectedToken.Remove();
-                            }
-                            else
-                            {
-                                tokenExists = false;
-                            }
-                        } while (tokenExists);
-                        
+                            selectedTokens.ForEach(t => removeList.Add(t));
+                        }
+
+                        foreach (JToken el in removeList)
+                        {
+                            el.Remove();
+                        }
                         return;
                     }
 
@@ -340,7 +430,7 @@ namespace Ellucian.Web.Http.Utilities
         /// <param name="token">token to examine</param>
         /// <param name="replaceEmptyObjectsWithNull">false means remove properties, true means replace objects with null and leave empty properties, arrays</param>
         /// <returns></returns>
-        private static JToken RemoveOrReplaceEmptyChildren(JToken token, bool replaceEmptyObjectsWithNull = false) 
+        private static JToken RemoveOrReplaceEmptyChildren(JToken token, bool replaceEmptyObjectsWithNull = false)
         {
             if (token.Type == JTokenType.Object)
             {
@@ -356,11 +446,11 @@ namespace Ellucian.Web.Http.Utilities
                     {
                         copy.Add(prop.Name, child);
                     }
-                    else if(replaceEmptyObjectsWithNull && child.Type == JTokenType.Object)
+                    else if (replaceEmptyObjectsWithNull && child.Type == JTokenType.Object)
                     {
                         copy.Add(prop.Name, null);
                     }
-                    else if(replaceEmptyObjectsWithNull)
+                    else if (replaceEmptyObjectsWithNull)
                     {
                         copy.Add(prop.Name, child);
                     }

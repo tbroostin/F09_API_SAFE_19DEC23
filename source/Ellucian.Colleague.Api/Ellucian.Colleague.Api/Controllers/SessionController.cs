@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +13,8 @@ using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using slf4net;
 using Ellucian.Dmi.Client;
-
+using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Base.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -24,16 +25,19 @@ namespace Ellucian.Colleague.Api.Controllers
     {
         private readonly ISessionRepository sessionRepository;
         private readonly ILogger logger;
+        private readonly ISessionRecoveryService sessionRecoveryService;
 
         /// <summary>
         /// SessionsController constructor
         /// </summary>
         /// <param name="logger">Logger of type <see cref="ILogger">ILogger</see></param>
         /// <param name="sessionRepository">Repository of type <see cref="ISessionRepository">ISessionRepository</see></param>
-        public SessionController(ILogger logger, ISessionRepository sessionRepository)
+        /// <param name="sessionRecoveryService">Session recovery service</param>
+        public SessionController(ILogger logger, ISessionRepository sessionRepository, ISessionRecoveryService sessionRecoveryService)
         {
             this.logger = logger;
             this.sessionRepository = sessionRepository;
+            this.sessionRecoveryService = sessionRecoveryService;
         }
 
         /// <summary>
@@ -41,7 +45,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="credentials">From Body, Login <see cref="Credentials">Credentials</see></param>
         /// <returns><see cref="HttpResponseMessage">HttpResponseMessage</see> with JSON Web Token</returns>
-        [Obsolete("Obsolete as of API version 1.12, use PostLogin2Async instead")]  
+        [Obsolete("Obsolete as of API version 1.12, use PostLogin2Async instead")]
         public async Task<HttpResponseMessage> PostLoginAsync([FromBody]Credentials credentials)
         {
             IEnumerable<string> nameHeaderValues = null;
@@ -78,10 +82,13 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             catch (LoginException lex)
             {
-                // Check if login failure is from the password expired error (DMI error code 10017)
-                if (lex.ErrorCode == "10017")
+                // Check if login failure is from a force change or password expired error (DMI error code 10017 or 10016)
+                if (lex.ErrorCode == "10017" || lex.ErrorCode == "10016")
                 {
-                    return new HttpResponseMessage(HttpStatusCode.Forbidden) { Content = new StringContent(lex.Message) };
+                    if (lex.ErrorCode == "10017")
+                        return new HttpResponseMessage(HttpStatusCode.Forbidden) { Content = new StringContent("You must change your password. Please choose a new password.") };
+                    else
+                        return new HttpResponseMessage(HttpStatusCode.Forbidden) { Content = new StringContent("Your password has expired.  Please choose a new password.") };
                 }
                 else
                 {
@@ -138,8 +145,8 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             catch (LoginException lex)
             {
-                // Check if login failure is from the password expired error (DMI error code 10017)
-                if (lex.ErrorCode == "10017")
+                // Check if login failure is from a force change or password expired error (DMI error code 10017 or 10016)
+                if (lex.ErrorCode == "10017" || lex.ErrorCode == "10016")
                 {
                     logger.Info(lex, "Login attempt failed due to expired password.");
                     return new HttpResponseMessage(HttpStatusCode.Forbidden) { Content = new StringContent(lex.Message + "Error: " + lex.ErrorCode) };
@@ -212,8 +219,8 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             catch (LoginException lex)
             {
-                // Check if login failure is from the password expired error (DMI error code 10017)
-                if (lex.ErrorCode == "10017")
+                // Check if login failure is from a force change or password expired error (DMI error code 10017 or 10016)
+                if (lex.ErrorCode == "10017" || lex.ErrorCode == "10016")
                 {
                     return new HttpResponseMessage(HttpStatusCode.Forbidden) { Content = new StringContent(lex.Message) };
                 }
@@ -276,10 +283,10 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             catch (LoginException lex)
             {
-                // Check if login failure is from the password expired error (DMI error code 10017)
-                if (lex.ErrorCode == "10017")
+                // Check if login failure is from a force change or password expired error (DMI error code 10017 or 10016)
+                if (lex.ErrorCode == "10017" || lex.ErrorCode == "10016")
                 {
-                    logger.Info(lex, "Login attempt failed due to expired password.");
+                    logger.Info(lex, lex.Message);
                     return new HttpResponseMessage(HttpStatusCode.Forbidden) { Content = new StringContent(lex.Message) };
                 }
                 else
@@ -436,6 +443,91 @@ namespace Ellucian.Colleague.Api.Controllers
                     Content = new StringContent(
                         string.Format("Problem occurred obtaining proxy access for proxy subject {0}, please contact the system administrator.", proxySubject.Id))
                 };
+            }
+        }
+
+        /// <summary>
+        /// Executes a request for a reset password token to be emailed to the user to enable them to complete a password reset.
+        /// </summary>
+        /// <param name="tokenRequest">The reset password token request</param>
+        /// <returns>A successful 202 response. For security reasons, failures will not be reported.</returns>
+        /// <accessComments>User must have ADMIN.RESET.ALL.PASSWORDS permission to reset passwords.</accessComments>
+        [HttpPost]
+        [Authorize]
+        public async Task<HttpResponseMessage> PostResetPasswordTokenRequestAsync([FromBody]PasswordResetTokenRequest tokenRequest)
+        {
+            try
+            {
+                await sessionRecoveryService.RequestPasswordResetTokenAsync(tokenRequest.UserId, tokenRequest.EmailAddress);
+                return new HttpResponseMessage(HttpStatusCode.Accepted);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Failed to request password reset token request.");
+                return new HttpResponseMessage(HttpStatusCode.Accepted);
+            }
+        }
+
+        /// <summary>
+        /// Request recovery of a user ID (user name) given supporting information and email.
+        /// </summary>
+        /// <param name="userIdRecoveryRequest">User ID Recovery Request</param>
+        /// <returns>A successful 202 response. For security reasons, failures will not be reported.</returns>
+        /// <accessComments>User must have ADMIN.RESET.ALL.PASSWORDS permission to reset passwords.</accessComments>
+        [HttpPost]
+        [Authorize]
+        public async Task<HttpResponseMessage> PostUserIdRecoveryRequestAsync([FromBody]UserIdRecoveryRequest userIdRecoveryRequest)
+        {
+            try
+            {
+                await sessionRecoveryService.RequestUserIdRecoveryAsync(userIdRecoveryRequest.FirstName, userIdRecoveryRequest.LastName, userIdRecoveryRequest.EmailAddress);
+                return new HttpResponseMessage(HttpStatusCode.Accepted);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Failed to recover user ID.");
+                return new HttpResponseMessage(HttpStatusCode.Accepted);
+            }
+        }
+
+        /// <summary>
+        /// Resets a password using a password reset token
+        /// </summary>
+        /// <param name="resetPassword">Reset password</param>
+        /// <returns></returns>
+        /// <accessComments>User must have ADMIN.RESET.ALL.PASSWORDS permission to reset passwords.</accessComments>
+        [HttpPost]
+        [Authorize]
+        public async Task<HttpResponseMessage> PostResetPasswordAsync([FromBody]ResetPassword resetPassword)
+        {
+            try
+            {
+                if (resetPassword == null || string.IsNullOrEmpty(resetPassword.UserId) || string.IsNullOrEmpty(resetPassword.ResetToken) || string.IsNullOrEmpty(resetPassword.NewPassword))
+                {
+                    throw new ArgumentNullException("resetPassword");
+                }
+                await sessionRecoveryService.ResetPasswordAsync(resetPassword.UserId, resetPassword.ResetToken, resetPassword.NewPassword);
+                return new HttpResponseMessage(HttpStatusCode.OK);
+            }
+            catch (PasswordComplexityException pce)
+            {
+                throw CreateHttpResponseException("Password complexity failure");
+            }
+            catch (PasswordUsedException pue)
+            {
+                throw CreateHttpResponseException("Password used recently failure");
+            }
+            catch (PasswordResetTokenExpiredException prtee)
+            {
+                throw CreateHttpResponseException("Password reset token expired failure");
+            }
+            catch (Web.Security.PermissionsException pe)
+            {
+                throw CreateHttpResponseException("Unable to reset password");
+            }
+            catch (Exception e)
+            {
+                throw CreateHttpResponseException("Unable to reset password");
             }
         }
     }

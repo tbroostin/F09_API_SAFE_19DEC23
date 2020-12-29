@@ -1,6 +1,5 @@
-﻿using Newtonsoft.Json;
-// Copyright 2015 Ellucian Company L.P. and its affiliates.
-using System;
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+using Newtonsoft.Json;
 
 namespace Ellucian.Colleague.Dtos.Base
 {
@@ -50,30 +49,6 @@ namespace Ellucian.Colleague.Dtos.Base
         /// Person's email address type
         /// </summary>
         EmailType,
-        ///// <summary>
-        ///// Street address lines
-        ///// </summary>
-        //AddressLines,
-        ///// <summary>
-        ///// Street address type
-        ///// </summary>
-        //AddressType,
-        ///// <summary>
-        ///// Person's city of residence
-        ///// </summary>
-        //City,
-        ///// <summary>
-        ///// Person's state or province of residence
-        ///// </summary>
-        //StateProvince,
-        ///// <summary>
-        ///// Person's postal code of residence
-        ///// </summary>
-        //PostalCode,
-        ///// <summary>
-        ///// Person's country of residence
-        ///// </summary>
-        //Country,
         /// <summary>
         /// Person's telephone number
         /// </summary>
@@ -101,6 +76,54 @@ namespace Ellucian.Colleague.Dtos.Base
         /// <summary>
         /// Unknown
         /// </summary>
-        Unknown
+        Unknown,
+        /// <summary>
+        /// Street address line 1
+        /// </summary>
+        AddressLine1,
+        /// <summary>
+        /// Street address line 2
+        /// </summary>
+        AddressLine2,
+        /// <summary>
+        /// Person's city of residence
+        /// </summary>
+        City,
+        /// <summary>
+        /// Person's state or province of residence
+        /// </summary>
+        StateProvince,
+        /// <summary>
+        /// Person's postal code of residence
+        /// </summary>
+        PostalCode,
+        /// <summary>
+        /// Person's county of residence
+        /// </summary>
+        County,
+        /// <summary>
+        /// Person's country of residence
+        /// </summary>
+        AddressCountry,
+        /// <summary>
+        /// Person's country of citizenship
+        /// </summary>
+        CitizenshipCountry,
+        /// <summary>
+        /// Person's ethnicity
+        /// </summary>
+        Ethnicity,
+        /// <summary>
+        /// Person's race
+        /// </summary>
+        Race,
+        /// <summary>
+        /// Street address line 3
+        /// </summary>
+        AddressLine3,
+        /// <summary>
+        /// Street address line 4
+        /// </summary>
+        AddressLine4
     }
 }

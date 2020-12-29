@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -64,6 +64,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private Mock<IPersonRepository> _personRepositoryMock;
             private Mock<IStudentRepository> _studentRepositoryMock;
             private Mock<IStudentReferenceDataRepository> _studentReferenceRepositoryMock;
+
+            private Mock<IReferenceDataRepository> _referenceRepositoryMock;
+
             private Mock<IStudentTestScoresRepository> _studentAptitudeAssessmentRepositoryMock;
             private Mock<IAptitudeAssessmentsRepository> _aptitudeAssessmentsRepositoryMock;
             private IConfigurationRepository baseConfigurationRepository;
@@ -79,7 +82,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private IEnumerable<Domain.Student.Entities.AssessmentSpecialCircumstance> _assessmentSpecialCircumstances;
             private IEnumerable<IntgTestPercentileType> _assesmentPercentileTypes;
             private IEnumerable<TestSource> _testSource;
-
+            Dictionary<string, string> personGuidCollection = new Dictionary<string, string>();
 
 
             int offset = 0;
@@ -95,6 +98,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _personRepositoryMock = new Mock<IPersonRepository>();
                 _studentRepositoryMock = new Mock<IStudentRepository>();
                 _studentReferenceRepositoryMock = new Mock<IStudentReferenceDataRepository>();
+                _referenceRepositoryMock = new Mock<IReferenceDataRepository>();
                 _studentAptitudeAssessmentRepositoryMock = new Mock<IStudentTestScoresRepository>();
                 _aptitudeAssessmentsRepositoryMock = new Mock<IAptitudeAssessmentsRepository>();
                 _loggerMock = new Mock<ILogger>();
@@ -117,7 +121,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 _studentAptitudeAssessmentsService = new StudentAptitudeAssessmentsService(
                     _studentAptitudeAssessmentRepositoryMock.Object, _personRepositoryMock.Object,
-                    _studentReferenceRepositoryMock.Object, _aptitudeAssessmentsRepositoryMock.Object,
+                    _studentReferenceRepositoryMock.Object, _referenceRepositoryMock.Object,  _aptitudeAssessmentsRepositoryMock.Object,
                     adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object,
                     _studentRepositoryMock.Object, _loggerMock.Object, baseConfigurationRepository);
             }
@@ -182,7 +186,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 _studentNonCoursesCollection = new List<StudentTestScores>()
                 {
-                    new StudentTestScores("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "0003784", "ACT", "ACT Test", DateTime.Today)
+                    new StudentTestScores("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "0000001", "0003784", "ACT", "ACT Test", DateTime.Today)
                     {
                         FormName = "ACT",
                         FormNo = "1",
@@ -193,9 +197,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         SpecialFactors = new List<string>() { "A", "D" },
                         StatusCode = "A",
                         StatusCodeSpProcessing = "2",
-                        StatusDate = new DateTime(2017, 12, 11)
+                        StatusCodeSpProcessing2 = "EXP",
+                        StatusDate = new DateTime(2017, 12, 11),
+                        
                     },
-                    new StudentTestScores("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "0003784", "SAT", "SAT Test", DateTime.Today)
+                    new StudentTestScores("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "0000002", "0003784", "SAT", "SAT Test", DateTime.Today)
                     {
                         FormName = "SAT",
                         FormNo = "494",
@@ -207,7 +213,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         StatusCodeSpProcessing = "3",
                         StatusDate = new DateTime(2017, 12, 11)
                     },
-                    new StudentTestScores("d2253ac7-9931-4560-b42f-1fccd43c952e", "0003784", "ACT.M", "ACT Math", DateTime.Today)
+                    new StudentTestScores("d2253ac7-9931-4560-b42f-1fccd43c952e", "0000003", "0003784", "ACT.M", "ACT Math", DateTime.Today)
                     {
                         FormName = "ACT.M",
                         FormNo = "700",
@@ -259,13 +265,22 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                
 
                 var studentAptitudeAssessmentTuple = new Tuple<IEnumerable<StudentTestScores>, int>(_studentNonCoursesCollection, 3);
-                _studentAptitudeAssessmentRepositoryMock.Setup(rp => rp.GetStudentTestScoresAsync("", offset, limit, It.IsAny<bool>()))
-                    .ReturnsAsync(studentAptitudeAssessmentTuple);
-                _studentAptitudeAssessmentRepositoryMock.Setup(rp => rp.GetStudentTestScoresByGuidAsync(It.IsAny<string>())).ReturnsAsync(_studentNonCoursesCollection.FirstOrDefault(c => c.Guid == studentAptitudeAssessmentsGuid));
+                _studentAptitudeAssessmentRepositoryMock.Setup(rp => rp.GetStudentTestScores2Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(),
+                    It.IsAny<bool>()))
+                  .ReturnsAsync(studentAptitudeAssessmentTuple);
+                _studentAptitudeAssessmentRepositoryMock.Setup(rp => rp.GetStudentTestScoresAsync(It.IsAny<string>(), offset, limit, It.IsAny<bool>()))
+                     .ReturnsAsync(studentAptitudeAssessmentTuple);
 
+                _studentAptitudeAssessmentRepositoryMock.Setup(rp => rp.GetStudentTestScoresByGuidAsync(It.IsAny<string>())).ReturnsAsync(_studentNonCoursesCollection.FirstOrDefault(c => c.Guid == studentAptitudeAssessmentsGuid));
+               
                 _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
                 _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("0003784")).ReturnsAsync("1df164eb-8178-4321-a9f7-24f27f3991d8");
                 _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("1df164eb-8178-4321-a9f7-24f27f3991d8");
+
+               
+                personGuidCollection.Add("0003784", "1df164eb-8178-4321-a9f7-24f27f3991d8");
+                   
+                _personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
 
                 _aptitudeAssessmentsRepositoryMock.Setup(i => i.GetAptitudeAssessmentsAsync(It.IsAny<bool>())).ReturnsAsync(_aptitudeAssementEntities);
                 foreach (var entity in _aptitudeAssementEntities)
@@ -339,6 +354,215 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     (await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessmentsAsync(offset, limit, true)).Item1.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
                 Assert.AreEqual(expectedResults.Guid, actualResult.Id);
 
+            }
+
+            [TestMethod]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessments2Async()
+            {
+                var pageOfItems = await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessments2Async(It.IsAny<string>(), offset, limit, true);
+                var results = pageOfItems.Item1;
+                Assert.IsTrue(results is IEnumerable<StudentAptitudeAssessments>);
+                Assert.IsNotNull(results);
+            }
+
+            [TestMethod]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessments2Async_Count()
+            {
+                var pageOfItems = await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessments2Async("",  offset, limit, true);
+                var results = pageOfItems.Item1;
+                Assert.AreEqual(3, results.Count());
+            }
+
+            [TestMethod]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessments2Async_Properties()
+            {
+                var result =
+                    (await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessments2Async("", offset, limit, true)).Item1.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
+                Assert.IsNotNull(result.Id);
+            }
+
+            [TestMethod]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessments2Async_Expected()
+            {
+                var expectedResults = _studentNonCoursesCollection.FirstOrDefault(c => c.Guid == studentAptitudeAssessmentsGuid);
+                var actualResult =
+                    (await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessments2Async("",  offset, limit, true)).Item1.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
+                Assert.AreEqual(expectedResults.Guid, actualResult.Id);
+
+            }
+
+
+            [TestMethod]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessments2Async_StudentFilter()
+            {
+                var record = _studentNonCoursesCollection.FirstOrDefault(x => !string.IsNullOrEmpty(x.StudentId));
+                var studentGuid = "";
+                personGuidCollection.TryGetValue(record.StudentId, out studentGuid);
+
+                var actualResult =
+                    (await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessments2Async(record.StudentId, offset, limit, true)).Item1
+                    .FirstOrDefault(x => x.Id == record.Guid);
+
+                Assert.AreEqual(record.Guid, actualResult.Id);
+                Assert.AreEqual(studentGuid, actualResult.Student.Id);
+
+            }
+
+            [TestMethod]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessments2Async_Invalid_StudentFilter()
+            {
+                var record = _studentNonCoursesCollection.FirstOrDefault(x => !string.IsNullOrEmpty(x.StudentId));
+
+                _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("");
+
+                var actualResult =
+                    await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessments2Async("invalid",  offset, limit, true);
+
+                Assert.AreEqual(actualResult.Item2, 0);
+            }
+
+            [TestMethod]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessments2Async_KeyNotFound_StudentFilter()
+            {
+                var record = _studentNonCoursesCollection.FirstOrDefault(x => !string.IsNullOrEmpty(x.StudentId));
+
+                _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
+
+                var actualResult =
+                   await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessments2Async("invalid", offset, limit, true);
+
+                Assert.AreEqual(actualResult.Item2, 0);
+            }
+
+
+            [TestMethod]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessments3Async()
+            {
+                var pageOfItems = await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessments3Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), offset, limit, true);
+                var results = pageOfItems.Item1;
+                Assert.IsTrue(results is IEnumerable<StudentAptitudeAssessments2>);
+                Assert.IsNotNull(results);
+            }
+
+            [TestMethod]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessments3Async_Count()
+            {
+                var pageOfItems = await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessments3Async("", It.IsAny<string>(), It.IsAny<string>(), offset, limit, true);
+                var results = pageOfItems.Item1;
+                Assert.AreEqual(3, results.Count());
+            }
+
+            [TestMethod]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessments3Async_Properties()
+            {
+                var result =
+                    (await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessments3Async("", It.IsAny<string>(),  It.IsAny<string>(), offset, limit, true)).Item1.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
+                Assert.IsNotNull(result.Id);
+            }
+
+            [TestMethod]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessments3Async_Expected()
+            {
+                var expectedResults = _studentNonCoursesCollection.FirstOrDefault(c => c.Guid == studentAptitudeAssessmentsGuid);
+                var actualResult =
+                    (await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessments3Async("","","", offset, limit, true)).Item1.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
+                Assert.AreEqual(expectedResults.Guid, actualResult.Id);
+
+            }
+
+
+            [TestMethod]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessments3Async_StudentFilter()
+            {
+                var record = _studentNonCoursesCollection.FirstOrDefault(x => !string.IsNullOrEmpty(x.StudentId));
+                var studentGuid = "";
+                personGuidCollection.TryGetValue(record.StudentId, out studentGuid);
+
+                var actualResult =
+                    (await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessments3Async(record.StudentId, "","", offset, limit, true)).Item1
+                    .FirstOrDefault(x => x.Id == record.Guid);
+
+                Assert.AreEqual(record.Guid, actualResult.Id);
+                Assert.AreEqual(studentGuid, actualResult.Student.Id);
+
+            }
+
+            [TestMethod]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessments3Async_Invalid_StudentFilter()
+            {
+                var record = _studentNonCoursesCollection.FirstOrDefault(x => !string.IsNullOrEmpty(x.StudentId));
+
+               _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(""); 
+
+                var actualResult =
+                    await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessments3Async("invalid", "","", offset, limit, true);
+             
+                Assert.AreEqual(actualResult.Item2, 0);
+            }
+
+            [TestMethod]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessments3Async_KeyNotFound_StudentFilter()
+            {
+                var record = _studentNonCoursesCollection.FirstOrDefault(x => !string.IsNullOrEmpty(x.StudentId));
+
+                _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
+
+                var actualResult =
+                   await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessments3Async("invalid", "","", offset, limit, true);
+
+                Assert.AreEqual(actualResult.Item2, 0);
+            }
+
+            [TestMethod]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessments3Async_Invalid_AssessmentFilter()
+            {
+                var record = _studentNonCoursesCollection.FirstOrDefault(x => !string.IsNullOrEmpty(x.StudentId));
+
+                _aptitudeAssessmentsRepositoryMock.Setup(i => i.GetAptitudeAssessmentsIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(""); 
+  
+                var actualResult =
+                    await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessments3Async("", "invalid", "", offset, limit, true);
+
+                Assert.AreEqual(actualResult.Item2, 0);
+            }
+
+            [TestMethod]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessments3Async_KeyNotFound_AssessmentFilter()
+            {
+                var record = _studentNonCoursesCollection.FirstOrDefault(x => !string.IsNullOrEmpty(x.StudentId));
+
+                _aptitudeAssessmentsRepositoryMock.Setup(i => i.GetAptitudeAssessmentsIdFromGuidAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
+
+                var actualResult =
+                    await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessments3Async("", "invalid", "", offset, limit, true);
+
+                Assert.AreEqual(actualResult.Item2, 0);
+            }
+
+            [TestMethod]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessments3Async_Invalid_personFilter()
+            {
+                var record = _studentNonCoursesCollection.FirstOrDefault(x => !string.IsNullOrEmpty(x.StudentId));
+
+                _referenceRepositoryMock.Setup(i => i.GetPersonIdsByPersonFilterGuidAsync(It.IsAny<string>())).ReturnsAsync(null); ;
+
+                var actualResult =
+                    await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessments3Async("", "", "invalid", offset, limit, true);
+
+                Assert.AreEqual(actualResult.Item2, 0);
+            }
+
+            [TestMethod]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessments3Async_KeyNotFound_personFilter()
+            {
+                var record = _studentNonCoursesCollection.FirstOrDefault(x => !string.IsNullOrEmpty(x.StudentId));
+
+                _referenceRepositoryMock.Setup(i => i.GetPersonIdsByPersonFilterGuidAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
+
+                var actualResult =
+                    await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessments3Async("", "", "invalid", offset, limit, true);
+
+                Assert.AreEqual(actualResult.Item2, 0);
             }
 
             [TestMethod]
@@ -420,6 +644,73 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.AreEqual(result.Status, expected.Status);
                 Assert.AreEqual(result.Student.Id, expected.Student.Id);
             }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessmentsByGuid2Async_Empty()
+            {
+                await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessmentsByGuid2Async("");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessmentsByGuid2Async_Null()
+            {
+                await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessmentsByGuid2Async(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(KeyNotFoundException))]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessmentsByGuid2Async_InvalidId()
+            {
+                _studentAptitudeAssessmentRepositoryMock.Setup(rp => rp.GetStudentTestScoresByGuidAsync("ABC")).ReturnsAsync(null);
+                await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessmentsByGuid2Async("ABC");
+            }
+
+            [TestMethod]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessmentsByGuid2Async_Expected()
+            {
+                var expectedResults =
+                    _studentNonCoursesCollection.First(c => c.Guid == studentAptitudeAssessmentsGuid);
+                var actualResult =
+                    await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessmentsByGuid2Async(studentAptitudeAssessmentsGuid);
+                Assert.AreEqual(expectedResults.Guid, actualResult.Id);
+            }
+
+            [TestMethod]
+            public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessmentsByGuid2Async_Properties()
+            {
+                var expected = _studentAptitudeAssessmentsDtos.First(nc => nc.Id == studentAptitudeAssessmentsGuid);
+                var result =
+                    await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessmentsByGuid2Async(studentAptitudeAssessmentsGuid);
+                Assert.IsNotNull(result.Id);
+                Assert.AreEqual(result.AssessedOn, expected.AssessedOn, "assessdOn");
+                Assert.AreEqual(result.Assessment.Id, expected.Assessment.Id, "Assessment.Id");
+                Assert.AreEqual(result.Form.Name, expected.Form.Name, "Form.Name");
+                Assert.AreEqual(result.Form.Number, expected.Form.Number, "Form.Number");
+                Assert.AreEqual(result.Percentile.Count, expected.Percentile.Count, "Percentile.Count");
+                var idx = 0;
+                foreach (var percentile in result.Percentile)
+                {
+                    Assert.AreEqual(percentile.Type.Id, expected.Percentile[idx].Type.Id, "Percentile[" + idx.ToString() + "].Type.Id");
+                    Assert.AreEqual(percentile.Value, expected.Percentile[idx].Value, "Percentile[" + idx.ToString() + "].Value");
+                    idx += 1;
+                }
+                Assert.AreEqual(result.Preference, expected.Preference, "Preference");
+                Assert.AreEqual(result.Reported, expected.Reported, "Reported");
+                Assert.AreEqual(result.Score.Type, expected.Score.Type, "Score.Type");
+                Assert.AreEqual(result.Score.Value, expected.Score.Value, "Score.Value");
+                Assert.AreEqual(result.Source.Id, expected.Source.Id, "Source.Id");
+                Assert.AreEqual(result.SpecialCircumstances.Count, expected.SpecialCircumstances.Count, "SpecialCircumstances.Count");
+                var ctr = 0;
+                foreach (var special in result.SpecialCircumstances)
+                {
+                    Assert.AreEqual(special.Id, expected.SpecialCircumstances[ctr].Id, "SpecialCircumstances[" + ctr.ToString() + "].Id");
+                    ctr += 1;
+                }
+                Assert.AreEqual(result.Status, expected.Status, "Status");
+                Assert.AreEqual(result.Student.Id, expected.Student.Id, "Student.Id");
+            }
         }
 
         [TestClass]
@@ -434,6 +725,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private Mock<IPersonRepository> _personRepositoryMock;
             private Mock<IStudentRepository> _studentRepositoryMock;
             private Mock<IStudentReferenceDataRepository> _studentReferenceRepositoryMock;
+            private Mock<IReferenceDataRepository> _referenceRepositoryMock;
             private Mock<IStudentTestScoresRepository> _studentAptitudeAssessmentRepositoryMock;
             private Mock<IAptitudeAssessmentsRepository> _aptitudeAssessmentsRepositoryMock;
             private IConfigurationRepository baseConfigurationRepository;
@@ -443,8 +735,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private const string studentAptitudeAssessmentsCode = "ACT";
             private ICollection<StudentTestScores> _studentNonCoursesCollection;
             private List<StudentAptitudeAssessments> _studentAptitudeAssessmentsDtos;
+            private List<StudentAptitudeAssessments2> _studentAptitudeAssessmentsDtos2;
             private Tuple<IEnumerable<StudentAptitudeAssessments>, int> _studentAptitudeAssessmentsDtoTuple;
-
+            private Tuple<IEnumerable<StudentAptitudeAssessments2>, int> _studentAptitudeAssessmentsDtoTuple2;
             private List<NonCourse> _aptitudeAssementEntities;
             private IEnumerable<Domain.Student.Entities.AssessmentSpecialCircumstance> _assessmentSpecialCircumstances;
             private IEnumerable<IntgTestPercentileType> _assesmentPercentileTypes;
@@ -460,6 +753,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 _personRepositoryMock = new Mock<IPersonRepository>();
                 _studentRepositoryMock = new Mock<IStudentRepository>();
+                _referenceRepositoryMock = new Mock<IReferenceDataRepository>();
                 _studentReferenceRepositoryMock = new Mock<IStudentReferenceDataRepository>();
                 _studentAptitudeAssessmentRepositoryMock = new Mock<IStudentTestScoresRepository>();
                 _aptitudeAssessmentsRepositoryMock = new Mock<IAptitudeAssessmentsRepository>();
@@ -481,7 +775,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 _studentAptitudeAssessmentsService = new StudentAptitudeAssessmentsService(
                     _studentAptitudeAssessmentRepositoryMock.Object, _personRepositoryMock.Object,
-                    _studentReferenceRepositoryMock.Object, _aptitudeAssessmentsRepositoryMock.Object,
+                    _studentReferenceRepositoryMock.Object, _referenceRepositoryMock.Object,  _aptitudeAssessmentsRepositoryMock.Object,
                     adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object,
                     _studentRepositoryMock.Object, _loggerMock.Object, baseConfigurationRepository);
             }
@@ -489,9 +783,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 #region dto
 
-                _studentAptitudeAssessmentsDtos = new List<StudentAptitudeAssessments>()
+                _studentAptitudeAssessmentsDtos2 = new List<StudentAptitudeAssessments2>()
                 {
-                    new Dtos.StudentAptitudeAssessments()
+                    new Dtos.StudentAptitudeAssessments2()
                     {
 
                         Id = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc",
@@ -508,7 +802,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         Student = new GuidObject2("1df164eb-8178-4321-a9f7-24f27f3991d8"),
                         Update = Dtos.EnumProperties.StudentAptitudeAssessmentsUpdateStatus.Original
                     },
-                    new Dtos.StudentAptitudeAssessments()
+                    new Dtos.StudentAptitudeAssessments2()
                     {
                         Id = "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d",
                         AssessedOn = new DateTimeOffset(DateTime.Today),
@@ -524,7 +818,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         Student = new GuidObject2("1df164eb-8178-4321-a9f7-24f27f3991d8"),
                         Update = Dtos.EnumProperties.StudentAptitudeAssessmentsUpdateStatus.Revised
                     },
-                    new Dtos.StudentAptitudeAssessments()
+                    new Dtos.StudentAptitudeAssessments2()
                     {
                         Id = "d2253ac7-9931-4560-b42f-1fccd43c952e",
                         AssessedOn = new DateTimeOffset(DateTime.Today),
@@ -541,7 +835,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         Update = Dtos.EnumProperties.StudentAptitudeAssessmentsUpdateStatus.Recentered
                     }
                 };
-                _studentAptitudeAssessmentsDtoTuple = new Tuple<IEnumerable<StudentAptitudeAssessments>, int>(_studentAptitudeAssessmentsDtos, _studentAptitudeAssessmentsDtos.Count());
+                _studentAptitudeAssessmentsDtoTuple2 = new Tuple<IEnumerable<StudentAptitudeAssessments2>, int>(_studentAptitudeAssessmentsDtos2, _studentAptitudeAssessmentsDtos2.Count());
 
                 #endregion
 
@@ -619,9 +913,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
                 var studentAptitudeAssessmentTuple = new Tuple<IEnumerable<StudentTestScores>, int>(_studentNonCoursesCollection, 3);
-                _studentAptitudeAssessmentRepositoryMock.Setup(rp => rp.GetStudentTestScoresAsync("", offset, limit, It.IsAny<bool>()))
+                _studentAptitudeAssessmentRepositoryMock.Setup(rp => rp.GetStudentTestScores2Async(offset, limit, "", "", null, It.IsAny<string>(), It.IsAny<bool>()))
                     .ReturnsAsync(studentAptitudeAssessmentTuple);
                 _studentAptitudeAssessmentRepositoryMock.Setup(rp => rp.GetStudentTestScoresByGuidAsync(It.IsAny<string>())).ReturnsAsync(_studentNonCoursesCollection.FirstOrDefault(c => c.Guid == studentAptitudeAssessmentsGuid));
+
+                Dictionary<string, string> personGuidCollection = new Dictionary<string, string>();             
+                personGuidCollection.Add("0003784", "1df164eb-8178-4321-a9f7-24f27f3991d8");
+
+                _personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
+
 
                 _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
                 _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("0003784")).ReturnsAsync("1df164eb-8178-4321-a9f7-24f27f3991d8");
@@ -668,32 +968,32 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
-            public async Task StudentAptitudeAssessmentsService_CreateStudentAptitudeAssessments_ArgumentNullException()
+            public async Task StudentAptitudeAssessmentsService_CreateStudentAptitudeAssessments2_ArgumentNullException()
             {
-                await _studentAptitudeAssessmentsService.CreateStudentAptitudeAssessmentsAsync(null);
+                await _studentAptitudeAssessmentsService.CreateStudentAptitudeAssessments2Async(null);
             }
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
-            public async Task StudentAptitudeAssessmentsService_Post_PopulateStatus()
+            public async Task StudentAptitudeAssessmentsService_Post2_PopulateStatus()
             {
                 var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
                 var studentTestScore = _studentNonCoursesCollection.FirstOrDefault(x => x.RecordKey == studentAptitudeAssessmentsGuid);
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.CreateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ReturnsAsync(studentTestScore);
                 studentAptitudeAssessment.Status = Dtos.EnumProperties.StudentAptitudeAssessmentsStatus.Active;
 
-                await _studentAptitudeAssessmentsService.CreateStudentAptitudeAssessmentsAsync(null);
+                await _studentAptitudeAssessmentsService.CreateStudentAptitudeAssessments2Async(null);
             }
 
             [TestMethod]
-            public async Task StudentAptitudeAssessmentsService_Post()
+            public async Task StudentAptitudeAssessmentsService_Post2()
             {
-                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
+                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
                 var studentTestScore = _studentNonCoursesCollection.FirstOrDefault(x => x.Guid == studentAptitudeAssessmentsGuid);
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.CreateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ReturnsAsync(studentTestScore);
 
                 studentAptitudeAssessment.Status = Dtos.EnumProperties.StudentAptitudeAssessmentsStatus.NotSet;
-                var result = await _studentAptitudeAssessmentsService.CreateStudentAptitudeAssessmentsAsync(studentAptitudeAssessment);
+                var result = await _studentAptitudeAssessmentsService.CreateStudentAptitudeAssessments2Async(studentAptitudeAssessment);
 
                 Assert.IsNotNull(result.Id);
                 Assert.AreEqual(result.AssessedOn, studentAptitudeAssessment.AssessedOn);
@@ -727,102 +1027,102 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
-            public async Task StudentAptitudeAssessmentsService_Post_NullId()
+            public async Task StudentAptitudeAssessmentsService_Post2_NullId()
             {
-                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
+                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
                 var studentTestScore = _studentNonCoursesCollection.FirstOrDefault(x => x.RecordKey == studentAptitudeAssessmentsGuid);
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.CreateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ReturnsAsync(studentTestScore);
 
                 studentAptitudeAssessment.Id = null;
 
-                await _studentAptitudeAssessmentsService.CreateStudentAptitudeAssessmentsAsync(studentAptitudeAssessment);
+                await _studentAptitudeAssessmentsService.CreateStudentAptitudeAssessments2Async(studentAptitudeAssessment);
 
             }
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentException))]
-            public async Task StudentAptitudeAssessmentsService_Put_PopulateStatus()
+            public async Task StudentAptitudeAssessmentsService_Put2_PopulateStatus()
             {
-                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
+                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
                 var studentTestScore = _studentNonCoursesCollection.FirstOrDefault(x => x.RecordKey == studentAptitudeAssessmentsGuid);
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.UpdateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ReturnsAsync(studentTestScore);
                 studentAptitudeAssessment.Status = Dtos.EnumProperties.StudentAptitudeAssessmentsStatus.Active;
-                await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessmentsAsync(studentAptitudeAssessment);
+                await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessments2Async(studentAptitudeAssessment);
             }
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
-            public async Task StudentAptitudeAssessmentsService_Put_NullId()
+            public async Task StudentAptitudeAssessmentsService_Put2_NullId()
             {
-                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
+                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
                 var studentTestScore = _studentNonCoursesCollection.FirstOrDefault(x => x.RecordKey == studentAptitudeAssessmentsGuid);
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.UpdateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ReturnsAsync(studentTestScore);
                 studentAptitudeAssessment.Status = Dtos.EnumProperties.StudentAptitudeAssessmentsStatus.Active;
                 studentAptitudeAssessment.Id = null;
-                await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessmentsAsync(studentAptitudeAssessment);
+                await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessments2Async(studentAptitudeAssessment);
             }
 
             [TestMethod]
             [ExpectedException(typeof(Exception))]
-            public async Task StudentAptitudeAssessmentsService_Put_RepositoryException()
+            public async Task StudentAptitudeAssessmentsService_Put2_RepositoryException()
             {
-                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
+                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
                 var studentTestScore = _studentNonCoursesCollection.FirstOrDefault(x => x.RecordKey == studentAptitudeAssessmentsGuid);
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.UpdateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ThrowsAsync(new RepositoryException());
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.CreateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ThrowsAsync(new KeyNotFoundException());
                 studentAptitudeAssessment.Status = Dtos.EnumProperties.StudentAptitudeAssessmentsStatus.NotSet;
-                await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessmentsAsync(studentAptitudeAssessment);
+                await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessments2Async(studentAptitudeAssessment);
             }
 
             [TestMethod]
             [ExpectedException(typeof(Exception))]
-            public async Task StudentAptitudeAssessmentsService_Put_KeyNotFoundException()
+            public async Task StudentAptitudeAssessmentsService_Put2_KeyNotFoundException()
             {
-                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
+                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
                 var studentTestScore = _studentNonCoursesCollection.FirstOrDefault(x => x.RecordKey == studentAptitudeAssessmentsGuid);
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.UpdateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ThrowsAsync(new KeyNotFoundException());
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.CreateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ThrowsAsync(new KeyNotFoundException());
                 studentAptitudeAssessment.Status = Dtos.EnumProperties.StudentAptitudeAssessmentsStatus.NotSet;
-                await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessmentsAsync(studentAptitudeAssessment);
+                await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessments2Async(studentAptitudeAssessment);
             }
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentException))]
-            public async Task StudentAptitudeAssessmentsService_Put_ArgumentException()
+            public async Task StudentAptitudeAssessmentsService_Put2_ArgumentException()
             {
-                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
+                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
                 var studentTestScore = _studentNonCoursesCollection.FirstOrDefault(x => x.RecordKey == studentAptitudeAssessmentsGuid);
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.UpdateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ThrowsAsync(new ArgumentException());
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.CreateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ThrowsAsync(new KeyNotFoundException());
-                await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessmentsAsync(studentAptitudeAssessment);
+                await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessments2Async(studentAptitudeAssessment);
             }
 
 
             [TestMethod]
             [ExpectedException(typeof(Exception))]
-            public async Task StudentAptitudeAssessmentsService_Put_Exception()
+            public async Task StudentAptitudeAssessmentsService_Put2_Exception()
             {
-                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
+                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
                 var studentTestScore = _studentNonCoursesCollection.FirstOrDefault(x => x.RecordKey == studentAptitudeAssessmentsGuid);
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.UpdateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ThrowsAsync(new Exception());
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.CreateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ThrowsAsync(new KeyNotFoundException());
                 studentAptitudeAssessment.Status = Dtos.EnumProperties.StudentAptitudeAssessmentsStatus.NotSet;
-                await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessmentsAsync(studentAptitudeAssessment);
+                await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessments2Async(studentAptitudeAssessment);
             }
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
-            public async Task StudentAptitudeAssessmentsService_Put_NullArguments()
+            public async Task StudentAptitudeAssessmentsService_Put2_NullArguments()
             {
-                await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessmentsAsync(null);
+                await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessments2Async(null);
             }
 
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task StudentAptitudeAssessmentsService_Put_EmptyStudent()
+            public async Task StudentAptitudeAssessmentsService_Put2_EmptyStudent()
             {
 
-                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
+                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
                 var studentTestScore = _studentNonCoursesCollection.FirstOrDefault(x => x.Guid == studentAptitudeAssessmentsGuid);
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.UpdateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ReturnsAsync(studentTestScore);
 
@@ -830,15 +1130,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 studentAptitudeAssessment.Student = new GuidObject2();
                 studentAptitudeAssessment.Status = Dtos.EnumProperties.StudentAptitudeAssessmentsStatus.NotSet;
-                var result = await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessmentsAsync(studentAptitudeAssessment);
+                var result = await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessments2Async(studentAptitudeAssessment);
             }          
 
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task StudentAptitudeAssessmentsService_Put_EmptyAssessment()
+            public async Task StudentAptitudeAssessmentsService_Put2_EmptyAssessment()
             {
 
-                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
+                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
                 var studentTestScore = _studentNonCoursesCollection.FirstOrDefault(x => x.Guid == studentAptitudeAssessmentsGuid);
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.UpdateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ReturnsAsync(studentTestScore);
 
@@ -846,15 +1146,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 studentAptitudeAssessment.Assessment = new GuidObject2();
                 studentAptitudeAssessment.Status = Dtos.EnumProperties.StudentAptitudeAssessmentsStatus.NotSet;
-                var result = await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessmentsAsync(studentAptitudeAssessment);
+                var result = await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessments2Async(studentAptitudeAssessment);
             }
 
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task StudentAptitudeAssessmentsService_Put_InvalidAssessment()
+            public async Task StudentAptitudeAssessmentsService_Put2_InvalidAssessment()
             {
 
-                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
+                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
                 var studentTestScore = _studentNonCoursesCollection.FirstOrDefault(x => x.Guid == studentAptitudeAssessmentsGuid);
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.UpdateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ReturnsAsync(studentTestScore);
 
@@ -862,15 +1162,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 studentAptitudeAssessment.Assessment = new GuidObject2("INVALID");
                 studentAptitudeAssessment.Status = Dtos.EnumProperties.StudentAptitudeAssessmentsStatus.NotSet;
-                var result = await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessmentsAsync(studentAptitudeAssessment);
+                var result = await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessments2Async(studentAptitudeAssessment);
             }
 
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task StudentAptitudeAssessmentsService_Put_EmptyAssessedOn()
+            public async Task StudentAptitudeAssessmentsService_Put2_EmptyAssessedOn()
             {
 
-                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
+                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
                 var studentTestScore = _studentNonCoursesCollection.FirstOrDefault(x => x.Guid == studentAptitudeAssessmentsGuid);
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.UpdateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ReturnsAsync(studentTestScore);
 
@@ -878,15 +1178,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 studentAptitudeAssessment.AssessedOn = null;
                 studentAptitudeAssessment.Status = Dtos.EnumProperties.StudentAptitudeAssessmentsStatus.NotSet;
-                var result = await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessmentsAsync(studentAptitudeAssessment);
+                var result = await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessments2Async(studentAptitudeAssessment);
             }
 
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task StudentAptitudeAssessmentsService_Put_EmptyScore()
+            public async Task StudentAptitudeAssessmentsService_Put2_EmptyScore()
             {
 
-                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
+                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
                 var studentTestScore = _studentNonCoursesCollection.FirstOrDefault(x => x.Guid == studentAptitudeAssessmentsGuid);
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.UpdateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ReturnsAsync(studentTestScore);
 
@@ -894,37 +1194,37 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 studentAptitudeAssessment.Score = new StudentAptitudeAssessmentsScore();
                 studentAptitudeAssessment.Status = Dtos.EnumProperties.StudentAptitudeAssessmentsStatus.NotSet;
-                var result = await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessmentsAsync(studentAptitudeAssessment);
+                var result = await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessments2Async(studentAptitudeAssessment);
             }
 
            
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task StudentAptitudeAssessmentsService_Put_InvalidSource()
+            public async Task StudentAptitudeAssessmentsService_Put2_InvalidSource()
             {
 
-                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
+                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
                 var studentTestScore = _studentNonCoursesCollection.FirstOrDefault(x => x.Guid == studentAptitudeAssessmentsGuid);
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.UpdateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ReturnsAsync(studentTestScore);
 
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.GetStudentTestScoresIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(studentTestScore.RecordKey);
 
                 studentAptitudeAssessment.Source = new GuidObject2("INVALID");
-                var result = await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessmentsAsync(studentAptitudeAssessment);
+                var result = await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessments2Async(studentAptitudeAssessment);
             }
 
             [TestMethod]
-            public async Task StudentAptitudeAssessmentsService_Put()
+            public async Task StudentAptitudeAssessmentsService_Put2()
             {
 
-                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
+                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
                 var studentTestScore = _studentNonCoursesCollection.FirstOrDefault(x => x.Guid == studentAptitudeAssessmentsGuid);
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.UpdateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ReturnsAsync(studentTestScore);
 
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.GetStudentTestScoresIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(studentTestScore.RecordKey);
 
                 studentAptitudeAssessment.Status = Dtos.EnumProperties.StudentAptitudeAssessmentsStatus.NotSet;
-                var result = await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessmentsAsync(studentAptitudeAssessment);
+                var result = await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessments2Async(studentAptitudeAssessment);
 
                 Assert.IsNotNull(result.Id);
                 Assert.AreEqual(result.AssessedOn, studentAptitudeAssessment.AssessedOn);
@@ -957,15 +1257,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
 
             [TestMethod]
-            public async Task StudentAptitudeAssessmentsService_Put_NoRecordKey()
+            public async Task StudentAptitudeAssessmentsService_Put2_NoRecordKey()
             {
-                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
+                var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
                 var studentTestScore = _studentNonCoursesCollection.FirstOrDefault(x => x.Guid == studentAptitudeAssessmentsGuid);
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.CreateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ReturnsAsync(studentTestScore);
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.GetStudentTestScoresIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
 
                 studentAptitudeAssessment.Status = Dtos.EnumProperties.StudentAptitudeAssessmentsStatus.NotSet;
-                var result = await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessmentsAsync(studentAptitudeAssessment);
+                var result = await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessments2Async(studentAptitudeAssessment);
 
                 Assert.IsNotNull(result.Id);
                 Assert.AreEqual(result.AssessedOn, studentAptitudeAssessment.AssessedOn);

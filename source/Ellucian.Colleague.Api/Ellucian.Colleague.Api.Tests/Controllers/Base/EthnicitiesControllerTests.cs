@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -61,9 +61,12 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             HashSet<ITypeAdapter> adapters = new HashSet<ITypeAdapter>();
             AdapterRegistry = new AdapterRegistry(adapters, logger);
             var testAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Base.Entities.Ethnicity, Ethnicity2>(AdapterRegistry, logger);
+            var entityAdapter = new Ellucian.Colleague.Coordination.Base.Adapters.EthnicityEntityAdapter(AdapterRegistry, logger);
             AdapterRegistry.AddAdapter(testAdapter);
+            AdapterRegistry.AddAdapter(entityAdapter);
 
             allEthnicities = new TestEthnicityRepository().Get() as List<Ellucian.Colleague.Domain.Base.Entities.Ethnicity>;
+            ReferenceDataRepositoryMock.Setup(r => r.EthnicitiesAsync()).ReturnsAsync(allEthnicities);
             var EthnicitiesList = new List<Ethnicity2>();
 
             EthnicityController = new EthnicitiesController(AdapterRegistry, ReferenceDataRepositoryMock.Object, DemographicService, logger);
@@ -84,6 +87,20 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         {
             EthnicityController = null;
             DemographicService = null;
+        }
+
+        [TestMethod]
+        public async Task GetAsync_returns_all_ethnicities()
+        {
+            var ethnicityDtos = await EthnicityController.GetAsync();
+            Assert.IsNotNull(ethnicityDtos);
+            Assert.AreEqual(allEthnicities.Count(), ethnicityDtos.Count());
+            for(int i = 0; i < allEthnicities.Count(); i++)
+            {
+                Assert.AreEqual(allEthnicities.ElementAt(i).Code, ethnicityDtos.ElementAt(i).Code);
+                Assert.AreEqual(allEthnicities.ElementAt(i).Description, ethnicityDtos.ElementAt(i).Description);
+                Assert.AreEqual(allEthnicities.ElementAt(i).Type.ToString(), ethnicityDtos.ElementAt(i).Type.ToString());
+            }
         }
 
         [TestMethod]

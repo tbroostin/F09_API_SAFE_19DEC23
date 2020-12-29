@@ -4,11 +4,13 @@ using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
+using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -76,6 +78,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private string financialAidApplicationGuid = "31d8aa32-dbe6-4a49-a1c4-2cad39e232e4";
             private StudentFinancialAidApplicationService financialAidApplicationService;
             private Tuple<IEnumerable<Domain.Student.Entities.Fafsa>, int> _financialAidApplicationTuple;
+            private List<FinancialAidMaritalStatus> finAidMarStatus = new List<FinancialAidMaritalStatus>();
 
             [TestInitialize]
             public void Initialize()
@@ -105,6 +108,28 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _financialAidYears.Add(new Domain.Student.Entities.FinancialAidYear("1df164eb-8178-4321-a9f7-24f12d3991d9", "2016", "CODE3", "STATUS3") { HostCountry = "USA" });
 
                 refRepoMock.Setup(repo => repo.GetFinancialAidYearsAsync(It.IsAny<bool>())).ReturnsAsync(_financialAidYears);
+
+                finAidMarStatus = new List<FinancialAidMaritalStatus>()
+                {
+                    new FinancialAidMaritalStatus("1", "Married"),
+                    new FinancialAidMaritalStatus("2", "Single"),
+                    new FinancialAidMaritalStatus("3", "Divorced"),
+                    new FinancialAidMaritalStatus("4", "Separated"),
+                    new FinancialAidMaritalStatus("5", "Married/Remarried"),
+                    new FinancialAidMaritalStatus("6", "Divorced/Widowed")
+
+                };
+                refRepoMock.Setup( repo => repo.GetFinancialAidMaritalStatusesAsync( It.IsAny<bool>(), It.IsAny<string>() ) ).ReturnsAsync( finAidMarStatus );
+
+                refRepoMock.Setup( repo => repo.GetFinancialAidMaritalStatusAsync( It.IsAny<string>(), "1" ) ).ReturnsAsync( finAidMarStatus[0] );
+                refRepoMock.Setup( repo => repo.GetFinancialAidMaritalStatusAsync( It.IsAny<string>(), "2" ) ).ReturnsAsync( finAidMarStatus[1] );
+                refRepoMock.Setup( repo => repo.GetFinancialAidMaritalStatusAsync( It.IsAny<string>(), "3" ) ).ReturnsAsync( finAidMarStatus[2] );
+                refRepoMock.Setup( repo => repo.GetFinancialAidMaritalStatusAsync( It.IsAny<string>(), "4" ) ).ReturnsAsync( finAidMarStatus[3] );
+                refRepoMock.Setup( repo => repo.GetFinancialAidMaritalStatusAsync( It.IsAny<string>(), "5" ) ).ReturnsAsync( finAidMarStatus[4] ); 
+                refRepoMock.Setup( repo => repo.GetFinancialAidMaritalStatusAsync( It.IsAny<string>(), "6" ) ).ReturnsAsync( finAidMarStatus[5] );
+
+
+
 
                 // Set up current user
                 //currentUserFactory = new CurrentUserSetup.PersonUserFactory();
@@ -172,9 +197,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_Count_Cache()
             {
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(_financialAidApplicationTuple);
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) )
+                    .ReturnsAsync(_financialAidApplicationTuple);
 
-                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplication = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<FinancialAidApplication>(), false);
+
+
+                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplication = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<Dtos.FinancialAidApplication>(), false);
                 Assert.AreEqual(allFinancialAidApplications.Count(), financialAidApplication.Item2);
             }
 
@@ -183,9 +211,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_NoRecords()
             {
                 var emptyTuple = new Tuple<IEnumerable<Domain.Student.Entities.Fafsa>, int>(new List<Domain.Student.Entities.Fafsa>(), 0);
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(emptyTuple);
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).ReturnsAsync(emptyTuple);
 
-                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplication = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<FinancialAidApplication>(), false);
+                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplication = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<Dtos.FinancialAidApplication>(), false);
                 Assert.AreEqual(emptyTuple.Item1.Count(), 0);
             }
 
@@ -193,25 +221,25 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_Null_Tuple()
             {
                 var emptyTuple = new Tuple<IEnumerable<Domain.Student.Entities.Fafsa>, int>(new List<Domain.Student.Entities.Fafsa>(), 0);
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(null);
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).ReturnsAsync(null);
 
-                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplication = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<FinancialAidApplication>(), false);
+                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplication = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<Dtos.FinancialAidApplication>(), false);
                 Assert.AreEqual(emptyTuple.Item1.Count(), 0);
             }
 
             [TestMethod]
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_Cache()
             {
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(_financialAidApplicationTuple);
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).ReturnsAsync(_financialAidApplicationTuple);
 
-                Tuple<IEnumerable<Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<FinancialAidApplication>(), false);
+                Tuple<IEnumerable<Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<Dtos.FinancialAidApplication>(), false);
                 Assert.AreEqual(allFinancialAidApplications.ElementAt(0).Guid, financialAidApplications.Item1.ElementAt(0).Id);
             }
 
             [TestMethod]
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_StudentId_Cache()
             {
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(_financialAidApplicationTuple);
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).ReturnsAsync(_financialAidApplicationTuple);
                 var faFilter = new Dtos.FinancialAidApplication();
                 faFilter.Applicant =  new Dtos.DtoProperties.FinancialAidApplicationApplicant() { Person = new GuidObject2() { Id = "9ae3a175-1dfd-4937-b97b-3c9ad596e023" } };
                 Tuple<IEnumerable<Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, faFilter, false);
@@ -223,7 +251,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 personRepoMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(string.Empty);
                 var emptyTuple = new Tuple<IEnumerable<Domain.Student.Entities.Fafsa>, int>(new List<Domain.Student.Entities.Fafsa>(), 0);
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(_financialAidApplicationTuple);
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).ReturnsAsync(_financialAidApplicationTuple);
                 var faFilter = new Dtos.FinancialAidApplication();
                 faFilter.Applicant = new Dtos.DtoProperties.FinancialAidApplicationApplicant() { Person = new GuidObject2() { Id = "abc" } };
                 Tuple<IEnumerable<Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, faFilter, false);
@@ -235,7 +263,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 personRepoMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).Throws<Exception>();
                 var emptyTuple = new Tuple<IEnumerable<Domain.Student.Entities.Fafsa>, int>(new List<Domain.Student.Entities.Fafsa>(), 0);
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(_financialAidApplicationTuple);
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).ReturnsAsync(_financialAidApplicationTuple);
                 var faFilter = new Dtos.FinancialAidApplication();
                 faFilter.Applicant = new Dtos.DtoProperties.FinancialAidApplicationApplicant() { Person = new GuidObject2() { Id = "abc" } };
                 Tuple<IEnumerable<Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, faFilter, false);
@@ -245,7 +273,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_AidYear_Cache()
             {
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(_financialAidApplicationTuple);
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).ReturnsAsync(_financialAidApplicationTuple);
                 var faFilter = new Dtos.FinancialAidApplication();
                 faFilter.AidYear = new GuidObject2() { Id = "9C3B805D-CFE6-483B-86C3-4C20562F8C15".ToLower() } ;
                 Tuple<IEnumerable<Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, faFilter, false);
@@ -256,7 +284,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_Invalid_AidYear_Cache()
             {
                 var emptyTuple = new Tuple<IEnumerable<Domain.Student.Entities.Fafsa>, int>(new List<Domain.Student.Entities.Fafsa>(), 0);
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(_financialAidApplicationTuple);
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).ReturnsAsync(_financialAidApplicationTuple);
                 var faFilter = new Dtos.FinancialAidApplication();
                 faFilter.AidYear = new GuidObject2() { Id = "abc".ToLower() };
                 Tuple<IEnumerable<Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, faFilter, false);
@@ -266,26 +294,18 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_Count_NonCache()
             {
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(_financialAidApplicationTuple);
-                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplication = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<FinancialAidApplication>(), true);
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).ReturnsAsync(_financialAidApplicationTuple);
+                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplication = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<Dtos.FinancialAidApplication>(), true);
                 Assert.AreEqual(allFinancialAidApplications.Count(), financialAidApplication.Item2);
             }
 
             [TestMethod]
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_NonCache()
             {
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(_financialAidApplicationTuple);
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).ReturnsAsync(_financialAidApplicationTuple);
 
-                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<FinancialAidApplication>(), true);
+                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<Dtos.FinancialAidApplication>(), true);
                 Assert.AreEqual(allFinancialAidApplications.ElementAt(0).Guid, financialAidApplications.Item1.ElementAt(0).Id);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_ArgumentNullException()
-            {
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).Throws<ArgumentNullException>();
-                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<FinancialAidApplication>(), true);
             }
 
             [TestMethod]
@@ -294,27 +314,27 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 var fafsa = new Domain.Student.Entities.Fafsa("123", "2004", string.Empty);
                 _financialAidApplicationTuple = new Tuple<IEnumerable<Domain.Student.Entities.Fafsa>, int>(new List<Domain.Student.Entities.Fafsa> {fafsa}, 1);
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(_financialAidApplicationTuple);
-                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<FinancialAidApplication>(), true);
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).ReturnsAsync(_financialAidApplicationTuple);
+                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<Dtos.FinancialAidApplication>(), true);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_BadGuid_ArgumentNullException()
             {
                 var fafsa = new Domain.Student.Entities.Fafsa("123", "2004", "123");
                 _financialAidApplicationTuple = new Tuple<IEnumerable<Domain.Student.Entities.Fafsa>, int>(new List<Domain.Student.Entities.Fafsa> { fafsa }, 1);
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(_financialAidApplicationTuple);
-                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<FinancialAidApplication>(), true);
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).ReturnsAsync(_financialAidApplicationTuple);
+                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<Dtos.FinancialAidApplication>(), true);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_NoPersonGuid_ArgumentNullException()
             {
                 personRepoMock.Setup(x => x.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(null);
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(_financialAidApplicationTuple);
-                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<FinancialAidApplication>(), true);
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).ReturnsAsync(_financialAidApplicationTuple);
+                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<Dtos.FinancialAidApplication>(), true);
             }
 
             [TestMethod]
@@ -323,66 +343,66 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 var fafsa = new Domain.Student.Entities.Fafsa("123",string.Empty, "1234");
                 _financialAidApplicationTuple = new Tuple<IEnumerable<Domain.Student.Entities.Fafsa>, int>(new List<Domain.Student.Entities.Fafsa> { fafsa }, 1);
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(_financialAidApplicationTuple);
-                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<FinancialAidApplication>(), true);
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).ReturnsAsync(_financialAidApplicationTuple);
+                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<Dtos.FinancialAidApplication>(), true);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_BadAidYear_ArgumentNullException()
             {
                 var fafsa = new Domain.Student.Entities.Fafsa("123", "123", "1234");
                 _financialAidApplicationTuple = new Tuple<IEnumerable<Domain.Student.Entities.Fafsa>, int>(new List<Domain.Student.Entities.Fafsa> { fafsa }, 1);
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(_financialAidApplicationTuple);
-                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<FinancialAidApplication>(), true);
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).ReturnsAsync(_financialAidApplicationTuple);
+                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<Dtos.FinancialAidApplication>(), true);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException( typeof( Exception ) )]
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_ArgumentException()
             {
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).Throws<ArgumentException>();
-                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<FinancialAidApplication>(), true);
-               
+                faAppRepoMock.Setup( repo => repo.GetAsync( It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).Throws<ArgumentException>();
+                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync( 0, 100, It.IsAny<Dtos.FinancialAidApplication>(), true );
+
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException( typeof( Exception ) )]
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_KeyNotFoundException()
             {
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).Throws<KeyNotFoundException>();
-                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<FinancialAidApplication>(), true);
+                faAppRepoMock.Setup( repo => repo.GetAsync( It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).Throws<KeyNotFoundException>();
+                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync( 0, 100, It.IsAny<Dtos.FinancialAidApplication>(), true );
             }
 
             [TestMethod]
             [ExpectedException(typeof(PermissionsException))]
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_PermissionsException()
             {
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).Throws<PermissionsException>();
-                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<FinancialAidApplication>(), true);
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).Throws<PermissionsException>();
+                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<Dtos.FinancialAidApplication>(), true);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof( Exception ) )]
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_InvalidOperationException()
             {
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).Throws<InvalidOperationException>();
-                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<FinancialAidApplication>(), true);
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).Throws<InvalidOperationException>();
+                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<Dtos.FinancialAidApplication>(), true);
             }
 
             [TestMethod]
             [ExpectedException(typeof(Exception))]
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_Exception()
             {
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).Throws<Exception>();
-                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<FinancialAidApplication>(), true);
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).Throws<Exception>();
+                Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<Dtos.FinancialAidApplication>(), true);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationByIdAsync_ThrowsInvOpExc()
             {
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).Throws<KeyNotFoundException>();
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).Throws<KeyNotFoundException>();
                 await financialAidApplicationService.GetByIdAsync("dshjfkj");
             }
         }

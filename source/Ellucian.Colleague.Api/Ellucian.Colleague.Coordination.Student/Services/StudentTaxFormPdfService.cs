@@ -1,22 +1,21 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Coordination.Base.Utility;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
-using slf4net;
 using Microsoft.Reporting.WebForms;
-using Ellucian.Colleague.Coordination.Base.Utility;
-using Ellucian.Colleague.Domain.Student;
+using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -32,7 +31,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                                          "</DeviceInfo>";
 
         IStudentTaxFormPdfDataRepository taxFormPdfDataRepository;
-        IPdfSharpRepository pdfSharpRepository;
         IPersonRepository personRepository;
 
         /// <summary>
@@ -43,12 +41,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="roleRepository">RoleRepository</param>
         /// <param name="logger">Logger</param>
         public StudentTaxFormPdfService(IStudentTaxFormPdfDataRepository taxFormPdfDataRepository,
-            IPdfSharpRepository pdfSharpRepository, IPersonRepository personRepository, IAdapterRegistry adapterRegistry,
+            IPersonRepository personRepository, IAdapterRegistry adapterRegistry,
             ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger)
         {
             this.taxFormPdfDataRepository = taxFormPdfDataRepository;
-            this.pdfSharpRepository = pdfSharpRepository;
             this.personRepository = personRepository;
         }
 
@@ -117,64 +114,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
-        /// Populates the 1098 PDF with the supplied data.
-        /// </summary>
-        /// <param name="pdfData">1098 PDF data</param>
-        /// <param name="documentPath">Path to the PDF template</param>
-        /// <returns>Byte array containing PDF data for the 1098 tax form</returns>
-        public byte[] Populate1098Pdf(Form1098PdfData pdfData, string documentPath)
-        {
-            byte[] reportBytes;
-            var memoryStream = new MemoryStream();
-            try
-            {
-                if (pdfData != null && !string.IsNullOrEmpty(documentPath))
-                {
-                    var document = pdfSharpRepository.OpenDocument(documentPath);
-
-                    var taxFormData = new Dictionary<string, string>()
-                        {
-                            { "Year2", pdfData.TaxYear.Substring(2) },
-                            { "CorrectedForm", pdfData.Correction ? "X" : "" },
-                            { "InstNameAddr1", pdfData.InstitutionName },
-                            { "InstNameAddr2", pdfData.InstitutionAddressLine1 },
-                            { "InstNameAddr3", pdfData.InstitutionAddressLine2 },
-                            { "InstNameAddr4", pdfData.InstitutionAddressLine3 },
-                            { "InstNameAddr5", pdfData.InstitutionAddressLine4 },
-                            { "InstEIN", pdfData.InstitutionEin },
-                            { "StudentSSN", pdfData.SSN },
-                            { "StudentName1", pdfData.StudentName },
-                            { "StudentName2", pdfData.StudentName2 },
-                            { "StudentAddress", pdfData.StudentAddressLine1 },
-                            { "StudentCSZ", pdfData.StudentAddressLine2 },
-                            { "StudentID", pdfData.StudentId },
-                            { "AtLeastHalfTime", pdfData.AtLeastHalfTime ? "X" : "" },
-                            { "Box2Amt", pdfData.AmountsBilledForTuitionAndExpenses ?? "" },
-                            { "Box4Amt", pdfData.AdjustmentsForPriorYear ?? "" },
-                            { "Box5Amt", pdfData.ScholarshipsOrGrants ?? "" },
-                            { "Box6Amt", pdfData.AdjustmentsToScholarshipsOrGrantsForPriorYear ?? "" },
-                            { "ChgRptgMethod", pdfData.ReportingMethodHasBeenChanged ? "X" : "" },
-                            { "GraduateStudent", pdfData.IsGradStudent ? "X" : "" },
-                            { "First3Months", pdfData.AmountsBilledAndReceivedForQ1Period ? "X" : "" },        // Box 7
-                        };
-
-                    pdfSharpRepository.PopulatePdfDocument(ref document, taxFormData);
-                    memoryStream = pdfSharpRepository.FinalizePdfDocument(document);
-                }
-
-                reportBytes = memoryStream.ToArray();
-                return reportBytes;
-            }
-            catch (Exception e)
-            {
-                // Log the error and throw the exception that was given
-                logger.Error(e.Message);
-                throw;
-            }
-
-        }
-
-        /// <summary>
         /// Populates the 1098 PDF with the supplied data using an RDLC report.
         /// </summary>
         /// <param name="pdfData">1098 PDF data</param>
@@ -191,72 +130,83 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new ArgumentNullException("pathToReport");
             }
 
+            byte[] renderedBytes;
             var report = new LocalReport();
-            report.ReportPath = pathToReport;
-            report.SetBasePermissionsForSandboxAppDomain(new System.Security.PermissionSet(System.Security.Permissions.PermissionState.Unrestricted));
-            report.EnableExternalImages = true;
 
-            // Specify the report parameters
-            var utility = new ReportUtility();
-            var parameters = new List<ReportParameter>();
-            //1098 Common Params
-            parameters.Add(utility.BuildReportParameter("Year2", pdfData.TaxYear.Substring(2)));
-            parameters.Add(utility.BuildReportParameter("CorrectedForm", pdfData.Correction ? "X" : ""));
-            parameters.Add(utility.BuildReportParameter("InstNameAddr1", pdfData.InstitutionName));
-            parameters.Add(utility.BuildReportParameter("InstNameAddr2", pdfData.InstitutionAddressLine1));
-            parameters.Add(utility.BuildReportParameter("InstNameAddr3", pdfData.InstitutionAddressLine2));
-            parameters.Add(utility.BuildReportParameter("InstNameAddr4", pdfData.InstitutionAddressLine3));
-            parameters.Add(utility.BuildReportParameter("InstNameAddr5", pdfData.InstitutionAddressLine4));
-            parameters.Add(utility.BuildReportParameter("InstEIN", pdfData.InstitutionEin));
-            parameters.Add(utility.BuildReportParameter("StudentSSN", pdfData.SSN));
-            parameters.Add(utility.BuildReportParameter("StudentName1", pdfData.StudentName));
-            parameters.Add(utility.BuildReportParameter("StudentName2", pdfData.StudentName2));
-            parameters.Add(utility.BuildReportParameter("StudentAddress", pdfData.StudentAddressLine1));
-            parameters.Add(utility.BuildReportParameter("StudentCSZ", pdfData.StudentAddressLine2));
-            parameters.Add(utility.BuildReportParameter("StudentID", pdfData.StudentId));
-            //1098 T params
-            if (pdfData.TaxFormName == "1098T")
+            try
             {
-                parameters.Add(utility.BuildReportParameter("AtLeastHalfTime", pdfData.AtLeastHalfTime ? "X" : ""));                            // Box 8
-                parameters.Add(utility.BuildReportParameter("Box1Amt", pdfData.AmountsPaidForTuitionAndExpenses ?? ""));
-                parameters.Add(utility.BuildReportParameter("Box2Amt", pdfData.AmountsBilledForTuitionAndExpenses ?? ""));
-                parameters.Add(utility.BuildReportParameter("Box4Amt", pdfData.AdjustmentsForPriorYear ?? ""));
-                parameters.Add(utility.BuildReportParameter("Box5Amt", pdfData.ScholarshipsOrGrants ?? ""));
-                parameters.Add(utility.BuildReportParameter("Box6Amt", pdfData.AdjustmentsToScholarshipsOrGrantsForPriorYear ?? ""));
-                parameters.Add(utility.BuildReportParameter("ChgRptgMethod", pdfData.ReportingMethodHasBeenChanged ? "X" : ""));                // Box 3
-                parameters.Add(utility.BuildReportParameter("GraduateStudent", pdfData.IsGradStudent ? "X" : ""));                              // Box 9
-                parameters.Add(utility.BuildReportParameter("First3Months", pdfData.AmountsBilledAndReceivedForQ1Period ? "X" : ""));           // Box 7
+                report.ReportPath = pathToReport;
+                report.SetBasePermissionsForSandboxAppDomain(new System.Security.PermissionSet(System.Security.Permissions.PermissionState.Unrestricted));
+                report.EnableExternalImages = true;
+
+                // Specify the report parameters
+                var utility = new ReportUtility();
+                var parameters = new List<ReportParameter>();
+                //1098 Common Params
+                parameters.Add(utility.BuildReportParameter("Year2", pdfData.TaxYear.Substring(2)));
+                parameters.Add(utility.BuildReportParameter("CorrectedForm", pdfData.Correction ? "X" : ""));
+                parameters.Add(utility.BuildReportParameter("InstNameAddr1", pdfData.InstitutionName));
+                parameters.Add(utility.BuildReportParameter("InstNameAddr2", pdfData.InstitutionAddressLine1));
+                parameters.Add(utility.BuildReportParameter("InstNameAddr3", pdfData.InstitutionAddressLine2));
+                parameters.Add(utility.BuildReportParameter("InstNameAddr4", pdfData.InstitutionAddressLine3));
+                parameters.Add(utility.BuildReportParameter("InstNameAddr5", pdfData.InstitutionAddressLine4));
+                parameters.Add(utility.BuildReportParameter("InstEIN", pdfData.InstitutionEin));
+                parameters.Add(utility.BuildReportParameter("StudentSSN", pdfData.SSN));
+                parameters.Add(utility.BuildReportParameter("StudentName1", pdfData.StudentName));
+                parameters.Add(utility.BuildReportParameter("StudentName2", pdfData.StudentName2));
+                parameters.Add(utility.BuildReportParameter("StudentAddress", pdfData.StudentAddressLine1));
+                parameters.Add(utility.BuildReportParameter("StudentCSZ", pdfData.StudentAddressLine2));
+                parameters.Add(utility.BuildReportParameter("StudentID", pdfData.StudentId));
+                //1098 T params
+                if (pdfData.TaxFormName == "1098T")
+                {
+                    parameters.Add(utility.BuildReportParameter("AtLeastHalfTime", pdfData.AtLeastHalfTime ? "X" : ""));                            // Box 8
+                    parameters.Add(utility.BuildReportParameter("Box1Amt", pdfData.AmountsPaidForTuitionAndExpenses ?? ""));
+                    parameters.Add(utility.BuildReportParameter("Box2Amt", pdfData.AmountsBilledForTuitionAndExpenses ?? ""));
+                    parameters.Add(utility.BuildReportParameter("Box4Amt", pdfData.AdjustmentsForPriorYear ?? ""));
+                    parameters.Add(utility.BuildReportParameter("Box5Amt", pdfData.ScholarshipsOrGrants ?? ""));
+                    parameters.Add(utility.BuildReportParameter("Box6Amt", pdfData.AdjustmentsToScholarshipsOrGrantsForPriorYear ?? ""));
+                    parameters.Add(utility.BuildReportParameter("ChgRptgMethod", pdfData.ReportingMethodHasBeenChanged ? "X" : ""));                // Box 3
+                    parameters.Add(utility.BuildReportParameter("GraduateStudent", pdfData.IsGradStudent ? "X" : ""));                              // Box 9
+                    parameters.Add(utility.BuildReportParameter("First3Months", pdfData.AmountsBilledAndReceivedForQ1Period ? "X" : ""));           // Box 7
+                }
+                //1098 E params
+                else
+                {
+                    parameters.Add(utility.BuildReportParameter("Box1Amt", pdfData.StudentInterestAmount ?? ""));
+                    parameters.Add(utility.BuildReportParameter("IsIntrstExcld", pdfData.IsPriorInterestOrFeeExcluded ? "X" : ""));
+                }
+                // Set the report parameters
+                report.SetParameters(parameters);
+
+                // Set up some options for the report
+                string mimeType = string.Empty;
+                string encoding;
+                string fileNameExtension;
+                Warning[] warnings;
+                string[] streams;
+
+                // Render the report as a byte array
+                renderedBytes = report.Render(
+                    ReportType,
+                    DeviceInfo,
+                    out mimeType,
+                    out encoding,
+                    out fileNameExtension,
+                    out streams,
+                    out warnings);
             }
-            //1098 E params
-            else
+            catch
             {
-                parameters.Add(utility.BuildReportParameter("Box1Amt", pdfData.StudentInterestAmount ?? ""));
-                parameters.Add(utility.BuildReportParameter("IsIntrstExcld", pdfData.IsPriorInterestOrFeeExcluded ? "X" : ""));
+                // Rethrow exception
+                throw;
             }
-            // Set the report parameters
-            report.SetParameters(parameters);
-
-            // Set up some options for the report
-            string mimeType = string.Empty;
-            string encoding;
-            string fileNameExtension;
-            Warning[] warnings;
-            string[] streams;
-
-            // Render the report as a byte array
-            var renderedBytes = report.Render(
-                ReportType,
-                DeviceInfo,
-                out mimeType,
-                out encoding,
-                out fileNameExtension,
-                out streams,
-                out warnings);
-
-            report.DataSources.Clear();
-            report.ReleaseSandboxAppDomain();
-            report.Dispose();
-
+            finally
+            {
+                report.DataSources.Clear();
+                report.ReleaseSandboxAppDomain();
+                report.Dispose();
+            }
             return renderedBytes;
         }
 
@@ -281,6 +231,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 // Call the repository to get all the data to print in the pdf.
                 var taxFormPdfData = await this.taxFormPdfDataRepository.GetT2202aPdfAsync(personId, recordId);
+
+                if (taxFormPdfData == null)
+                {
+                    throw new NullReferenceException("taxFormPdfData was null from repository.");
+                }
+
+                if (taxFormPdfData.Cancelled)
+                {
+                    throw new ApplicationException(string.Format("Attempt to access T2202 record {0} which is marked as cancelled.", recordId));
+                }
 
                 // Validate that the domain entity student ID is the same as the person ID requested.
                 if (personId != taxFormPdfData.StudentId)
@@ -334,73 +294,109 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new ArgumentNullException("pathToReport");
             }
-
+            byte[] renderedBytes;
             var report = new LocalReport();
-            report.ReportPath = pathToReport;
-            report.SetBasePermissionsForSandboxAppDomain(new System.Security.PermissionSet(System.Security.Permissions.PermissionState.Unrestricted));
-            report.EnableExternalImages = true;
 
-            // Specify the report parameters
-            var utility = new ReportUtility();
-            var parameters = new List<ReportParameter>();
-            parameters.Add(utility.BuildReportParameter("TaxYear", pdfData.TaxYear.Substring(2)));
-            parameters.Add(utility.BuildReportParameter("ProgramName", pdfData.ProgramName));
-            parameters.Add(utility.BuildReportParameter("StudentIDNumber", pdfData.StudentId));
-
-            parameters.Add(utility.BuildReportParameter("StuNameAddr1", pdfData.StudentNameAddressLine1));
-            parameters.Add(utility.BuildReportParameter("StuNameAddr2", pdfData.StudentNameAddressLine2));
-            parameters.Add(utility.BuildReportParameter("StuNameAddr3", pdfData.StudentNameAddressLine3));
-            parameters.Add(utility.BuildReportParameter("StuNameAddr4", pdfData.StudentNameAddressLine4));
-            parameters.Add(utility.BuildReportParameter("StuNameAddr5", pdfData.StudentNameAddressLine5));
-            parameters.Add(utility.BuildReportParameter("StuNameAddr6", pdfData.StudentNameAddressLine6));
-
-            // Populate the 4 "dynamic" session periods, boxes A, B, and C.
-            for (int i = 0; i < 4; i++)
+            try
             {
-                int sessionPeriodNumber = i + 1;
-                var sessionPeriod = pdfData.SessionPeriods.ElementAtOrDefault(i);
-                if (sessionPeriod != null)
+                report.ReportPath = pathToReport;
+                report.SetBasePermissionsForSandboxAppDomain(new System.Security.PermissionSet(System.Security.Permissions.PermissionState.Unrestricted));
+                report.EnableExternalImages = true;
+
+                // Specify the report parameters
+                var utility = new ReportUtility();
+                var parameters = new List<ReportParameter>();
+
+                int taxYearInt;
+                bool taxYearParseSuccess = int.TryParse(pdfData.TaxYear, out taxYearInt);
+                
+                if (taxYearParseSuccess && taxYearInt >= 2019)
                 {
-                    parameters.Add(utility.BuildReportParameter("FromYear" + sessionPeriodNumber, sessionPeriod.StudentFromYear));
-                    parameters.Add(utility.BuildReportParameter("FromMonth" + sessionPeriodNumber, sessionPeriod.StudentFromMonth));
-                    parameters.Add(utility.BuildReportParameter("ToYear" + sessionPeriodNumber, sessionPeriod.StudentToYear));
-                    parameters.Add(utility.BuildReportParameter("ToMonth" + sessionPeriodNumber, sessionPeriod.StudentToMonth));
-                    parameters.Add(utility.BuildReportParameter("BoxAAmt" + sessionPeriodNumber, sessionPeriod.BoxAAmountString));
-                    parameters.Add(utility.BuildReportParameter("BoxBAmt" + sessionPeriodNumber, sessionPeriod.BoxBHours));
-                    parameters.Add(utility.BuildReportParameter("BoxCAmt" + sessionPeriodNumber, sessionPeriod.BoxCHours));
+                    parameters.Add(utility.BuildReportParameter("TaxYear", pdfData.TaxYear));
+                    parameters.Add(utility.BuildReportParameter("FlyingClub", pdfData.FlyingClub));
+                    parameters.Add(utility.BuildReportParameter("SchoolType", pdfData.SchoolType));
+                    parameters.Add(utility.BuildReportParameter("SocialInsuranceNumber", pdfData.SocialInsuranceNumber));
                 }
                 else
                 {
-                    parameters.Add(utility.BuildReportParameter("FromYear" + sessionPeriodNumber, string.Empty));
-                    parameters.Add(utility.BuildReportParameter("FromMonth" + sessionPeriodNumber, string.Empty));
-                    parameters.Add(utility.BuildReportParameter("ToYear" + sessionPeriodNumber, string.Empty));
-                    parameters.Add(utility.BuildReportParameter("ToMonth" + sessionPeriodNumber, string.Empty));
-                    parameters.Add(utility.BuildReportParameter("BoxAAmt" + sessionPeriodNumber, string.Empty));
-                    parameters.Add(utility.BuildReportParameter("BoxBAmt" + sessionPeriodNumber, string.Empty));
-                    parameters.Add(utility.BuildReportParameter("BoxCAmt" + sessionPeriodNumber, string.Empty));
+                    parameters.Add(utility.BuildReportParameter("TaxYear", pdfData.TaxYear.Substring(2)));
                 }
+
+                parameters.Add(utility.BuildReportParameter("ProgramName", pdfData.ProgramName));
+                parameters.Add(utility.BuildReportParameter("StudentIDNumber", pdfData.StudentId));
+
+                parameters.Add(utility.BuildReportParameter("StuNameAddr1", pdfData.StudentNameAddressLine1));
+                parameters.Add(utility.BuildReportParameter("StuNameAddr2", pdfData.StudentNameAddressLine2));
+                parameters.Add(utility.BuildReportParameter("StuNameAddr3", pdfData.StudentNameAddressLine3));
+                parameters.Add(utility.BuildReportParameter("StuNameAddr4", pdfData.StudentNameAddressLine4));
+                parameters.Add(utility.BuildReportParameter("StuNameAddr5", pdfData.StudentNameAddressLine5));
+                parameters.Add(utility.BuildReportParameter("StuNameAddr6", pdfData.StudentNameAddressLine6));
+
+                // Populate the 4 "dynamic" session periods, boxes A (eligible tuition fees), B (number of part time months), and C (number of full time months).
+                for (int i = 0; i < 4; i++)
+                {
+                    int sessionPeriodNumber = i + 1;
+                    var sessionPeriod = pdfData.SessionPeriods.ElementAtOrDefault(i);
+                    if (sessionPeriod != null)
+                    {
+                        if (taxYearParseSuccess && taxYearInt >= 2019)
+                        {
+                            parameters.Add(utility.BuildReportParameter("FromYear" + sessionPeriodNumber, sessionPeriod.StudentFromYear.Substring(2)));
+                            parameters.Add(utility.BuildReportParameter("FromMonth" + sessionPeriodNumber, sessionPeriod.StudentFromMonth.Length > 1 ? sessionPeriod.StudentFromMonth : "0" + sessionPeriod.StudentFromMonth));
+                            parameters.Add(utility.BuildReportParameter("ToYear" + sessionPeriodNumber, sessionPeriod.StudentToYear.Substring(2)));
+                            parameters.Add(utility.BuildReportParameter("ToMonth" + sessionPeriodNumber, sessionPeriod.StudentToMonth.Length > 1 ? sessionPeriod.StudentToMonth : "0" + sessionPeriod.StudentToMonth));
+                        }
+                        else
+                        {
+                            parameters.Add(utility.BuildReportParameter("FromYear" + sessionPeriodNumber, sessionPeriod.StudentFromYear));
+                            parameters.Add(utility.BuildReportParameter("FromMonth" + sessionPeriodNumber, sessionPeriod.StudentFromMonth));
+                            parameters.Add(utility.BuildReportParameter("ToYear" + sessionPeriodNumber, sessionPeriod.StudentToYear));
+                            parameters.Add(utility.BuildReportParameter("ToMonth" + sessionPeriodNumber, sessionPeriod.StudentToMonth));
+                        }
+
+                        parameters.Add(utility.BuildReportParameter("BoxAAmt" + sessionPeriodNumber, sessionPeriod.BoxAAmountString));
+                        parameters.Add(utility.BuildReportParameter("BoxBAmt" + sessionPeriodNumber, sessionPeriod.BoxBHours));
+                        parameters.Add(utility.BuildReportParameter("BoxCAmt" + sessionPeriodNumber, sessionPeriod.BoxCHours));
+                    }
+                    else
+                    {
+                        parameters.Add(utility.BuildReportParameter("FromYear" + sessionPeriodNumber, string.Empty));
+                        parameters.Add(utility.BuildReportParameter("FromMonth" + sessionPeriodNumber, string.Empty));
+                        parameters.Add(utility.BuildReportParameter("ToYear" + sessionPeriodNumber, string.Empty));
+                        parameters.Add(utility.BuildReportParameter("ToMonth" + sessionPeriodNumber, string.Empty));
+                        parameters.Add(utility.BuildReportParameter("BoxAAmt" + sessionPeriodNumber, string.Empty));
+                        parameters.Add(utility.BuildReportParameter("BoxBAmt" + sessionPeriodNumber, string.Empty));
+                        parameters.Add(utility.BuildReportParameter("BoxCAmt" + sessionPeriodNumber, string.Empty));
+                    }
+                }
+
+                parameters.Add(utility.BuildReportParameter("BoxATotal", pdfData.StudentBoxATotal));
+                parameters.Add(utility.BuildReportParameter("BoxBTotal", pdfData.StudentBoxBTotal));
+                parameters.Add(utility.BuildReportParameter("BoxCTotal", pdfData.StudentBoxCTotal));
+
+                parameters.Add(utility.BuildReportParameter("InstNameAddr1", pdfData.InstitutionNameAddressLine1));
+                parameters.Add(utility.BuildReportParameter("InstNameAddr2", pdfData.InstitutionNameAddressLine2));
+                parameters.Add(utility.BuildReportParameter("InstNameAddr3", pdfData.InstitutionNameAddressLine3));
+
+                // Set the report parameters
+                report.SetParameters(parameters);
+
+                // Render the report as a byte array
+                renderedBytes = report.Render(
+                    ReportType,
+                    DeviceInfo);
             }
-
-            parameters.Add(utility.BuildReportParameter("BoxATotal", pdfData.StudentBoxATotal));
-            parameters.Add(utility.BuildReportParameter("BoxBTotal", pdfData.StudentBoxBTotal));
-            parameters.Add(utility.BuildReportParameter("BoxCTotal", pdfData.StudentBoxCTotal));
-
-            parameters.Add(utility.BuildReportParameter("InstNameAddr1", pdfData.InstitutionNameAddressLine1));
-            parameters.Add(utility.BuildReportParameter("InstNameAddr2", pdfData.InstitutionNameAddressLine2));
-            parameters.Add(utility.BuildReportParameter("InstNameAddr3", pdfData.InstitutionNameAddressLine3));
-
-            // Set the report parameters
-            report.SetParameters(parameters);
-
-            // Render the report as a byte array
-            var renderedBytes = report.Render(
-                ReportType,
-                DeviceInfo);
-
-            report.DataSources.Clear();
-            report.ReleaseSandboxAppDomain();
-            report.Dispose();
-
+            catch
+            {
+                // rethrow exception
+                throw;
+            }
+            finally
+            {
+                report.DataSources.Clear();
+                report.ReleaseSandboxAppDomain();
+                report.Dispose();
+            }
             return renderedBytes;
         }
 

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 using AutoMapper;
 using Ellucian.Colleague.Api.Controllers;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -217,6 +217,87 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 // act
                 var response = await academicHistoryController.QueryAcademicCredits2Async(criteria);
+            }
+        }
+
+        [TestClass]
+        public class AcademicHistoryController_QueryAcademicCredits3Async : AcademicHistoryControllerTestSetup
+        {
+            private List<string> sectionIds;
+            private List<AcademicCredit3> academicCreditDtos;
+            AcademicCreditQueryCriteria criteria;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                InitializeAcademicHistoryController();
+
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                sectionIds = new List<string>() { "8001", "8005" };
+                List<Ellucian.Colleague.Domain.Student.Entities.AcademicCredit> sectionAcademicCreditEntities = new List<Ellucian.Colleague.Domain.Student.Entities.AcademicCredit>();
+                foreach (var sectionId in sectionIds)
+                {
+                    sectionAcademicCreditEntities.AddRange(academicCredits.Where(ac => ac.SectionId == sectionId).ToList());
+                }
+
+                academicHistoryController = new AcademicHistoryController(academicHistoryService, loggerMock.Object);
+                Mapper.CreateMap<Ellucian.Colleague.Domain.Student.Entities.Faculty, Faculty>();
+                Mapper.CreateMap<Ellucian.Colleague.Domain.Student.Entities.Corequisite, Corequisite>();
+                academicCreditDtos = new List<AcademicCredit3>();
+                foreach (var credit in sectionAcademicCreditEntities)
+                {
+                    AcademicCredit3 target = Mapper.Map<Ellucian.Colleague.Domain.Student.Entities.AcademicCredit, AcademicCredit3>(credit);
+                    academicCreditDtos.Add(target);
+                }
+
+                criteria = new AcademicCreditQueryCriteria() { SectionIds = sectionIds };
+                AcademicCreditsWithInvalidKeys creditsWithInvalidKeys = new AcademicCreditsWithInvalidKeys(academicCreditDtos, new List<string>() { "8002" });
+                academicHistoryServiceMock.Setup(x => x.QueryAcademicCreditsWithInvalidKeysAsync(criteria)).Returns(Task.FromResult<AcademicCreditsWithInvalidKeys>(creditsWithInvalidKeys));
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                academicHistoryController = null;
+                academicHistoryService = null;
+            }
+
+            [TestMethod]
+            public async Task ReturnsAcademicCreditWithInvalidKeysDtos()
+            {
+                // act
+                var response = await academicHistoryController.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+
+                // assert
+                Assert.IsTrue(response.AcademicCredits is IEnumerable<AcademicCredit3>);
+                Assert.AreEqual(2, response.AcademicCredits.Count());
+                Assert.AreEqual(1, response.InvalidAcademicCreditIds.Count());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task ResponseWhenArgumentNullExceptionOccurs()
+            {
+                // arrange
+                criteria.SectionIds = null;
+                academicHistoryServiceMock.Setup(x => x.QueryAcademicCreditsWithInvalidKeysAsync(criteria)).Throws(new ArgumentNullException());
+
+                // act
+                var response = await academicHistoryController.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task ResponseWhenArgumentExceptionOccurs()
+            {
+                // arrange
+                criteria.SectionIds = null;
+                academicHistoryServiceMock.Setup(x => x.QueryAcademicCreditsWithInvalidKeysAsync(criteria)).Throws(new ArgumentException());
+
+                // act
+                var response = await academicHistoryController.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
             }
         }
     }

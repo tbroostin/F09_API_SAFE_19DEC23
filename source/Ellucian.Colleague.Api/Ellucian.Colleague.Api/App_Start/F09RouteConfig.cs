@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 using System.Web.Http;
+using System.Web.Mvc;
 using System.Web.Routing;
 using Ellucian.Web.Http.Routes;
 
@@ -171,6 +172,134 @@ namespace Ellucian.Colleague.Api
                     headerVersion = new HeaderVersionConstraint(1, true)
                 }
             );
+
+            // F09 teresa@toad-code.com 06/17/19
+            routes.MapHttpRoute(
+                 name: "GetF09KaSelectById",
+                 routeTemplate: "f09/get-f09KaSelect/{personId}",
+                 defaults: new { controller = "F09KaSelect", action = "GetF09KaSelectAsync" },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("GET"),
+                     headerVersion = new HeaderVersionConstraint(1, true)
+                 }
+             );
+
+            // F09 teresa@toad-code.com 06/18/19
+            routes.MapHttpRoute(
+                 name: "GetF09KaGradingById",
+                 routeTemplate: "f09/get-f09KaGrading/{stcId}",
+                 defaults: new { controller = "F09KaGrading", action = "GetF09KaGradingAsync" },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("GET"),
+                     headerVersion = new HeaderVersionConstraint(1, true)
+                 }
+             );
+
+            // F09 teresa@toad-code.com 06/19/19
+            routes.MapHttpRoute(
+                name: "PutF09KaGrading",
+                routeTemplate: "f09/put-f09KaGrading",
+                defaults: new { controller = "F09KaGrading", action = "PutF09KaGradingAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("PUT"),
+                    headerVersion = new HeaderVersionConstraint(1, true)
+                }
+            );
+
+            // F09 teresa@toad-code.com 11/30/19
+            routes.MapHttpRoute(
+                name: "GetF09Report",
+                routeTemplate: "f09/get-f09Report",
+                defaults: new { controller = "F09Report", action = "GetF09ReportAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("PUT"),
+                    headerVersion = new HeaderVersionConstraint(1, true)
+                }
+            );
+
+            // F09 teresa@toad-code.com 07/30/20
+            routes.MapHttpRoute(
+                 name: "GetF09EvalSelect",
+                 routeTemplate: "f09/get-f09EvalSelect/{personId}",
+                 defaults: new { controller = "F09EvalSelect", action = "GetF09EvalSelectAsync" },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("GET"),
+                     headerVersion = new HeaderVersionConstraint(1, true)
+                 }
+             );
+
+            // F09 teresa@toad-code.com 07/30/20
+            routes.MapHttpRoute(
+                 name: "GetF09EvalForm",
+                 routeTemplate: "f09/get-F09EvalForm/{key}",
+                 defaults: new { controller = "F09EvalForm", action = "GetF09EvalFormAsync" },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("GET"),
+                     headerVersion = new HeaderVersionConstraint(1, true)
+                 }
+             );
+
+            // F09 teresa@toad-code.com 07/30/20
+            routes.MapHttpRoute(
+                name: "PutF09EvalForm",
+                routeTemplate: "f09/put-F09EvalForm",
+                defaults: new { controller = "F09EvalForm", action = "PutF09EvalFormAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("PUT"),
+                    headerVersion = new HeaderVersionConstraint(1, true)
+                }
+            );
+
+
+            #region TuitionPaymentPlan
+            routes.MapHttpRoute(
+                 name: "GetTuitionPaymentForm",
+                 routeTemplate: "f09/tuition-payment/{studentId}/{paymentPlanType}",
+                 defaults: new { controller = "F09TuitionPayment", action = "GetFormInformationAsync", @paymentPlanType = UrlParameter.Optional },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("GET"),
+                     headerVersion = new HeaderVersionConstraint(1, true)
+                 }
+             );
+            //routes.MapHttpRoute(
+            //     name: "GetTuitionChangeForm",
+            //     routeTemplate: "f09/tuition-change-payment/{studentId}",
+            //     defaults: new { controller = "F09TuitionPayment", action = "GetChangeFormInformationAsync" },
+            //     constraints: new
+            //     {
+            //         httpMethod = new HttpMethodConstraint("GET"),
+            //         headerVersion = new HeaderVersionConstraint(1, true)
+            //     }
+            // );
+            routes.MapHttpRoute(
+                 name: "SubmitTuitionPaymentForm",
+                 routeTemplate: "f09/tuition-payment/",
+                 defaults: new { controller = "F09TuitionPayment", action = "PostPaymentPlanAsync" },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("POST"),
+                     headerVersion = new HeaderVersionConstraint(1, true)
+                 }
+             );
+            routes.MapHttpRoute(
+                 name: "SubmitTuitionChangeForm",
+                 routeTemplate: "f09/tuition-payment/",
+                 defaults: new { controller = "F09TuitionPayment", action = "PutPaymentPlanAsync" },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("PUT"),
+                     headerVersion = new HeaderVersionConstraint(1, true)
+                 }
+             );
+            #endregion TuitionPaymentPlan
 
         }
     }

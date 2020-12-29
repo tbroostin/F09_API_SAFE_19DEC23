@@ -1,5 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -137,6 +136,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             InstructionalContacts = _instructionalContacts.AsReadOnly();
             SectionCharges = _sectionCharges.AsReadOnly();
             ExcludeFromAddAuthorization = false;
+            ShowSpecialIcon = false;
         }
 
         #endregion
@@ -278,6 +278,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// Indicates whether the section should show in the course catalog 
         /// </summary>
         public bool HideInCatalog { get { return _HideInCatalog; } }
+        /// <summary>
+        /// Subject of the section
+        /// </summary>
+        public string Subject { get; set; }
 
         #endregion
 
@@ -310,6 +314,12 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// Grade scheme
         /// </summary>
         public string GradeSchemeCode { get; set; }
+
+        /// <summary>
+        /// Grade subscheme
+        /// </summary>
+        public string GradeSubschemeCode { get; set; }
+
 
         ///<summary>
         /// Course categories
@@ -728,6 +738,17 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// Attendance tracking type for the course section
         /// </summary>
         public AttendanceTrackingType AttendanceTrackingType { get; set; }
+
+        /// <summary>
+        /// Synonym for the section
+        /// </summary>
+        public string Synonym { get; set; }
+
+        /// <summary>
+        /// Indicates whether this section should display a client-specified icon (when provided) in course catalog and section search
+        /// </summary>
+        public bool ShowSpecialIcon { get; set; }
+
         #endregion
 
         #region Calculated properties

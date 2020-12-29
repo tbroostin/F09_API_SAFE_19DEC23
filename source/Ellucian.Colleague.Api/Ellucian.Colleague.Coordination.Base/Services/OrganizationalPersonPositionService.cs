@@ -1,8 +1,11 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Security;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -15,11 +18,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
     /// Service to retrieve the current organizational structure
     /// </summary>
     [RegisterType]
-    public class OrganizationalPersonPositionService : IOrganizationalPersonPositionService
+    public class OrganizationalPersonPositionService : BaseCoordinationService, IOrganizationalPersonPositionService
     {
         private readonly IOrganizationalPersonPositionRepository _orgPersonPositionRepository;
         private readonly IPersonBaseRepository _personBaseRepository;
-        private readonly Ellucian.Web.Adapters.IAdapterRegistry _adapterRegistry;
         private readonly ILogger _logger;
 
         /// <summary>
@@ -29,9 +31,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="orgPersonPositionRepository"></param>
         /// <param name="personBaseRepository"></param>
         /// <param name="logger"></param>
-        public OrganizationalPersonPositionService(IAdapterRegistry adapterRegistry, IOrganizationalPersonPositionRepository orgPersonPositionRepository, IPersonBaseRepository personBaseRepository, ILogger logger)
+        public OrganizationalPersonPositionService(IAdapterRegistry adapterRegistry, IOrganizationalPersonPositionRepository orgPersonPositionRepository, IPersonBaseRepository personBaseRepository, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger)
+            : base(adapterRegistry, currentUserFactory, roleRepository, logger)
         {
-            _adapterRegistry = adapterRegistry;
             _orgPersonPositionRepository = orgPersonPositionRepository;
             _personBaseRepository = personBaseRepository;
             _logger = logger;
@@ -49,6 +51,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 throw new ArgumentNullException("criteria", "Organizational Person Position Query Criteria cannot be null.");
             }
+
+            CheckViewOrUpdateOrganizationalRelationshipsPermission();
+
             if (string.IsNullOrEmpty(criteria.SearchString))
             {
                 if (criteria.Ids == null || criteria.Ids.Count() == 0)
@@ -90,6 +95,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 throw new ArgumentNullException("id", "id is required to get organizational person position.");
             }
+
+            CheckViewOrUpdateOrganizationalRelationshipsPermission();
+
             var organizationalPersonPositions = await _orgPersonPositionRepository.GetOrganizationalPersonPositionsByIdsAsync(new List<string> { id });
             if (organizationalPersonPositions.Count() < 1)
             {
@@ -142,6 +150,19 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
 
             return orgPersonPositionDtos;
+        }
+
+        /// <summary>
+        /// Throws an exception if the current user does not have the <see cref="BasePermissionCodes.ViewOrganizationalRelationships"/> 
+        /// or <see cref="BasePermissionCodes.UpdateOrganizationalRelationships"/> permission.
+        /// </summary>
+        private void CheckViewOrUpdateOrganizationalRelationshipsPermission()
+        {
+            if (!HasPermission(BasePermissionCodes.ViewOrganizationalRelationships)
+                && !HasPermission(BasePermissionCodes.UpdateOrganizationalRelationships))
+            {
+                throw new PermissionsException("User does not have permission to view organizational relationships.");
+            }
         }
     }
 }

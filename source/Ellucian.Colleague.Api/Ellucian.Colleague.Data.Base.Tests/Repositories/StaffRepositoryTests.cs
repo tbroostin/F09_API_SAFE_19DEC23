@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Runtime.Caching;
@@ -494,7 +494,9 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                         {
                             Recordkey = i.recordKey,
                             StaffStatus = i.status,
-                            StaffType = i.type
+                            StaffType = i.type,
+                            StaffInitials = i.initials,
+                            StaffLoginId = i.loginid
                         }).ToList()));
 
             dataReaderMock.Setup(a => a.BulkReadRecordAsync<Staff>(It.IsAny<string[]>(), true))
@@ -508,7 +510,9 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                         {
                             Recordkey = i.recordKey,
                             StaffStatus = i.status,
-                            StaffType = i.type
+                            StaffType = i.type,
+                            StaffInitials = i.initials,
+                            StaffLoginId = i.loginid
                         }).ToList())
                      ));
 

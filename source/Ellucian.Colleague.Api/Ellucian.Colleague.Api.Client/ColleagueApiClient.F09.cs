@@ -33,6 +33,27 @@ namespace Ellucian.Colleague.Api.Client
 
         // F09 teresa@toad-code.com 05/21/19
         private static readonly string getF09Ssn = "f09/get-f09Ssn";
-        private static readonly string updateF09Ssn = "f09/put-f09Ssn";                                                      
+        private static readonly string updateF09Ssn = "f09/put-f09Ssn";
+
+        // F09 teresa@toad-code.com 07/17/19
+        private static readonly string getF09KaSelect = "f09/get-f09KaSelect";
+
+        // F09 teresa@toad-code.com 06/18/19
+        private static readonly string getF09KaGrading = "f09/get-f09KaGrading";
+
+        // F09 teresa@toad-code.com 06/18/19
+        private static readonly string updateF09KaGrading = "f09/put-f09KaGrading";
+
+        // F09 teresa@toad-code.com 11/30/19
+        private static readonly string getF09Report = "f09/get-f09Report";
+
+        // F09 teresa@toad-code.com 07/30/20
+        private static readonly string getF09EvalSelect = "f09/get-f09EvalSelect";
+        private static readonly string getF09EvalForm = "f09/get-f09EvalForm";
+        private static readonly string updateF09EvalForm = "f09/put-f09EvalForm";
+
+        #region TuitionPaymentPlan
+        private static readonly string _getF09Payment = "f09/tuition-payment";
+        #endregion TuitionPaymentPlan
     }
 }

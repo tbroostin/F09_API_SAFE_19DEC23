@@ -24,6 +24,7 @@ namespace Ellucian.Colleague.Dtos.Student.Requirements
     /// <summary>
     /// enum to define explananation for Acad credit or course. This implies whether acad credit/course that is applied is 'Extra' to requirement completion.
     /// Default Value is 'None'.
+    /// MinGrade indicates that the credit hasn't met MinGrade syntax. Such credit will not be applied but will remain related.
     /// </summary>
     [JsonConverter(typeof(StringEnumConverter))]
     public enum AcadResultExplanation
@@ -35,7 +36,11 @@ namespace Ellucian.Colleague.Dtos.Student.Requirements
         /// <summary>
         /// extra
         /// </summary>
-        Extra
+        Extra,
+        /// <summary>
+        /// To indicate that academic credit was not applied because it fails to meet Minimum Grade 
+        /// </summary>
+        MinGrade
 
     }
 }

@@ -1,9 +1,10 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -27,7 +28,9 @@ using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
+using System.Net.Configuration;
 using System.Text;
 using System.Threading.Tasks;
 using Course2 = Ellucian.Colleague.Dtos.Student.Course2;
@@ -72,15 +75,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private List<Domain.Student.Entities.CourseType> _courseCategories = null;
         private List<Domain.Student.Entities.CourseTitleType> _courseTitleTypes = null;
         private List<Domain.Student.Entities.CourseStatuses> _courseStatuses = null;
-
-        //
-        //private IEnumerable<CreditCategory> _creditCategoriesEntitites = null;
-        //private IEnumerable<Domain.Student.Entities.GradeScheme> _gradeSchemesEntities = null;
-        //private IEnumerable<Domain.Student.Entities.AcademicLevel> _academicLevelsEntities = null;
-        //private IEnumerable<Domain.Student.Entities.InstructionalMethod> _instructionalMethodEntites = null;
-        //private IEnumerable<Domain.Student.Entities.CourseLevel> _courseLevelsEntities = null;
-        //private IEnumerable<Domain.Student.Entities.Subject> _subjectEntities = null;
-
+        private List<Domain.Student.Entities.CipCode> _cipCodes = null;
 
         /// <summary>
         /// Store the version of Lucene.net being used - required in the constructor of several Lucene objects
@@ -95,6 +90,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private static DateTime indexBuildTime = new DateTime();
 
         /// <summary>
+        /// The instant enrollment course search engine's index, stored in memory
+        /// </summary>
+        private static RAMDirectory InstantEnrollmentCourseIndex;
+        private static object InstantEnrollmentIndexLock = new object();
+        private static DateTime instantEnrollmentIndexBuildTime = new DateTime();
+
+
+        /// <summary>
         /// A query analyzer, used in the construction and parsing of queries against the index
         /// </summary>
         private static StandardAnalyzer Analyzer = new StandardAnalyzer(LuceneVersion);
@@ -103,6 +106,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// Default value for the course delimiter
         /// </summary>
         public static string CourseDelimiter = "-";
+
+        /// <summary>
+        /// Default values for min and max minutes in a day
+        /// </summary>
+        private const int MinimumMinutesInADay = 0;
+        private const int MaximumMinutesInADay = 1440;
 
         public CourseService(IAdapterRegistry adapterRegistry, ICourseRepository courseRepository,
             IReferenceDataRepository referenceDataRepository, IStudentReferenceDataRepository studentReferenceDataRepository,
@@ -206,9 +215,61 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             coursePage.LatestTime = criteria.LatestTime;
             coursePage.OnlineCategories = BuildOnlineCategoryFilter(filterBasis.Sections, criteria);
             coursePage.OpenSections = BuildOpenSectionsFilter(filterBasis.Sections, criteria);
+            coursePage.OpenAndWaitlistSections = BuildOpenAndWaitlistSectionsFilter(filterBasis.Sections, criteria);
             return coursePage;
         }
 
+        /// <summary>
+        /// Instant Enrollment Search is Sections driven. Therefore all the filters will be applied to the valid Instant Enrollment sections. 
+        /// Returns a page of sections for Instant Enrollment course search.
+        /// </summary>
+        /// <param name="criteria">Course search criteria</param>
+        /// <param name="pageSize">Number of items per page</param>
+        /// <param name="pageIndex">Page number to return</param>
+        /// <returns>A SectionPage DTO which is essentially a data page of type Section DTO along with associated filters. 
+        /// In case there are no valid IE Sections or there are no sections filtered then result will always be empty result and will never be null.
+        /// </returns>
+        /// 
+
+        public async Task<SectionPage> InstantEnrollmentSearchAsync(InstantEnrollmentCourseSearchCriteria criteriaForIE, int pageSize, int pageIndex)
+        {
+            InstantEnrollmentCourseSearchCriteria ieSearchCriteria = new InstantEnrollmentCourseSearchCriteria();
+            if (criteriaForIE != null)
+            {
+                ieSearchCriteria = criteriaForIE;
+                ieSearchCriteria.Keyword = criteriaForIE.Keyword != null ? criteriaForIE.Keyword.Replace("_~", "/") : null;
+
+            }
+            //make a placeholder for empty section page
+            SectionPage emptySectionPage = new SectionPage(new List<Dtos.Student.Section3>(), pageSize, pageIndex);
+            //copy instant enrollment criteria to CourseSearch criteria
+            CourseSearchCriteria courseSearchCriteria = CopyIECriteria(ieSearchCriteria);
+
+            // Courses and Sections Returned by instant enrollment filter. Even though we are returning courses in filtered results but those courses are never returned back in 
+            //DTO. We only return sections but that's what is IE about.  IE search is sections driven.
+            var filterResult = await BuildInstantEnrollmentFilterResultAsync(ieSearchCriteria);
+            if (filterResult != null)
+            {
+                List<Dtos.Student.Section3> sectionsDto = ConvertSectionsToDto(filterResult.Sections);
+                SectionPage sectionPage = new SectionPage(sectionsDto, pageSize, pageIndex);
+                // Build outgoing filters. Built against the results from the overall search and all current filters.
+                sectionPage.Locations = await BuildSectionLocationFilterAsyncForCourseSearchCriteria(filterResult, courseSearchCriteria);
+                sectionPage.Faculty = BuildFacultyFilter(filterResult.Sections, courseSearchCriteria);
+                sectionPage.DaysOfWeek = BuildDayOfWeekFilter(filterResult.Sections, courseSearchCriteria);
+                sectionPage.TopicCodes = BuildSectionTopicCodeFilter(filterResult, courseSearchCriteria);
+                sectionPage.Terms = BuildTermFilter(filterResult.Sections, courseSearchCriteria);
+                sectionPage.EarliestTime = courseSearchCriteria.EarliestTime;
+                sectionPage.LatestTime = courseSearchCriteria.LatestTime;
+                sectionPage.OnlineCategories = BuildOnlineCategoryFilter(filterResult.Sections, courseSearchCriteria);
+                sectionPage.OpenSections = BuildOpenSectionsFilter(filterResult.Sections, courseSearchCriteria);
+                sectionPage.OpenAndWaitlistSections = BuildOpenAndWaitlistSectionsFilter(filterResult.Sections, courseSearchCriteria);
+                return sectionPage;
+            }
+            else
+            {
+                return emptySectionPage;
+            }
+        }
 
 
         public static void ClearIndex()
@@ -219,10 +280,76 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
         }
 
+        public static void ClearInstantEnrollmentIndex()
+        {
+            lock (InstantEnrollmentIndexLock)
+            {
+                InstantEnrollmentCourseIndex = null;
+            }
+        }
+
+
+        private CourseSearchCriteria CopyIECriteria(InstantEnrollmentCourseSearchCriteria criteriaForIE)
+        {
+            CourseSearchCriteria courseSearchCriteria = new CourseSearchCriteria();
+            if (criteriaForIE != null)
+            {
+                courseSearchCriteria.Keyword = criteriaForIE.Keyword;
+                courseSearchCriteria.Locations = criteriaForIE.Locations;
+                courseSearchCriteria.OnlineCategories = criteriaForIE.OnlineCategories;
+                courseSearchCriteria.OpenAndWaitlistSections = criteriaForIE.OpenAndWaitlistSections;
+                courseSearchCriteria.OpenSections = criteriaForIE.OpenSections;
+                courseSearchCriteria.SectionEndDate = criteriaForIE.SectionEndDate;
+                courseSearchCriteria.SectionIds = criteriaForIE.SectionIds;
+                courseSearchCriteria.CourseIds = criteriaForIE.CourseIds;
+                courseSearchCriteria.SectionStartDate = criteriaForIE.SectionStartDate;
+                courseSearchCriteria.SectionEndDate = criteriaForIE.SectionEndDate;
+                courseSearchCriteria.LatestTime = criteriaForIE.LatestTime;
+                courseSearchCriteria.EarliestTime = criteriaForIE.EarliestTime;
+                courseSearchCriteria.DaysOfWeek = criteriaForIE.DaysOfWeek;
+                courseSearchCriteria.Terms = criteriaForIE.Terms;
+                courseSearchCriteria.TopicCodes = criteriaForIE.TopicCodes;
+                courseSearchCriteria.Faculty = criteriaForIE.Faculty;
+            }
+            return courseSearchCriteria;
+        }
+        private List<Dtos.Student.Section3> ConvertSectionsToDto(List<Domain.Student.Entities.Section> sections)
+        {
+            List<Dtos.Student.Section3> sectionsConverted = new List<Dtos.Student.Section3>();
+            var sectionDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Section, Dtos.Student.Section3>();
+            foreach (var section in sections)
+            {
+                var courseSearchDto = sectionDtoAdapter.MapToType(section);
+                sectionsConverted.Add(courseSearchDto);
+            }
+            return sectionsConverted;
+        }
         private async Task<IEnumerable<Domain.Student.Entities.Course>> GetCatalogAsync()
         {
             // List of subjects to include in the catalog
-            var catalogSubjectCodes = (await _studentReferenceDataRepository.GetSubjectsAsync()).Where(s => s.ShowInCourseSearch == true).Select(s => s.Code);
+            var catalogSubjectCodes = (await _studentReferenceDataRepository.GetSubjectsAsync()).Where(s => s.ShowInCourseSearch == true).Select(s => s.Code).ToList();
+
+            // Get all courses in the given subjects
+            var courses = (await _courseRepository.GetAsync())
+                                .Where(c => c.IsCurrent == true && catalogSubjectCodes.Contains(c.SubjectCode) && c.IsPseudoCourse == false)
+                                .OrderBy(c => c.SubjectCode)
+                                .ThenBy(c => c.Number);
+
+            return courses;
+        }
+
+        private async Task<IEnumerable<Domain.Student.Entities.Course>> GetInstantEnrollmentCatalogAsync()
+        {
+            // List of subjects to include in the catalog
+            var catalogSubjectCodes = (await _studentReferenceDataRepository.GetSubjectsAsync()).Select(s => s.Code).ToList();
+
+            // List of subjects allowed in Instant Enrollment
+            var ieSubjectCodes = (await _studentConfigRepository.GetInstantEnrollmentConfigurationAsync()).SubjectCodesToDisplayInCatalog;
+            if (ieSubjectCodes != null && ieSubjectCodes.Any())
+            {
+                // If there are IE-specific subjects, use those; otherwise, use the broader list of subjects
+                catalogSubjectCodes = ieSubjectCodes.ToList();
+            }
 
             // Get all courses in the given subjects
             var courses = (await _courseRepository.GetAsync())
@@ -250,7 +377,50 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             on crs.Id equals sec.CourseId into joinCourseSection
                             from crsSec in joinCourseSection
                             select crsSec);
+             return sections;
+        }
+
+        /// <summary>
+        /// For a given set of courses - get the catalog sections associated to them making sure to NOT include any section that is not active and is not viewable in the catalog.
+        /// </summary>
+        /// <param name="courses">Courses for which associated sections are requested</param>
+        /// <returns>Active Sections</returns>
+        private async Task<IEnumerable<Domain.Student.Entities.Section>> GetInstantEnrollmentSectionsForCoursesAsync(IEnumerable<Domain.Student.Entities.Course> courses)
+        {
+            IEnumerable<Domain.Student.Entities.Section> ieSections = new List<Domain.Student.Entities.Section>();
+            // Registration terms used to limit sections retrieved
+            var allIeSections = (await _sectionRepository.GetInstantEnrollmentSectionsAsync());
+            // Get all sections for the selected courses
+            var sections = (from crs in courses
+                            join sec in allIeSections.Where(s => s.IsActive && !s.HideInCatalog)
+                            on crs.Id equals sec.CourseId into joinCourseSection
+                            from crsSec in joinCourseSection
+                            select crsSec);
             return sections;
+        }
+        /// <summary>
+        /// This returns the list of courses for the sections passed.
+        /// Those courses should belong to valid subject that is defined for IE on CECS form
+        /// If there are no subjects defined specifically for IE courses then all the subjects are looked at
+        /// Those subjects should not be hidden for the catalog
+        /// </summary>
+        /// <param name="sections"></param>
+        /// <returns>List of Courses associated with the Sections passed</returns>
+        private async Task<IEnumerable<Domain.Student.Entities.Course>> GetInstantEnrollmentCoursesForSectionsAsync(IEnumerable<Domain.Student.Entities.Section> sections)
+        {
+            if(sections==null)
+            {
+                return null;
+            }
+            List<Domain.Student.Entities.Course> courses = new List<Domain.Student.Entities.Course>();
+            // Get the courses for these sections
+            var sectionCourseIds = sections.Select(s => s.CourseId).Distinct();
+            if (sectionCourseIds.Any())
+            {
+                courses = (await GetInstantEnrollmentCatalogAsync()).Where(c => sectionCourseIds.Contains(c.Id)).ToList();
+            }
+            
+            return courses;
         }
 
         #region Filter
@@ -263,13 +433,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             // Course filters--start with list of courses from search (keyword or requirement)
             filterResult.Courses = searchResult.Courses;
-            // Filter courses based on selected subjects
+            // Filter courses based on selected subjects. This will also work for subjects filter on sections because SEC.SUBJECT is carried from the COURSE.
             filterResult.Courses = FilterBySubjects(filterResult.Courses, criteria.Subjects).ToList();
-            // filter courses based on selected course levels
-            filterResult.Courses = FilterByCourseLevels(filterResult.Courses, criteria.CourseLevels).ToList();
+           
 
-            // LOCATION, TOPIC CODE, AND ACADEMIC LEVEL FILTERS APPLY TO BOTH COURSES AND SECTIONS
-            bool updateCoursesFromSections = false;
+                // COURSE LEVELS, LOCATION, TOPIC CODE, AND ACADEMIC LEVEL FILTERS APPLY TO BOTH COURSES AND SECTIONS
+                bool updateCoursesFromSections = false;
             // If there is a location filter, filter the sections
             if ((criteria.Locations != null) && (criteria.Locations.Any()))
             {
@@ -289,7 +458,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // There are no values in the location filters, therefore get sections for only the courses.
                 filterResult.Sections = (await RetrieveSectionsForFilteredCoursesAsync(filterResult.Courses, searchResult.Sections)).ToList();
             }
-
+            // filter courses based on selected course levels
+            if (criteria.CourseLevels != null && criteria.CourseLevels.Any())
+            {
+                //Filter the sections using course levels.
+                filterResult.Sections = FilterSectionsByCourseLevel(filterResult.Sections, criteria.CourseLevels).ToList();
+                //filter courses based upon course levels.
+                filterResult.Courses = FilterByCourseLevels(filterResult.Courses, criteria.CourseLevels).ToList();
+                // make sure we have a course for every filtered section (course may have been filtered out).
+                updateCoursesFromSections = true;
+            }
             // If there is a topic code filter, filter the sections first
             if ((criteria.TopicCodes != null) && (criteria.TopicCodes.Any()))
             {
@@ -348,10 +526,67 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             // Determine earliest start time and latest end time
             var collectionEarliestTime = meetingCollection.Select(mc => mc.mtg.StartTime).Min().GetValueOrDefault().DateTime.TimeOfDay.TotalMinutes;
             var collectionLatestTime = meetingCollection.Select(mc => mc.mtg.EndTime).Max().GetValueOrDefault().DateTime.TimeOfDay.TotalMinutes;
+
+            var filteredSections = filterResult.Sections;
             // If provided start/end times fall outside the criteria time range, filter sections
             if ((collectionEarliestTime < criteria.EarliestTime || collectionLatestTime > criteria.LatestTime) && (!(criteria.EarliestTime == criteria.LatestTime)))
             {
                 filterResult.Sections = FilterSectionsByTimeOfDay(filterResult.Sections, criteria.EarliestTime, criteria.LatestTime).ToList();
+                sectionFiltersUsed = true;
+            }
+            //this flag indicates if there was any time of the day provided (this is like the range of times for example: 8am - 12pm). This is true when no TOD is provided
+            bool IsDefaultTimeFilterSelected = criteria.EarliestTime == MinimumMinutesInADay && (criteria.LatestTime == MinimumMinutesInADay || criteria.LatestTime == MaximumMinutesInADay);
+            bool IsStartsByEndsByFilterApplied = false;
+            int collectionStartsAtTime = MinimumMinutesInADay;
+            int collectionEndsByTime = MaximumMinutesInADay;
+
+            //If provided the starts at and/or ends by time for course search criteria, we filter with time value provided
+            if (!string.IsNullOrEmpty(criteria.StartsAtTime) && string.IsNullOrEmpty(criteria.EndsByTime))
+            {
+                //If just starts at time is provided, we convert the starts at time into equivalent minutes in a day
+                collectionStartsAtTime = (int)DateTime.ParseExact(criteria.StartsAtTime, "hh:mm tt", CultureInfo.InvariantCulture).TimeOfDay.TotalMinutes;
+                collectionEndsByTime = MaximumMinutesInADay;
+
+                //Check if default time filter is selected. If yes, set the time range by taking minimum of the starts at time
+                if (!IsDefaultTimeFilterSelected)
+                {
+                    collectionStartsAtTime = collectionStartsAtTime < criteria.EarliestTime ? collectionStartsAtTime : criteria.EarliestTime;
+                    collectionEndsByTime = criteria.LatestTime;
+                }
+                IsStartsByEndsByFilterApplied = true;
+            }
+            else if (string.IsNullOrEmpty(criteria.StartsAtTime) && !string.IsNullOrEmpty(criteria.EndsByTime))
+            {
+                //If just ends by time is provided, we convert the ends by time into equivalent minutes in a day
+                collectionStartsAtTime = MinimumMinutesInADay;
+                collectionEndsByTime = (int)DateTime.ParseExact(criteria.EndsByTime, "hh:mm tt", CultureInfo.InvariantCulture).TimeOfDay.TotalMinutes;
+
+                //Check if default time filter is selected. If yes, set the time range by taking maximum of the ends by time
+                if (!IsDefaultTimeFilterSelected)
+                {
+                    collectionStartsAtTime = criteria.EarliestTime;
+                    collectionEndsByTime = collectionEndsByTime > criteria.LatestTime ? collectionEndsByTime : criteria.LatestTime;
+                }
+                IsStartsByEndsByFilterApplied = true;
+            }
+            else if (!string.IsNullOrEmpty(criteria.StartsAtTime) && !string.IsNullOrEmpty(criteria.EndsByTime))
+            {
+                //If both starts at and ends by time is provided, we convert the both times into equivalent minutes in a day
+                collectionStartsAtTime = (int)DateTime.ParseExact(criteria.StartsAtTime, "hh:mm tt", CultureInfo.InvariantCulture).TimeOfDay.TotalMinutes;
+                collectionEndsByTime = (int)DateTime.ParseExact(criteria.EndsByTime, "hh:mm tt", CultureInfo.InvariantCulture).TimeOfDay.TotalMinutes;
+
+                //Check if default time filter is selected. If yes, set the time range by taking minimum of the starts at time and maximum of the ends by time
+                if (!IsDefaultTimeFilterSelected)
+                {
+                    collectionStartsAtTime = collectionStartsAtTime < criteria.EarliestTime ? collectionStartsAtTime : criteria.EarliestTime;
+                    collectionEndsByTime = collectionEndsByTime > criteria.LatestTime ? collectionEndsByTime : criteria.LatestTime;
+                }
+                IsStartsByEndsByFilterApplied = true;
+            }
+
+            if (IsStartsByEndsByFilterApplied)
+            {
+                filterResult.Sections = FilterSectionsByTimeOfDay(filteredSections, collectionStartsAtTime, collectionEndsByTime).ToList();
                 sectionFiltersUsed = true;
             }
 
@@ -389,8 +624,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //filter sections that are open 
             if (criteria.OpenSections)
             {
-                var sectionsDict = filterResult.Sections.ToDictionary(s => s.Id, s => s);
+                //Filter sections which are ended. When open sections filter is selected, We need to get sections which are active.
+                var sectionsDict = filterResult.Sections.Where(s => (s.EndDate.HasValue && s.EndDate.Value >= DateTime.Now) || !s.EndDate.HasValue).ToDictionary(s => s.Id, s => s);
                 await FilterOpenSectionsOnlyAsync(sectionsDict);
+                filterResult.Sections = sectionsDict.Select(s => s.Value).ToList();
+                sectionFiltersUsed = true;
+            }
+
+            if (criteria.OpenAndWaitlistSections)
+            {
+                //Filter sections which are ended. When open sections filter is selected, We need to get sections which are active.
+                filterResult.Sections.RemoveAll(s => (s.EndDate.HasValue && s.EndDate.Value < DateTime.Now));
+                var sectionsDict = filterResult.Sections.ToDictionary(s => s.Id, s => s);
+                await FilterOpenAndWaitlistSectionsAsync(sectionsDict);
                 filterResult.Sections = sectionsDict.Select(s => s.Value).ToList();
                 sectionFiltersUsed = true;
             }
@@ -411,6 +657,123 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             logger.Debug("CourseSearch: FilterResults: " + sw.ElapsedMilliseconds + "ms");
             return filterResult;
         }
+        /// <summary>
+        /// Instant Enrollment search is Sections driven hence all the filters are initially applied to valid IE Sections and then on the courses which belongs to those filtered sections
+        /// </summary>
+        /// <param name="searchResult"></param>
+        /// <param name="criteria"></param>
+        /// <returns>Returns filtered sections and courses. should just return empty resultset if no criteria is matched</returns>
+        private async Task<CourseSectionResult> FilterInstantEnrollmentResultsAsync(CourseSectionResult searchResult, InstantEnrollmentCourseSearchCriteria criteria)
+        {
+            var sw = new Stopwatch();
+            sw.Start();
+            var filterResult = new CourseSectionResult();
+            if(searchResult==null)
+            {
+                searchResult=new CourseSectionResult();
+            }
+
+            // Course filters--start with list of courses from search (keyword or requirement)
+            filterResult.Courses = searchResult.Courses;
+            filterResult.Sections = searchResult.Sections;
+
+          
+            // If there is a location filter, filter the sections
+            if ((criteria.Locations != null) && (criteria.Locations.Any()))
+            {
+                // filter the sections that have location defined in criteria. This step must be taken to ensure that if any
+                // sections were identified during the initial (keyword) search, only those sections are included in the filtering,
+                // and the sequence of those sections must be preserved as well.
+                // Filter the sections using location.
+                filterResult.Sections = FilterSectionsByLocations(searchResult.Sections, criteria.Locations).ToList();
+            }
+
+            // If there is a topic code filter, filter the sections first
+            if ((criteria.TopicCodes != null) && (criteria.TopicCodes.Any()))
+            {
+                // Filter the sections using topic codes.
+                filterResult.Sections = FilterSectionsByTopicCode(filterResult.Sections, criteria.TopicCodes).ToList();
+            }
+            // Faculty filter
+            if ((criteria.Faculty != null) && (criteria.Faculty.Any()))
+            {
+                filterResult.Sections = FilterSectionsByFaculty(filterResult.Sections, criteria.Faculty).ToList();
+            }
+
+            // DayOfWeek filter
+            if ((criteria.DaysOfWeek != null) && (criteria.DaysOfWeek.Any()))
+            {
+                // Filter sections based on selected days of the week
+                filterResult.Sections = FilterSectionsByDayOfWeek(filterResult.Sections, criteria.DaysOfWeek).ToList();
+            }
+            // Create a join of all section meetings to determine if the filter should be used.
+            //Union section.Meetings with section.PrimarySectionMeetings because for cross-listed sections meetings could be in either of the property
+            var meetingCollection = (from sec in filterResult.Sections
+                                     from mtg in sec.Meetings
+                                     select new { mtg, sec })
+                                     .Union
+                                    (from sec in filterResult.Sections
+                                     from mtg in sec.PrimarySectionMeetings
+                                     select new { mtg, sec });
+            // Determine earliest start time and latest end time
+            var collectionEarliestTime = meetingCollection.Select(mc => mc.mtg.StartTime).Min().GetValueOrDefault().DateTime.TimeOfDay.TotalMinutes;
+            var collectionLatestTime = meetingCollection.Select(mc => mc.mtg.EndTime).Max().GetValueOrDefault().DateTime.TimeOfDay.TotalMinutes;
+            // If provided start/end times fall outside the criteria time range, filter sections
+            if ((collectionEarliestTime < criteria.EarliestTime || collectionLatestTime > criteria.LatestTime) && (!(criteria.EarliestTime == criteria.LatestTime)))
+            {
+                filterResult.Sections = FilterSectionsByTimeOfDay(filterResult.Sections, criteria.EarliestTime, criteria.LatestTime).ToList();
+            }
+
+            // Term filter
+            if ((criteria.Terms != null) && (criteria.Terms.Any()))
+            {
+                filterResult.Sections = FilterSectionsByTerm(filterResult.Sections, criteria.Terms).ToList();
+            }
+            // Section Start and End Date filters
+            if (criteria.SectionStartDate.HasValue || criteria.SectionEndDate.HasValue)
+            {
+                filterResult.Sections = FilterSectionsByDate(filterResult.Sections, criteria.SectionStartDate, criteria.SectionEndDate).ToList();
+            }
+
+            // Online Category filter
+            if ((criteria.OnlineCategories != null) && (criteria.OnlineCategories.Any()))
+            {
+                // Online Category filter. Do not flag the use of AnyOnlineCategory as a filter, since that option returns all sections.
+                filterResult.Sections = FilterSectionsByOnlineCategory(filterResult.Sections, criteria.OnlineCategories).ToList();
+            }
+
+            //filter sections that are open 
+            if (criteria.OpenSections)
+            {
+                //Filter sections which are ended. When open sections filter is selected, We need to get sections which are active.
+                var sectionsDict = filterResult.Sections.Where(s => (s.EndDate.HasValue && s.EndDate.Value >= DateTime.Now) || !s.EndDate.HasValue).ToDictionary(s => s.Id, s => s);
+                await FilterOpenSectionsOnlyAsync(sectionsDict);
+                filterResult.Sections = sectionsDict.Select(s => s.Value).ToList();
+            }
+
+            if (criteria.OpenAndWaitlistSections)
+            {
+                //Filter sections which are ended. When open sections filter is selected, We need to get sections which are active.
+                filterResult.Sections.RemoveAll(s => (s.EndDate.HasValue && s.EndDate.Value < DateTime.Now));
+                var sectionsDict = filterResult.Sections.ToDictionary(s => s.Id, s => s);
+                await FilterOpenAndWaitlistSectionsAsync(sectionsDict);
+                filterResult.Sections = sectionsDict.Select(s => s.Value).ToList();
+            }
+
+            // When (and after) section-only filters have been applied, limit the courses to the filtered sections
+                var courseIds = filterResult.Sections.Select(s => s.CourseId).Distinct();
+                var limitedCourses = (from id in courseIds
+                                      join resultCourse in filterResult.Courses
+                                      on id equals resultCourse.Id into joinCourse
+                                      from course in joinCourse
+                                      select course).ToList();
+                filterResult.Courses = limitedCourses;
+
+            sw.Stop();
+            logger.Debug("CourseSearch: FilterInstantEnrollmentResultsAsync: " + sw.ElapsedMilliseconds + "ms");
+            return filterResult;
+        }
+
 
         private IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Course> FilterBySubjects(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Course> courseCollection, IEnumerable<string> subjects)
         {
@@ -495,6 +858,52 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             logger.Debug("CourseSearch: RetrieveSectionsForFilteredCourses returned " + returnSections.Count() + " sections in " + sw.ElapsedMilliseconds + "ms");
             return returnSections;
         }
+
+        /// <summary>
+        /// Assemble sections for the given courses for instant enrollment, starting with the given sections.
+        /// </summary>
+        /// <param name="courses"></param>
+        /// <returns></returns>
+        private async Task<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section>> RetrieveSectionsForFilteredInstantEnrollmentCoursesAsync(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Course> filteredCourses, IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections)
+        {
+            logger.Debug("Start RetrieveSectionsForFilteredInstantEnrollmentCoursesAsync: " + filteredCourses.Count() + " courses and " + sections.Count() + " sections.");
+            var sw = new Stopwatch();
+            sw.Start();
+            // Create a new list of sections to return
+            var returnSections = new List<Ellucian.Colleague.Domain.Student.Entities.Section>();
+          
+            // First get the sections from the original incoming list, but only those for which there is a course in the incoming course list.
+            foreach (var sec in sections)
+            {
+                if (filteredCourses.Select(c => c.Id).Contains(sec.CourseId))
+                {
+                    returnSections.Add(sec);
+                }
+            }
+            // Get related sections from the repository if none found in the original list of sections
+            List<string> courseIds = new List<string>();
+            foreach (var crs in filteredCourses)
+            {
+                // Get sections for this course from the input list of sections (any sections found by the initial search)
+                var searchSection = returnSections.Where(s => s.CourseId == crs.Id).FirstOrDefault();
+
+                if ((searchSection == null))
+                {
+                    // If no sections for this course are already in the returnSections list, add this course Id into the list to be used to pull its sections from the repository.
+                    courseIds.Add(crs.Id);
+                }
+            }
+            // Get all the active sections for any course that did not have sections already in the return sections list.
+            if (courseIds.Any())
+            {
+                returnSections.AddRange((await _sectionRepository.GetInstantEnrollmentSectionsAsync()).Where(s => s.IsActive == true && !s.HideInCatalog));
+            }
+
+            sw.Stop();
+            logger.Debug("CourseSearch: RetrieveSectionsForFilteredInstantEnrollmentCoursesAsync returned " + returnSections.Count() + " sections in " + sw.ElapsedMilliseconds + "ms");
+            return returnSections;
+        }
+
 
         /// Ensure there is a course for every section in the filtered result.
         private async Task<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Course>> RetrieveCoursesForFilteredSectionsAsync(CourseSectionResult filterResult)
@@ -623,11 +1032,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                                      from mtg in sec.Meetings
                                      from dayOfWk in mtg.Days
                                      select new { dayOfWk, sec })
-                                    .Union
-                                    (from sec in sectionCollection
-                                     from mtg in sec.PrimarySectionMeetings
-                                     from dayOfWk in mtg.Days
-                                     select new { dayOfWk, sec });
+                                     .Union
+                                     (from sec in sectionCollection
+                                      from mtg in sec.PrimarySectionMeetings
+                                      from dayOfWk in mtg.Days
+                                      select new { dayOfWk, sec });
+
 
                 foreach (var day in daysOfWeek)
                 {
@@ -651,17 +1061,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                                     (from sec in sectionCollection
                                      from mtg in sec.PrimarySectionMeetings
                                      select new { mtg, sec });
-            // Determine earliest start time and latest end time
-            var collectionEarliestTime = meetingCollection.Select(mc => mc.mtg.StartTime).Min().GetValueOrDefault().DateTime.TimeOfDay.TotalMinutes;
-            var collectionLatestTime = meetingCollection.Select(mc => mc.mtg.EndTime).Min().GetValueOrDefault().DateTime.TimeOfDay.TotalMinutes;
-            // If provided start/end times fall outside the criteria time range, filter sections
-            if (collectionEarliestTime > earliestTime || collectionLatestTime < latestTime)
-            {
+
                 filteredCollection = meetingCollection.Where(m => ((m.mtg.StartTime.GetValueOrDefault().DateTime.TimeOfDay == TimeSpan.MaxValue) ||
                                               (m.mtg.StartTime.GetValueOrDefault().DateTime.TimeOfDay.TotalMinutes >= earliestTime)) &&
                                              ((m.mtg.EndTime.GetValueOrDefault().DateTime.TimeOfDay == TimeSpan.MaxValue) ||
                                               (m.mtg.EndTime.GetValueOrDefault().DateTime.TimeOfDay.TotalMinutes <= latestTime))).Select(s => s.sec).ToList();
-            }
             return filteredCollection.Distinct();
         }
 
@@ -794,6 +1198,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             return filteredSections;
         }
+        //this is to filter all the sections based upon the course levels
+        private IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> FilterSectionsByCourseLevel(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sectionCollection, IEnumerable<string> courseLevels)
+        {
+            List<Ellucian.Colleague.Domain.Student.Entities.Section> filteredSections = sectionCollection.ToList();
+            if (courseLevels != null && courseLevels.Any())
+            {
+                 var newCollection = from level in courseLevels
+                                    let secCourseLevelSections = from sec in sectionCollection
+                                                                where sec.CourseLevelCodes.Contains(level)
+                                                                select sec
+                                    select new { sections = secCourseLevelSections };
+                filteredSections = newCollection.SelectMany(s => s.sections).Distinct().ToList();
+            }
+            return filteredSections;
+        }
 
         private Dictionary<string, Ellucian.Colleague.Domain.Student.Entities.OnlineCategory> GetDomainOnlineCategoryDictionary()
         {
@@ -847,6 +1266,31 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 return;
         }
 
+        private async Task FilterOpenAndWaitlistSectionsAsync(Dictionary<string, Ellucian.Colleague.Domain.Student.Entities.Section> sectionDict)
+        {
+            List<Ellucian.Colleague.Domain.Student.Entities.Section> openSections = new List<Ellucian.Colleague.Domain.Student.Entities.Section>();
+            if (sectionDict != null)
+            {
+                List<string> sectionIds = sectionDict.Keys.ToList();
+                if (sectionIds != null && sectionIds.Count > 0)
+                {
+                    // Open sections are those with available seats greater than 0.
+                    var sectionSeats = (await _sectionRepository.GetSectionsSeatsAsync(sectionIds)).Where(s => (s.Value.Available == null || s.Value.Available > 0)).ToList();
+                    //find the sections that were not open to remove from incoming/original list
+                    IEnumerable<string> missingSectionIds = sectionIds.Except(sectionSeats.Select(s => s.Key));
+                    if (missingSectionIds != null)
+                    {
+                        foreach (string sec in missingSectionIds.ToList())
+                        {
+                            if (!(sectionDict[sec].AllowWaitlist && sectionDict[sec].WaitlistAvailable))
+                                sectionDict.Remove(sec);
+                        }
+                    }
+                }
+            }
+            else
+                return;
+        }
 
         #endregion
 
@@ -893,6 +1337,26 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return filter;
         }
 
+        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildSectionAcademicLevelFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sectionCollection, SectionSearchCriteria criteria)
+        {
+            var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
+            // Get the unique list from the section collection
+            var academicLevelCodes = sectionCollection.Select(x => x.AcademicLevelCode).Distinct();
+            // For each item in the list, count the number of items and build a filter detail
+            foreach (var academicLevelCode in academicLevelCodes)
+            {
+                var filterValueCount = sectionCollection.Where(x => x.AcademicLevelCode == academicLevelCode).Count();
+                var filterDetail = new Ellucian.Colleague.Dtos.Base.Filter()
+                {
+                    Count = filterValueCount,
+                    Value = academicLevelCode,
+                    Selected = criteria.AcademicLevels != null ? criteria.AcademicLevels.Contains(academicLevelCode) : false
+                };
+                filter.Add(filterDetail);
+            }
+            return filter;
+        }
+
         private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildCourseLevelFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Course> courseCollection, CourseSearchCriteria criteria)
         {
             var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
@@ -913,6 +1377,26 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return filter;
         }
 
+        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildSectionCourseLevelFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sectionCollection, SectionSearchCriteria criteria)
+        {
+            var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
+            // Get the unique list from the section collection
+            List<string> sectionLevelCodes = sectionCollection.SelectMany(sec => sec.CourseLevelCodes).Distinct().ToList();
+            // For each item in the list, count the number of items and build a filter detail
+            foreach (string sectionLevelCode in sectionLevelCodes)
+            {
+                var filterValueCount = sectionCollection.SelectMany(x => x.CourseLevelCodes).Where(clc => clc == sectionLevelCode).Count();
+                var filterDetail = new Ellucian.Colleague.Dtos.Base.Filter()
+                {
+                    Count = filterValueCount,
+                    Value = sectionLevelCode,
+                    Selected = criteria.CourseLevels != null ? criteria.CourseLevels.Contains(sectionLevelCode) : false
+                };
+                filter.Add(filterDetail);
+            }
+            return filter;
+        }
+
         private async Task<IEnumerable<Ellucian.Colleague.Dtos.Base.Filter>> BuildLocationFilterAsync(CourseSectionResult result, CourseSearchCriteria criteria)
         {
             var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
@@ -922,13 +1406,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             locationCodes.AddRange(result.Sections.Select(s => s.Location).Distinct().ToList());
             locationCodes = locationCodes.Distinct().ToList();
 
-            // Get location entities that are filterable - only these should end up as filters returned.
-            var allLocations = (await _referenceDataRepository.GetLocationsAsync(false)).ToList();
-            var searchableLocationCodes = allLocations.Where(loc => !loc.HideInSelfServiceCourseSearch).Select(loc => loc.Code).ToList();
-            // Reduce the locations list to only those that should be shown in course search
-            locationCodes = locationCodes.Intersect(searchableLocationCodes).ToList();
+            locationCodes = await LimitToViewableLocations(locationCodes);
 
-            // For each location, count the courses with this location, or that have sections with this location
+            // For each location, count the courses with each location, or that have sections with this location
             foreach (string locationCode in locationCodes)
             {
                 var filterCourseIds = new List<string>();
@@ -956,11 +1436,164 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return filter;
         }
 
+        private async Task<List<string>> LimitToViewableLocations(List<string> locationResults)
+        {
+            // Get location entities that are filterable - only these should end up as filters returned.
+            var allLocations = (await _referenceDataRepository.GetLocationsAsync(false)).ToList();
+            var searchableLocationCodes = allLocations.Where(loc => !loc.HideInSelfServiceCourseSearch).Select(loc => loc.Code).ToList();
+            // Reduce the locations list to only those that should be shown in course search
+            return locationResults.Intersect(searchableLocationCodes).ToList();
+        }
 
-        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildFacultyFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria)
+        private async Task<List<string>> LimitToViewableLocationsIncludingNoLocation(List<string> locationResults)
+        {
+            // Get location entities that are filterable - only these should end up as filters returned.
+            var allLocations = (await _referenceDataRepository.GetLocationsAsync(false)).ToList();
+            var searchableLocationCodes = allLocations.Where(loc => !loc.HideInSelfServiceCourseSearch).Select(loc => loc.Code).ToList();
+            if (locationResults.Any(lr => lr == null)) {
+                searchableLocationCodes.Add(null);
+            }
+            if (locationResults.Any(lr => lr == string.Empty))
+            {
+                searchableLocationCodes.Add(string.Empty);
+            }
+            // Reduce the locations list to only those that should be shown in course search
+            var viewableLocations = locationResults.Intersect(searchableLocationCodes).ToList();
+            return viewableLocations;
+        }
+
+        /// <summary>
+        /// Builds a section-based location filter from a <see cref="CourseSectionResult"/> and <see cref="CourseSearchCriteria"/>
+        /// </summary>
+        /// <param name="result">Course/section search results</param>
+        /// <param name="criteria">Course-based search criteria</param>
+        /// <returns>Collection of location-based <see cref="Dtos.Base.Filter">filters</see></returns>
+        private async Task<IEnumerable<Ellucian.Colleague.Dtos.Base.Filter>> BuildSectionLocationFilterAsyncForCourseSearchCriteria(CourseSectionResult result, CourseSearchCriteria criteria)
         {
             var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
+            // Get the unique list of locations from all courses and sections
+            var locationCodes = new List<string>();
+            locationCodes.AddRange(result.Sections.Select(s => s.Location).Distinct().ToList());
+            locationCodes = await LimitToViewableLocationsIncludingNoLocation(locationCodes);
 
+            // For each viewable location, count the sections and add the filter to the list returned
+            foreach (string locationCode in locationCodes)
+            {
+                int filterValueCount = 0;
+
+                // Get section Ids for all sections with this location
+                var filterSectionIds = new List<string>();
+                if ((result.Sections != null) && (result.Sections.Any()))
+                {
+                    filterSectionIds.AddRange(result.Sections.Where(s => s.Location == locationCode).Select(s => s.Id).Distinct().ToList());
+                }
+                // Count distinct sections
+                filterValueCount = filterSectionIds.Distinct().Count();
+
+                // Add filter detail line for this location
+                var filterDetail = new Ellucian.Colleague.Dtos.Base.Filter()
+                {
+                    Count = filterValueCount,
+                    Value = locationCode,
+                    Selected = criteria.Locations != null ? criteria.Locations.Contains(locationCode) : false
+                };
+                filter.Add(filterDetail);
+            }
+
+            return filter;
+        }
+
+        /// <summary>
+        /// Builds a section-based location filter from a <see cref="CourseSectionResult"/> and <see cref="SectionSearchCriteria"/>
+        /// </summary>
+        /// <param name="result">Course/section search results</param>
+        /// <param name="criteria">Course-based search criteria</param>
+        /// <returns>Collection of location-based <see cref="Dtos.Base.Filter">filters</see></returns>
+
+        private async Task<IEnumerable<Ellucian.Colleague.Dtos.Base.Filter>> BuildSectionLocationFilterAsync(CourseSectionResult result, SectionSearchCriteria criteria)
+        {
+            var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
+            // Get the unique list of locations from sections
+            var locationCodes = new List<string>();
+            locationCodes.AddRange(result.Sections.Select(s => s.Location).Distinct().ToList());
+            locationCodes = await LimitToViewableLocations(locationCodes);
+
+            // For each viewable location, count the sections and add the filter to the list returned
+            foreach (string locationCode in locationCodes)
+            {
+                int filterValueCount = 0;
+
+                // Get section Ids for all sections with this location
+                var filterSectionIds = new List<string>();
+                if ((result.Sections != null) && (result.Sections.Any()))
+                {
+                    filterSectionIds.AddRange(result.Sections.Where(s => s.Location == locationCode).Select(s => s.Id).Distinct().ToList());
+                }
+                // Count distinct sections
+                filterValueCount = filterSectionIds.Distinct().Count();
+
+                // Add filter detail line for this location
+                var filterDetail = new Ellucian.Colleague.Dtos.Base.Filter()
+                {
+                    Count = filterValueCount,
+                    Value = locationCode,
+                    Selected = criteria.Locations != null ? criteria.Locations.Contains(locationCode) : false
+                };
+                filter.Add(filterDetail);
+            }
+            return filter;
+        }
+
+        /// <summary>
+        /// Build Sections Filter for Subjects
+        /// </summary>
+        /// <param name="sectionCollection">sections to filter from</param>
+        /// <param name="criteria">section search criteria</param>
+        /// <returns></returns>
+
+        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildSectionSubjectFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sectionCollection, SectionSearchCriteria criteria)
+        {
+            logger.Info("Sections subject filter started");
+            Stopwatch sortWatch = new Stopwatch();
+            sortWatch.Start();
+            // Set of filters to return
+            var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
+            if (sectionCollection == null)
+            {
+                logger.Info("sections subject filter didn't work because there were sections passed");
+                return filter;
+            }
+
+            // Get the subject code from section entity
+            var subjectCodes = sectionCollection.Where(x => x != null).Select(x => x.Subject).Distinct().ToList();
+          
+            // For each item in the subject list, find the sections
+           
+                foreach (var subjectCode in subjectCodes)
+                {
+                    var filterValueCount = sectionCollection.Where(x => x!=null && x.Subject == subjectCode).Count();
+                    var filterDetail = new Ellucian.Colleague.Dtos.Base.Filter()
+                    {
+                        Count = filterValueCount,
+                        Value = subjectCode,
+                        Selected = criteria.Subjects != null ? criteria.Subjects.Contains(subjectCode) : false
+                    };
+                    filter.Add(filterDetail);
+                }
+           
+            sortWatch.Stop();
+            logger.Info(string.Format("Amount of time taken for section subject filter={0} ms for section", sortWatch.ElapsedMilliseconds));
+            return filter;
+        }
+
+        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildFacultyFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria, bool returnCourseCounts = true)
+        {
+            var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
+            if (sections == null)
+            {
+                logger.Info("There were no sections passed to build faculty filter");
+                return filter;
+            }
             // Get the unique list of faculty from all courses and sections
             var facultyIds = sections.SelectMany(s => s.FacultyIds).Distinct().ToList();
             // Count the courses with this faculty
@@ -970,7 +1603,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // Get course Ids for all sections with this faculty
                 if ((sections != null) && (sections.Any()))
                 {
-                    filterSectionIds.AddRange(sections.Where(s => s.FacultyIds.Contains(facId)).Select(s => s.CourseId).ToList());
+                    if (returnCourseCounts)
+                    {
+                        filterSectionIds.AddRange(sections.Where(s => s.FacultyIds.Contains(facId)).Select(s => s.CourseId).ToList());
+                    }
+                    else
+                    {
+                        filterSectionIds.AddRange(sections.Where(s => s.FacultyIds.Contains(facId)).Select(s => s.Id).ToList());
+                    }
                 }
                 // Count distinct courses
                 var filterValueCount = filterSectionIds.Distinct().Count();
@@ -988,43 +1628,120 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildDayOfWeekFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria)
         {
+            var sw = new Stopwatch();
             var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
-
-            // Get the unique list of faculty from all courses and sections
-
-            var allTheMeetings = sections.SelectMany(s => s.Meetings).Union(sections.SelectMany(s => s.PrimarySectionMeetings));
-            var daysOfWeek = allTheMeetings.SelectMany(m => m.Days).Distinct().ToList();
-
-
-            // Build collection of section/day
-            var dayCollection = from sec in sections
-                                from mtg in allTheMeetings
-                                from dayOfWk in mtg.Days
-                                select new { dayOfWk, sec.CourseId };
-
-
-            // Count the courses with this faculty
-            foreach (var day in daysOfWeek)
+            ILookup<DayOfWeek, string> groupedDays = null;
+            if (sections == null)
             {
-                int filterValueCount = 0;
-                // Count course Ids for all sections found with this dayOfWeek
-                if ((dayCollection != null) && (dayCollection.Any()))
-                {
-                    filterValueCount = dayCollection.Where(d => d.dayOfWk == day).Select(d => d.CourseId).Distinct().Count();
-                }
-                // Add filter detail line for this faculty
-                var filterDetail = new Ellucian.Colleague.Dtos.Base.Filter()
-                {
-                    Count = filterValueCount,
-                    Value = ((int)day).ToString(),
-                    Selected = criteria.DaysOfWeek != null ? criteria.DaysOfWeek.Contains(((int)day).ToString()) : false
-                };
-                filter.Add(filterDetail);
+                logger.Info("There were no sections passed to build day of week filter");
+                return filter;
             }
+            sw.Start();
+            try
+            {
+                // Build collection of section/day
+                var dayCollection = (from sec in sections
+                                     from mtg in sec.Meetings
+                                     from dayOfWk in mtg.Days
+                                     select new { dayOfWk = dayOfWk, CourseId = sec.CourseId })
+                                     .Union
+                                     (from sec in sections
+                                      from mtg in sec.PrimarySectionMeetings
+                                      from dayOfWk in mtg.Days
+                                      select new { dayOfWk = dayOfWk, CourseId = sec.CourseId });
+
+                //convert dayCollection to lookup
+                groupedDays = dayCollection.ToLookup(s => s.dayOfWk, s => s.CourseId);
+                // Count the courses with this Day of week
+                foreach (var day in groupedDays)
+                {
+                    try
+                    {
+                        int filterValueCount = 0;
+                        filterValueCount = groupedDays[day.Key].Count();
+                        // Add filter detail line for this day of week
+                        var filterDetail = new Ellucian.Colleague.Dtos.Base.Filter()
+                        {
+                            Count = filterValueCount,
+                            Value = ((int)day.Key).ToString(),
+                            Selected = criteria.DaysOfWeek != null ? criteria.DaysOfWeek.Contains(((int)day.Key).ToString()) : false
+                        };
+                        filter.Add(filterDetail);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, "Exception occured while enumerating through grouped days of week while building days of week filter for course search");
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception occured while building day of week filter for course search");
+            }
+            sw.Stop();
+            logger.Info("Build day of week filter elapsed time " + sw.ElapsedMilliseconds + "ms");
             return filter;
         }
 
-        private async Task<IEnumerable<Ellucian.Colleague.Dtos.Base.Filter>> BuildCourseTypeFilterAsync(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria)
+        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildSectionDayOfWeekFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, SectionSearchCriteria criteria)
+        {
+            var sw = new Stopwatch();
+            var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
+            ILookup<DayOfWeek, string> groupedDays = null;
+            if (sections == null)
+            {
+                logger.Info("There were no sections passed to build day of week filter");
+                return filter;
+            }
+
+            try
+            {
+                // Build collection of section/day
+                var dayCollection = (from sec in sections
+                                     from mtg in sec.Meetings
+                                     from dayOfWk in mtg.Days
+                                     select new { dayOfWk = dayOfWk, Id = sec.Id })
+                                     .Union
+                                     (from sec in sections
+                                      from mtg in sec.PrimarySectionMeetings
+                                      from dayOfWk in mtg.Days
+                                      select new { dayOfWk = dayOfWk, Id = sec.Id });
+
+                //convert dayCollection to lookup
+                groupedDays = dayCollection.ToLookup(s => s.dayOfWk, s => s.Id);
+                // Count the sections with this Day of week
+                foreach (var day in groupedDays)
+                {
+                    try
+                    {
+                        int filterValueCount = 0;
+                        filterValueCount = groupedDays[day.Key].Count();
+                        // Add filter detail line for this day of week
+                        var filterDetail = new Ellucian.Colleague.Dtos.Base.Filter()
+                        {
+                            Count = filterValueCount,
+                            Value = ((int)day.Key).ToString(),
+                            Selected = criteria.DaysOfWeek != null ? criteria.DaysOfWeek.Contains(((int)day.Key).ToString()) : false
+                        };
+                        filter.Add(filterDetail);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, "Exception occured while enumerating through grouped days of week while building days of week filter for section search");
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception occured while building day of week filter for course search");
+            }
+
+            return filter;
+        }
+
+        private async Task<IEnumerable<Ellucian.Colleague.Dtos.Base.Filter>> BuildCourseTypeFilterAsync(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria, bool returnCourseCounts = true)
         {
             var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
 
@@ -1042,7 +1759,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // Get course Ids for all sections with this course type code
                 if ((sections != null) && (sections.Any()))
                 {
-                    filterSectionIds.AddRange(sections.Where(s => s.CourseTypeCodes.Contains(courseTypeCode)).Select(s => s.CourseId).ToList());
+                    if (returnCourseCounts)
+                    {
+                        filterSectionIds.AddRange(sections.Where(s => s.CourseTypeCodes.Contains(courseTypeCode)).Select(s => s.CourseId).ToList());
+                    }
+                    else
+                    {
+                        filterSectionIds.AddRange(sections.Where(s => s.CourseTypeCodes.Contains(courseTypeCode)).Select(s => s.Id).ToList());
+                    }
                 }
                 // Count distinct courses
                 var filterValueCount = filterSectionIds.Distinct().Count();
@@ -1098,7 +1822,85 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return filter;
         }
 
-        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildTermFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria)
+        /// <summary>
+        /// Builds a section-based topic code filter from a <see cref="CourseSectionResult"/> and <see cref="CourseSearchCriteria"/>
+        /// </summary>
+        /// <param name="result">Course/section search results</param>
+        /// <param name="criteria">Course-based search criteria</param>
+        /// <returns>Collection of topic code-based <see cref="Dtos.Base.Filter">filters</see></returns>
+
+        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildSectionTopicCodeFilter(CourseSectionResult result, CourseSearchCriteria criteria)
+        {
+            var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
+
+            // Get the unique list of topic codes from all sections so all possible are in the list of filterable topics.
+            var topicCodes = new List<string>();
+            topicCodes.AddRange(result.Sections.Select(s => s.TopicCode).Distinct().ToList());
+            topicCodes = topicCodes.Distinct().ToList();
+
+            foreach (string topicCode in topicCodes)
+            {
+
+                var filterSectionIds = new List<string>();
+                // Get all sections with this topic code
+                if ((result.Sections != null) && (result.Sections.Any()))
+                {
+                    filterSectionIds.AddRange(result.Sections.Where(s => s.TopicCode == topicCode).Select(s => s.Id).Distinct().ToList());
+                }
+                // Count 
+                var filterValueCount = filterSectionIds.Distinct().Count();
+                // Add filter detail line for this topic code
+                var filterDetail = new Ellucian.Colleague.Dtos.Base.Filter()
+                {
+                    Count = filterValueCount,
+                    Value = topicCode,
+                    Selected = criteria.TopicCodes != null ? criteria.TopicCodes.Contains(topicCode) : false
+                };
+                filter.Add(filterDetail);
+            }
+            return filter;
+        }
+
+        /// <summary>
+        /// Builds a section-based topic code filter from a <see cref="CourseSectionResult"/> and <see cref="SectionSearchCriteria"/>
+        /// </summary>
+        /// <param name="result">Course/section search results</param>
+        /// <param name="criteria">Section-based search criteria</param>
+        /// <returns>Collection of topic code-based <see cref="Dtos.Base.Filter">filters</see></returns>
+
+        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildSectionTopicCodeFilter(CourseSectionResult result, SectionSearchCriteria criteria)
+        {
+            var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
+
+            // Get the unique list of topic codes from all sections so all possible are in the list of filterable topics.
+            var topicCodes = new List<string>();
+            topicCodes.AddRange(result.Sections.Select(s => s.TopicCode).Distinct().ToList());
+            topicCodes = topicCodes.Distinct().ToList();
+
+            foreach (string topicCode in topicCodes)
+            {
+
+                var filterSectionIds = new List<string>();
+                // Get all sections with this topic code
+                if ((result.Sections != null) && (result.Sections.Any()))
+                {
+                    filterSectionIds.AddRange(result.Sections.Where(s => s.TopicCode == topicCode).Select(s => s.Id).Distinct().ToList());
+                }
+                // Count 
+                var filterValueCount = filterSectionIds.Distinct().Count();
+                // Add filter detail line for this topic code
+                var filterDetail = new Ellucian.Colleague.Dtos.Base.Filter()
+                {
+                    Count = filterValueCount,
+                    Value = topicCode,
+                    Selected = criteria.TopicCodes != null ? criteria.TopicCodes.Contains(topicCode) : false
+                };
+                filter.Add(filterDetail);
+            }
+            return filter;
+        }
+
+        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildTermFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria, bool returnsCourseCounts = true)
         {
             var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
 
@@ -1111,11 +1913,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // Get course Ids for all sections with this course type code
                 if ((sections != null) && (sections.Any()))
                 {
-                    filterSectionIds.AddRange(sections.Where(sec => sec.TermId == termCode).Select(sec => sec.CourseId).ToList());
+                    if (returnsCourseCounts)
+                    {
+                        filterSectionIds.AddRange(sections.Where(sec => sec.TermId == termCode).Select(sec => sec.CourseId).ToList());
+                    }
+                    else
+                    {
+                        filterSectionIds.AddRange(sections.Where(sec => sec.TermId == termCode).Select(sec => sec.Id).ToList());
+
+                    }
                 }
-                // Count distinct courses
+                // Count distinct courses or sections
                 var filterValueCount = filterSectionIds.Distinct().Count();
-                // Add filter detail line for this course type
+                // Add filter detail line for this Term
                 var filterDetail = new Ellucian.Colleague.Dtos.Base.Filter()
                 {
                     Count = filterValueCount,
@@ -1127,7 +1937,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return filter;
         }
 
-        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildOnlineCategoryFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria)
+
+        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildOnlineCategoryFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria, bool returnsCourseCounts = true)
         {
             var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
 
@@ -1155,7 +1966,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             foreach (var onlineCategory in sectionOnlineCategories)
             {
                 // count the sections with this online category
-                var sectionCount = sections.Where(sec => sec.OnlineCategory == onlineCategory).Select(s => s.CourseId).Distinct().Count();
+                int sectionCount;
+                if (returnsCourseCounts)
+                {
+                    sectionCount = sections.Where(sec => sec.OnlineCategory == onlineCategory).Select(s => s.CourseId).Distinct().Count();
+                }
+                else
+                {
+                    sectionCount = sections.Where(sec => sec.OnlineCategory == onlineCategory).Select(s => s.Id).Distinct().Count();
+                }
+
                 // Add filter detail. Set as selected if this filter is in the criteria.
                 filter.Add(new Ellucian.Colleague.Dtos.Base.Filter()
                 {
@@ -1168,7 +1988,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
         private Ellucian.Colleague.Dtos.Base.Filter BuildOpenSectionsFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria)
         {
-            // count the sections 
+            // count the sections
             var sectionCount = sections == null ? 0 : sections.Count();
             // Add filter detail. Set as selected if this filter is in the criteria.
             var filter = new Ellucian.Colleague.Dtos.Base.Filter()
@@ -1180,12 +2000,34 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             return filter;
         }
+
+        private Ellucian.Colleague.Dtos.Base.Filter BuildOpenAndWaitlistSectionsFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria)
+        {
+            // count the sections 
+            var sectionCount = sections == null ? 0 : sections.Count();
+            // Add filter detail. Set as selected if this filter is in the criteria.
+            var filter = new Ellucian.Colleague.Dtos.Base.Filter()
+            {
+                Value = null,
+                Count = sectionCount,
+                Selected = criteria.OpenAndWaitlistSections
+            };
+
+            return filter;
+        }
         #endregion
 
         #region SearchByCourseId
         private async Task<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Course>> SearchByIdAsync(List<string> courseids)
         {
             var courses = (await GetCatalogAsync()).ToList();
+            var filtered = courses.Where(c => courseids.Contains(c.Id) || c.EquatedCourseIds.Intersect(courseids).Any());
+            return filtered;
+        }
+
+        private async Task<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Course>> InstantEnrollmentSearchByCourseIdAsync(List<string> courseids)
+        {
+            var courses = (await GetInstantEnrollmentCatalogAsync()).ToList();
             var filtered = courses.Where(c => courseids.Contains(c.Id) || c.EquatedCourseIds.Intersect(courseids).Any());
             return filtered;
         }
@@ -1329,8 +2171,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             // Dictionary that contains ALL fields to be searched, with their boost values
             // Lucene allows the assigning of weights (boost values) to each field that is being searched.
-            // In the course name has highest weight, then title, then subject, then everything else.
+            // The synonym has highest weight, then course name, then subject, then title, then everything else.
             var FieldBoosts = new Dictionary<string, float>();
+            FieldBoosts.Add("synonym", 50f);
             FieldBoosts.Add("name", 20f);
             FieldBoosts.Add("subject", 15f);
             FieldBoosts.Add("title", 5f);
@@ -1348,13 +2191,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // Create parser for this field
                 var queryParser = new QueryParser(LuceneVersion, fieldBoost.Key, Analyzer);
                 // Allow leading wildcard (if entered)
-                queryParser.SetAllowLeadingWildcard(true);
+                queryParser.AllowLeadingWildcard = true;
                 // Create query for this keyword against this field
                 Query qu = queryParser.Parse(keyword);
                 // Boost the results for this field
-                qu.SetBoost(fieldBoost.Value);
+                qu.Boost = fieldBoost.Value;
                 // Add to the overall query as an OR
-                query.Add(qu, BooleanClause.Occur.SHOULD);
+                query.Add(qu, Occur.SHOULD);
                 queryString = query.ToString();
             }
 
@@ -1379,11 +2222,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var sortedByScoreList = from doc in docs
                                     select new
                                     {
-                                        CourseId = searcher.Doc(doc.doc).GetField("courseId").StringValue(),
-                                        SectionId = searcher.Doc(doc.doc).GetField("sectionId").StringValue(),
-                                        SortName = searcher.Doc(doc.doc).GetField("sortName").StringValue(),
-                                        Name = searcher.Doc(doc.doc).GetField("name").StringValue(),
-                                        Score = doc.score
+                                        CourseId = searcher.Doc(doc.Doc).GetField("courseId").StringValue,
+                                        SectionId = searcher.Doc(doc.Doc).GetField("sectionId").StringValue,
+                                        SortName = searcher.Doc(doc.Doc).GetField("sortName").StringValue,
+                                        Name = searcher.Doc(doc.Doc).GetField("name").StringValue,
+                                        Score = doc.Score
                                     };
 
             // Get the courses with the matching name first, then append all the others in name sequence.
@@ -1416,6 +2259,138 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             return searchResult;
         }
+
+        /// <summary>
+        /// Given a keyword, or string of keywords, return a set of matching courses
+        /// </summary>
+        /// <param name="keyword">A keyword or query to search against the couse catalog.</param>
+        /// <returns></returns>
+        private async Task<CourseSectionResult> InstantEnrollmentSearchByKeywordAsync(string keyword)
+        {
+            CourseSectionResult indexItems = new CourseSectionResult();
+            // Get all the current courses and get instant enrollment sections
+            var sw = new Stopwatch();
+            sw.Start();
+            
+
+            // Get all the current courses and get active sections
+            sw.Start();
+            logger.Debug("Instant Enrollment CourseSearch: call GetInstantEnrollmentSectionsAsync");
+            indexItems.Sections = (await GetInstantEnrollmentActiveSectionsAsync()).ToList();
+            sw.Stop();
+            logger.Debug("Instant Enrollment  CourseSearch: GetInstantEnrollmentSectionsAsync: " + sw.ElapsedMilliseconds + "ms");
+
+            logger.Debug("Instant Enrollment CourseSearch: call GetInstantEnrollmentCatalogAsync");
+            indexItems.Courses = (await GetInstantEnrollmentCoursesForSectionsAsync(indexItems.Sections)).ToList();
+            sw.Stop();
+            logger.Debug("Instant Enrollment CourseSearch: GetInstantEnrollmentCatalogAsync: " + sw.ElapsedMilliseconds + "ms");
+
+            // Build the index to be searched.
+            logger.Debug("retrieval of subjects, departments, locations");
+            var subjects = await _studentReferenceDataRepository.GetSubjectsAsync();
+            var departments = await _referenceDataRepository.DepartmentsAsync();
+            var locations = _referenceDataRepository.Locations;
+
+            logger.Debug("Instant Enrollment CourseSearch: Get the lock on the index");
+            lock (InstantEnrollmentIndexLock)
+            {
+                // Get the timestamp from the last time the instant enrollment cache was built
+                var cacheTimestamp = _sectionRepository.GetChangedInstantEnrollmentSectionsCacheBuildTime();
+                BuildInstantEnrollmentIndex(indexItems, subjects, departments, locations, cacheTimestamp, logger);
+            }
+            logger.Debug("Instant Enrollment CourseSearch: Index build complete and unlocked");
+
+            // Dictionary that contains ALL fields to be searched, with their boost values
+            // Lucene allows the assigning of weights (boost values) to each field that is being searched.
+            // The synonym has highest weight, then course name, then subject, then title, then everything else.
+            var FieldBoosts = new Dictionary<string, float>();
+            FieldBoosts.Add("synonym", 50f);
+            FieldBoosts.Add("name", 20f);
+            FieldBoosts.Add("subject", 15f);
+            FieldBoosts.Add("title", 5f);
+            FieldBoosts.Add("course", 1f);
+            FieldBoosts.Add("section", 1f);
+
+            // The BooleanQuery query is the final, concatenated query that will be run against the index.  
+            // It will contain subqueries against individual fields within the indexed documents.
+            BooleanQuery query = new BooleanQuery(true);
+
+            string queryString = "";
+            // Simply use query parser to build a query item for each field given the user's query
+            foreach (var fieldBoost in FieldBoosts)
+            {
+                // Create parser for this field
+                var queryParser = new QueryParser(LuceneVersion, fieldBoost.Key, Analyzer);
+                // Allow leading wildcard (if entered)
+                queryParser.AllowLeadingWildcard = true;
+                // Create query for this keyword against this field
+                Query qu = queryParser.Parse(keyword);
+                // Boost the results for this field
+                qu.Boost = fieldBoost.Value;
+                // Add to the overall query as an OR
+                query.Add(qu, Occur.SHOULD);
+                queryString = query.ToString();
+            }
+
+            // Build the search engine, using the index.
+            var searcher = new IndexSearcher(InstantEnrollmentCourseIndex, true);
+
+            // Get all matches
+            sw.Reset();
+            sw.Start();
+            var topDocs = searcher.Search(query, Int16.MaxValue);
+            sw.Stop();
+            logger.Debug("Instant Enrollment CourseSearch: Search: " + sw.ElapsedMilliseconds + "ms");
+
+            // Establish items that will be used to build the returned results
+            CourseSectionResult searchResult = new CourseSectionResult();
+            var courseIdsList = new List<string>();
+
+            // For each document returned by the search, get the course or section, and add it to the result set.
+            // Docs returned in descending score sequence, simply append to course/section list in sequence.
+            var docs = topDocs.ScoreDocs;
+
+            var sortedByScoreList = from doc in docs
+                                    select new
+                                    {
+                                        CourseId = searcher.Doc(doc.Doc).GetField("courseId").StringValue,
+                                        SectionId = searcher.Doc(doc.Doc).GetField("sectionId").StringValue,
+                                        SortName = searcher.Doc(doc.Doc).GetField("sortName").StringValue,
+                                        Name = searcher.Doc(doc.Doc).GetField("name").StringValue,
+                                        Score = doc.Score
+                                    };
+
+            // Get the courses with the matching name first, then append all the others in name sequence.
+            // Correction made to put the results in descending score order so those with the highest score are at the top of the list.
+            var sortedList = sortedByScoreList.Where(s => s.Name.IndexOf(keyword.ToUpper()) >= 0).OrderByDescending(s => s.Score).ThenBy(s => s.SortName).ToList();
+            sortedList.AddRange(sortedByScoreList.Where(s => s.Name.IndexOf(keyword.ToUpper()) < 0).OrderByDescending(s => s.Score).ThenBy(s => s.SortName).ToList());
+
+            //var sortedList = from doc in sortedByScoreList
+            //                 orderby doc.Score descending, doc.SortName
+            //                 select doc;
+
+            foreach (var item in sortedList)
+            {
+                // Add the course to the result list of courses if not already there
+                if (!(courseIdsList.Contains(item.CourseId)))
+                {
+                    searchResult.Courses.Add(indexItems.Courses.Where(c => c.Id == item.CourseId).First());
+                    courseIdsList.Add(item.CourseId);
+                }
+                // Add the section to the section result list if this is a section document
+                if (!(string.IsNullOrEmpty(item.SectionId)))
+                {
+                    var section = indexItems.Sections.Where(s => s.Id == item.SectionId).FirstOrDefault();
+                    if (section != null)
+                    {
+                        searchResult.Sections.Add(section);
+                    }
+                }
+            }
+
+            return searchResult;
+        }
+
 
         /// <summary>
         /// This method builds the Lucene index if it does not already exist. This method must be called
@@ -1605,6 +2580,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     fieldString += " " + course.SubjectCode + CourseDelimiter + course.Number + CourseDelimiter + section.Number;
                     // Append to the whole section string
                     sectionString.Append(fieldString);
+
+                    // Synonym used as an alternative short ID for easy sharing and searching (Append to whole Section string)
+                    fieldString += " " + section.Synonym;
+                    sectionString.Append(fieldString);
+                    f = new Field("synonym", section.Synonym ?? string.Empty, Field.Store.YES, Field.Index.ANALYZED);
+                    doc.Add(f);
+
                     // Add Name field to the document
                     f = new Field("name", fieldString, Field.Store.YES, Field.Index.ANALYZED);
                     doc.Add(f);
@@ -1659,6 +2641,283 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             return;
         }
+
+        /// <summary>
+        /// This method builds the Lucene index if it does not already exist for Instant Enrollment. This method must be called
+        /// in a thread safe way to ensure multiple threads are not creating the index simultaneously.
+        /// </summary>
+        /// <param name="indexItems"></param>
+        /// <param name="subjects"></param>
+        /// <param name="departments"></param>
+        /// <param name="locations"></param>
+        private static void BuildInstantEnrollmentIndex(CourseSectionResult indexItems,
+            IEnumerable<Domain.Student.Entities.Subject> subjects,
+            IEnumerable<Domain.Base.Entities.Department> departments,
+            IEnumerable<Domain.Base.Entities.Location> locations,
+            DateTime cacheTimestamp,
+            ILogger logger)
+        {
+            logger.Debug("CourseSearch: Start BuildInstantEnrollmentIndex");
+
+            // If the updated section cache is newer than the index, clear the index and rebuild it
+            if (cacheTimestamp > instantEnrollmentIndexBuildTime && InstantEnrollmentCourseIndex != null)
+            {
+                logger.Debug("CourseSearch: BuildInstantEnrollmentIndex - Cache is newer than index, close index and rebuild");
+
+                InstantEnrollmentCourseIndex.Close();
+                InstantEnrollmentCourseIndex = null;
+            }
+
+            if (InstantEnrollmentCourseIndex == null)
+            {
+                // The index has not been created yet.
+                logger.Debug("CourseSearch: BuildInstantEnrollmentIndex - Create RAMDirectory for index");
+                InstantEnrollmentCourseIndex = new RAMDirectory();
+            }
+            else
+            {
+                // The index has been created, and it's static, so we're done.
+                return;
+            }
+
+            // Protect against nulls and null properties
+            if (indexItems == null)
+            {
+                indexItems = new CourseSectionResult();
+            }
+            if (indexItems.Courses == null)
+            {
+                indexItems.Courses = new List<Domain.Student.Entities.Course>();
+            }
+            if (indexItems.Sections == null)
+            {
+                indexItems.Sections = new List<Domain.Student.Entities.Section>();
+            }
+            if (subjects == null)
+            {
+                subjects = new List<Domain.Student.Entities.Subject>();
+            }
+            if (departments == null)
+            {
+                departments = new List<Domain.Base.Entities.Department>();
+            }
+            if (locations == null)
+            {
+                locations = new List<Domain.Base.Entities.Location>();
+            }
+
+            // IndexWriter is a utility object that creates and maintains an index.
+            IndexWriter indexWriter = new IndexWriter(InstantEnrollmentCourseIndex, Analyzer, true, IndexWriter.MaxFieldLength.UNLIMITED);
+            foreach (var course in indexItems.Courses)
+            {
+                // Create a new document that corresponds to the current course
+                var doc = new Document();
+
+                // build a whole-course index string as we go along - for AND queries
+                string fieldString = "";
+                var courseString = new StringBuilder();
+
+                // Add the course/section ID to the document.  It is stored, but is not indexed.
+                // (student's don't search by ID). Also add blank placeholder for section Id.
+                doc.Add(new Field("courseId", course.Id, Field.Store.YES, Field.Index.NO));
+                doc.Add(new Field("sectionId", "", Field.Store.YES, Field.Index.NO));
+
+                // Course name (subject and course number) with no space or delimiter
+                fieldString = " " + course.SubjectCode + course.Number;
+                // Add this store-only value for sorting later
+                doc.Add(new Field("sortName", fieldString, Field.Store.YES, Field.Index.NO));
+
+                // Course name with a space between
+                fieldString += " " + course.SubjectCode + " " + course.Number;
+                // Course name with delimiter
+                fieldString += " " + course.SubjectCode + CourseDelimiter + course.Number;
+                // Add course names to entire course string 
+                courseString.Append(fieldString);
+                // Add course names to indexed document
+                var f = new Field("name", fieldString, Field.Store.YES, Field.Index.ANALYZED);
+                doc.Add(f);
+
+                // Title
+                fieldString = " " + course.Title;
+                courseString.Append(fieldString);
+                f = new Field("title", fieldString, Field.Store.NO, Field.Index.ANALYZED);
+                doc.Add(f);
+
+                // Description (append to whole Course string)
+                fieldString = " " + course.Description;
+                courseString.Append(fieldString);
+
+                // Subject code and description (append to whole Course string)
+                fieldString = " " + course.SubjectCode;
+                courseString.Append(fieldString);
+                var subjString = fieldString;
+                // Add subject description to the subject field
+                var s = subjects.Where(sub => sub != null && sub.Code == course.SubjectCode).FirstOrDefault();
+                if (s != null)
+                {
+                    fieldString = " " + s.Description;
+                    courseString.Append(fieldString);
+                    subjString += " " + s.Description;
+                }
+                // Add field to score matches on subject code
+                f = new Field("subject", subjString, Field.Store.NO, Field.Index.ANALYZED);
+                doc.Add(f);
+
+                // Department code and description (append to whole Course string)
+                // A course can have multiple departments, so add each of them as a separate field
+                // Lucene allows field names to be entered multiple times.
+                foreach (var department in course.DepartmentCodes)
+                {
+                    fieldString = " " + department;
+                    courseString.Append(fieldString);
+                    var dept = departments.Where(d => d != null && d.Code == department).FirstOrDefault();
+                    if (dept != null)
+                    {
+                        fieldString = " " + dept.Description;
+                        courseString.Append(fieldString);
+                    }
+                }
+
+                // Location code and description (append to whole Course string)
+                // A course can have multiple locations, so add each of them as a separate field
+                foreach (var location in course.LocationCodes)
+                {
+                    fieldString = " " + location;
+                    courseString.Append(fieldString);
+                    var loc = locations.Where(l => l != null && l.Code == location).FirstOrDefault();
+                    if (loc != null)
+                    {
+                        fieldString = " " + loc.Description;
+                        courseString.Append(fieldString);
+                    }
+                }
+
+                // Add the whole course string to the document
+                f = new Field("course", courseString.ToString(), Field.Store.NO, Field.Index.ANALYZED);
+                doc.Add(f);
+
+                // Add course document to the index
+                indexWriter.AddDocument(doc);
+            }
+
+            foreach (var section in indexItems.Sections)
+            {
+                // First get the associated course for this section. Build section index
+                // info ONLY if course exists.
+                var course = indexItems.Courses.Where(c => c.Id == section.CourseId).FirstOrDefault();
+                if (course != null)
+                {
+                    // Create a new document for this section
+                    var doc = new Document();
+
+                    // build a whole-section index string as we go along - for AND queries
+                    string fieldString = "";
+                    var sectionString = new StringBuilder();
+                    Field f;
+
+                    // Add the section ID to the document.  It is stored, but is not indexed
+                    // Store in combination with course Id for uniqueness
+                    doc.Add(new Field("courseId", section.CourseId, Field.Store.YES, Field.Index.NO));
+                    doc.Add(new Field("sectionId", section.Id, Field.Store.YES, Field.Index.NO));
+
+                    // Section Name (with all permutations of null, space and delimiter)
+                    // null, null
+                    fieldString = " " + course.SubjectCode + course.Number + section.Number;
+                    // Add this store-only value for sorting later
+                    doc.Add(new Field("sortName", fieldString, Field.Store.YES, Field.Index.NO));
+
+                    if (!string.IsNullOrEmpty(section.CourseName))
+                    {
+                        //This was added because we wanted search could happen on legacy section data too
+                        //For example- if a course number changed on existing course and there were sections 
+                        //from old course then those sections should be searchable too.
+                        // null, space
+                        fieldString += " " + section.CourseName + " " + section.Number;
+                        // null, delim
+                        fieldString += " " + section.CourseName + CourseDelimiter + section.Number;
+                        // space, null
+                        fieldString += " " + section.CourseName + section.Number;
+                    }
+                    // null, space
+                    fieldString += " " + course.SubjectCode + course.Number + " " + section.Number;
+                    // null, delim
+                    fieldString += " " + course.SubjectCode + course.Number + CourseDelimiter + section.Number;
+                    // space, null
+                    fieldString += " " + course.SubjectCode + " " + course.Number + section.Number; //remove this??
+                    // space, space
+                    fieldString += " " + course.SubjectCode + " " + course.Number + " " + section.Number;
+                    // space, delim
+                    fieldString += " " + course.SubjectCode + " " + course.Number + CourseDelimiter + section.Number;
+                    // delim, null
+                    fieldString += " " + course.SubjectCode + CourseDelimiter + course.Number + section.Number; //remove this??
+                    // delim, space
+                    fieldString += " " + course.SubjectCode + CourseDelimiter + course.Number + " " + section.Number;
+                    // delim, delim
+                    fieldString += " " + course.SubjectCode + CourseDelimiter + course.Number + CourseDelimiter + section.Number;
+                    // Append to the whole section string
+                    sectionString.Append(fieldString);
+
+                    // Synonym used as an alternative short ID for easy sharing and searching (Append to whole Section string)
+                    fieldString += " " + section.Synonym;
+                    sectionString.Append(fieldString);
+                    f = new Field("synonym", section.Synonym ?? string.Empty, Field.Store.YES, Field.Index.ANALYZED);
+                    doc.Add(f);
+
+                    // Add Name field to the document
+                    f = new Field("name", fieldString, Field.Store.YES, Field.Index.ANALYZED);
+                    doc.Add(f);
+
+                    // Section Title (often different from course title) (Append to whole Section string)
+                    fieldString = " " + section.Title;
+                    sectionString.Append(fieldString);
+                    f = new Field("title", fieldString, Field.Store.NO, Field.Index.ANALYZED);
+                    doc.Add(f);
+
+                    // Department code and description. (Append to whole Section string)
+                    // A section can have multiple departments, so add each of them as a separate field
+                    // Lucene allows field names to be entered multiple times.
+                    foreach (var department in section.Departments)
+                    {
+                        fieldString = " " + department.AcademicDepartmentCode;
+                        sectionString.Append(fieldString);
+                        var dept = departments.Where(d => d != null && d.Code == department.AcademicDepartmentCode).FirstOrDefault();
+                        if (dept != null)
+                        {
+                            fieldString = " " + dept.Description;
+                            sectionString.Append(fieldString);
+                        }
+                    }
+
+                    // Section Location (Append to whole Section string)
+                    fieldString = " " + section.Location;
+                    sectionString.Append(fieldString);
+                    var loc = locations.Where(l => l != null && l.Code == section.Location).FirstOrDefault();
+                    if (loc != null)
+                    {
+                        fieldString = " " + loc.Description;
+                        sectionString.Append(fieldString);
+                    }
+
+                    // Add the whole section string to the document
+                    f = new Field("section", sectionString.ToString(), Field.Store.NO, Field.Index.ANALYZED);
+                    doc.Add(f);
+
+                    // Add the section document to the index
+                    indexWriter.AddDocument(doc);
+                }
+            }
+
+            indexWriter.Optimize();
+            indexWriter.Close();
+
+            // Update the index build time
+            instantEnrollmentIndexBuildTime = DateTime.Now;
+
+            logger.Debug("CourseSearch: End BuildInstantEnrollmentIndex");
+
+            return;
+        }
+
 
         #endregion
 
@@ -1941,13 +3200,100 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return courseDto;
         }
 
-        /// <summary>
-        /// OBSOLETE AS OF API VERSION 1.3. REPLACED BY GetSections2
-        /// Gets all sections that are open for preregistration or registration for the course Ids specified.
-        /// </summary>
-        /// <param name="courseids">String of course Ids separated by commas</param>
-        /// <returns>IEnumerable list of SectionDTOs</returns>
-        [Obsolete("Obsolete as of API version 1.3. Use the latest version of this method.")]
+
+        private List<Dtos.Student.Section3> SortSections(List<Dtos.Student.Section3> sections, CatalogSortType sortOn, CatalogSortDirection sortDirection)
+        {
+            logger.Info(string.Format("sorting of filtered sections will be on field {0} with direction of {1}", sortOn, sortDirection));
+            Stopwatch sortWatch = new Stopwatch();
+            sortWatch.Start();
+            List<Dtos.Student.Section3> sortedSections = new List<Dtos.Student.Section3>();
+            if (sections == null || !sections.Any())
+            {
+                return sections;
+            }
+            try
+            {
+                switch (sortOn)
+                {
+                    //Status is Waitlisted or Open,  Section is Waitlisted when  Waitlisted attribute is >=1
+                    case CatalogSortType.Status:
+                        switch (sortDirection)
+                        {
+                            case CatalogSortDirection.Ascending:
+                                sortedSections = sections.OrderBy(s => s.IsStatusWaitlisted).ThenBy(s => string.Concat(s.CourseName, s.Number)).ToList();
+                                break;
+                            case CatalogSortDirection.Descending:
+                                sortedSections = sections.OrderByDescending(s => s.IsStatusWaitlisted).ThenBy(s => string.Concat(s.CourseName, s.Number)).ToList();
+                                break;
+
+                        }
+
+                        break;
+                    //Number of seats available, which is Available property in Section, If there is no capacity, Available property is null
+                    case CatalogSortType.SeatsAvailable:
+                        switch (sortDirection)
+                        {
+                            case CatalogSortDirection.Ascending:
+                                sortedSections = sections.OrderBy(s => s.Available).ThenBy(s => string.Concat(s.CourseName, s.Number)).ToList();
+                                break;
+                            case CatalogSortDirection.Descending:
+                                sortedSections = sections.OrderByDescending(s => s.Available).ThenBy(s => string.Concat(s.CourseName, s.Number)).ToList();
+                                break;
+
+                        }
+
+                        break;
+                    //Section Name is combination of course name and section number
+                    case CatalogSortType.SectionName:
+                        switch (sortDirection)
+                        {
+                            case CatalogSortDirection.Ascending:
+                                sortedSections = sections.OrderBy(s => string.Concat(s.CourseName, s.Number)).ToList();
+                                break;
+                            case CatalogSortDirection.Descending:
+                                sortedSections = sections.OrderByDescending(s => string.Concat(s.CourseName, s.Number)).ToList();
+                                break;
+
+                        }
+                        break;
+                    //Section location- which is simple string
+                    case CatalogSortType.Location:
+                        switch (sortDirection)
+                        {
+                            case CatalogSortDirection.Ascending:
+                                sortedSections = sections.OrderBy(s => s.Location).ThenBy(s => string.Concat(s.CourseName, s.Number)).ToList();
+                                break;
+                            case CatalogSortDirection.Descending:
+                                sortedSections = sections.OrderByDescending(s => s.Location).ThenBy(s => string.Concat(s.CourseName, s.Number)).ToList();
+                                break;
+
+                        }
+                        break;
+                    default:
+                        sortedSections = sections;
+                        break;
+
+
+                }
+                sortWatch.Stop();
+                logger.Info(string.Format("Amount of time taken for sorting all the filtered sections from catalog={0} ms", sortWatch.ElapsedMilliseconds));
+                return sortedSections;
+            }
+            catch(Exception ex)
+            {
+                logger.Error(ex, "An exception occured while doing section sorting for catalog result.");
+                return sections;
+            }
+        }
+           
+
+    /// <summary>
+    /// OBSOLETE AS OF API VERSION 1.3. REPLACED BY GetSections2
+    /// Gets all sections that are open for preregistration or registration for the course Ids specified.
+    /// </summary>
+    /// <param name="courseids">String of course Ids separated by commas</param>
+    /// <returns>IEnumerable list of SectionDTOs</returns>
+    [Obsolete("Obsolete as of API version 1.3. Use the latest version of this method.")]
         public async Task<PrivacyWrapper<IEnumerable<Ellucian.Colleague.Dtos.Student.Section>>> GetSectionsAsync(IEnumerable<string> courseIds, bool useCache = true)
         {
             IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Term> registrationTerms = await _termRepository.GetRegistrationTermsAsync();
@@ -2829,6 +4175,125 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         }
 
+        /// <summary>
+        /// Returns a CourseSectionResult based on the supplied search and filters for Instant Enrollment.
+        /// </summary>
+        /// <param name="criteria">Instant Enrollment search criteria</param>
+        /// <returns>CourseSectionResult - filter result. Will always return empty result if no search is found or any exception occurs</returns>
+        private async Task<CourseSectionResult> BuildInstantEnrollmentFilterResultAsync(InstantEnrollmentCourseSearchCriteria criteria)
+        {
+            if(criteria==null)
+            {
+                criteria = new InstantEnrollmentCourseSearchCriteria();
+            }
+            // Courses and Sections Returned by search. Later used as basis for filter counts.
+            var searchResult = new CourseSectionResult();
+
+            // Courses and Sections Returned by filter
+            var filterResult = new CourseSectionResult();
+
+            // Just in case, clean up incoming identifiers
+            string keyword = "";
+            if (criteria.Keyword != null)
+            {
+                keyword = criteria.Keyword.Trim();
+            }
+
+            List<string> courseIds = new List<string>();
+            if (criteria.CourseIds != null)
+            {
+                foreach (var courseid in criteria.CourseIds)
+                {
+                    if (!string.IsNullOrEmpty(courseid))
+                    {
+                        courseIds.Add(courseid.Trim());
+                    }
+                }
+            }
+
+            var sectionIds = new List<string>();
+            if (criteria.SectionIds != null)
+            {
+                foreach (var sectionid in criteria.SectionIds)
+                {
+                    if (!string.IsNullOrEmpty(sectionid))
+                    {
+                        sectionIds.Add(sectionid.Trim());
+                    }
+                }
+            }
+
+            // SEARCH BY KEYWORD
+            // If a keyword has been specified, get all courses and sections and do a keyword search
+            if (!(string.IsNullOrEmpty(keyword)))
+            {
+                // Call method to search both courses and sections
+                searchResult = await InstantEnrollmentSearchByKeywordAsync(keyword);
+
+                // Filter courses and sections as specified in criteria
+                filterResult = await FilterInstantEnrollmentResultsAsync(searchResult, criteria);
+
+                // Ensure there is a course for every section in the filter result
+                // This could occur as a result of the keyword search
+                // Sort results by subject/number (aka course name)
+                // Remove line that sorted result by course name
+                filterResult.Courses = (await RetrieveCoursesForFilteredSectionsAsync(filterResult)).ToList();
+            }
+            
+
+            // GET SECTIONS (AND COURSES) FOR SPECIFIC SECTION IDS
+            else if (sectionIds != null && sectionIds.Any())
+            {
+                // Get all sections for the specified Ids
+                var allIeSections = (await GetInstantEnrollmentActiveSectionsAsync()).ToList();
+                searchResult.Sections = allIeSections.Where(s => sectionIds.Contains(s.Id)).ToList();
+
+                // Get the courses for these sections
+                var sectionCourseIds = searchResult.Sections.Select(s => s.CourseId).Distinct();
+                if (sectionCourseIds.Any())
+                {
+                    searchResult.Courses = (await GetInstantEnrollmentCatalogAsync()).Where(c => sectionCourseIds.Contains(c.Id)).ToList();
+                }
+                // Further filter courses and sections as specified in criteria
+                filterResult = await FilterInstantEnrollmentResultsAsync(searchResult, criteria);
+            }
+            // SEARCH BY COURSE ID
+            // If a course ID has been specified, get all courses with that ID and any equivalents. Course Ids are retreived from the valid and active and non hidden IE sections (passing ninja criteria) only
+            else if (courseIds != null && courseIds.Any())
+            {
+
+                var allTheSections = (await GetInstantEnrollmentActiveSectionsAsync()).ToList();
+                searchResult.Sections = allTheSections.Where(s => courseIds.Contains(s.CourseId)).ToList();
+                searchResult.Courses = (await GetInstantEnrollmentCoursesForSectionsAsync(searchResult.Sections)).ToList();
+
+                // Further filter courses and sections as specified in criteria
+                filterResult = await FilterInstantEnrollmentResultsAsync(searchResult, criteria);
+            }
+
+            // FILTER ALL COURSES AND SECTIONS
+            else
+            {
+                // Get all sections for the specified Ids
+                searchResult.Sections = (await GetInstantEnrollmentActiveSectionsAsync()).ToList();
+                searchResult.Courses = (await GetInstantEnrollmentCoursesForSectionsAsync(searchResult.Sections)).ToList();
+                // Further filter courses and sections as specified in criteria
+                filterResult = await FilterInstantEnrollmentResultsAsync(searchResult, criteria);
+            }
+            return filterResult;
+
+        }
+        /// <summary>
+        /// Retrieves Active and non-hidden valid IE Sections.
+        /// Valid IE Sections are those sections that pass the ninja criteria.
+        /// </summary>
+        /// <returns>List of sections</returns>
+        private async Task<IEnumerable<Domain.Student.Entities.Section>> GetInstantEnrollmentActiveSectionsAsync()
+        {
+            IEnumerable<Domain.Student.Entities.Section> allIeSections = await _sectionRepository.GetInstantEnrollmentSectionsAsync();
+            List<Domain.Student.Entities.Section> activeSections = allIeSections!=null ? allIeSections.Where(s => s.IsActive && !s.HideInCatalog).ToList() : new List<Domain.Student.Entities.Section>();
+            return activeSections;
+        }
+
         private async Task<IEnumerable<Domain.Student.Entities.Course>> FilterCoursesAgainstRulesAsync(IEnumerable<Domain.Student.Entities.Course> courses, IEnumerable<RequirementRule> rules)
         {
             if (rules == null || rules.Count() == 0)
@@ -3039,6 +4504,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 _courseTitleTypes = (await _studentReferenceDataRepository.GetCourseTitleTypesAsync(ignoreCache)).ToList();
             }
+            if (_cipCodes == null)
+            {
+                _cipCodes = (await _studentReferenceDataRepository.GetCipCodesAsync(ignoreCache)).ToList();
+            }
         }
 
         /// <summary>
@@ -3075,6 +4544,92 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new ConfigurationException("A default course inactive status code must be specified.");
             }
+        }
+
+        /// <summary>
+        /// Returns a page of sections for section search.
+        /// </summary>
+        /// <param name="criteria">Section search criteria</param>
+        /// <param name="pageSize">Number of items per page</param>
+        /// <param name="pageIndex">Page number to return</param>
+        /// <returns>A SectionPage DTO which is essentially a data page of Section DTOs along with associated filters</returns>
+        /// 
+
+        public async Task<SectionPage> SectionSearchAsync(SectionSearchCriteria criteria, int pageSize, int pageIndex)
+        {
+            SectionPage emptySectionPage = new SectionPage(new List<Dtos.Student.Section3>(), pageSize, pageIndex);
+            if (criteria == null)
+            {
+                return emptySectionPage;
+            }
+
+            //Convert Section search criteria to a CourseSearchCriteria so we can use the normal course search engine.
+            CourseSearchCriteria courseSearchCriteria = ConvertSectionSearchCriteriaToCourseSearchCriteria(criteria);
+
+            // Courses and Sections Returned by filter
+            var filterResult = await BuildFilterResultAsync(courseSearchCriteria, pageSize, pageIndex);
+            if (filterResult != null)
+            {
+                List<Dtos.Student.Section3> sectionsDto = ConvertSectionsToDto(filterResult.Sections);
+                //sort the section before paging happens so that proper page of the resultset is picked.
+              
+                List<Dtos.Student.Section3> sortedSectionsDto = SortSections(sectionsDto, criteria.SortOn, criteria.SortDirection);
+                SectionPage sectionPage = new SectionPage(sortedSectionsDto, pageSize, pageIndex);
+                // Build outgoing filters. Built against the results from the overall search and all current filters.
+                sectionPage.Subjects = BuildSectionSubjectFilter(filterResult.Sections, criteria);
+                sectionPage.Locations = await BuildSectionLocationFilterAsync(filterResult, criteria);
+                sectionPage.Faculty = BuildFacultyFilter(filterResult.Sections, courseSearchCriteria, false);
+                sectionPage.DaysOfWeek = BuildSectionDayOfWeekFilter(filterResult.Sections, criteria);
+                sectionPage.CourseTypes = await BuildCourseTypeFilterAsync(filterResult.Sections, courseSearchCriteria, false);
+                sectionPage.AcademicLevels = BuildSectionAcademicLevelFilter(filterResult.Sections, criteria);
+                sectionPage.CourseLevels = BuildSectionCourseLevelFilter(filterResult.Sections, criteria);
+                sectionPage.TopicCodes = BuildSectionTopicCodeFilter(filterResult, criteria);
+                sectionPage.Terms = BuildTermFilter(filterResult.Sections, courseSearchCriteria, false);
+                sectionPage.EarliestTime = criteria.EarliestTime;
+                sectionPage.LatestTime = criteria.LatestTime;
+                sectionPage.OnlineCategories = BuildOnlineCategoryFilter(filterResult.Sections, courseSearchCriteria);
+                sectionPage.OpenSections = BuildOpenSectionsFilter(filterResult.Sections, courseSearchCriteria);
+                sectionPage.OpenAndWaitlistSections = BuildOpenAndWaitlistSectionsFilter(filterResult.Sections, courseSearchCriteria);
+                return sectionPage;
+            }
+            else
+            {
+                return emptySectionPage;
+            }
+        }
+
+        private CourseSearchCriteria ConvertSectionSearchCriteriaToCourseSearchCriteria(SectionSearchCriteria sectionCriteria)
+        {
+            CourseSearchCriteria courseSearchCriteria = new CourseSearchCriteria();
+            if (sectionCriteria != null)
+            {
+                courseSearchCriteria.Subjects = sectionCriteria.Subjects;
+                courseSearchCriteria.Keyword = sectionCriteria.Keyword;
+                courseSearchCriteria.CourseIds = sectionCriteria.CourseIds;
+                courseSearchCriteria.SectionIds = sectionCriteria.SectionIds;
+                courseSearchCriteria.CourseTypes = sectionCriteria.CourseTypes;
+                courseSearchCriteria.Locations = sectionCriteria.Locations;
+                courseSearchCriteria.OnlineCategories = sectionCriteria.OnlineCategories;
+                courseSearchCriteria.OpenAndWaitlistSections = sectionCriteria.OpenAndWaitlistSections;
+                courseSearchCriteria.OpenSections = sectionCriteria.OpenSections;
+                courseSearchCriteria.SectionEndDate = sectionCriteria.SectionEndDate;
+                courseSearchCriteria.SectionIds = sectionCriteria.SectionIds;
+                courseSearchCriteria.SectionStartDate = sectionCriteria.SectionStartDate;
+                courseSearchCriteria.SectionEndDate = sectionCriteria.SectionEndDate;
+                courseSearchCriteria.LatestTime = sectionCriteria.LatestTime;
+                courseSearchCriteria.EarliestTime = sectionCriteria.EarliestTime;
+                courseSearchCriteria.StartsAtTime = sectionCriteria.StartsAtTime;
+                courseSearchCriteria.EndsByTime = sectionCriteria.EndsByTime;
+                courseSearchCriteria.DaysOfWeek = sectionCriteria.DaysOfWeek;
+                courseSearchCriteria.Terms = sectionCriteria.Terms;
+                courseSearchCriteria.TopicCodes = sectionCriteria.TopicCodes;
+                courseSearchCriteria.Faculty = sectionCriteria.Faculty;
+                courseSearchCriteria.AcademicLevels = sectionCriteria.AcademicLevels;
+                courseSearchCriteria.CourseLevels = sectionCriteria.CourseLevels;
+                courseSearchCriteria.RequirementCode = sectionCriteria.RequirementCode;
+                courseSearchCriteria.RequirementGroup = sectionCriteria.RequirementGroup;
+            }
+            return courseSearchCriteria;
         }
 
         #region V6 Changes
@@ -3781,18 +5336,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             }
 
-            // If we don't have owning organizations then try using the subject-department mapping 
-            // to determine department based on subject
+            // If we don't have owning organizations then try use the department specified on the subject
+            // for Ethos integration if it exists
             if (offeringDepartments.Count() == 0 && courseConfig.SubjectDepartmentMapping.Items != null && courseConfig.SubjectDepartmentMapping.Items.Count > 0)
             {
-                var deptMapping = courseConfig.SubjectDepartmentMapping.Items.Where(i => i.OriginalCode == subjectCode).FirstOrDefault();
-                var deptCode = deptMapping != null ? deptMapping.NewCode : null;
-                var department = deptCode != null ? _departments.Where(d => d.Code == deptCode).FirstOrDefault() : null;
-                var academicDepartment = department != null ? _academicDepartments.Where(ad => ad.Code == department.Code).FirstOrDefault() : null;
-
-                if (academicDepartment != null)
+                if (!string.IsNullOrEmpty(subjectCode))
                 {
-                    offeringDepartments.Add(new OfferingDepartment(academicDepartment.Code, 100m));
+                    string subjectIntgDepartment = string.Empty;
+                    var subject = (await GetSubjectAsync(bypassCache)).FirstOrDefault(c => c.Code == subjectCode);
+                    if (subject != null)
+                    {
+                        if (!string.IsNullOrEmpty(subject.IntgDepartment))
+                        {
+                            offeringDepartments.Add(new OfferingDepartment(subject.IntgDepartment, 100m));
+                        }
+                    }
                 }
             }
 
@@ -4258,7 +5816,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (!string.IsNullOrEmpty(gradeScheme))
                     course.GradeSchemes = new List<Dtos.GuidObject2> { new Dtos.GuidObject2((gradeScheme)) };
             }
-        
+
 
             course.Title = source.LongTitle;
             course.Description = source.Description;
@@ -4584,18 +6142,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             }
 
-            // If we don't have owning organizations then try using the subject-department mapping 
-            // to determine department based on subject
+            // If we don't have owning organizations then try use the department specified on the subject
+            // for Ethos integration if it exists
             if (offeringDepartments.Count() == 0 && courseConfig.SubjectDepartmentMapping.Items != null && courseConfig.SubjectDepartmentMapping.Items.Count > 0)
             {
-                var deptMapping = courseConfig.SubjectDepartmentMapping.Items.Where(i => i.OriginalCode == subjectCode).FirstOrDefault();
-                var deptCode = deptMapping != null ? deptMapping.NewCode : null;
-                var department = deptCode != null ? _departments.Where(d => d.Code == deptCode).FirstOrDefault() : null;
-                var academicDepartment = department != null ? _academicDepartments.Where(ad => ad.Code == department.Code).FirstOrDefault() : null;
-
-                if (academicDepartment != null)
+                if (!string.IsNullOrEmpty(subjectCode))
                 {
-                    offeringDepartments.Add(new OfferingDepartment(academicDepartment.Code, 100m));
+                    string subjectIntgDepartment = string.Empty;
+                    var subject = (await GetSubjectAsync(bypassCache)).FirstOrDefault(c => c.Code == subjectCode);
+                    if (subject != null)
+                    {
+                        if (!string.IsNullOrEmpty(subject.IntgDepartment))
+                        {
+                            offeringDepartments.Add(new OfferingDepartment(subject.IntgDepartment, 100m));
+                        }
+                    }
                 }
             }
 
@@ -4880,24 +6441,35 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var courseCollection = new List<Dtos.Course5>();
             int totalCount = 0;
             List<string> newAcademicLevel = null, newOwningInstitutionUnit = null, newInstructionalMethods = null, newCategories = null;
-            string newSubject = string.Empty, newTopic = string.Empty;
+            string newSubject = string.Empty, newTopic = string.Empty, newStartOn = string.Empty, newEndOn = string.Empty, newActiveOn = string.Empty;
+
             try
             {
                 if (!string.IsNullOrEmpty(subject))
                 {
-                    newSubject = (string.IsNullOrEmpty(subject) ? string.Empty : ConvertGuidToCode(await GetSubjectAsync(bypassCache), subject));
+                    var subjects = await GetSubjectAsync(bypassCache);
+                    if (subjects == null || !subject.Any())
+                    {
+                        return new Tuple<IEnumerable<Course5>, int>(new List<Course5>(), 0);
+                    }
+                    newSubject = (string.IsNullOrEmpty(subject) ? string.Empty : ConvertGuidToCode(subjects, subject));
                     if (string.IsNullOrEmpty(newSubject))
                     {
                         return new Tuple<IEnumerable<Course5>, int>(new List<Course5>(), 0);
                     }
                 }
-                var newStartOn = (string.IsNullOrEmpty(schedulingStartOn) ? string.Empty : await ConvertDateArgument(schedulingStartOn));
-                var newEndOn = (string.IsNullOrEmpty(schedulingEndOn) ? string.Empty : await ConvertDateArgument(schedulingEndOn));
-                var newActiveOn = (string.IsNullOrEmpty(activeOn) ? string.Empty : await ConvertDateArgument(activeOn));
+                newStartOn = (string.IsNullOrEmpty(schedulingStartOn) ? string.Empty : await ConvertDateArgument(schedulingStartOn));
+                newEndOn = (string.IsNullOrEmpty(schedulingEndOn) ? string.Empty : await ConvertDateArgument(schedulingEndOn));
+                newActiveOn = (string.IsNullOrEmpty(activeOn) ? string.Empty : await ConvertDateArgument(activeOn));
 
                 if (academicLevel != null && academicLevel.Any())
                 {
-                    newAcademicLevel = ConvertGuidToCodeCollection(await GetAcademicLevelsAsync(bypassCache), academicLevel);
+                    var acadLevels = await GetAcademicLevelsAsync(bypassCache);
+                    if (acadLevels == null || !acadLevels.Any())
+                    {
+                        return new Tuple<IEnumerable<Course5>, int>(new List<Course5>(), 0);
+                    }
+                    newAcademicLevel = ConvertGuidToCodeCollection(acadLevels, academicLevel);
                     if ((newAcademicLevel == null) || (!newAcademicLevel.Any()))
                     {
                         return new Tuple<IEnumerable<Course5>, int>(new List<Course5>(), 0);
@@ -4905,7 +6477,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 if (owningInstitutionUnits != null && owningInstitutionUnits.Any())
                 {
-                    newOwningInstitutionUnit = ConvertGuidToCodeCollection(await GetDepartmentsAsync(bypassCache), owningInstitutionUnits);
+                    var depts = await GetDepartmentsAsync(bypassCache);
+                    if (depts == null || !depts.Any())
+                    {
+                        return new Tuple<IEnumerable<Course5>, int>(new List<Course5>(), 0);
+                    }
+                    newOwningInstitutionUnit = ConvertGuidToCodeCollection(depts, owningInstitutionUnits);
                     if ((newOwningInstitutionUnit == null) || (!newOwningInstitutionUnit.Any()))
                     {
                         return new Tuple<IEnumerable<Course5>, int>(new List<Course5>(), 0);
@@ -4913,7 +6490,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 if (instructionalMethods != null && instructionalMethods.Any())
                 {
-                    newInstructionalMethods = ConvertGuidToCodeCollection(await GetInstructionalMethodsAsync(bypassCache), instructionalMethods);
+                    var instrMethods = await GetInstructionalMethodsAsync(bypassCache);
+                    if (instrMethods == null || !instrMethods.Any())
+                    {
+                        return new Tuple<IEnumerable<Course5>, int>(new List<Course5>(), 0);
+                    }
+                    newInstructionalMethods = ConvertGuidToCodeCollection(instrMethods, instructionalMethods);
                     if ((newInstructionalMethods == null) || (!newInstructionalMethods.Any()))
                     {
                         return new Tuple<IEnumerable<Course5>, int>(new List<Course5>(), 0);
@@ -4921,7 +6503,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 if (categories != null && categories.Any())
                 {
-                    newCategories = ConvertGuidToCodeCollection(await _studentReferenceDataRepository.GetCourseTypesAsync(bypassCache), categories);
+                    var crsTypes = await _studentReferenceDataRepository.GetCourseTypesAsync(bypassCache);
+                    if (crsTypes == null || !crsTypes.Any())
+                    {
+                        return new Tuple<IEnumerable<Course5>, int>(new List<Course5>(), 0);
+                    }
+                    newCategories = ConvertGuidToCodeCollection(crsTypes, categories);
                     if ((newCategories == null) || (!newCategories.Any()))
                     {
                         return new Tuple<IEnumerable<Course5>, int>(new List<Course5>(), 0);
@@ -4929,38 +6516,78 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 if (!string.IsNullOrEmpty(topic))
                 {
-                    newTopic = (string.IsNullOrEmpty(topic) ? string.Empty : ConvertGuidToCode(await _studentReferenceDataRepository.GetTopicCodesAsync(bypassCache), topic));
+                    var topicCodes = await _studentReferenceDataRepository.GetTopicCodesAsync(bypassCache);
+                    if (topicCodes == null || !topicCodes.Any())
+                    {
+                        return new Tuple<IEnumerable<Course5>, int>(new List<Course5>(), 0);
+                    }
+                    newTopic = (string.IsNullOrEmpty(topic) ? string.Empty : ConvertGuidToCode(topicCodes, topic));
                     if (string.IsNullOrEmpty(newTopic))
                     {
                         return new Tuple<IEnumerable<Course5>, int>(new List<Course5>(), 0);
                     }
                 }
-
-                var courseEntities = await _courseRepository.GetPagedCoursesAsync(offset, limit, newSubject, number, newAcademicLevel, newOwningInstitutionUnit, titles, newInstructionalMethods, newStartOn, newEndOn, newTopic, newCategories, newActiveOn);
-                totalCount = courseEntities.Item2;
-                foreach (var course in courseEntities.Item1)
-                {
-                    courseCollection.Add(await ConvertCourseEntityToDto5Async(course, false));
-                }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                throw new Exception("An error occurred retrieving courses: " + ex.Message, ex.InnerException);
+                return new Tuple<IEnumerable<Course5>, int>(new List<Course5>(), 0);
             }
+
+            Tuple<IEnumerable<Domain.Student.Entities.Course>, int> courseEntities = null;
+
+            try
+            {
+                courseEntities = await _courseRepository.GetPagedCoursesAsync(offset, limit, newSubject, number, newAcademicLevel, newOwningInstitutionUnit, titles,
+                    newInstructionalMethods, newStartOn, newEndOn, newTopic, newCategories, newActiveOn, true);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+
+            if (courseEntities == null)
+            {
+                return new Tuple<IEnumerable<Course5>, int>(new List<Course5>(), 0);
+            }
+
+            totalCount = courseEntities.Item2;
+            foreach (var course in courseEntities.Item1)
+            {
+                courseCollection.Add(await ConvertCourseEntityToDto5Async(course, false));
+            }
+
+            if (IntegrationApiException != null)
+                throw IntegrationApiException;
+
             return courseCollection.Any() ? new Tuple<IEnumerable<Course5>, int>(courseCollection, totalCount) :
                     new Tuple<IEnumerable<Course5>, int>(new List<Course5>(), 0);
         }
 
         /// <summary>
-        /// Gets a course by id
+        /// Gets a course by guid
         /// </summary>
         /// <param name="id"></param>
         /// <returns>Dtos.Course4</returns>
         public async Task<Dtos.Course5> GetCourseByGuid5Async(string id)
         {
-            var course = await _courseRepository.GetCourseByGuidAsync(id);
 
-            var courseDto = await ConvertCourseEntityToDto5Async(course, true);
+            Domain.Student.Entities.Course course = null;
+            try
+            {
+                course = await _courseRepository.GetCourseByGuid2Async(id, true);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex, guid: id);
+                throw IntegrationApiException;
+            }
+
+            Course5 courseDto = await ConvertCourseEntityToDto5Async(course, true);
+
+            if (IntegrationApiException != null)
+                throw IntegrationApiException;
+
             return courseDto;
         }
 
@@ -4984,12 +6611,25 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             // Confirm that user has permissions to update course
             CheckCoursePermission();
 
+            _courseRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+
             //Convert the DTO to an entity, update the course, convert the resulting entity back to a DTO, and return it
             var courseEntity = await ConvertCourseDtoToEntity5Async(course, bypassCache);
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
             var source = course.MetadataObject != null ? course.MetadataObject.CreatedBy : null;
             var version = "16";
             var updatedCourseEntity = await _courseRepository.UpdateCourseAsync(courseEntity, source, version);
-            return await ConvertCourseEntityToDto5Async(updatedCourseEntity, true);
+            var convertedEntity = await ConvertCourseEntityToDto5Async(updatedCourseEntity, bypassCache);
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            return convertedEntity;
         }
 
         /// <summary>
@@ -5001,13 +6641,36 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             // Confirm that user has permissions to create course
             CheckCoursePermission();
+            _courseRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
             //Convert the DTO to an entity, create the course, convert the resulting entity back to a DTO, and return it
             var courseEntity = await ConvertCourseDtoToEntity5Async(course, bypassCache);
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
             var source = course.MetadataObject != null ? course.MetadataObject.CreatedBy : null;
             var version = "16";
             var createdCourseEntity = await _courseRepository.CreateCourseAsync(courseEntity, source, version);
-            return await ConvertCourseEntityToDto5Async(createdCourseEntity, true);
+
+            var convertedEntity = await ConvertCourseEntityToDto5Async(createdCourseEntity, bypassCache);
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            return convertedEntity;
+        }
+
+        /// <summary>
+        /// Gets contact measures.
+        /// </summary>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        private async Task<IEnumerable<ContactMeasure>> GetContactMeasuresAsync(bool bypassCache)
+        {
+            return _contactMeasures ?? await _studentReferenceDataRepository.GetContactMeasuresAsync(false);
         }
 
         /// <summary>
@@ -5020,24 +6683,36 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             if (source == null)
             {
-                throw new ArgumentNullException("source", "A course must be supplied.");
+                IntegrationApiExceptionAddError("A course must be supplied.");
+                return null;
             }
 
-            if (_contactMeasures == null)
-            {
-                _contactMeasures = (await _studentReferenceDataRepository.GetContactMeasuresAsync(false)).ToList();
-            }
-            
             var course = new Ellucian.Colleague.Dtos.Course5();
+            if (!string.IsNullOrEmpty(source.Guid))
+            {
+                course.Id = source.Guid;
+            }
+            else
+            {
+                IntegrationApiExceptionAddError("Course must provide a GUID.", "Bad.Data", source.Guid, source.Id);
+            }
 
-            course.Id = source.Guid;
             //get subject
             if (!string.IsNullOrEmpty(source.SubjectCode))
             {
-                var subject = await _studentReferenceDataRepository.GetSubjectGuidAsync(source.SubjectCode);
+                var subject = string.Empty;
+                try
+                {
+                    subject = await _studentReferenceDataRepository.GetSubjectGuidAsync(source.SubjectCode);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                }
                 if (!string.IsNullOrEmpty(subject))
                     course.Subject = new Dtos.GuidObject2(subject);
             }
+
             //get course levels
             course.CourseLevels = new List<Dtos.GuidObject2>();
             if (source.CourseLevelCodes != null && source.CourseLevelCodes.Count > 0)
@@ -5047,7 +6722,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (!string.IsNullOrEmpty(courseLevelCode))
                     {
-                        var courseLevel = await _studentReferenceDataRepository.GetCourseLevelGuidAsync(courseLevelCode);
+                        var courseLevel = string.Empty;
+                        try
+                        {
+                            courseLevel = await _studentReferenceDataRepository.GetCourseLevelGuidAsync(courseLevelCode);
+                        }
+                        catch (RepositoryException ex)
+                        {
+                            IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                        }
                         if (!string.IsNullOrEmpty(courseLevel))
                             courseLevelGuids.Add(new Dtos.GuidObject2(courseLevel));
                     }
@@ -5058,20 +6741,24 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             }
 
-            // New object InstructionalMethodDetails with v16
-
             course.InstructionalMethodDetails = new List<InstructionalMethodDetail>();
             if (source.InstructionalMethodCodes != null && source.InstructionalMethodCodes.Any())
             {
-
-                // var administrativeInstructionalMethods = await GetAdministrativeInstructionalMethodsAsync(bypassCache);
 
                 foreach (var instrMethodCode in source.InstructionalMethodCodes)
                 {
                     if (!string.IsNullOrEmpty(instrMethodCode))
                     {
                         var position = source.InstructionalMethodCodes.IndexOf(instrMethodCode);
-                        var instructionalMethod = await _studentReferenceDataRepository.GetInstructionalMethodGuidAsync(instrMethodCode);
+                        var instructionalMethod = string.Empty;
+                        try
+                        {
+                            instructionalMethod = await _studentReferenceDataRepository.GetInstructionalMethodGuidAsync(instrMethodCode);
+                        }
+                        catch (RepositoryException ex)
+                        {
+                            IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                        }
                         ContactHoursPeriod instrMethodPeriod = ContactHoursPeriod.NotSet;
                         decimal? instrMethodHours = null;
 
@@ -5087,14 +6774,33 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             {
                                 if (!string.IsNullOrEmpty(source.InstructionalMethodContactPeriods[position]))
                                 {
-                                    instrMethodPeriod = ConvertContactHoursPeriodEntityToDto(_contactMeasures.First(cm => cm.Code == source.InstructionalMethodContactPeriods[position]).ContactPeriod);
+                                    if (_contactMeasures == null)
+                                    {
+                                        _contactMeasures = (await GetContactMeasuresAsync(bypassCache)).ToList();
+                                    }
+                                    if (_contactMeasures != null && _contactMeasures.Any())
+                                    {
+                                        var contactPeriod = _contactMeasures.FirstOrDefault(cm => cm.Code == source.InstructionalMethodContactPeriods[position]);
+                                        if (contactPeriod != null)
+                                        {
+                                            instrMethodPeriod = ConvertContactHoursPeriodEntityToDto(contactPeriod.ContactPeriod);
+                                        }
+                                    }
                                 }
                             }
                             if (source.InstructionalMethodContactHours != null && source.InstructionalMethodContactHours.Count == source.InstructionalMethodCodes.Count)
                             {
                                 instrMethodHours = source.InstructionalMethodContactHours[position];
                             }
-                            var administrativeInstructionalMethod = await _studentReferenceDataRepository.GetAdministrativeInstructionalMethodGuidAsync(instrMethodCode);
+                            var administrativeInstructionalMethod = string.Empty;
+                            try
+                            {
+                                administrativeInstructionalMethod = await _studentReferenceDataRepository.GetAdministrativeInstructionalMethodGuidAsync(instrMethodCode);
+                            }
+                            catch (RepositoryException ex)
+                            {
+                                IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                            }
                             if (!string.IsNullOrEmpty(administrativeInstructionalMethod) && instrMethodHours != null)
                             {
                                 var instrMethodHoursDetail = new CoursesHoursDtoProperty()
@@ -5123,14 +6829,31 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //get academic levels
             if (!(string.IsNullOrEmpty(source.AcademicLevelCode)))
             {
-                var acadLevel = await _studentReferenceDataRepository.GetAcademicLevelsGuidAsync(source.AcademicLevelCode);
+                var acadLevel = string.Empty;
+                try
+                {
+                    acadLevel = await _studentReferenceDataRepository.GetAcademicLevelsGuidAsync(source.AcademicLevelCode);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                }
                 if (!string.IsNullOrEmpty(acadLevel))
                     course.AcademicLevels = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2(acadLevel) };
             }
 
+
             if (!string.IsNullOrEmpty(source.GradeSchemeCode))
             {
-                var gradeScheme = await _studentReferenceDataRepository.GetGradeSchemeGuidAsync(source.GradeSchemeCode);
+                var gradeScheme = string.Empty;
+                try
+                {
+                    gradeScheme = await _studentReferenceDataRepository.GetGradeSchemeGuidAsync(source.GradeSchemeCode);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                }
                 if (!string.IsNullOrEmpty(gradeScheme))
                 {
                     course.GradeSchemes = new List<GradeSchemesDtoProperty>()
@@ -5145,26 +6868,37 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             course.Titles = new List<CoursesTitlesDtoProperty>();
-            var shortEntity = await _studentReferenceDataRepository.GetCourseTitleTypeGuidAsync("SHORT");
+            var shortEntity = string.Empty;
+            try
+            {
+                shortEntity = await _studentReferenceDataRepository.GetCourseTitleTypeGuidAsync("SHORT");
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+            }
             if (!string.IsNullOrEmpty(shortEntity))
             {
                 var shortTitle = new CoursesTitlesDtoProperty() { Type = new GuidObject2(shortEntity), Value = source.Title };
                 course.Titles.Add(shortTitle);
             }
-            else
+
+            var longEntity = string.Empty;
+            try
             {
-                throw new ArgumentNullException("titles.type", "The record 'SHORT' or it's GUID is missing from course title types. ");
+                longEntity = await _studentReferenceDataRepository.GetCourseTitleTypeGuidAsync("LONG");
             }
-            var longEntity = await _studentReferenceDataRepository.GetCourseTitleTypeGuidAsync("LONG");
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+            }
+
             if (!string.IsNullOrEmpty(longEntity))
             {
                 var longTitle = new CoursesTitlesDtoProperty() { Type = new GuidObject2(longEntity), Value = source.LongTitle };
                 course.Titles.Add(longTitle);
             }
-            else
-            {
-                throw new ArgumentNullException("titles.type", "The record 'LONG' or it's GUID is missing from course title types. ");
-            }
+
 
             if (!string.IsNullOrWhiteSpace(source.Description))
                 course.Description = source.Description;
@@ -5177,7 +6911,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 foreach (var offeringDept in source.Departments)
                 {
-                    var academicDepartment = await _referenceDataRepository.GetDepartments2GuidAsync(offeringDept.AcademicDepartmentCode);
+                    var academicDepartment = string.Empty;
+                    try
+                    {
+                        academicDepartment = await _referenceDataRepository.GetDepartments2GuidAsync(offeringDept.AcademicDepartmentCode);
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        IntegrationApiExceptionAddError(new RepositoryException(ex.Message, ex), "Bad.Data", source.Guid, source.Id);
+                    }
                     if (!string.IsNullOrEmpty(academicDepartment))
                     {
                         var department = new Ellucian.Colleague.Dtos.OwningInstitutionUnit
@@ -5201,7 +6947,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             // Determine the Credit information for the course
             course.Credits = new List<Dtos.Credit3>();
-            var creditCategories = await GetCreditCategoriesAsync(bypassCache);
+            List<CreditCategory> creditCategories = null;
+            try
+            {
+                creditCategories = (await GetCreditCategoriesAsync(bypassCache)).ToList();
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+            }
+
             if ((creditCategories != null) && (creditCategories.Any()))
             {
                 var creditType = creditCategories.FirstOrDefault(ct => ct.Code == source.LocalCreditType);
@@ -5266,7 +7021,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             if (!string.IsNullOrEmpty(source.TopicCode))
             {
-                var topicGuid = await _studentReferenceDataRepository.GetTopicCodeGuidAsync(source.TopicCode);
+                var topicGuid = string.Empty;
+                try
+                {
+                    topicGuid = await _studentReferenceDataRepository.GetTopicCodeGuidAsync(source.TopicCode);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                }
                 if (!string.IsNullOrEmpty(topicGuid))
                 {
                     course.Topic = new GuidObject2(topicGuid);
@@ -5278,26 +7041,64 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (!string.IsNullOrEmpty(cat))
                     {
-                        var TypeGuid = await _studentReferenceDataRepository.GetCourseTypeGuidAsync(cat);
-                        if (!string.IsNullOrEmpty(TypeGuid))
+                        var typeGuid = string.Empty;
+                        try
+                        {
+                            typeGuid = await _studentReferenceDataRepository.GetCourseTypeGuidAsync(cat);
+                        }
+                        catch (RepositoryException ex)
+                        {
+                            IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                        }
+                        if (!string.IsNullOrEmpty(typeGuid))
                         {
                             if (course.Categories == null)
                                 course.Categories = new List<GuidObject2>();
 
-                            course.Categories.Add(new GuidObject2(TypeGuid));
+                            course.Categories.Add(new GuidObject2(typeGuid));
                         }
                     }
                 }
-                
+
             }
             if (source.CourseApprovals != null && source.CourseApprovals.Any())
             {
                 var approval = source.CourseApprovals.ElementAtOrDefault(0);
                 if (approval != null && !string.IsNullOrEmpty(approval.StatusCode))
                 {
-                    var courseStatusGuid = await _studentReferenceDataRepository.GetCourseStatusGuidAsync(approval.StatusCode);
+                    var courseStatusGuid = string.Empty;
+                    try
+                    {
+                        courseStatusGuid = await _studentReferenceDataRepository.GetCourseStatusGuidAsync(approval.StatusCode);
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                    }
+
                     if (!string.IsNullOrEmpty(courseStatusGuid))
                         course.Status = new GuidObject2(courseStatusGuid);
+                }
+            }
+            if (!string.IsNullOrEmpty(source.FederalCourseClassification))
+            {
+                try
+                {
+                    var cipCodes = new List<CourseAdditionalClassifications>();
+                    var guid = await _studentReferenceDataRepository.GetCipCodesGuidAsync(source.FederalCourseClassification);
+                    if (!string.IsNullOrEmpty(guid))
+                    {
+                        var cip = new CourseAdditionalClassifications()
+                        {
+                            CipCode = new GuidObject2(guid)
+                        };
+                        cipCodes.Add(cip);
+                        course.AdditionalClassifications = cipCodes;
+                    }
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
                 }
             }
 
@@ -5315,43 +7116,48 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>A<see cref="Course">Course</see> domain entity</returns>
         private async Task<Domain.Student.Entities.Course> ConvertCourseDtoToEntity5Async(Dtos.Course5 course, bool bypassCache)
         {
-
             if (course == null)
             {
-                throw new ArgumentNullException("The request body for course is invalid or missing. ", "courses");
+                throw new ArgumentNullException("The request body for course is invalid or missing.", "courses");
             }
             if (course.Titles == null || !course.Titles.Any())
             {
-                throw new ArgumentException("At least one course title must be provided. ", "titles.value");
+                IntegrationApiExceptionAddError("At least one course title must be provided.", "Validation.Exception", course.Id);
             }
-            foreach (var title in course.Titles)
+            else
             {
-                if (string.IsNullOrEmpty(title.Value))
+                foreach (var title in course.Titles)
                 {
-                    throw new ArgumentException("The title value must be provided for the title object. ", "titles.value");
+                    if (string.IsNullOrEmpty(title.Value))
+                    {
+                        IntegrationApiExceptionAddError("The title value must be provided for the title object.", "Validation.Exception", course.Id);
+                    }
                 }
             }
             if (course.Status == null || string.IsNullOrEmpty(course.Status.Id))
             {
-                throw new ArgumentException("Status is required; no Id supplied. ", "status.id");
+                IntegrationApiExceptionAddError("Status is required; no Id supplied.", "Validation.Exception", course.Id);
             }
             if (course.Subject == null || string.IsNullOrEmpty(course.Subject.Id))
             {
-                throw new ArgumentException("Subject is required; no Id supplied. ", "subject.id");
+                IntegrationApiExceptionAddError("Subject is required; no Id supplied.", "Validation.Exception", course.Id);
             }
             if (string.IsNullOrEmpty(course.Number))
             {
-                throw new ArgumentException("Course number is required. ", "number");
+                IntegrationApiExceptionAddError("Course number is required.", "Validation.Exception", course.Id);
             }
-            if (course.Number.Length > 7)
+            else
             {
-                throw new ArgumentException("Course number cannot be longer than 7 characters. ", "number");
+                if (course.Number.Length > 7)
+                {
+                    IntegrationApiExceptionAddError("Course number cannot be longer than 7 characters.", "Validation.Exception", course.Id);
+                }
             }
             if (course.EffectiveStartDate != null && course.EffectiveEndDate != null)
             {
                 if (course.EffectiveEndDate < course.EffectiveStartDate)
                 {
-                    throw new ArgumentException("schedulingEndOn cannot be earlier than schedulingStartOn. ", "schedulingStartOn");
+                    IntegrationApiExceptionAddError("schedulingEndOn cannot be earlier than schedulingStartOn.", "Validation.Exception", course.Id);
                 }
             }
 
@@ -5361,7 +7167,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (string.IsNullOrEmpty(level.Id))
                     {
-                        throw new ArgumentException("Course Level id is a required field when Course Levels are defined. ", "courseLevels.id");
+                        IntegrationApiExceptionAddError("Course Level id is a required field when Course Levels are defined.", "Validation.Exception", course.Id);
                     }
                 }
             }
@@ -5372,7 +7178,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (scheme.GradeScheme == null || string.IsNullOrEmpty(scheme.GradeScheme.Id))
                     {
-                        throw new ArgumentException("Grade Scheme id is a required field when Grade Schemes are defined. ", "gradeSchemes.gradeScheme.id");
+                        IntegrationApiExceptionAddError("Grade Scheme id is a required field when Grade Schemes are defined.", "Validation.Exception", course.Id);
                     }
                 }
             }
@@ -5383,12 +7189,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (org.InstitutionUnit == null || string.IsNullOrEmpty(org.InstitutionUnit.Id))
                     {
-                        throw new ArgumentException("Institution Unit id is a required field when Owning Organizations are defined. ", "owningInstitutionUnits.institutionUnit.id");
+                        IntegrationApiExceptionAddError("Institution Unit id is a required field when Owning Organizations are defined.", "Validation.Exception", course.Id);
                     }
 
                     if (org.OwnershipPercentage == 0)
                     {
-                        throw new ArgumentException("Ownership Percentage is a required field when Owning Organizations are defined. ", "owningInstitutionUnits.ownershipPercentage");
+                        IntegrationApiExceptionAddError("Ownership Percentage is a required field when Owning Organizations are defined.", "Validation.Exception", course.Id);
                     }
                 }
             }
@@ -5397,73 +7203,78 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 if (course.Credits.Count() > 2)
                 {
-                    throw new ArgumentException("A maximum of 2 entries are allowed in the Credits array. ", "course.credits");
+                    IntegrationApiExceptionAddError("A maximum of 2 entries are allowed in the Credits array.", "Validation.Exception", course.Id);
                 }
                 if (course.Credits.Count() == 2)
                 {
                     if (course.Credits.Any() && course.Credits.ElementAt(0).CreditCategory != null && course.Credits.ElementAt(1).CreditCategory != null &&
                         course.Credits.ElementAt(0).CreditCategory.CreditType != course.Credits.ElementAt(1).CreditCategory.CreditType)
                     {
-                        throw new ArgumentException("The same Credit Type must be used for each entry in the Credits array. ", "credits.creditCategory.creditType");
+                        IntegrationApiExceptionAddError("The same Credit Type must be used for each entry in the Credits array.", "Validation.Exception", course.Id);
                     }
-                    if (!(course.Credits.ElementAt(0).Measure == CreditMeasure2.CEU && course.Credits.ElementAt(1).Measure == CreditMeasure2.Credit)
-                        && !(course.Credits.ElementAt(0).Measure == CreditMeasure2.Credit && course.Credits.ElementAt(1).Measure == CreditMeasure2.CEU)
-                        && !(course.Credits.ElementAt(0).Measure == CreditMeasure2.CEU && course.Credits.ElementAt(1).Measure == CreditMeasure2.Hours)
-                        && !(course.Credits.ElementAt(0).Measure == CreditMeasure2.Hours && course.Credits.ElementAt(1).Measure == CreditMeasure2.CEU))
+                    else
                     {
-                        throw new ArgumentException("Invalid combination of measures '" + course.Credits.ElementAt(0).Measure
-                            + "' and '" + course.Credits.ElementAt(1).Measure + "'. ", "credits.measure");
+                        if (!(course.Credits.ElementAt(0).Measure == CreditMeasure2.CEU && course.Credits.ElementAt(1).Measure == CreditMeasure2.Credit)
+                            && !(course.Credits.ElementAt(0).Measure == CreditMeasure2.Credit && course.Credits.ElementAt(1).Measure == CreditMeasure2.CEU)
+                            && !(course.Credits.ElementAt(0).Measure == CreditMeasure2.CEU && course.Credits.ElementAt(1).Measure == CreditMeasure2.Hours)
+                            && !(course.Credits.ElementAt(0).Measure == CreditMeasure2.Hours && course.Credits.ElementAt(1).Measure == CreditMeasure2.CEU))
+                        {
+                            IntegrationApiExceptionAddError("Invalid combination of measures '" + course.Credits.ElementAt(0).Measure
+                                + "' and '" + course.Credits.ElementAt(1).Measure + "'.", "Validation.Exception", course.Id);
+                        }
                     }
                 }
                 foreach (var credit in course.Credits)
                 {
                     if (credit.CreditCategory == null)
                     {
-                        throw new ArgumentException("Credit Category is required if Credits are defined. ", "credit.creditCategory");
+                        IntegrationApiExceptionAddError("Credit Category is required if Credits are defined.", "Validation.Exception", course.Id);
                     }
+                    else
+                    {
+                        if (credit.CreditCategory.CreditType == null)
+                        {
+                            IntegrationApiExceptionAddError("Credit Type is required for Credit Categories if Credits are defined.", "Validation.Exception", course.Id);
+                        }
 
-                    if (credit.CreditCategory.CreditType == null)
-                    {
-                        throw new ArgumentException("Credit Type is required if for Credit Categories if Credits are defined. ", "credit.creditCategory.creditType");
+                        if (credit.CreditCategory.Detail != null && string.IsNullOrEmpty(credit.CreditCategory.Detail.Id))
+                        {
+                            IntegrationApiExceptionAddError("Credit Category id within the detail object is required if Credit Category is defined.", "Validation.Exception", course.Id);
+                        }
+                        //if (credit.Increment == null && credit.Maximum != null)
+                        //{
+                        //    throw new ArgumentException("Credit Increment is required when Credit Maximum exists. ", "credit.maximum");
+                        //}
+                        if (credit.Maximum == null && credit.Increment != null)
+                        {
+                            IntegrationApiExceptionAddError("Credit Maximum is required when Credit Increment exists.", "Validation.Exception", course.Id);
+                        }
+                        if ((credit.Maximum != null || credit.Increment != null) && credit.Measure == CreditMeasure2.CEU)
+                        {
+                            IntegrationApiExceptionAddError("Credit Maximum/Increment cannot exist when Credit Measure is 'ceu'.", "Validation.Exception", course.Id);
+                        }
+                        //if (credit.Increment != null && credit.Measure == CreditMeasure2.CEU)
+                        //{
+                        //    throw new ArgumentException("Credit Increment cannot exist when Credit Measure is 'ceu'. ", "credit.measure");
+                        //}
                     }
-
-                    if (credit.CreditCategory.Detail != null && string.IsNullOrEmpty(credit.CreditCategory.Detail.Id))
-                    {
-                        throw new ArgumentException("Credit Category id is required within the detail section of Credit Category is defined. ", "credit.creditCategory.detail.id");
-                    }
-                    //if (credit.Increment == null && credit.Maximum != null)
-                    //{
-                    //    throw new ArgumentException("Credit Increment is required when Credit Maximum exists. ", "credit.maximum");
-                    //}
-                    if (credit.Maximum == null && credit.Increment != null)
-                    {
-                        throw new ArgumentException("Credit Maximum is required when Credit Increment exists. ", "credit.increment");
-                    }
-                    if ((credit.Maximum != null || credit.Increment != null) && credit.Measure == CreditMeasure2.CEU)
-                    {
-                        throw new ArgumentException("Credit Maximum/Increment cannot exist when Credit Measure is 'ceu'. ", "credit.measure");
-                    }
-                    //if (credit.Increment != null && credit.Measure == CreditMeasure2.CEU)
-                    //{
-                    //    throw new ArgumentException("Credit Increment cannot exist when Credit Measure is 'ceu'. ", "credit.measure");
-                    //}
                 }
 
                 if (course.Billing != null && course.Billing.Minimum < 0)
                 {
-                    throw new ArgumentException("Billing credits minimum cannot be less than zero. ", "billing.minimum");
+                    IntegrationApiExceptionAddError("Billing credits minimum cannot be less than zero.", "Validation.Exception", course.Id);
                 }
                 if (course.Billing != null && course.Billing.Maximum != null && course.Billing.Minimum != course.Billing.Maximum)
                 {
-                    throw new ArgumentException("Billing minimum and maximum credits must be equal. ", "billing.minimum");
+                    IntegrationApiExceptionAddError("Billing minimum and maximum credits must be equal.", "Validation.Exception", course.Id);
                 }
                 if (course.Billing != null && course.Billing.Increment != null && course.Billing.Increment != 0)
                 {
-                    throw new ArgumentException("Billing credits increment must be zero. ", "billing.increment");
+                    IntegrationApiExceptionAddError("Billing credits increment must be zero.", "Validation.Exception", course.Id);
                 }
                 if (course.Topic != null && string.IsNullOrEmpty(course.Topic.Id))
                 {
-                    throw new ArgumentException("Id must be supplied for a Topic. ", "topic.id");
+                    IntegrationApiExceptionAddError("Id must be supplied for a Topic.", "Validation.Exception", course.Id);
                 }
             }
             // Check for duplicates in the instructionalMethodDetails array
@@ -5476,9 +7287,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         if (testInstructionalMethods.Contains(detail.InstructionalMethod.Id))
                         {
-                            throw new ArgumentException(string.Format("Duplicate instructional method '{0}' is not allowed. ", detail.InstructionalMethod.Id), "instructionalMethodDetail.instructionalMethod.id");
+                            IntegrationApiExceptionAddError(string.Format("Duplicate instructional method '{0}' is not allowed.", detail.InstructionalMethod.Id), "Validation.Exception", course.Id);
                         }
-                        testInstructionalMethods.Add(detail.InstructionalMethod.Id);
+                        else
+                        {
+                            testInstructionalMethods.Add(detail.InstructionalMethod.Id);
+                        }
                     }
                 }
             }
@@ -5492,12 +7306,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         if (testInstructionalMethods.Contains(hours.AdministrativeInstructionalMethod.Id))
                         {
-                            throw new ArgumentException(string.Format("Duplicate instructional method '{0}' is not allowed. ", hours.AdministrativeInstructionalMethod.Id), "hours.administrativeInstructionalMethod.id");
+                            IntegrationApiExceptionAddError(string.Format("Duplicate instructional method '{0}' is not allowed.", hours.AdministrativeInstructionalMethod.Id), "Validation.Exception", course.Id);
                         }
-                        testInstructionalMethods.Add(hours.AdministrativeInstructionalMethod.Id);
-                        if (hours.Minimum == null)
+                        else
                         {
-                            throw new ArgumentException(string.Format("hours minimum is required for administrativeInstructionalMethod '{0}'. ", hours.AdministrativeInstructionalMethod.Id), "hours.minimum");
+                            testInstructionalMethods.Add(hours.AdministrativeInstructionalMethod.Id);
+                            if (hours.Minimum == null)
+                            {
+                                IntegrationApiExceptionAddError(string.Format("hours minimum is required for administrativeInstructionalMethod '{0}'.", hours.AdministrativeInstructionalMethod.Id), "Validation.Exception", course.Id);
+                            }
                         }
                     }
                 }
@@ -5510,11 +7327,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             VerifyCurriculumConfiguration(courseConfig);
 
             // Set the subject based on the supplied GUID
-            var subjectCode = ConvertGuidToCode(_subjects, course.Subject.Id);
-
-            if (subjectCode == null)
+            string subjectCode = string.Empty;
+            if (course.Subject != null && !string.IsNullOrEmpty(course.Subject.Id))
             {
-                throw new ArgumentException(string.Concat("Subject for id '", course.Subject.Id.ToString(), "' was not found. Valid Subject is required. "), "subject.id");
+                subjectCode = ConvertGuidToCode(_subjects, course.Subject.Id);
+            }
+
+            if (string.IsNullOrEmpty(subjectCode))
+            {
+                var subjectId = course.Subject != null && !string.IsNullOrEmpty(course.Subject.Id) ? course.Subject.Id.ToString() : string.Empty;
+                IntegrationApiExceptionAddError(string.Concat("Subject for id '", subjectId, "' was not found. Valid Subject is required."), "Validation.Exception", course.Id);
             }
 
             // Set the list of departments/shares
@@ -5525,41 +7347,47 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 foreach (var owningInstitutionUnit in course.OwningInstitutionUnits)
                 {
-                    var division = (await _referenceDataRepository.GetDivisionsAsync(bypassCache))
-                                            .FirstOrDefault(div => div.Guid.Equals(owningInstitutionUnit.InstitutionUnit.Id, StringComparison.OrdinalIgnoreCase));
-                    if (division != null)
+                    if (owningInstitutionUnit != null && owningInstitutionUnit.InstitutionUnit != null && !string.IsNullOrEmpty(owningInstitutionUnit.InstitutionUnit.Id))
                     {
-                        throw new InvalidOperationException("Owning institution unit of type 'division' is not supported.");
-                    }
+                        var division = (await _referenceDataRepository.GetDivisionsAsync(bypassCache))
+                                                .FirstOrDefault(div => div.Guid.Equals(owningInstitutionUnit.InstitutionUnit.Id, StringComparison.OrdinalIgnoreCase));
+                        if (division != null)
+                        {
+                            IntegrationApiExceptionAddError("Owning institution unit of type 'division' is not supported.", "Validation.Exception", course.Id);
+                        }
 
-                    var school = (await _referenceDataRepository.GetSchoolsAsync(bypassCache))
-                                            .FirstOrDefault(div => div.Guid.Equals(owningInstitutionUnit.InstitutionUnit.Id, StringComparison.OrdinalIgnoreCase));
-                    if (school != null)
-                    {
-                        throw new InvalidOperationException("Owning institution unit of type 'school' is not supported.");
-                    }
+                        var school = (await _referenceDataRepository.GetSchoolsAsync(bypassCache))
+                                                .FirstOrDefault(div => div.Guid.Equals(owningInstitutionUnit.InstitutionUnit.Id, StringComparison.OrdinalIgnoreCase));
+                        if (school != null)
+                        {
+                            IntegrationApiExceptionAddError("Owning institution unit of type 'school' is not supported.", "Validation.Exception", course.Id);
+                        }
 
-                    var department = _departments.Where(d => d.Guid == owningInstitutionUnit.InstitutionUnit.Id).FirstOrDefault();
-                    var academicDepartment = department != null ? _academicDepartments.FirstOrDefault(ad => ad.Code == department.Code) : null;
-                    if (academicDepartment != null)
-                    {
-                        offeringDepartments.Add(new OfferingDepartment(academicDepartment.Code, owningInstitutionUnit.OwnershipPercentage));
+                        var department = _departments.Where(d => d.Guid == owningInstitutionUnit.InstitutionUnit.Id).FirstOrDefault();
+                        var academicDepartment = department != null ? _academicDepartments.FirstOrDefault(ad => ad.Code == department.Code) : null;
+                        if (academicDepartment != null)
+                        {
+                            offeringDepartments.Add(new OfferingDepartment(academicDepartment.Code, owningInstitutionUnit.OwnershipPercentage));
+                        }
                     }
                 }
             }
 
-            // If we don't have owning organizations then try using the subject-department mapping 
-            // to determine department based on subject
+            // If we don't have owning organizations then try use the department specified on the subject
+            // for Ethos integration if it exists
             if (offeringDepartments.Count() == 0 && courseConfig.SubjectDepartmentMapping.Items != null && courseConfig.SubjectDepartmentMapping.Items.Count > 0)
             {
-                var deptMapping = courseConfig.SubjectDepartmentMapping.Items.Where(i => i.OriginalCode == subjectCode).FirstOrDefault();
-                var deptCode = deptMapping != null ? deptMapping.NewCode : null;
-                var department = deptCode != null ? _departments.Where(d => d.Code == deptCode).FirstOrDefault() : null;
-                var academicDepartment = department != null ? _academicDepartments.Where(ad => ad.Code == department.Code).FirstOrDefault() : null;
-
-                if (academicDepartment != null)
+                if (!string.IsNullOrEmpty(subjectCode))
                 {
-                    offeringDepartments.Add(new OfferingDepartment(academicDepartment.Code, 100m));
+                    string subjectIntgDepartment = string.Empty;
+                    var subject = (await GetSubjectAsync(bypassCache)).FirstOrDefault(c => c.Code == subjectCode);
+                    if (subject != null)
+                    {
+                        if (!string.IsNullOrEmpty(subject.IntgDepartment))
+                        {
+                            offeringDepartments.Add(new OfferingDepartment(subject.IntgDepartment, 100m));
+                        }
+                    }
                 }
             }
 
@@ -5578,7 +7406,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             // Department could not be determined from supplied subject or owning organization
             if (offeringDepartments.Count == 0)
             {
-                throw new ArgumentException("Department could not be determined for subject '" + subjectCode + "'. ", "subject.id");
+                IntegrationApiExceptionAddError("Department could not be determined for subject '" + subjectCode + "'.", "Validation.Exception", course.Id);
             }
 
             // Set the academic level code based on the supplied GUID or the default if one is not supplied
@@ -5588,36 +7416,39 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 int counter = 1;
                 foreach (var acadLevel in course.AcademicLevels)
                 {
-                    try
+                    //Colleague only permits a single academic level for a course, so a POST or PUT request w/ multiple academic levels should respond with an error.
+                    if (counter > 1)
                     {
-                        //Colleague only permits a single academic level for a course, so a POST or PUT request w/ multiple academic levels should respond with an error.
-                        if (counter > 1)
-                        {
-                            throw new InvalidOperationException("A single academic level is permitted.");
-                        }
+                        IntegrationApiExceptionAddError("A single academic level is permitted.", "Validation.Exception", course.Id);
+                    }
 
-                        if (string.IsNullOrEmpty(acadLevel.Id))
-                        {
-                            throw new ArgumentException("Academic Level id is a required field when Academic Levels are defined. ", "academicLevels.id");
-                        }
+                    if (string.IsNullOrEmpty(acadLevel.Id))
+                    {
+                        IntegrationApiExceptionAddError("Academic Level id is a required field when Academic Levels are defined.", "Validation.Exception", course.Id);
+                    }
+                    else
+                    {
 
                         var acadLvl = _academicLevels.Where(al => al.Guid == acadLevel.Id).FirstOrDefault();
                         if (acadLvl == null)
                         {
-                            throw new ArgumentNullException("Invalid Id '" + acadLevel.Id + "' supplied for academicLevels. ", "academicLevels.id");
+                            IntegrationApiExceptionAddError("Invalid Id '" + acadLevel.Id + "' supplied for academicLevels.", "Validation.Exception", course.Id);
                         }
-                        acadLevelCode = acadLvl.Code;
-                        counter++;
+                        else
+                        {
+                            acadLevelCode = acadLvl.Code;
+                        }
                     }
-                    catch (Exception)
-                    {
-                        throw;
-                    }
+                    counter++;
                 }
             }
             else
             {
                 acadLevelCode = courseConfig.DefaultAcademicLevelCode;
+            }
+            if (string.IsNullOrEmpty(acadLevelCode))
+            {
+                IntegrationApiExceptionAddError("The academicLevels property is required in Colleague.", "Validation.Exception", course.Id);
             }
 
             // Set the list of course level codes based on the supplied GUIDs or the default if one is not supplied
@@ -5632,13 +7463,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch
                     {
-                        throw new ArgumentException("Invalid Id '" + courseLevel.Id + "' supplied for courseLevels. ", "courseLevels.id");
+                        IntegrationApiExceptionAddError("Invalid Id '" + courseLevel.Id + "' supplied for courseLevels.", "Validation.Exception", course.Id);
                     }
                 }
             }
             else
             {
                 courseLevelCodes.Add(courseConfig.DefaultCourseLevelCode);
+            }
+            if (courseLevelCodes.Count() == 0)
+            {
+                IntegrationApiExceptionAddError("At least one course level required.", "Validation.Exception", course.Id);
             }
 
             // Set the list of course approvals based on the supplied GUIDs
@@ -5655,25 +7490,41 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var statusEntity = _courseStatuses.FirstOrDefault(sc => sc.Guid == course.Status.Id);
                 if (statusEntity == null)
                 {
-                    throw new ArgumentException(string.Format("Status id '{0}' is invalid. ", course.Status.Id), "status.id");
+                    IntegrationApiExceptionAddError(string.Format("Status id '{0}' is invalid.", course.Status.Id), "Validation.Exception", course.Id);
                 }
-                if (string.IsNullOrEmpty(statusEntity.Code))
-                    throw new ArgumentException(string.Format("Status id '{0}' is invalid. ", course.Status.Id), "status.id");
-                statusCode = statusEntity.Code;
-                statusTitle = statusEntity.Description;
-                status = statusEntity.Status;
+                else
+                {
+                    if (string.IsNullOrEmpty(statusEntity.Code))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Status id '{0}' is invalid.", course.Status.Id), "Validation.Exception", course.Id);
+                    }
+                    else
+                    {
+                        statusCode = statusEntity.Code;
+                        statusTitle = statusEntity.Description;
+                        status = statusEntity.Status;
+                    }
+                }
             }
             if (status == CourseStatus.Terminated)
             {
                 if (course.EffectiveEndDate == null)
                 {
-                    throw new ArgumentException(string.Format("The scheduling end on date must have a value when using a status of '{0}'. ", course.Status.Id), "schedulingEndOn");
+                    IntegrationApiExceptionAddError(string.Format("The scheduling end on date must have a value when using a status of '{0}'.", course.Status.Id), "Validation.Exception", course.Id);
                 }
             }
-            courseApprovals.Add(new CourseApproval(statusCode, DateTime.Today, approvingAgencyId, approverId, DateTime.Today)
+
+            try
             {
-                Status = status
-            });
+                courseApprovals.Add(new CourseApproval(statusCode, DateTime.Today, approvingAgencyId, approverId, DateTime.Today)
+                {
+                    Status = status
+                });
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(string.Format("Course Status is Invalid.  {0}.", ex.Message), "Validation.Exception", course.Id);
+            }
 
             // Set the list of grade scheme codes based on the supplied GUIDs
             string gradeSchemeCode = null;
@@ -5685,7 +7536,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 catch
                 {
-                    throw new ArgumentException("Invalid Id '" + course.GradeSchemes.ToList()[0].GradeScheme.Id + "' supplied for gradeSchemes. ", "gradeSchemes.gradeScheme.id");
+                    IntegrationApiExceptionAddError("Invalid Id '" + course.GradeSchemes.ToList()[0].GradeScheme.Id + "' supplied for gradeSchemes.", "Validation.Exception", course.Id);
                 }
             }
 
@@ -5700,7 +7551,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 creditCategory = _creditCategories.FirstOrDefault(ct => ct.Guid == course.Credits.ToList()[0].CreditCategory.Detail.Id);
                 if (creditCategory == null)
                 {
-                    throw new ArgumentException("Invalid Id '" + course.Credits.ToList()[0].CreditCategory.Detail.Id + "' supplied for creditCategory. ", "credits.creditCategory.detail.id");
+                    IntegrationApiExceptionAddError("Invalid Id '" + course.Credits.ToList()[0].CreditCategory.Detail.Id + "' supplied for creditCategory.", "Validation.Exception", course.Id);
                 }
             }
             // If we don't have a GUID then check for a CreditType enumeration value
@@ -5713,7 +7564,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (course.Credits.ToList()[0].CreditCategory.CreditType == CreditCategoryType3.Exam ||
                     course.Credits.ToList()[0].CreditCategory.CreditType == CreditCategoryType3.WorkLifeExperience)
                 {
-                    throw new InvalidOperationException("Credit category type 'exam' or 'workLifeExperience' are not supported. ");
+                    IntegrationApiExceptionAddError("Credit category type 'exam' or 'workLifeExperience' are not supported.", "Validation.Exception", course.Id);
                 }
 
                 // Find the credit category that matches the enumeration
@@ -5747,7 +7598,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //If creditCategory is null then throw an exception
             if (creditCategory == null)
             {
-                throw new ArgumentException(string.Format("Credit category {0} was not found. ", courseConfig.DefaultCreditTypeCode), "credits.creditCategory.creditType");
+                IntegrationApiExceptionAddError(string.Format("Credit category {0} was not found.", courseConfig.DefaultCreditTypeCode), "Validation.Exception", course.Id);
             }
 
 
@@ -5779,6 +7630,23 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                 }
             }
+
+            if (minCredits == null && ceus == null)
+            {
+                IntegrationApiExceptionAddError("Either Course Min Credits or CEUs is required ", "Validation.Exception", course.Id);
+            }
+            else
+            {
+                if (minCredits != null && minCredits < 0)
+                {
+                    IntegrationApiExceptionAddError("Minimum Credit cannot be less than zero.", "Validation.Exception", course.Id);
+                }
+                if (ceus != null && ceus < 0)
+                {
+                    IntegrationApiExceptionAddError("CEUs cannot be less than zero.", "Validation.Exception", course.Id);
+                }
+            }
+
             var courseDelimeter = !string.IsNullOrEmpty(courseConfig.CourseDelimiter) ? courseConfig.CourseDelimiter : CourseDelimiter;
 
             //Handle GUID requiredness
@@ -5797,15 +7665,18 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 if (string.IsNullOrEmpty(course.Topic.Id))
                 {
-                    throw new ArgumentException("Course topic must contain a valid Id. ", "topic.id");
+                    IntegrationApiExceptionAddError("Course topic must contain a valid Id.", "Validation.Exception", course.Id);
                 }
-                try
+                else
                 {
-                    topicCode = (_topicCodes.FirstOrDefault(cc => cc.Guid == course.Topic.Id)).Code;
-                }
-                catch
-                {
-                    throw new ArgumentException("Invalid Id '" + course.Topic.Id + "' supplied for topic. ", "topic.id");
+                    try
+                    {
+                        topicCode = (_topicCodes.FirstOrDefault(cc => cc.Guid == course.Topic.Id)).Code;
+                    }
+                    catch
+                    {
+                        IntegrationApiExceptionAddError("Invalid Id '" + course.Topic.Id + "' supplied for topic.", "Validation.Exception", course.Id);
+                    }
                 }
             }
 
@@ -5817,15 +7688,20 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (string.IsNullOrEmpty(cat.Id))
                     {
-                        throw new ArgumentException("Course category must contain a valid Id. ", "categories.id");
+                        IntegrationApiExceptionAddError("Course category must contain a valid Id.", "Validation.Exception", course.Id);
                     }
-
-                    var catEntity = _courseCategories.FirstOrDefault(cc => cc.Guid == cat.Id);
-                    if (catEntity == null)
+                    else
                     {
-                        throw new ArgumentException("Invalid Id '" + cat.Id + "' supplied for course category. ", "categories.id");
+                        var catEntity = _courseCategories.FirstOrDefault(cc => cc.Guid == cat.Id);
+                        if (catEntity == null)
+                        {
+                            IntegrationApiExceptionAddError("Invalid Id '" + cat.Id + "' supplied for course category.", "Validation.Exception", course.Id);
+                        }
+                        else
+                        {
+                            if (!courseTypeCodes.Contains(catEntity.Code)) courseTypeCodes.Add(catEntity.Code);
+                        }
                     }
-                    if (!courseTypeCodes.Contains(catEntity.Code)) courseTypeCodes.Add(catEntity.Code);
                 }
             }
 
@@ -5842,50 +7718,58 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (mthd.AdministrativeInstructionalMethod == null || string.IsNullOrEmpty(mthd.AdministrativeInstructionalMethod.Id))
                     {
-                        throw new ArgumentException("Instructional Method detail requires an instructional method Id. ", "hours.administrativeInstructionalMethod.id");
-                    }
-                    var method = _administrativeInstructionalMethods.FirstOrDefault(im => im.Guid.Equals(mthd.AdministrativeInstructionalMethod.Id, StringComparison.OrdinalIgnoreCase));
-                    if (method != null)
-                    {
-                        if (contactMethodCodes == null)
-                        {
-                            contactMethodCodes = new List<string>();
-                            contactPeriods = new List<string>();
-                            contactHours = new List<decimal?>();
-                        }
-                        contactMethodCodes.Add(method.Code);
+                        IntegrationApiExceptionAddError("Administrative Instructional Method detail requires the Id property.", "Validation.Exception", course.Id);
                     }
                     else
                     {
-                        throw new ArgumentException("Instructional method GUID '" + mthd.AdministrativeInstructionalMethod.Id + "' could not be found. ", "hours.administrativeInstructionalMethod.id");
-                    }
-                    if (mthd.Minimum.HasValue)
-                    {
-                        contactHours.Add(mthd.Minimum);
+                        var method = _administrativeInstructionalMethods.FirstOrDefault(im => im.Guid.Equals(mthd.AdministrativeInstructionalMethod.Id, StringComparison.OrdinalIgnoreCase));
 
-                        ContactMeasure contactPeriod = null;
-                        if ((mthd.Interval != null) && (mthd.Interval != ContactHoursPeriod.NotSet))
+                        if (method == null)
                         {
-
-                            contactPeriod = _contactMeasures.FirstOrDefault(cm => cm.ContactPeriod.ToString() == mthd.Interval.ToString().ToLowerInvariant());
-
-                            if (contactPeriod == null)
-                            {
-                                throw new ArgumentException("Hours interval value '" + mthd.Interval.ToString() + "' could not be matched to a contact measure. ", "hours.interval");
-                            }
-                            contactPeriods.Add(contactPeriod.Code);
+                            IntegrationApiExceptionAddError("Administrative Instructional method GUID '" + mthd.AdministrativeInstructionalMethod.Id + "' could not be found.", "Validation.Exception", course.Id);
                         }
                         else
                         {
-                            contactPeriods.Add(null);
+                            if (contactMethodCodes == null)
+                            {
+                                contactMethodCodes = new List<string>();
+                                contactPeriods = new List<string>();
+                                contactHours = new List<decimal?>();
+                            }
+                            contactMethodCodes.Add(method.Code);
+
+                            if (mthd.Minimum.HasValue)
+                            {
+                                contactHours.Add(mthd.Minimum);
+
+                                ContactMeasure contactPeriod = null;
+                                if ((mthd.Interval != null) && (mthd.Interval != ContactHoursPeriod.NotSet))
+                                {
+
+                                    contactPeriod = _contactMeasures.FirstOrDefault(cm => cm.ContactPeriod.ToString() == mthd.Interval.ToString().ToLowerInvariant());
+
+                                    if (contactPeriod == null)
+                                    {
+                                        IntegrationApiExceptionAddError("Hours interval value '" + mthd.Interval.ToString() + "' could not be matched to a contact measure.", "Validation.Exception", course.Id);
+                                    }
+                                    else
+                                    {
+                                        contactPeriods.Add(contactPeriod.Code);
+                                    }
+                                }
+                                else
+                                {
+                                    contactPeriods.Add(null);
+                                }
+                                // Maximum and Increment are not published or consumed by Colleague per spec
+                                // but if they were they'd go here.
+                            }
+                            else
+                            {
+                                contactHours.Add(null);
+                                contactPeriods.Add(null);
+                            }
                         }
-                        // Maximum and Increment are not published or consumed by Colleague per spec
-                        // but if they were they'd go here.
-                    }
-                    else
-                    {
-                        contactHours.Add(null);
-                        contactPeriods.Add(null);
                     }
                 }
             }
@@ -5910,7 +7794,32 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                         else
                         {
-                            throw new ArgumentException("Instructional method GUID '" + mthd.InstructionalMethod.Id + "' could not be found. ", "instructionalMethodDetails.instructionalMethod.id");
+                            IntegrationApiExceptionAddError("Instructional method GUID '" + mthd.InstructionalMethod.Id + "' could not be found.", "Validation.Exception", course.Id);
+                        }
+                    }
+                }
+            }
+            // Add in The federal classification (cipCode)
+            string federalClassification = string.Empty;
+            if (course.AdditionalClassifications != null && course.AdditionalClassifications.Any())
+            {
+                foreach (var additionalClassification in course.AdditionalClassifications)
+                {
+                    if (additionalClassification.CipCode != null && !string.IsNullOrEmpty(additionalClassification.CipCode.Id))
+                    {
+                        var cipCode = _cipCodes.FirstOrDefault(im => im.Guid.Equals(additionalClassification.CipCode.Id, StringComparison.OrdinalIgnoreCase));
+                        if (cipCode != null)
+                        {
+                            if (!string.IsNullOrEmpty(federalClassification))
+                            {
+                                // The CIP code has already been updated and we can only have one.
+                                IntegrationApiExceptionAddError("Only one additionalClassifications.cipCode is allowed.", "Validation.Exception", course.Id);
+                            }
+                            federalClassification = cipCode.Code;
+                        }
+                        else
+                        {
+                            IntegrationApiExceptionAddError("additionalClassifications.cipCode GUID '" + additionalClassification.CipCode.Id + "' could not be found.", "Validation.Exception", course.Id);
                         }
                     }
                 }
@@ -5922,23 +7831,29 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var shortEntity = _courseTitleTypes.FirstOrDefault(ctt => ctt.Code.ToLower() == "short");
                 if (shortEntity == null || string.IsNullOrEmpty(shortEntity.Guid))
                 {
-                    throw new ArgumentNullException("titles.type", "The record 'SHORT' or it's GUID is missing from course title types. ");
+                    IntegrationApiExceptionAddError("The record 'SHORT' or it's GUID is missing from course title types.", "Validation.Exception", course.Id);
                 }
-                var longEntity = _courseTitleTypes.FirstOrDefault(ctt => ctt.Code.ToLower() == "long");
-                if (longEntity == null || string.IsNullOrEmpty(longEntity.Guid))
+                else
                 {
-                    throw new ArgumentNullException("titles.type", "The record 'LONG' or it's GUID is missing from course title types. ");
-                }
-                foreach (var title in course.Titles)
-                {
-                    if (title.Type != null && !string.IsNullOrEmpty(title.Type.Id) && !string.IsNullOrEmpty(title.Value))
+                    var longEntity = _courseTitleTypes.FirstOrDefault(ctt => ctt.Code.ToLower() == "long");
+                    if (longEntity == null || string.IsNullOrEmpty(longEntity.Guid))
                     {
-                        if (title.Type.Id.Equals(shortEntity.Guid, StringComparison.OrdinalIgnoreCase)) shortTitle = title.Value;
-                        if (title.Type.Id.Equals(longEntity.Guid, StringComparison.OrdinalIgnoreCase)) longTitle = title.Value;
+                        IntegrationApiExceptionAddError("The record 'LONG' or it's GUID is missing from course title types.", "Validation.Exception", course.Id);
                     }
-                    if (!string.IsNullOrEmpty(title.Value))
+                    else
                     {
-                        defaultTitle = title.Value;
+                        foreach (var title in course.Titles)
+                        {
+                            if (title.Type != null && !string.IsNullOrEmpty(title.Type.Id) && !string.IsNullOrEmpty(title.Value))
+                            {
+                                if (title.Type.Id.Equals(shortEntity.Guid, StringComparison.OrdinalIgnoreCase)) shortTitle = title.Value;
+                                if (title.Type.Id.Equals(longEntity.Guid, StringComparison.OrdinalIgnoreCase)) longTitle = title.Value;
+                            }
+                            if (!string.IsNullOrEmpty(title.Value))
+                            {
+                                defaultTitle = title.Value;
+                            }
+                        }
                     }
                 }
             }
@@ -5951,60 +7866,78 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 longTitle = defaultTitle;
             }
 
-            // Build the course entity
-            var courseEntity = new Ellucian.Colleague.Domain.Student.Entities.Course(null, shortTitle, longTitle, offeringDepartments,
-                subjectCode, course.Number, acadLevelCode, courseLevelCodes, minCredits, ceus, courseApprovals)
+            if (string.IsNullOrEmpty(shortTitle))
             {
-                LocalCreditType = creditTypeCode,
-                Description = course.Description,
-                Guid = guid,
-                GradeSchemeCode = gradeSchemeCode,
-                StartDate = course.EffectiveStartDate,
-                EndDate = course.EffectiveEndDate,
-                Name = subjectCode + courseDelimeter + course.Number,
-                MaximumCredits = maxCredits,
-                VariableCreditIncrement = varIncrCredits,
-                AllowPassNoPass = courseConfig.AllowPassNoPass,
-                AllowAudit = courseConfig.AllowAudit,
-                OnlyPassNoPass = courseConfig.OnlyPassNoPass,
-                AllowWaitlist = courseConfig.AllowWaitlist,
-                IsInstructorConsentRequired = courseConfig.IsInstructorConsentRequired,
-                WaitlistRatingCode = courseConfig.WaitlistRatingCode,
-                AllowWaitlistMultipleSections = waitlistMultiSections,
-                TopicCode = topicCode,
-                CourseTypeCodes = courseTypeCodes,
-            };
-
-            // Add billing credits if they exist
-            if (course.Billing != null)
-            {
-                courseEntity.BillingCredits = course.Billing.Minimum;
+                IntegrationApiExceptionAddError("The titles property must contain a short title type.  Short title is a required property for a course.", "Validation.Exception", course.Id);
             }
 
-
-            // Add instructional method data if supplied
-
-            if (contactMethodCodes != null)
+            Domain.Student.Entities.Course courseEntity = null;
+            try
             {
-                contactMethodCodes.ForEach(cm => courseEntity.AddInstructionalMethodCode(cm));
-            }
-            if (contactPeriods != null)
-            {
-                contactPeriods.ForEach(cp => courseEntity.AddInstructionalMethodPeriod(cp));
-            }
-            if (contactHours != null)
-            {
-                contactHours.ForEach(ch => courseEntity.AddInstructionalMethodHours(ch));
-            }
+                // Build the course entity
+                courseEntity = new Ellucian.Colleague.Domain.Student.Entities.Course(null, shortTitle, longTitle, offeringDepartments,
+                    subjectCode, course.Number, acadLevelCode, courseLevelCodes, minCredits, ceus, courseApprovals)
+                {
+                    LocalCreditType = creditTypeCode,
+                    Description = course.Description,
+                    Guid = guid,
+                    GradeSchemeCode = gradeSchemeCode,
+                    StartDate = course.EffectiveStartDate,
+                    EndDate = course.EffectiveEndDate,
+                    Name = subjectCode + courseDelimeter + course.Number,
+                    MaximumCredits = maxCredits,
+                    VariableCreditIncrement = varIncrCredits,
+                    AllowPassNoPass = courseConfig.AllowPassNoPass,
+                    AllowAudit = courseConfig.AllowAudit,
+                    OnlyPassNoPass = courseConfig.OnlyPassNoPass,
+                    AllowWaitlist = courseConfig.AllowWaitlist,
+                    IsInstructorConsentRequired = courseConfig.IsInstructorConsentRequired,
+                    WaitlistRatingCode = courseConfig.WaitlistRatingCode,
+                    AllowWaitlistMultipleSections = waitlistMultiSections,
+                    TopicCode = topicCode,
+                    CourseTypeCodes = courseTypeCodes,
+                    FederalCourseClassification = federalClassification
+                };
+
+                // Add billing credits if they exist
+                if (course.Billing != null)
+                {
+                    courseEntity.BillingCredits = course.Billing.Minimum;
+                }
 
 
-            // Verify that all the data in the entity is valid
-            CourseProcessor.ValidateCourseData(courseEntity, _academicLevels, _courseLevels, null, _creditCategories, _academicDepartments,
-                _gradeSchemes, _instructionalMethods, _subjects, _locations, _topicCodes);
+                // Add instructional method data if supplied
+
+                if (contactMethodCodes != null)
+                {
+                    contactMethodCodes.ForEach(cm => courseEntity.AddInstructionalMethodCode(cm));
+                }
+                if (contactPeriods != null)
+                {
+                    contactPeriods.ForEach(cp => courseEntity.AddInstructionalMethodPeriod(cp));
+                }
+                if (contactHours != null)
+                {
+                    contactHours.ForEach(ch => courseEntity.AddInstructionalMethodHours(ch));
+                }
+
+
+                // Verify that all the data in the entity is valid
+                CourseProcessor.ValidateCourseData(courseEntity, _academicLevels, _courseLevels, null, _creditCategories, _academicDepartments,
+                    _gradeSchemes, _instructionalMethods, _subjects, _locations, _topicCodes);
+            }
+            catch (Exception ex)
+            {
+                if (IntegrationApiException == null)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "Validation.Exception", course.Id);
+                }
+            }
 
             return courseEntity;
         }
 
+       
         #endregion
     }
 }

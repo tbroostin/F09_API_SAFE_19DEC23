@@ -1,9 +1,9 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Dtos.Finance;
+using Ellucian.Colleague.Dtos.Finance.AccountActivity;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Dtos.Finance;
-using Ellucian.Colleague.Dtos.Finance.AccountActivity;
 
 namespace Ellucian.Colleague.Coordination.Finance
 {
@@ -75,5 +75,15 @@ namespace Ellucian.Colleague.Coordination.Finance
         /// <param name="awardId">award id</param>
         /// <returns>Student Award Disbursement information</returns>
         Task<StudentAwardDisbursementInfo> GetStudentAwardDisbursementInfoAsync(string studentId, string awardYearCode, string awardId);
+
+        /// <summary>
+        /// Returns information about potentially untransmitted D7 financial aid, based on
+        /// current charges, credits, and awarded aid.
+        /// </summary>
+        /// <param name="criteria">The <see cref="PotentialD7FinancialAidCriteria"/> criteria of
+        /// potential financial aid for which to search.</param>
+        /// <returns>Enumeration of <see cref="PotentialD7FinancialAid"/>  
+        /// awards and potential award amounts.</returns>
+        Task<IEnumerable<PotentialD7FinancialAid>> GetPotentialD7FinancialAidAsync(PotentialD7FinancialAidCriteria criteria);
     }
 }

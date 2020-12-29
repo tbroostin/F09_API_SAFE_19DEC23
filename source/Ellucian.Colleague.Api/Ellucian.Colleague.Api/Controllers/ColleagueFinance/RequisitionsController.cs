@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -50,6 +50,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             this.logger = logger;
         }
 
+        #region Requisition(SS) DTO entity methods
         /// <summary>
         /// Retrieves a specified requisition
         /// </summary>
@@ -94,8 +95,189 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 logger.Error(ex, ex.Message);
                 throw CreateHttpResponseException("Unable to get the requisition.", HttpStatusCode.BadRequest);
             }
+        }        
+        
+        /// <summary>
+        /// Retrieves list of requistion summary
+        /// </summary>
+        /// <param name="personId">ID logged in user</param>
+        /// <returns>list of Requisition Summary DTO</returns>
+        /// <accessComments>
+        /// Requires Staff record, requires permission VIEW.REQUISITION.
+        /// </accessComments>
+        [HttpGet]
+        public async Task<IEnumerable<RequisitionSummary>> GetRequisitionsSummaryByPersonIdAsync(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                string message = "person Id must be specified.";
+                logger.Error(message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+
+            try
+            {
+                var requisition = await requisitionService.GetRequisitionsSummaryByPersonIdAsync(personId);
+                return requisition;
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex.Message);
+                throw CreateHttpResponseException("Insufficient permissions to get the requisition summary.", HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException anex)
+            {
+                logger.Error(anex, anex.Message);
+                throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
+            }
+            catch (KeyNotFoundException knfex)
+            {
+                logger.Error(knfex, knfex.Message);
+                throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
+            }
+            // Application exceptions will be caught below.
+            catch (Exception ex)
+            {
+                logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException("Unable to get the requisition summary.", HttpStatusCode.BadRequest);
+            }
         }
 
+        /// <summary>
+        /// Create / Update a requisition.
+        /// </summary>
+        /// <param name="requisitionCreateUpdateRequest">The requisition create update request DTO.</param>        
+        /// <returns>The requisition create response DTO.</returns>
+        /// <accessComments>
+        /// Requires Staff record, requires permission CREATE.UPDATE.REQUISITION.
+        /// </accessComments>        
+        [HttpPost]
+        public async Task<Dtos.ColleagueFinance.RequisitionCreateUpdateResponse> PostRequisitionAsync([FromBody] Dtos.ColleagueFinance.RequisitionCreateUpdateRequest requisitionCreateUpdateRequest)
+        {
+            if (requisitionCreateUpdateRequest == null)
+            {
+                throw CreateHttpResponseException("Request body must contain a valid requisition.", HttpStatusCode.BadRequest);
+            }
+
+            try
+            {
+                return await requisitionService.CreateUpdateRequisitionAsync(requisitionCreateUpdateRequest);                
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex.Message);
+                throw CreateHttpResponseException("Insufficient permissions to create/update the requisition.", HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException anex)
+            {
+                logger.Error(anex, anex.Message);
+                throw CreateHttpResponseException("Invalid argument to create/update the requisition.", HttpStatusCode.BadRequest);
+            }
+            catch (KeyNotFoundException knfex)
+            {
+                logger.Error(knfex, knfex.Message);
+                throw CreateHttpResponseException("Record not found to create/update the requisition.", HttpStatusCode.NotFound);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message);
+                throw CreateHttpResponseException("Unable to create/update the requisition.", HttpStatusCode.BadRequest);
+            }
+        }
+
+
+        /// <summary>
+        /// Retrieves a specified requisition for modify with line item defaults
+        /// </summary>
+        /// <param name="requisitionId">ID of the requested requisition</param>
+        /// <returns>Modify Requisition DTO</returns>
+        /// <accessComments>
+        /// Requires permission VIEW.REQUISITION, and requires access to at least one of the
+        /// general ledger numbers on the requisition line items.
+        /// </accessComments>
+        [Obsolete("Obsolete as of Colleague Web API 1.28. Use GetRequisitionAsync instead.")]
+        public async Task<ModifyRequisition> GetRequisitionForModifyWithLineItemDefaultsAsync(string requisitionId)
+        {
+            if (string.IsNullOrEmpty(requisitionId))
+            {
+                string message = "A Requisition ID must be specified.";
+                logger.Error(message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+
+            try
+            {
+                var modifyRequisitionDto = await requisitionService.GetRequisitionForModifyWithLineItemDefaultsAsync(requisitionId);
+                return modifyRequisitionDto;
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex.Message);
+                throw CreateHttpResponseException("Insufficient permissions to get the requisition.", HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException anex)
+            {
+                logger.Error(anex, anex.Message);
+                throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
+            }
+            catch (KeyNotFoundException knfex)
+            {
+                logger.Error(knfex, knfex.Message);
+                throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
+            }
+            // Application exceptions will be caught below.
+            catch (Exception ex)
+            {
+                logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException("Unable to get the requisition.", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Delete a requisition.
+        /// </summary>
+        /// <param name="requisitionDeleteRequest">The requisition delete request DTO.</param>        
+        /// <returns>The requisition delete response DTO.</returns>
+        /// <accessComments>
+        /// Requires Staff record, requires permission DELETE.REQUISITION.
+        /// </accessComments>
+        [HttpPost]
+        public async Task<Dtos.ColleagueFinance.RequisitionDeleteResponse> DeleteRequisitionAsync([FromBody] Dtos.ColleagueFinance.RequisitionDeleteRequest requisitionDeleteRequest)
+        {
+            if (requisitionDeleteRequest == null)
+            {
+                throw CreateHttpResponseException("Request body must contain a valid delete requisition request.", HttpStatusCode.BadRequest);
+            }
+
+            try
+            {
+                return await requisitionService.DeleteRequisitionsAsync(requisitionDeleteRequest);
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex.Message);
+                throw CreateHttpResponseException("Insufficient permissions to delete the requisition.", HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException anex)
+            {
+                logger.Error(anex, anex.Message);
+                throw CreateHttpResponseException("Invalid argument to delete the requisition.", HttpStatusCode.BadRequest);
+            }
+            catch (KeyNotFoundException knfex)
+            {
+                logger.Error(knfex, knfex.Message);
+                throw CreateHttpResponseException("Record not found to delete the requisition.", HttpStatusCode.NotFound);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message);
+                throw CreateHttpResponseException("Unable to delete the requisition.", HttpStatusCode.BadRequest);
+            }
+        }
+
+        #endregion
+
+        #region Requisitions(EEDM) DTO entity methods
         /// <summary>
         /// Return all requisitions
         /// </summary>
@@ -432,5 +614,6 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
         }
+        #endregion
     }
 }

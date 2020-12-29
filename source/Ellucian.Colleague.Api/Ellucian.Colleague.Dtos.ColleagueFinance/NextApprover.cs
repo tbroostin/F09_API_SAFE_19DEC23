@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 
 namespace Ellucian.Colleague.Dtos.ColleagueFinance
 {
@@ -16,5 +16,10 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// The next approver name.
         /// </summary>
         public string NextApproverName { get; set; }
+
+        /// <summary>
+        /// The next approver person Id.
+        /// </summary>
+        public string NextApproverPersonId { get; set; }
     }
 }

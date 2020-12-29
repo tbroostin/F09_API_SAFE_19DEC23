@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -8,6 +8,7 @@ using Ellucian.Colleague.Dtos.Converters;
 using System.Runtime.Serialization;
 using Ellucian.Colleague.Dtos.Attributes;
 using Newtonsoft.Json.Converters;
+
 
 namespace Ellucian.Colleague.Dtos.Tests.Converters
 {
@@ -74,9 +75,27 @@ namespace Ellucian.Colleague.Dtos.Tests.Converters
         }
 
         [TestMethod]
+        public void ReadJsonTest_ValidProperty_NotInFilter_ContainsConverter()
+        {
+            var criteria = "{\"dateOfBirth\":\"2017-01-01\"}";
+
+            var filterConverter = new FilterConverter("criteria");
+
+            var rawFilterData = JsonConvert.DeserializeObject<TestDto>(criteria,
+                filterConverter);
+
+            //invalidFilters will be populated if an invalid value is used
+            Assert.IsTrue(filterConverter.ContainsInvalidFilterProperties());
+            Assert.AreEqual(filterConverter.InvalidFilterProperties[0].Item3.ToString(), "Property");
+
+            var retval = filterConverter.GetInvalidFilterErrorMessage();
+            Assert.AreEqual("'dateOfBirth' is an invalid property on the schema. ", retval);
+        }
+
+        [TestMethod]
         public void ReadJsonTest_InvalidProperty()
         {
-            var criteria = "{\"invalid\":\"inactive\"}";
+            var criteria = "{\"invalidProperty\":\"inactive\"}";
 
             var filterConverter = new FilterConverter("criteria");
 
@@ -85,17 +104,19 @@ namespace Ellucian.Colleague.Dtos.Tests.Converters
 
             //invalidFilters will be populated if an invalid value is used          
             Assert.IsTrue(filterConverter.ContainsInvalidFilterProperties());
-
             Assert.AreEqual(filterConverter.InvalidFilterProperties.Count, 1);
 
-            Assert.AreEqual(filterConverter.InvalidFilterProperties[0].Item1, "invalid");
+            Assert.AreEqual(filterConverter.InvalidFilterProperties[0].Item1, "invalidProperty");
+            Assert.AreEqual(filterConverter.InvalidFilterProperties[0].Item3.ToString(), "Property");
 
+            var retval = filterConverter.GetInvalidFilterErrorMessage();
+            Assert.AreEqual("'invalidProperty' is an invalid property on the schema. ", retval);
         }
 
         [TestMethod]
         public void ReadJsonTest_InvalidEnumeration()
         {
-            var criteria = "{\"status\":\"invalid\"}";
+            var criteria = "{\"status\":\"invalidEnumeration\"}";
 
             var filterConverter = new FilterConverter("criteria");
 
@@ -108,6 +129,34 @@ namespace Ellucian.Colleague.Dtos.Tests.Converters
             Assert.AreEqual(filterConverter.InvalidFilterProperties.Count, 1);
 
             Assert.AreEqual(filterConverter.InvalidFilterProperties[0].Item1, "status");
+            Assert.AreEqual(filterConverter.InvalidFilterProperties[0].Item3.ToString(), "Enumeration");
+
+            var retval = filterConverter.GetInvalidFilterErrorMessage();
+            Assert.AreEqual("'invalidEnumeration' is an invalid enumeration value. ", retval);
+
+        }
+
+        [TestMethod]
+        public void ReadJsonTest_InvalidEnumeration_NonNullable()
+        {
+            var criteria = "{\"statusNonNullable\":\"invalidEnumeration\"}";
+
+            var filterConverter = new FilterConverter("criteria");
+
+            var rawFilterData = JsonConvert.DeserializeObject<TestDto>(criteria,
+                filterConverter);
+
+            //invalidFilters will be populated if an invalid value is used
+            Assert.IsTrue(filterConverter.ContainsInvalidFilterProperties());
+
+            Assert.AreEqual(filterConverter.InvalidFilterProperties.Count, 1);
+
+            Assert.AreEqual(filterConverter.InvalidFilterProperties[0].Item1, "statusNonNullable");
+            Assert.AreEqual(filterConverter.InvalidFilterProperties[0].Item3.ToString(), "Enumeration");
+
+            var retval = filterConverter.GetInvalidFilterErrorMessage();
+            Assert.AreEqual("'invalidEnumeration' is an invalid enumeration value. ", retval);
+
         }
 
         [TestMethod]
@@ -127,9 +176,58 @@ namespace Ellucian.Colleague.Dtos.Tests.Converters
         }
 
         [TestMethod]
+        public void ReadJsonTest_ValidEnumeration_NonNullable()
+        {
+            var criteria = "{\"statusNonNullable\":\"closed\"}";
+
+            var filterConverter = new FilterConverter("criteria");
+
+            var rawFilterData = JsonConvert.DeserializeObject<TestDto>(criteria,
+                filterConverter);
+
+            //invalidFilters will be populated if an invalid value is used
+            Assert.IsFalse(filterConverter.ContainsInvalidFilterProperties());
+            Assert.IsFalse(filterConverter.ContainsEmptyFilterProperties);
+
+        }
+
+
+        [TestMethod]
+        public void ReadJsonTest_ValidEnumerationCaseInsensitive()
+        {
+            var criteria = "{\"status\":\"Closed\"}";
+
+            var filterConverter = new FilterConverter("criteria");
+
+            var rawFilterData = JsonConvert.DeserializeObject<TestDto>(criteria,
+                filterConverter);
+
+            //invalidFilters will be populated if an invalid value is used
+            Assert.IsFalse(filterConverter.ContainsInvalidFilterProperties());
+            Assert.IsFalse(filterConverter.ContainsEmptyFilterProperties);
+
+        }
+
+
+        [TestMethod]
         public void ReadJsonTest_ValidEnumeration_NoEnumMember()
         {
             var criteria = "{\"status\":\"Cancelled\"}";
+
+            var filterConverter = new FilterConverter("criteria");
+
+            var rawFilterData = JsonConvert.DeserializeObject<TestDto>(criteria,
+                filterConverter);
+
+            //invalidFilters will be populated if an invalid value is used
+            Assert.IsFalse(filterConverter.ContainsInvalidFilterProperties());
+            Assert.IsFalse(filterConverter.ContainsEmptyFilterProperties);
+        }
+
+        [TestMethod]
+        public void ReadJsonTest_ValidEnumeration_NonNulbale_NoEnumMember()
+        {
+            var criteria = "{\"statusNonNullable\":\"Cancelled\"}";
 
             var filterConverter = new FilterConverter("criteria");
 
@@ -171,7 +269,11 @@ namespace Ellucian.Colleague.Dtos.Tests.Converters
 
             //invalidFilters will be populated if an invalid value is used
             Assert.IsTrue(filterConverter.ContainsInvalidFilterProperties());
-           
+            Assert.AreEqual(filterConverter.InvalidFilterProperties[0].Item3.ToString(), "Property");
+
+            var retval = filterConverter.GetInvalidFilterErrorMessage();
+            Assert.AreEqual("'course.kitten' is an invalid property on the schema. ", retval);
+
         }
         
 
@@ -304,6 +406,63 @@ namespace Ellucian.Colleague.Dtos.Tests.Converters
 
             Assert.IsFalse(filterConverter.ContainsEmptyFilterProperties);
         }
+
+        [TestMethod]
+        public void ReadJsonTest_NotEmptyProperty_DateTime_SupportedOperator()
+        {
+
+            var criteria = "{\"endOn\":{\"$eq\":\"1989-08-15\"}}";
+
+
+            var filterConverter = new FilterConverter("criteria");
+
+            var rawFilterData = JsonConvert.DeserializeObject<TestDto>(criteria,
+                filterConverter);
+
+
+            Assert.IsFalse(filterConverter.ContainsInvalidFilterProperties());
+        }
+
+
+        [TestMethod]
+        public void ReadJsonTest_NotEmptyProperty_DateTime_NotSupportedOperator()
+        {
+            
+            var criteria = "{\"endOn\":{\"$invalid\":\"1989-08-15\"}}";
+
+
+            var filterConverter = new FilterConverter("criteria");
+
+            var rawFilterData = JsonConvert.DeserializeObject<TestDto>(criteria,
+                filterConverter);
+
+
+            Assert.IsTrue(filterConverter.ContainsInvalidFilterProperties());
+            Assert.AreEqual(filterConverter.InvalidFilterProperties.Count, 1);
+            Assert.AreEqual(filterConverter.InvalidFilterProperties[0].Item1, "endOn");
+            Assert.AreEqual(filterConverter.InvalidFilterProperties[0].Item3.ToString(), "UnsupportedFilterOperator");
+        }
+
+        [TestMethod]
+        public void ReadJsonTest_NotEmptyProperty_DateTime_InvalidFilterOperator()
+        {
+
+            var criteria = "{\"endOn\":{\"$EQ\":\"1989-08-15\"}}";
+
+
+            var filterConverter = new FilterConverter("criteria");
+
+            var rawFilterData = JsonConvert.DeserializeObject<TestDto>(criteria,
+                filterConverter);
+
+
+            Assert.IsTrue(filterConverter.ContainsInvalidFilterProperties());
+            Assert.AreEqual(filterConverter.InvalidFilterProperties.Count, 1);
+            Assert.AreEqual(filterConverter.InvalidFilterProperties[0].Item1, "endOn");
+            Assert.AreEqual(filterConverter.InvalidFilterProperties[0].Item3.ToString(), "InvalidFilterOperator");
+        }
+
+
 
         [TestMethod]
         public void ReadJsonTest_Invalid_DateTimeOffset()
@@ -457,6 +616,7 @@ namespace Ellucian.Colleague.Dtos.Tests.Converters
             Assert.AreEqual(filterConverter.InvalidFilterProperties.Count, 1);
 
             Assert.AreEqual(filterConverter.InvalidFilterProperties[0].Item1, "testChildDtoProperty");
+            Assert.AreEqual(filterConverter.InvalidFilterProperties[0].Item3, FilterConverter.InvalidFilterType.Property);
 
         }
 
@@ -490,6 +650,8 @@ namespace Ellucian.Colleague.Dtos.Tests.Converters
         }
 
         
+
+
         [TestMethod]
         public void ReadJsonTest_InvalidDataType()
         {
@@ -506,6 +668,10 @@ namespace Ellucian.Colleague.Dtos.Tests.Converters
             Assert.AreEqual(filterConverter.InvalidFilterProperties.Count, 1);
 
             Assert.AreEqual(filterConverter.InvalidFilterProperties[0].Item1, "title");
+            Assert.AreEqual(filterConverter.InvalidFilterProperties[0].Item3.ToString(), "DataType");
+
+            var retval = filterConverter.GetInvalidFilterErrorMessage();
+            Assert.AreEqual("'title' is an invalid data type. ", retval);
         }
 
         [TestMethod]
@@ -524,6 +690,10 @@ namespace Ellucian.Colleague.Dtos.Tests.Converters
             Assert.AreEqual(filterConverter.InvalidFilterProperties.Count, 1);
 
             Assert.AreEqual(filterConverter.InvalidFilterProperties[0].Item1, "course");
+            Assert.AreEqual(filterConverter.InvalidFilterProperties[0].Item3.ToString(), "DataType");
+
+            var retval = filterConverter.GetInvalidFilterErrorMessage();
+            Assert.AreEqual("'course' is an invalid data type. ", retval);
         }
 
    
@@ -614,6 +784,13 @@ namespace Ellucian.Colleague.Dtos.Tests.Converters
     [DataContract]
     public class TestDto
     {
+        /// <summary>
+        /// Date of birth
+        /// </summary>
+        [JsonConverter(typeof(DateOnlyConverter))]
+        [JsonProperty("dateOfBirth", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public DateTime? BirthDate { get; set; }
+
         [DataMember(Name = "title")]
         [FilterProperty("criteria")]
         public string Title { get; set; }
@@ -624,8 +801,8 @@ namespace Ellucian.Colleague.Dtos.Tests.Converters
         public DateTimeOffset? StartOn { get; set; }
 
         [DataMember(Name = "endOn", EmitDefaultValue = false)]
-        [JsonProperty("endOn", NullValueHandling = NullValueHandling.Ignore)]
-        [FilterProperty("criteria")]
+        [JsonProperty("endOn", NullValueHandling = NullValueHandling.Ignore)]       
+        [FilterProperty("criteria", new string[] { "$eq", "$gte", "$lte" })]
         public DateTime? EndOn { get; set; }
 
         [DataMember(Name = "course", EmitDefaultValue = false)]
@@ -640,6 +817,12 @@ namespace Ellucian.Colleague.Dtos.Tests.Converters
         [JsonProperty("status", NullValueHandling = NullValueHandling.Ignore)]
         [FilterProperty("criteria")]
         public TestEnum? Status { get; set; }
+
+        [DataMember(Name = "status", EmitDefaultValue = false)]
+        [JsonProperty("statusNonNullable", NullValueHandling = NullValueHandling.Ignore)]
+        [FilterProperty("criteria")]
+        public TestEnum StatusNonNullable { get; set; }
+
 
         [DataMember(Name = "statuses", EmitDefaultValue = false)]
         [JsonProperty("statuses", NullValueHandling = NullValueHandling.Ignore)]

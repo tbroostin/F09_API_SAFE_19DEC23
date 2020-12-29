@@ -7,6 +7,7 @@ using Ellucian.Colleague.Dtos.Converters;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Newtonsoft.Json;
+using Ellucian.Colleague.Dtos.Attributes;
 
 namespace Ellucian.Colleague.Dtos
 {
@@ -26,6 +27,7 @@ namespace Ellucian.Colleague.Dtos
         /// A code that may be used to identify the institution employer.
         /// </summary>
         [JsonProperty("code", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
         public string Code { get; set; }
 
         /// <summary>

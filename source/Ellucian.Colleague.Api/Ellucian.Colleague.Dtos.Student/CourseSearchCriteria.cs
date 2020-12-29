@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 
@@ -92,6 +92,16 @@ namespace Ellucian.Colleague.Dtos.Student
         public int LatestTime { get; set; }
 
         /// <summary>
+        /// StartsAt Time Filter: Used to filter returned results based on meeting start times on top of EarliestTime.
+        /// </summary>
+        public string StartsAtTime { get; set; }
+
+        /// <summary>
+        /// EndsBy Time Filter: Used to filter returned results based on meeting end times on top of LatestTime.
+        /// </summary>
+        public string EndsByTime { get; set; }
+
+        /// <summary>
         /// Course Topic Filter: Used to filter returned results based on course topic codes
         /// </summary>
         public IEnumerable<string> TopicCodes { get; set; }
@@ -126,8 +136,13 @@ namespace Ellucian.Colleague.Dtos.Student
         public DateTime? SectionEndDate { get; set; }
 
         /// <summary>
-        /// display sections that are open - have seats available
+        /// display sections that are open Only - have seats available
         /// </summary>
         public bool OpenSections { get; set; }
+
+        /// <summary>
+        /// display sections that are open and waitlisted - have seats available
+        /// </summary>
+        public bool OpenAndWaitlistSections { get; set; }
     }
 }

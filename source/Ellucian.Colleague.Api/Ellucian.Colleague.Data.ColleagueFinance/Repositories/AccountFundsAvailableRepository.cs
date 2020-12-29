@@ -18,6 +18,7 @@ using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Dmi.Runtime;
+using System.Text.RegularExpressions;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
@@ -81,7 +82,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// </summary>
         /// <returns>The created FundsAvailable domain entity</returns>       
         public async Task<List<FundsAvailable>>  CheckAvailableFundsAsync(List<FundsAvailable> fundsAvailable, 
-            string purchaseOrderId = "", string voucherId = "", string blanketPurchaseOrderNumber = "", string documentSubmittedBy = "")
+            string purchaseOrderId = "", string voucherId = "", string blanketPurchaseOrderNumber = "", string documentSubmittedBy = "", string requisitionId = "")
         {
             if (fundsAvailable == null || !fundsAvailable.Any())
             {
@@ -124,7 +125,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 DocSubmittedBy = documentSubmittedBy,
                 BpoNo = blanketPurchaseOrderNumber,  
                 PoId = purchaseOrderId,
-                VouId = voucherId  };
+                VouId = voucherId,
+                ReqId = requisitionId
+            };
 
             // write the data
             var createResponse = await transactionInvoker.ExecuteAsync<CheckAvailableFundsRequest, CheckAvailableFundsResponse>(createRequest);
@@ -160,7 +163,22 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 {
                     try
                     {
-                        glClass = glAvailableResponse.AccountingStrings.Substring(glStartPosition, glClassLength);
+                        // In Colleague, if the GL number is greater than 15 characters, then it gets stored with an underscore ("_")
+                        // in place of the delimiter and therefore needs to have the delimiter included before we extract the GL class.
+                        // If the length of the GL number is less than or equal to 15, then we strip out the delimiter completly before
+                        // we extract the GL class.  This is because the GL structure setup has the starting position for the class
+                        // based on delimiters when the number is 16 or greater in length.
+                        var glNumberWithProject = glAvailableResponse.AccountingStrings.Split('*');
+                        var glNumber = glNumberWithProject.Count() > 0 ? glNumberWithProject[0] : glAvailableResponse.AccountingStrings;
+                        var unFormattedGlAccount = Regex.Replace(glNumber, "[^0-9a-zA-Z]", "");
+                        if (unFormattedGlAccount.Length < 16)
+                        {
+                            glClass = unFormattedGlAccount.Substring(glStartPosition, glClassLength);
+                        }
+                        else
+                        {
+                            glClass = glAvailableResponse.AccountingStrings.Substring(glStartPosition, glClassLength);
+                        }
                     }
                     catch(Exception ex)
                     {

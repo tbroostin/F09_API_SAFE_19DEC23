@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
@@ -27,7 +27,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
     {
         private readonly INonAcademicAttendanceService _nonAcademicAttendanceService;
         private readonly ILogger _logger;
-
+                
         /// <summary>
         /// Initializes a new instance of the NonAcademicAttendanceRequirementsController class.
         /// </summary>
@@ -44,6 +44,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="studentId">Unique identifier for the student whose requirements are being retrieved</param>
         /// <returns>All <see cref="NonAcademicAttendanceRequirement">nonacademic attendance requirements</see> for a person</returns>
+        /// <accessComments> 
+        /// Student must be requesting their own attendance data
+        /// </accessComments>
         public async Task<IEnumerable<NonAcademicAttendanceRequirement>> GetNonAcademicAttendanceRequirementsAsync(string studentId)
         {
             try

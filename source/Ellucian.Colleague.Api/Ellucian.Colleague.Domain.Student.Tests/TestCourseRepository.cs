@@ -60,7 +60,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 {"18","306","MATH-102","MATH","Geometry","100","UG", "Introduction to geometrical theory and practice",""},
                 {"19","315","MATH-103","MATH","Trigonometry","100","UG", "Introduction to tools needed for calculus",""},
                 {"20","84","SPAN-300","MDLL","Advanced Spanish","300","UG", "Conversational spanish",""},
-                {"21","122","DANC-100","PERF","Ballroom Dancing","100","UG", "Learn to dance like the Greatest Generation",""},
+                {"21","122","DANC-100","PERF","Ballroom Dancing","100","UG", "Learn to dance like the Greatest Generation","SD"},
                 {"22","28","DANC-200","PERF","Dance Theory","200","UG", "Study of dance","MAIN"},
                 {"23","159","SOCI-100","SOCI","Introduction to Sociology","100","UG", "Study of the world societies",""},
                 {"24","155","POLI-100","POLI","Intro to Political Science","100","UG", "Politics, complexities, insights",""},
@@ -161,7 +161,26 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 // Added for testing sections' attendance tracking type 
                 {"94","7434","COMM-123","COMM","Communications", "100","UG", "Communications 123","" },
                 //test data for retake and replace testing
-                {"95","7435","MATH-300BB","MATH","Mathematics","300","GR","Calculus AP","" }
+                {"95","7435","MATH-300BB","MATH","Mathematics","300","GR","Calculus AP","" },
+                //test data for release extra courses from one requirement to other tests
+                 //index, courseId, subj-number, dept, title, course level, acad level, description, location
+                  {"97","7437","DANC-101","PERF","dance-101","100","UG","LOCAL Dance 2","" },
+                   {"98","7438","DANC-102","PERF","dance-102","100","UG","LOCAL Dance 3","" },
+                    {"99","7439","ENGL-201","ENGL","ENGLISH-201","200","UG","ENGLISH II","" },
+
+                 // test data for course constructor failure (missing short title)
+                 {"100","7440","ENGL-201BAD","ENGL","neeeds small title","200","UG","ENGLISH II","" },
+
+                 //test data for testing of in.list.order
+                 //FREN-100 GERM-100 HIND-100 ARTH-100 HUMT-100 CRIM-100 POLI-100; -- POLI-100 already exist with index of 155
+                 {"101","7441","FREN-100","LANG","French basics","100","UG","Basic french learning",""},
+                 {"102","7442","GERM-100","LANG","German basics","100","UG","Basic german learning",""},
+                 {"103","7443","HIND-100","LANG","Hindi basics","100","UG","Basic hindi learning",""},
+                 {"104","7444","ARTH-100","LANG","Art history basics","100","UG","Basic art history learning",""},
+                 {"105","7445","HUMT-100","ART","Humanity basics","100","UG","Basic humaninty learning",""},
+                 {"106","7446","CRIM-100","CRIM","law basics","100","UG","Basic crime law learning",""}
+
+
                 };
 
         public TestCourseRepository(ICacheProvider cacheProvider = null, IColleagueTransactionFactory transactionFactory = null, ILogger logger = null) : base(new Mock<ICacheProvider>().Object, new Mock<IColleagueTransactionFactory>().Object, logger)
@@ -529,6 +548,21 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
 
         public Task<Dictionary<string, string>> GetGuidsCollectionAsync(IEnumerable<string> ids, string filename)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Course> GetCourseByGuid2Async(string guid, bool addToCollection = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Tuple<IEnumerable<Course>, int>> GetPagedCoursesAsync(int offset, int limit, string subject, string number, List<string> academicLevel, List<string> owningInstitutionUnit, string title, List<string> instructionalMethods, string startOn, string endOn, string topic = "", string category = "", bool addToCollection = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Tuple<IEnumerable<Course>, int>> GetPagedCoursesAsync(int offset, int limit, string subject, string number, List<string> academicLevel, List<string> owningInstitutionUnit, List<string> titles, List<string> instructionalMethods, string startOn, string endOn, string topic = "", List<string> categories = null, string activeOn = "", bool addToCollection = false)
         {
             throw new NotImplementedException();
         }

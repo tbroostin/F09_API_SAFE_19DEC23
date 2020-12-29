@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<settings>
+  <colleague>
+    <accountName>test18_rt</accountName>
+    <ipAddress>laurel.fielding.edu</ipAddress>
+    <port>7222</port>
+    <secure>False</secure>
+    <certificateHostnameOverride></certificateHostnameOverride>
+    <connectionPoolSize>100</connectionPoolSize>
+    <sharedSecret>DC0A180699C9E1D1CE0895AA2712B9DBF5E66DBD149A1CEB8CC1EC13B9AE964355AB52844F59E5DCCA6FE205D29CC6B65A3C02ADA1A06AA9809F7E33CFFA83E98801AA0B5DFDD0E85D9DE1783EA2BDE0A2475AE8799716C2DC75914F87849C3413F82A6167CE475293053E6B75D242B3</sharedSecret>
+    <dasEnvironment>test18</dasEnvironment>
+    <dasAddress>laurel.fielding.edu</dasAddress>
+    <dasPort>7221</dasPort>
+    <dasSecure>False</dasSecure>
+    <dasCertificateHostnameOverride></dasCertificateHostnameOverride>
+    <dasConnectionPoolSize>5</dasConnectionPoolSize>
+    <dasLogin>D770F2505F910E43106F38D877C16F374C88A3673C2AE413537B26E7E310436D292EE2DD874EC790C3BD8E23C770B485CA9A288CF11FB8D00018DCC573260148AD53B5DD3A502F9BAE8B05F8D8F153AF09DF9D19565B4F2E265978D9CC50F076</dasLogin>
+    <dasPassword>43F9575D19A28C2AFD3BF5B1A72F596EBBA7BF2B52D544FB0E2755C13350F4B7BBDC454A004773363B646EBB4F48D52FAC2611D9640FAE69D2EFA35F0AF8566AA3AB68E9795EFE2F74D6BCA969BAB0E11B666A20C5999B79A37EC3BF1E5EA4E8</dasPassword>
+    <useDasDatareader>True</useDasDatareader>
+  </colleague>
+  <logLevel>Error</logLevel>
+  <profileName>TEST_18</profileName>
+</settings>

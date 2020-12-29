@@ -71,10 +71,16 @@ namespace Ellucian.Colleague.Dtos
         [JsonProperty("amount", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public DtoProperties.AmountDtoProperty Amount { get; set; }
 
-        ///// <summary>
-        ///// The indicator whether or not the transaction was posted to the general Ledger
-        ///// </summary>
-        //[JsonProperty("generalLedgerPosting",DefaultValueHandling = DefaultValueHandling.Ignore)]
-        //public GlPosting GlPosting { get; set; }
+        /// <summary>
+        /// The override description associated with the charge.
+        /// </summary>
+        [JsonProperty("reportingDetail", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public DtoProperties.StudentPaymentsReportingDtoProperty ReportingDetail { get; set; }
+
+        /// <summary>
+        /// The override description associated with the charge.
+        /// </summary>
+        [JsonProperty("overrideDescription", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public string OverrideDescription { get; set; }
     }
 }

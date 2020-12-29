@@ -147,6 +147,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public bool IsPrimary { get; set; }
         public string AdmitStatus { get; set; }
         public CurriculumObjectiveCategory CurriculumObjective { get; set; }
+        public string StudentProgramToReplace { get; set; }
 
 
         #endregion
@@ -169,11 +170,6 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             {
                 throw new ArgumentException(string.Concat("Academic Program is required. Entity: 'STUDENT.PROGRAMS', Record ID: '", guid, "'"));
             }
-            if (string.IsNullOrEmpty(catalogCode))
-            {
-                throw new ArgumentException(string.Concat("CatalogCode is required. Entity: 'STUDENT.PROGRAMS', Record ID: '", personId,  "*" , programCode, "'"));
-            }
-           
             if (string.IsNullOrEmpty(status))
             {
                 throw new ArgumentException(string.Concat("Enrollment status is required. Entity: 'STUDENT.PROGRAMS', Record ID: '", personId,  "*" , programCode, "'"));
@@ -191,10 +187,38 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             StudentProgramCcds = new List<string>();
             StudentProgramHonors = new List<string>();
         }
-        
-        #endregion  
+
+        /// <summary>
+        /// Initialize the StudentProgram Method
+        /// </summary>
+        /// <param name="personId">Student Id for this program</param>
+        /// <param name="programCode">The Academic Program Code</param>
+        /// <param name="catalogCode">The Catalog Code which is typically the catalog Year</param>
+        public StudentAcademicProgram(string personId, string programCode, string catalogCode, DateTime startDate)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentException(string.Concat("PersonId is required. Entity: 'STUDENT.PROGRAMS', person ID: '", personId, "'"));
+            }
+            if (string.IsNullOrEmpty(programCode))
+            {
+                throw new ArgumentException(string.Concat("Academic Program is required. Entity: 'STUDENT.PROGRAMS', person ID: '", personId, "'"));
+            }
+
+            StudentId = personId;
+            ProgramCode = programCode;
+            CatalogCode = catalogCode;
+            StartDate = startDate;
+            StudentProgramMajors = new List<string>();
+            StudentProgramMinors = new List<string>();
+            StudentProgramSpecializations = new List<string>();
+            StudentProgramCcds = new List<string>();
+            StudentProgramHonors = new List<string>();
+        }
+
+        #endregion
         #region Methods
-        
+
 
         /// <summary>
         /// Add Student Majors into the Student Program

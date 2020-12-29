@@ -20,6 +20,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public List<string> MarkAcadCredentials { get; set; }
         public string CreditType { get; set; }
         public string StcStudentCourseSec { get; set; }
-        public string StcReportingTerm { get; set; }        
+        public string StcReportingTerm { get; set; }
+        public string SourceKey { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -37,17 +37,21 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
 
         /// <summary>
-        /// Get the PersonStatuses based on the permissions of the current user/user who has proxy
+        /// Get the PersonStatuses based on the permissions of the current user/user who has proxy or time history admin 
         /// </summary>
         /// <param name="effectivePersonId">Optional parameter for effective personId</param>
+        /// <param name="lookupStartDate">lookup start date, all records with end date before this date will not be retrieved</param>
         /// <returns></returns>
-        public async Task<IEnumerable<PersonEmploymentStatus>> GetPersonEmploymentStatusesAsync(string effectivePersonId = null)
+        public async Task<IEnumerable<PersonEmploymentStatus>> GetPersonEmploymentStatusesAsync(string effectivePersonId = null, DateTime? lookupStartDate = null)
         {
             if (effectivePersonId == null)
             {
                 effectivePersonId = CurrentUser.PersonId;
             }
-            else if (!CurrentUser.IsPerson(effectivePersonId) && !HasProxyAccessForPerson(effectivePersonId, Domain.Base.Entities.ProxyWorkflowConstants.TimeManagementTimeApproval))
+
+            //To view other's info, logged in user must be a proxy or admin or leave approver
+            else if (!CurrentUser.IsPerson(effectivePersonId) && !(HasProxyAccessForPerson(effectivePersonId, Domain.Base.Entities.ProxyWorkflowConstants.TimeManagementTimeApproval)
+                               || HasPermission(HumanResourcesPermissionCodes.ViewAllTimeHistory) || HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest)))
             {
                 throw new PermissionsException("User does not have permission to view person employment status information");
             }
@@ -69,7 +73,24 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 }
             }
 
-            var personEmploymentStatusEntities = await personEmploymentStatusRepository.GetPersonEmploymentStatusesAsync(userAndSubordinateIds);
+            // Supervisees for leave approver
+            if (HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest))
+            {
+                var subordinateIds = (await supervisorsRepository.GetSuperviseesByPrimaryPositionForSupervisorAsync(effectivePersonId)).ToList();
+
+                if (subordinateIds == null)
+                {
+                    var message = "Unexpected null person id list returned from supervisors repository";
+                    logger.Error(message);
+                    throw new ApplicationException(message);
+                }
+                if (subordinateIds.Any())
+                {
+                    userAndSubordinateIds = userAndSubordinateIds.Concat(subordinateIds).ToList();
+                }
+            }
+
+            var personEmploymentStatusEntities = await personEmploymentStatusRepository.GetPersonEmploymentStatusesAsync(userAndSubordinateIds, lookupStartDate);
 
             if (personEmploymentStatusEntities == null)
             {

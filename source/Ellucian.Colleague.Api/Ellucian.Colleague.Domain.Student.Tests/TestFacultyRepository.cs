@@ -129,5 +129,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
             return await Task.FromResult(faculty);
         }
+
+        public Task<IEnumerable<FacultyOfficeHours>> GetFacultyOfficeHoursByIdsAsync(IEnumerable<string> facultyIds)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

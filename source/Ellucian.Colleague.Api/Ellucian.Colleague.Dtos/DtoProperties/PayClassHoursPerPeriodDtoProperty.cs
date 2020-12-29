@@ -14,7 +14,7 @@ namespace Ellucian.Colleague.Dtos
         /// <summary>
         /// The default work hours in the specified time period.
         /// </summary>
-        [JsonProperty("hours", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [JsonProperty("hours")]
         public decimal Hours { get; set; }
 
         /// <summary>

@@ -1,16 +1,23 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+
+using System;
+using System.Net;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using Newtonsoft.Json;
+using Ellucian.Web.Utility;
+using Ellucian.Colleague.Api.Client.Core;
+using Ellucian.Rest.Client.Exceptions;
 using Ellucian.Colleague.Api.Client.Exceptions;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Colleague.Dtos.Student.DegreePlans;
 using Ellucian.Colleague.Dtos.Student.Requirements;
-using Ellucian.Rest.Client.Exceptions;
-using Ellucian.Web.Utility;
-using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Linq;
-using System.Threading.Tasks;
+using Ellucian.Colleague.Dtos.Student.QuickRegistration;
+using Ellucian.Colleague.Dtos.Student.InstantEnrollment;
+using Ellucian.Colleague.Dtos.Student.TransferWork;
 
 namespace Ellucian.Colleague.Api.Client
 {
@@ -204,6 +211,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Gets all grades out of the repository. Grade objects have an ID which maps to a grade such as &quot;A&quot;, along with a few other properties async.
         /// </summary>
@@ -224,6 +232,64 @@ namespace Ellucian.Colleague.Api.Client
             {
                 logger.Error(ex, "Unable to get IEnumerable<Grade>");
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a <see cref="GradeScheme"/> by ID
+        /// </summary>
+        /// <param name="id">ID of the grade scheme</param>
+        /// <returns>A <see cref="GradeScheme"/></returns>
+        public async Task<GradeScheme> GetGradeSchemeByIdAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "A grade scheme ID is required to retrieve a grade scheme.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_gradeSchemesPath, UrlParameterUtility.EncodeWithSubstitution(id));
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<GradeScheme>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                string message = string.Format("Unable to retrieve grade scheme {0}.", id);
+                logger.Error(ex, message);
+                throw new ApplicationException(message);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a <see cref="GradeSubscheme"/> by ID
+        /// </summary>
+        /// <param name="id">ID of the grade subscheme</param>
+        /// <returns>A <see cref="GradeSubscheme"/></returns>
+        public async Task<GradeSubscheme> GetGradeSubschemeByIdAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "A grade subscheme ID is required to retrieve a grade subscheme.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_gradeSubschemesPath, UrlParameterUtility.EncodeWithSubstitution(id));
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<GradeSubscheme>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                string message = string.Format("Unable to retrieve grade subscheme {0}.", id);
+                logger.Error(ex, message);
+                throw new ApplicationException(message);
             }
         }
 
@@ -1248,11 +1314,13 @@ namespace Ellucian.Colleague.Api.Client
         /// <returns>Returns the set of active programs</returns>
         /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
         /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
-        public async Task<IEnumerable<Program>> GetActiveProgramsAsync()
+        public async Task<IEnumerable<Program>> GetActiveProgramsAsync(bool IncludeEndedPrograms = true)
         {
             try
             {
+                string query = UrlUtility.BuildEncodedQueryString(new[] { "IncludeEndedPrograms", IncludeEndedPrograms.ToString() });
                 string urlPath = UrlUtility.CombineUrlPath(_programsPath, "active");
+                urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, query);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
@@ -1391,6 +1459,71 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
+        /// <summary>
+        /// Add new academic program for a student.
+        /// </summary>
+        /// <returns>Returns newly created student program</returns>
+        /// <exception cref="ArgumentNullException">The student academic program must be provided.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<StudentProgram2> AddStudentProgram(string studentId, StudentAcademicProgram studentAcademicProgram)
+        {
+            if (studentAcademicProgram == null)
+            {
+                throw new ArgumentNullException("studentAcademicProgram", "studentAcademicProgram cannot be null.");
+            }
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentException("studentAcademicProgram must have a student Id.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _programsPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(studentAcademicProgram, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<StudentProgram2>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Update student academic program.
+        /// </summary>
+        /// <param name="studentAcademicProgram">An student academic to be updated.</param>
+        /// <exception cref="ArgumentNullException">The student academic program must be provided.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <returns>The updated Program DTO.</returns>
+        public async Task<StudentProgram2> UpdateStudentProgram(string studentId, StudentAcademicProgram studentAcademicProgram)
+        {
+            if (studentAcademicProgram == null)
+            {
+                throw new ArgumentNullException("studentAcademicProgram", "studentAcademicProgram cannot be null.");
+            }
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentException("studentAcademicProgram must have a student Id.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _programsPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePutRequestWithResponseAsync(studentAcademicProgram, urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<StudentProgram2>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to update student academic program.");
+                throw;
+            }
+        }
+
         /// <summary>
         /// Get a course by id
         /// </summary>
@@ -1763,8 +1896,11 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="sectionEndDate">Lastest last meeting time for the section</param>
         /// <param name="pageSize">Number of items to return per page</param>
         /// <param name="pageIndex">Page number</param>
+        /// <param name="startsAtTime">Start at time (section)</param>
+        /// <param name="endsByTime">End by time (section)</param>
+        /// <param name="openAndWaitlistedSections">Flag to retrieve sections that are open and Waitlisted</param>
         /// <returns><see cref="CoursePage2">CoursePage2</see> containing the list of course Ids, section Ids and filters</returns>
-        public async Task<CoursePage2> SearchCoursesAsync(IEnumerable<string> courseIds, IEnumerable<string> subjects, IEnumerable<string> academicLevels, IEnumerable<string> courseLevels, IEnumerable<string> courseTypes, IEnumerable<string> topicCodes, IEnumerable<string> terms, IEnumerable<string> days, IEnumerable<string> locations, IEnumerable<string> faculty, int? startTime, int? endTime, string keyword, RequirementGroup requirementGroup, string requirementCode, IEnumerable<string> sectionIds, IEnumerable<string> onlineCategories, bool? openSections, DateTime? sectionStartDate, DateTime? sectionEndDate, int pageSize, int pageIndex)
+        public async Task<CoursePage2> SearchCoursesAsync(IEnumerable<string> courseIds, IEnumerable<string> subjects, IEnumerable<string> academicLevels, IEnumerable<string> courseLevels, IEnumerable<string> courseTypes, IEnumerable<string> topicCodes, IEnumerable<string> terms, IEnumerable<string> days, IEnumerable<string> locations, IEnumerable<string> faculty, int? startTime, int? endTime, string keyword, RequirementGroup requirementGroup, string requirementCode, IEnumerable<string> sectionIds, IEnumerable<string> onlineCategories, bool? openSections, DateTime? sectionStartDate, DateTime? sectionEndDate, int pageSize, int pageIndex, string startsAtTime, string endsByTime, bool? openAndWaitlistedSections = false)
         {
             if (keyword == null) keyword = string.Empty;
 
@@ -1809,11 +1945,14 @@ namespace Ellucian.Colleague.Api.Client
                 criteria.Faculty = faculty;
                 criteria.EarliestTime = startTime == null ? 0 : (int)startTime;
                 criteria.LatestTime = endTime == null ? 0 : (int)endTime;
+                criteria.StartsAtTime = startsAtTime;
+                criteria.EndsByTime = endsByTime;
                 criteria.SectionIds = sectionIds;
                 criteria.OnlineCategories = onlineCategories;
                 criteria.OpenSections = openSections.HasValue ? openSections.Value : false;
                 criteria.SectionStartDate = sectionStartDate;
                 criteria.SectionEndDate = sectionEndDate;
+                criteria.OpenAndWaitlistSections = openAndWaitlistedSections.HasValue ? openAndWaitlistedSections.Value : false;
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
 
@@ -1823,6 +1962,76 @@ namespace Ellucian.Colleague.Api.Client
                 var courses = JsonConvert.DeserializeObject<CoursePage2>(await response.Content.ReadAsStringAsync());
 
                 return courses;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Search for course, brings back a page containing courses that met criteria and associated filters async.
+        /// </summary>
+        /// <param name="topicCodes">List of topic codes</param>
+        /// <param name="terms">List of terms (section)</param>
+        /// <param name="days">List of meeting days (section)</param>
+        /// <param name="locations">List of locations (course and section)</param>
+        /// <param name="faculty">List of faculty (section)</param>
+        /// <param name="courseIds">List of course Ids</param>
+        /// <param name="sectionIds">List of section Ids</param>
+        /// <param name="startTime">Start time (section)</param>
+        /// <param name="endTime">End time (section)</param>
+        /// <param name="keyword">Search string (course and section)</param>
+        /// <param name="onlineCategories">Online Category</param>
+        /// <param name="openSections">Flag to retrieve only sections that are open </param>
+        /// <param name="sectionStartDate">Earliest first meeting time of the section.</param>
+        /// <param name="sectionEndDate">Lastest last meeting time for the section</param>
+        /// <param name="pageSize">Number of items to return per page</param>
+        /// <param name="pageIndex">Page number</param>
+        /// <param name="openAndWaitlistedSections">Flag to retrieve sections that are open and Waitlisted</param>
+        /// <returns><see cref="CoursePage2">CoursePage2</see> containing the list of course Ids, section Ids and filters</returns>
+        public async Task<SectionPage> InstantEnrollmentCourseSearchAsync(IEnumerable<string> topicCodes, IEnumerable<string> terms, IEnumerable<string> days, IEnumerable<string> locations, IEnumerable<string> faculty,
+            IEnumerable<string> courseIds, IEnumerable<string> sectionIds, int? startTime, int? endTime, string keyword, IEnumerable<string> onlineCategories, bool? openSections, DateTime? sectionStartDate, DateTime? sectionEndDate, int pageSize, int pageIndex, bool? openAndWaitlistedSections = false)
+        {
+            if (keyword == null) keyword = string.Empty;
+
+            try
+            {
+                // Build url path + subject
+                var queryString = UrlUtility.BuildEncodedQueryString("pageSize", pageSize.ToString(), "pageIndex", pageIndex.ToString());
+                var urlPath = UrlUtility.CombineUrlPathAndArguments(_coursesSearchPath, queryString);
+
+                var criteria = new InstantEnrollmentCourseSearchCriteria();
+
+                if (!string.IsNullOrEmpty(keyword))
+                {
+                    criteria.Keyword = keyword.Replace("/", "_~");
+                }
+
+                criteria.TopicCodes = topicCodes;
+                criteria.Terms = terms;
+                criteria.DaysOfWeek = days;
+                criteria.Locations = locations;
+                criteria.Faculty = faculty;
+                criteria.EarliestTime = startTime == null ? 0 : (int)startTime;
+                criteria.LatestTime = endTime == null ? 0 : (int)endTime;
+                criteria.OnlineCategories = onlineCategories;
+                criteria.OpenSections = openSections.HasValue ? openSections.Value : false;
+                criteria.SectionStartDate = sectionStartDate;
+                criteria.SectionEndDate = sectionEndDate;
+                criteria.OpenAndWaitlistSections = openAndWaitlistedSections.HasValue ? openAndWaitlistedSections.Value : false;
+                criteria.CourseIds = courseIds;
+                criteria.SectionIds = sectionIds;
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianInstantEnrollmentFormatVersion1);
+
+                // Use URL path to call web api method (including query string)
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+
+                var sections = JsonConvert.DeserializeObject<SectionPage>(await response.Content.ReadAsStringAsync());
+
+                return sections;
             }
             catch (Exception ex)
             {
@@ -2039,7 +2248,7 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
         /// <summary>
-        /// Get a section 
+        /// Get a section
         /// </summary>
         /// <returns><see cref="Section3">Section3</see> object</returns>
         /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
@@ -2366,7 +2575,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Given a section ID return list of section meeting instances - i.e. specific class meeting times.  
+        /// Given a section ID return list of section meeting instances - i.e. specific class meeting times.
         /// </summary>
         /// <param name="sectionIds">A set of section IDs</param>
         /// <returns>A list of section meeting instance Dtos.</returns>
@@ -2395,7 +2604,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Retrieves student attendances for a specific section 
+        /// Retrieves student attendances for a specific section
         /// </summary>
         /// <param name="sectionId">section Id (required)</param>
         /// <param name="includeCrossListedSections">If yes, attendances for sections crosslisted to the sectionId will also be included</param>
@@ -2432,7 +2641,7 @@ namespace Ellucian.Colleague.Api.Client
 
         /// <summary>
         /// Retrieves student attendances for a given studentId for the given sectionIds.
-        /// If  sectionIds is not provided then attendances from all the student's sections is returned. 
+        /// If  sectionIds is not provided then attendances from all the student's sections is returned.
         /// </summary>
         /// <param name="sectionId">section Id (required)</param>
         /// <returns> <see cref="StudentSectionsAttendances"/> section wise student's attendances</returns>
@@ -2461,7 +2670,7 @@ namespace Ellucian.Colleague.Api.Client
             }
             catch (Exception ex)
             {
-                logger.Error(ex.GetBaseException(), "Unable to retrieve  attendances for student "+studentId);
+                logger.Error(ex.GetBaseException(), "Unable to retrieve  attendances for student " + studentId);
                 throw;
             }
         }
@@ -3282,7 +3491,7 @@ namespace Ellucian.Colleague.Api.Client
         /// Returns registration eligibility information for a student
         /// </summary>
         /// <param name="studentId">Id of student to check registration eligibility for</param>
-        /// <returns><see cref="RegistrationEligibility">Registration Eligibility Information</see> including messages returned by 
+        /// <returns><see cref="RegistrationEligibility">Registration Eligibility Information</see> including messages returned by
         /// the student eligibility check and booleans indicating whether the student is eligible and whether the user can override and
         /// register the student even if the student is ineligible.</returns>
         public RegistrationEligibility CheckRegistrationEligibility(string studentId)
@@ -3313,7 +3522,7 @@ namespace Ellucian.Colleague.Api.Client
         /// Returns registration eligibility information for a student async.
         /// </summary>
         /// <param name="studentId">Id of student to check registration eligibility for</param>
-        /// <returns><see cref="RegistrationEligibility">Registration Eligibility Information</see> including messages returned by 
+        /// <returns><see cref="RegistrationEligibility">Registration Eligibility Information</see> including messages returned by
         /// the student eligibility check and booleans indicating whether the student is eligible and whether the user can override and
         /// register the student even if the student is ineligible.</returns>
         public async Task<RegistrationEligibility> CheckRegistrationEligibilityAsync(string studentId)
@@ -4022,7 +4231,7 @@ namespace Ellucian.Colleague.Api.Client
         }
         // <summary>
         // Posts connection status from Colleague to Recruiter.
-        // </summary>       
+        // </summary>
         public ConnectionStatus PostConnectionStatus(ConnectionStatus connectionStatus)
         {
             string urlPath = UrlUtility.CombineUrlPath(_recruiterConnectionStatusPath);
@@ -4046,7 +4255,7 @@ namespace Ellucian.Colleague.Api.Client
         }
         // <summary>
         // Posts connection status from Colleague to Recruiter async.
-        // </summary>       
+        // </summary>
         public async Task<ConnectionStatus> PostConnectionStatusAsync(ConnectionStatus connectionStatus)
         {
             string urlPath = UrlUtility.CombineUrlPath(_recruiterConnectionStatusPath);
@@ -4761,7 +4970,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="studentIds">Student ID</param>
         /// <returns>PersonRestriction DTO objects</returns>
         /// <exception cref="ArgumentNullException">The resource studentId must be provided.</exception>
-        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception> 
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
         public IEnumerable<PersonRestriction> GetStudentRestrictions(string studentId)
         {
             if (string.IsNullOrEmpty(studentId))
@@ -4793,7 +5002,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="useCache">Use Cache</param>
         /// <returns>PersonRestriction DTO objects</returns>
         /// <exception cref="ArgumentNullException">The resource studentId must be provided.</exception>
-        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>        
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
         public async Task<IEnumerable<PersonRestriction>> GetStudentRestrictionsAsync(string studentId, bool useCache = false)
         {
             if (string.IsNullOrEmpty(studentId))
@@ -4825,7 +5034,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="useCache">Use Cache</param>
         /// <returns>PersonRestriction DTO objects</returns>
         /// <exception cref="ArgumentNullException">The resource studentId must be provided.</exception>
-        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>        
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
         public async Task<IEnumerable<PersonRestriction>> GetStudentRestrictions2Async(string studentId, bool useCache = false)
         {
             if (string.IsNullOrEmpty(studentId))
@@ -4915,7 +5124,7 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
-        
+
         /// <summary>
         /// Retrieve Student Objects in Batch without cache based on a Post transaction with multiple keys async.
         /// </summary>
@@ -5176,6 +5385,35 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve faculty.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a list of FacultyOfficeHours
+        /// </summary>
+        /// <param name="facultyIds">Post in Body a list of faculty keys</param>
+        /// <returns>list of faculty office hours</returns>
+        public async Task<IEnumerable<FacultyOfficeHours>> GetFacultyOfficeHoursAsync(IEnumerable<string> facultyIds)
+        {
+            try
+            {
+                if (facultyIds == null)
+                {
+                    throw new ArgumentNullException("IDs cannot be empty/null for Faculty office hours retrieval.");
+                }
+                // Build url path from qapi path and faculty path
+                string[] pathStrings = new string[] { _qapiPath, _facultyPath, _officeHoursPath };
+                var urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(facultyIds, urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<IEnumerable<FacultyOfficeHours>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve faculty office hours.");
                 throw;
             }
         }
@@ -6032,7 +6270,7 @@ namespace Ellucian.Colleague.Api.Client
 
         }
         /// <summary>
-        /// Process registration requests for student 
+        /// Process registration requests for student
         /// </summary>
         /// <param name="studentId">Id of the student being registered</param>
         /// <param name="sectionRegistrations">Section registration items being submitted for registration</param>
@@ -6227,7 +6465,7 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
         /// <summary>
-        /// Get a student's transcript viewing restrictions asynchronously. 
+        /// Get a student's transcript viewing restrictions asynchronously.
         /// </summary>
         /// <param name="studentId">Id of student</param>
         /// <returns>A list of transcript viewing restrictions. If none it is an empty list.</returns>
@@ -6750,7 +6988,7 @@ namespace Ellucian.Colleague.Api.Client
             return permissions;
         }
         /// <summary>
-        /// Client method to Post (create) a new waiver. 
+        /// Client method to Post (create) a new waiver.
         /// </summary>
         /// <param name="studentWaiver">Waiver object</param>
         /// <returns>Created Waiver object</returns>
@@ -6792,7 +7030,7 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
         /// <summary>
-        /// Client method to Post (create) a new waiver. 
+        /// Client method to Post (create) a new waiver.
         /// </summary>
         /// <param name="studentWaiver">Waiver object</param>
         /// <returns>Created Waiver object</returns>
@@ -6918,8 +7156,9 @@ namespace Ellucian.Colleague.Api.Client
         /// Retrieve Section Registration Date Objects based on a Post transaction with multiple keys async.
         /// </summary>
         /// <param name="ids">List of section Ids</param>
+        /// <param name="considerUsersGroup">This is set to true if the registration group should be considered for dates calculation, otherwise set to false</param>
         /// <returns>Returns a set of <see cref="SectionRegistrationDate">SectionRegistrationDate</see> items</returns>
-        public async Task<IEnumerable<SectionRegistrationDate>> GetSectionRegistrationDatesAsync(IEnumerable<string> sectionIds)
+        public async Task<IEnumerable<SectionRegistrationDate>> GetSectionRegistrationDatesAsync(IEnumerable<string> sectionIds, bool considerUsersGroup = true)
         {
 
             if (sectionIds == null || sectionIds.Count() == 0)
@@ -6928,6 +7167,7 @@ namespace Ellucian.Colleague.Api.Client
             }
             SectionDateQueryCriteria criteria = new SectionDateQueryCriteria();
             criteria.SectionIds = sectionIds;
+            criteria.ConsiderUsersGroup = considerUsersGroup;
             try
             {
                 // Build url path from qapi path and sections and registration-dates pieces
@@ -7195,7 +7435,7 @@ namespace Ellucian.Colleague.Api.Client
 
         }
         /// <summary>
-        /// Client method to Post (add) a new student petition. 
+        /// Client method to Post (add) a new student petition.
         /// </summary>
         /// <param name="studentPetitionToAdd">StudentPetition object</param>
         /// <returns>The StudentPetition object created</returns>
@@ -7237,7 +7477,7 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
         /// <summary>
-        /// Client method to Post (add) a new student petition async. 
+        /// Client method to Post (add) a new student petition async.
         /// </summary>
         /// <param name="studentPetitionToAdd">StudentPetition object</param>
         /// <returns>The StudentPetition object created</returns>
@@ -7484,7 +7724,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Client method to Post (create) a new graduation application asynchronously. 
+        /// Client method to Post (create) a new graduation application asynchronously.
         /// </summary>
         /// <param name="graduationApplication">Graduation Application object</param>
         /// <returns>Created Graduation Application object</returns>
@@ -7523,7 +7763,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Client method to Post (create) a new graduation application. 
+        /// Client method to Post (create) a new graduation application.
         /// </summary>
         /// <param name="graduationApplication">Graduation Application object</param>
         /// <returns>Created Graduation Application object</returns>
@@ -7662,9 +7902,227 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+        /// <summary>
+        /// Get a <see cref="SectionWaitlist"/> for a given course section ID
+        /// </summary>
+        /// <param name="sectionId">Course section ID</param>
+        /// <returns>A <see cref="SectionWaitlist"/></returns>
+        public async Task<SectionWaitlist> GetSectionWaitlistStudentsAsync(string sectionId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(sectionId))
+                {
+                    throw new ArgumentNullException("sectionId", "Cannot build a section waitlist without a course section ID.");
+                }
+                string[] pathStrings = new string[] { _sectionsPath, UrlParameterUtility.EncodeWithSubstitution(sectionId), "waitlist" };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<SectionWaitlist>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to retrieve section waitlist.");
+                throw;
+            }
+        }
 
         /// <summary>
-        /// Async client method to update an existing graduation application. 
+        /// Get a list of<see cref="StudentWaitlistStatus"/>
+        /// </summary>
+        /// <returns>A list of<see cref="StudentWaitlistStatus"/></returns>
+        public async Task<IEnumerable<StudentWaitlistStatus>> GetStudentWaitlistStatusesAsync()
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(_waitlistStatusesPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<StudentWaitlistStatus>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to retrieve student waitlist statuses.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a list of<see cref="SectionWaitlistStudent"/> for a given course section ID
+        /// </summary>
+        /// <param name="sectionId">Course section ID</param>
+        /// <returns>A list of<see cref="SectionWaitlistStudent"/></returns>
+        public async Task<IEnumerable<SectionWaitlistStudent>> GetSectionWaitlistStudents2Async(string sectionId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(sectionId))
+                {
+                    throw new ArgumentNullException("sectionId", "Cannot build a section waitlist without a course section ID.");
+                }
+                string[] pathStrings = new string[] { _sectionsPath, UrlParameterUtility.EncodeWithSubstitution(sectionId), "waitlist" };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<SectionWaitlistStudent>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to retrieve section waitlist.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves information about faculty member indications that midterm grading is complete for the section.
+        /// </summary>
+        /// <param name="sectionId">Course section ID</param>
+        /// <returns>Information about faculty member indications that grading is complete for the section.</returns>
+        public async Task<SectionMidtermGradingComplete> GetSectionMidtermGradingCompleteAsync(string sectionId)
+        {
+            if (string.IsNullOrEmpty(sectionId))
+            {
+                throw new ArgumentNullException("sectionId", "section ID was not provided.");
+            }
+
+            try
+            {
+                string[] pathStrings = new string[] { _sectionsPath, UrlParameterUtility.EncodeWithSubstitution(sectionId), "midterm-grading-complete" };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<SectionMidtermGradingComplete>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to retrieve section midterm grading complete information.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Records that midterm grading is complete for a given section and midterm grade
+        /// </summary>
+        /// <param name="sectionId">Course section ID</param>
+        /// <returns>Information about all faculty member indications that grading is complete for the section.</returns>
+        public async Task<SectionMidtermGradingComplete> PostSectionMidtermGradingCompleteAsync(string sectionId, SectionMidtermGradingCompleteForPost sectionGradeCompleteInfo)
+        {
+            if (sectionId == null)
+            {
+                throw new ArgumentNullException("SectionId", "SectionId is not provided");
+            }
+
+            if (sectionGradeCompleteInfo.MidtermGradeNumber == null)
+            {
+                throw new ArgumentNullException("MidtermGradeNumber", "MidtermGradeNumber is not provided");
+            }
+
+            if ((sectionGradeCompleteInfo.MidtermGradeNumber < 1) || (sectionGradeCompleteInfo.MidtermGradeNumber > 6))
+            {
+                throw new ArgumentNullException("MidtermGradeNumber", "MidtermGradeNumber must be between 1 and 6");
+            }
+
+            if (string.IsNullOrEmpty(sectionGradeCompleteInfo.CompleteOperator))
+            {
+                throw new ArgumentNullException("CompleteOperator", "CompleteOperator is not provided");
+            }
+
+            if (sectionGradeCompleteInfo.DateAndTime == null)
+            {
+                throw new ArgumentNullException("DateAndTime", "DateAndTime is not provided");
+            }
+
+            try
+            {
+                string[] pathStrings = new string[] { _sectionsPath, UrlParameterUtility.EncodeWithSubstitution(sectionId), "midterm-grading-complete" };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(sectionGradeCompleteInfo, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<SectionMidtermGradingComplete>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to post section midterm grading complete information.");
+                throw;
+            }
+        }
+
+
+        /// <summary>
+        /// Get a <see cref="SectionWaitlistConfig"/> for a given course section ID
+        /// </summary>
+        /// <param name="sectionId">Course section ID</param>
+        /// <returns>A <see cref="SectionWaitlistConfig"/></returns>
+        public async Task<SectionWaitlistConfig> GetSectionWaitlistConfigAsync(string sectionId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(sectionId))
+                {
+                    throw new ArgumentNullException("sectionId", "Cannot fetch section waitlist config without a course section ID.");
+                }
+                string[] pathStrings = new string[] { _sectionsPath, UrlParameterUtility.EncodeWithSubstitution(sectionId), "waitlist-config" };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<SectionWaitlistConfig>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to retrieve section waitlist configuration.");
+                throw;
+            }
+        }
+
+
+        /// <summary>
+        /// Get a <see cref="StudentSectionWaitlistInfo"/> for a given course section ID and student Id
+        /// </summary>
+        /// <param name="sectionId">Course section ID</param>
+        /// <param name="studentId">student ID</param>
+        /// <returns>A <see cref="StudentSectionWaitlistInfo"/></returns>
+        public async Task<StudentSectionWaitlistInfo> GetStudentSectionWaitlistInfoAsync(string sectionId, string studentId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(sectionId))
+                {
+                    throw new ArgumentNullException("sectionId", "Cannot fetch section waitlist info without a course section ID.");
+                }
+                if (string.IsNullOrEmpty(studentId))
+                {
+                    throw new ArgumentNullException("studentId", "Cannot fetch section waitlist info without a student ID.");
+                }
+                var urlPath = UrlUtility.CombineUrlPath(new[] { _sectionsPath, sectionId.ToString(), _waitlistInfoPath });
+                var query = UrlUtility.BuildEncodedQueryString(new[] { "studentId", studentId });
+                urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, query);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<StudentSectionWaitlistInfo>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to retrieve student section waitlist information.");
+                throw;
+            }
+        }
+        /// <summary>
+        /// Async client method to update an existing graduation application.
         /// </summary>
         /// <param name="graduationApplication">Graduation Application object</param>
         /// <returns>Updated Graduation Application object</returns>
@@ -7735,7 +8193,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Client method to Post (create) a new student request. 
+        /// Client method to Post (create) a new student request.
         /// </summary>
         /// <param name="studentRequest">Student Request object</param>
         /// <returns>Created a new Student Request object</returns>
@@ -7778,7 +8236,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         ///// <summary>
-        ///// Client method to Post (create) a new student request. 
+        ///// Client method to Post (create) a new student request.
         ///// </summary>
         ///// <param name="studentRequest">Student Request object</param>
         ///// <returns>Created a new Student Request object</returns>
@@ -8084,6 +8542,41 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+        /// <summary>
+        /// Returns academic credit information asynchronously. Primarily useful for credits by section.
+        /// Also returns List of invalid academic credit Ids.
+        /// </summary>
+        /// <param name="criteria">Criteria that identifies which credits are desired. At least one section is required.</param>
+        /// <returns><see cref="AcademicCreditsWithInvalidKeys">Academic Credit with Invalid Academic credit Ids</see></returns>
+        public async Task<AcademicCreditsWithInvalidKeys> QueryAcademicCreditsWithInvalidKeysAsync(AcademicCreditQueryCriteria criteria, int? offset = null, int? limit = null)
+        {
+            // Throw exception if section Id is not supplied
+            if (criteria == null || criteria.SectionIds == null || !criteria.SectionIds.Any())
+            {
+                throw new ArgumentNullException("You must supply a criteria with at least one section Id to retrieve aademic credit information.");
+            }
+            try
+            {
+
+                var queryString = UrlUtility.BuildEncodedQueryString("offset", offset.HasValue ? offset.Value.ToString() : null, "limit", limit.HasValue ? limit.Value.ToString() : null);
+
+
+                string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _academicCreditsPath);
+                var combinedUrl = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianInvalidKeysFormatVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, combinedUrl, headers: headers);
+                string responseString = await response.Content.ReadAsStringAsync();
+                var academicCreditsWithInvalidKeys = JsonConvert.DeserializeObject<AcademicCreditsWithInvalidKeys>(responseString);
+                return academicCreditsWithInvalidKeys;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, string.Format("Unable to query academic credit information."));
+                throw;
+            }
+        }
+
 
         /// <summary>
         /// Asynchronously returns faculty grading configuration with all needed information to render faculty grade view
@@ -8110,81 +8603,10 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Get a 1098-T tax form PDF
-        /// </summary>
-        /// <param name="personId">ID of the person assigned to and requesting the 1098-T.</param>
-        /// <param name="recordId">The record ID where the 1098-T pdf data is stored</param>
-        /// <returns>Byte array containing PDF data</returns>
-        public async Task<byte[]> Get1098tTaxFormPdf(string personId, string recordId)
-        {
-            if (string.IsNullOrEmpty(personId))
-                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
-
-            if (string.IsNullOrEmpty(recordId))
-                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
-
-            try
-            {
-                // Build url path and create and execute a request to get the tax form pdf
-                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxForm1098tPdfPath, recordId);
-
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                headers.Add(AcceptHeaderKey, "application/pdf");
-                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
-                headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
-                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
-
-                var resource = response.Content.ReadAsByteArrayAsync().Result;
-                return resource;
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex.GetBaseException(), "Unable to retrieve 1098-T tax form pdf.");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Get a T2202A tax form PDF
-        /// </summary>
-        /// <param name="personId">ID of the person assigned to and requesting the T2202A.</param>
-        /// <param name="recordId">The record ID where the T2202A pdf data is stored</param>
-        /// <returns>Byte array containing PDF data</returns>
-        public async Task<byte[]> GetT2202aTaxFormPdf(string personId, string recordId)
-        {
-            if (string.IsNullOrEmpty(personId))
-                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
-
-            if (string.IsNullOrEmpty(recordId))
-                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
-
-            try
-            {
-                // Build url path and create and execute a request to get the tax form pdf
-                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxFormT2202aPdfPath, recordId);
-
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                headers.Add(AcceptHeaderKey, "application/pdf");
-                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
-                headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
-                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
-
-                var resource = response.Content.ReadAsByteArrayAsync().Result;
-                return resource;
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex.GetBaseException(), "Unable to retrieve T2202A tax form pdf.");
-                throw;
-            }
-        }
-
-        /// <summary>
         /// Asynchronously returns the course catalog configuration with all needed information for catalog searches
         /// </summary>
         /// <returns>The requested <see cref="CourseCatalogConfiguration">CourseCatalogConfiguration</see> object</returns>
+        [Obsolete("Obsolete as of API version 1.26. Use GetCourseCatalogConfiguration2Async.")]
         public async Task<CourseCatalogConfiguration> GetCourseCatalogConfigurationAsync()
         {
             try
@@ -8194,6 +8616,52 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_configurationPath, _courseCatalogPath);
                 var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var configuration = JsonConvert.DeserializeObject<CourseCatalogConfiguration>(await responseString.Content.ReadAsStringAsync());
+
+                return configuration;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the course catalog configuration information.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously returns the course catalog configuration with all needed information for catalog searches
+        /// </summary>
+        /// <returns>The requested <see cref="CourseCatalogConfiguration2">CourseCatalogConfiguration2</see> object</returns>
+        public async Task<CourseCatalogConfiguration2> GetCourseCatalogConfiguration2Async()
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                string urlPath = UrlUtility.CombineUrlPath(_configurationPath, _courseCatalogPath);
+                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var configuration = JsonConvert.DeserializeObject<CourseCatalogConfiguration2>(await responseString.Content.ReadAsStringAsync());
+
+                return configuration;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the course catalog configuration information.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously returns the course catalog configuration with all needed information for catalog searches
+        /// </summary>
+        /// <returns>The requested <see cref="CourseCatalogConfiguration3">CourseCatalogConfiguration3</see> object</returns>
+        public async Task<CourseCatalogConfiguration3> GetCourseCatalogConfiguration3Async()
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
+                string urlPath = UrlUtility.CombineUrlPath(_configurationPath, _courseCatalogPath);
+                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var configuration = JsonConvert.DeserializeObject<CourseCatalogConfiguration3>(await responseString.Content.ReadAsStringAsync());
 
                 return configuration;
             }
@@ -8469,7 +8937,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <summary>
         /// Searches for advisees within an advisor's assigned advisee list or within the global pool (depending on advisor's permissions) async.
         /// </summary>
-        /// <param name="studentKeyword">The search string used when searching students by name or ID</param>        
+        /// <param name="studentKeyword">The search string used when searching students by name or ID</param>
         /// <returns>A list of matching students, which may be empty</returns>
         /// <exception cref="System.ArgumentException">Thrown when studentKeyword is not supplied.</exception>
         /// <exception cref="Ellucian.Colleague.Api.Client.Exceptions.AdvisingException">Thrown when the search fails</exception>
@@ -8624,6 +9092,35 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
+        /// Retrieve add authorizations for a student
+        /// </summary>
+        /// <param name="studentId">ID of the student for whom add authorizations are being retrieved</param>
+        /// <returns>Collection of <see cref="AddAuthorization">Add Authorizations</see> for the student</returns>
+        public async Task<IEnumerable<AddAuthorization>> GetStudentAddAuthorizationsAsync(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                string message = "Student ID must be provided to retrieve student add authorizations.";
+                logger.Error(message);
+                throw new ArgumentNullException(message);
+            }
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _addAuthorizationsPath);
+                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var addAuthorizations = JsonConvert.DeserializeObject<IEnumerable<AddAuthorization>>(await responseString.Content.ReadAsStringAsync());
+                return addAuthorizations;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, string.Format("Unable to get add authorizations for student {0}", studentId));
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Asynchronously returns an add authorization by its id.
         /// </summary>
         /// <param name="id">The Id of the add authorization requested</param>
@@ -8654,7 +9151,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Create a new add authorization for a student in a section. 
+        /// Create a new add authorization for a student in a section.
         /// </summary>
         /// <param name="addAuthorizationInput">Input for a new add authorization. Must have  section Id and student Id.</param>
         /// <returns>Newly created add authorization</returns>
@@ -8728,7 +9225,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Returns graduation application eligibilty information for a student 
+        /// Returns graduation application eligibilty information for a student
         /// </summary>
         /// <param name="studentId">(Required) Id of student</param>
         /// <param name="programCodes">List of program Codes for which graduation application eligibility is desired. Must provide at least 1</param>
@@ -8756,6 +9253,2555 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+
+
+
+        /// <summary>
+        /// Get a degree plan by the specified ID async.
+        /// </summary>
+        /// <returns>Returns a degree plan</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        [Obsolete("Obsolete as of API version 1.5. Use GetDegreePlan3.")]
+        public DegreePlan2 GetDegreePlan(string id)
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath, id);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<DegreePlan2>(response.Content.ReadAsStringAsync().Result);
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get DegreePlan");
+                throw;
+            }
+        }
+        /// <summary>
+        /// Get a degree plan by the specified ID
+        /// </summary>
+        /// <returns>Returns a degree plan</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        [Obsolete("Obsolete as of API version 1.5. Use GetDegreePlan3.")]
+        public async Task<DegreePlan2> GetDegreePlanAsync(string id)
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath, id);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<DegreePlan2>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get DegreePlan");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a degree plan by the specified ID
+        /// </summary>
+        /// <returns>Returns a degree plan</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        [Obsolete("Obsolete as of API version 1.6. Use GetDegreePlan4.")]
+        public DegreePlan3 GetDegreePlan3(string id)
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath, id);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
+                var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<DegreePlan3>(response.Content.ReadAsStringAsync().Result);
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get DegreePlan3");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a degree plan by the specified ID async
+        /// </summary>
+        /// <returns>Returns a degree plan</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        [Obsolete("Obsolete as of API version 1.6. Use GetDegreePlan4Async.")]
+        public async Task<DegreePlan3> GetDegreePlan3Async(string id)
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath, id);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<DegreePlan3>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get DegreePlan3");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a degree plan by the specified ID. Pass argument validate = false to get a degree
+        /// plan without validation warnings.
+        /// </summary>
+        /// <returns>Returns a combined dto containing degree plan and academic history</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public DegreePlanAcademicHistory GetDegreePlan4(string id, bool validate = true)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "An Id must be specified.");
+            }
+            try
+            {
+                var queryString = UrlUtility.BuildEncodedQueryString("validate", validate.ToString());
+                string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath, id);
+                urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion4);
+                var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<DegreePlanAcademicHistory>(response.Content.ReadAsStringAsync().Result);
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get DegreePlanAcademicHistory");
+                throw;
+            }
+        }
+        /// <summary>
+        /// Get a degree plan by the specified ID. Pass argument validate = false to get a degree Async
+        /// plan without validation warnings.
+        /// </summary>
+        /// <returns>Returns a combined dto containing degree plan and academic history</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        [Obsolete("Obsolete as of API version 1.11. Use GetDegreePlan5Async.")]
+        public async Task<DegreePlanAcademicHistory> GetDegreePlan4Async(string id, bool validate = true)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "An Id must be specified.");
+            }
+            try
+            {
+                var queryString = UrlUtility.BuildEncodedQueryString("validate", validate.ToString());
+                string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath, id);
+                urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion4);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<DegreePlanAcademicHistory>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get DegreePlanAcademicHistory");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a degree plan by the specified ID. Pass argument validate = false to get a degree Async
+        /// plan without validation warnings.
+        /// </summary>
+        /// <returns>Returns a combined dto containing degree plan and academic history</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        [Obsolete("Obsolete as of API version 1.18. Use GetDegreePlan6Async.")]
+        public async Task<DegreePlanAcademicHistory2> GetDegreePlan5Async(string id, bool validate = true)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "An Id must be specified.");
+            }
+            try
+            {
+                var queryString = UrlUtility.BuildEncodedQueryString("validate", validate.ToString());
+                string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath, id);
+                urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion5);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<DegreePlanAcademicHistory2>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get DegreePlanAcademicHistory");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a degree plan by the specified ID. Pass argument validate = false to get a degree Async
+        /// plan without validation warnings.
+        /// </summary>
+        /// <param name="id">id of plan to retrieve</param>
+        /// <param name="validate">true returns a validated degree plan, false does not validate</param>
+        /// <param name="includeDrops">Defaults to false, If true, includes dropped academic credits in the degree plan</param>
+        /// <returns>Returns a combined dto containing degree plan and academic history</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<DegreePlanAcademicHistory3> GetDegreePlan6Async(string id, bool validate = true, bool includeDrops = false)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "An Id must be specified.");
+            }
+            try
+            {
+                var queryString = UrlUtility.BuildEncodedQueryString("validate", validate.ToString(), "includeDrops", includeDrops.ToString());
+                string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath, id);
+                urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion6);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<DegreePlanAcademicHistory3>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get DegreePlanAcademicHistory");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the Degree Plan associated with the given student ID.
+        /// </summary>
+        /// <param name="studentId">The ID of the student</param>
+        /// <exception cref="System.InvalidOperationException">Thrown when the provided student ID cannot be mapped to an existing student</exception>
+        /// <returns>The student's associated Degree Plan, or null if they do not have one</returns>
+        [Obsolete("Obsolete as of API version 1.5. Use GetDegreePlan3 and AddDegreePlan3.")]
+        public DegreePlan2 GetOrCreateDegreePlanForStudent(string studentId)
+        {
+            //first get the Student record to be able to know their plan ID
+            Student student = GetStudent(studentId);
+
+            if (student == null)
+            {
+                throw new InvalidOperationException(string.Format("The person with ID {0} does not have a student record.", studentId));
+            }
+
+            //does the student already have a plan? if not, need to create one now
+            DegreePlan2 degreePlan = null;
+            if (student.DegreePlanId.HasValue)
+            {
+                //retrieve the existing plan
+                degreePlan = GetDegreePlan(student.DegreePlanId.Value.ToString());
+            }
+            else
+            {
+                //call create method
+                degreePlan = AddDegreePlan(student.Id);
+            }
+
+            return degreePlan;
+        }
+
+
+
+        /// <summary>
+        /// Creates a new Degree Plan for the given student.
+        /// </summary>
+        /// <param name="studentId">The ID of the student for whom to create a new Degree Plan</param>
+        /// <exception cref="System.InvalidOperationException">Thrown when a degree plan cannot be created for the provided student</exception>
+        /// <exception cref="System.ArgumentNullException">Thrown when the provided studentId argument is empty or null</exception>
+        /// <returns>The newly-created Degree Plan</returns>
+        [Obsolete("Obsolete as of API version 1.5. Use AddDegreePlan3.")]
+        public DegreePlan2 AddDegreePlan(string studentId)
+        {
+            //make sure ID is legit
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Student ID cannot be null or empty");
+            }
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+
+                var response = ExecutePostRequestWithResponse<string>(studentId, urlPath, headers: headers);
+                var createdDegreePlan = JsonConvert.DeserializeObject<DegreePlan2>(response.Content.ReadAsStringAsync().Result);
+
+                return createdDegreePlan;
+            }
+            // If the HTTP request fails, the degree plan probably wasn't created successfully...
+            catch (HttpRequestFailedException hre)
+            {
+                logger.Error(hre.ToString());
+                throw new InvalidOperationException(string.Format("Degree Plan creation for student {0} failed.", studentId), hre);
+            }
+            // HTTP request successful, but some other problem encountered...
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+        /// <summary>
+        /// Creates a new Degree Plan for the given student async.
+        /// </summary>
+        /// <param name="studentId">The ID of the student for whom to create a new Degree Plan</param>
+        /// <exception cref="System.InvalidOperationException">Thrown when a degree plan cannot be created for the provided student</exception>
+        /// <exception cref="System.ArgumentNullException">Thrown when the provided studentId argument is empty or null</exception>
+        /// <returns>The newly-created Degree Plan</returns>
+        [Obsolete("Obsolete as of API version 1.5. Use AddDegreePlan3.")]
+        public async Task<DegreePlan2> AddDegreePlanAsync(string studentId)
+        {
+            //make sure ID is legit
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Student ID cannot be null or empty");
+            }
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+
+                var response = await ExecutePostRequestWithResponseAsync<string>(studentId, urlPath, headers: headers);
+                var createdDegreePlan = JsonConvert.DeserializeObject<DegreePlan2>(await response.Content.ReadAsStringAsync());
+
+                return createdDegreePlan;
+            }
+            // If the HTTP request fails, the degree plan probably wasn't created successfully...
+            catch (HttpRequestFailedException hre)
+            {
+                logger.Error(hre.ToString());
+                throw new InvalidOperationException(string.Format("Degree Plan creation for student {0} failed.", studentId), hre);
+            }
+            // HTTP request successful, but some other problem encountered...
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+        /// <summary>
+        /// Creates a new Degree Plan for the given student.
+        /// </summary>
+        /// <param name="studentId">The ID of the student for whom to create a new Degree Plan</param>
+        /// <exception cref="System.InvalidOperationException">Thrown when a degree plan cannot be created for the provided student</exception>
+        /// <exception cref="System.ArgumentNullException">Thrown when the provided studentId argument is empty or null</exception>
+        /// <returns>The newly-created Degree Plan</returns>
+        [Obsolete("Obsolete as of API version 1.6. Use AddDegreePlan4.")]
+        public DegreePlan3 AddDegreePlan3(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Student ID cannot be null or empty");
+            }
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
+
+                var response = ExecutePostRequestWithResponse<string>(studentId, urlPath, headers: headers);
+                var createdDegreePlan = JsonConvert.DeserializeObject<DegreePlan3>(response.Content.ReadAsStringAsync().Result);
+
+                return createdDegreePlan;
+            }
+            // If the HTTP request fails, the degree plan probably wasn't created successfully...
+            catch (HttpRequestFailedException hre)
+            {
+                logger.Error(hre.ToString());
+                throw new InvalidOperationException(string.Format("Degree Plan creation for student {0} failed.", studentId), hre);
+            }
+            // HTTP request successful, but some other problem encountered...
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+        /// <summary>
+        /// Creates a new Degree Plan for the given student async.
+        /// </summary>
+        /// <param name="studentId">The ID of the student for whom to create a new Degree Plan</param>
+        /// <exception cref="System.InvalidOperationException">Thrown when a degree plan cannot be created for the provided student</exception>
+        /// <exception cref="System.ArgumentNullException">Thrown when the provided studentId argument is empty or null</exception>
+        /// <returns>The newly-created Degree Plan</returns>
+        [Obsolete("Obsolete as of API version 1.6. Use AddDegreePlan4.")]
+        public async Task<DegreePlan3> AddDegreePlan3Async(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Student ID cannot be null or empty");
+            }
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
+
+                var response = await ExecutePostRequestWithResponseAsync<string>(studentId, urlPath, headers: headers);
+                var createdDegreePlan = JsonConvert.DeserializeObject<DegreePlan3>(await response.Content.ReadAsStringAsync());
+
+                return createdDegreePlan;
+            }
+            // If the HTTP request fails, the degree plan probably wasn't created successfully...
+            catch (HttpRequestFailedException hre)
+            {
+                logger.Error(hre.ToString());
+                throw new InvalidOperationException(string.Format("Degree Plan creation for student {0} failed.", studentId), hre);
+            }
+            // HTTP request successful, but some other problem encountered...
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Creates a new Degree Plan for the given student.
+        /// </summary>
+        /// <param name="studentId">The ID of the student for whom to create a new Degree Plan</param>
+        /// <exception cref="System.InvalidOperationException">Thrown when a degree plan cannot be created for the provided student</exception>
+        /// <exception cref="System.ArgumentNullException">Thrown when the provided studentId argument is empty or null</exception>
+        /// <returns>DegreePlanAcademicHistory which includes the newly created Degree Plan along with the student's Academic History</returns>
+        public DegreePlanAcademicHistory AddDegreePlan4(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Student ID cannot be null or empty");
+            }
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion4);
+
+                var response = ExecutePostRequestWithResponse<string>(studentId, urlPath, headers: headers);
+                var createdDegreePlan = JsonConvert.DeserializeObject<DegreePlanAcademicHistory>(response.Content.ReadAsStringAsync().Result);
+
+                return createdDegreePlan;
+            }
+            // If the HTTP request fails, the degree plan probably wasn't created successfully...
+            catch (HttpRequestFailedException hre)
+            {
+                logger.Error(hre.ToString());
+                throw new InvalidOperationException(string.Format("Degree Plan creation for student {0} failed.", studentId), hre);
+            }
+            // HTTP request successful, but some other problem encountered...
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+        /// <summary>
+        /// Creates a new Degree Plan for the given student async.
+        /// </summary>
+        /// <param name="studentId">The ID of the student for whom to create a new Degree Plan</param>
+        /// <exception cref="System.InvalidOperationException">Thrown when a degree plan cannot be created for the provided student</exception>
+        /// <exception cref="System.ArgumentNullException">Thrown when the provided studentId argument is empty or null</exception>
+        /// <returns>DegreePlanAcademicHistory which includes the newly created Degree Plan along with the student's Academic History</returns>
+        [Obsolete("Obsolete with API 1.11. Use AddDegreePlan5Async instead")]
+        public async Task<DegreePlanAcademicHistory> AddDegreePlan4Async(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Student ID cannot be null or empty");
+            }
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion4);
+
+                var response = await ExecutePostRequestWithResponseAsync<string>(studentId, urlPath, headers: headers);
+                var createdDegreePlan = JsonConvert.DeserializeObject<DegreePlanAcademicHistory>(await response.Content.ReadAsStringAsync());
+
+                return createdDegreePlan;
+            }
+            // If the HTTP request fails, the degree plan probably wasn't created successfully...
+            catch (HttpRequestFailedException hre)
+            {
+                logger.Error(hre.ToString());
+                throw new InvalidOperationException(string.Format("Degree Plan creation for student {0} failed.", studentId), hre);
+            }
+            // HTTP request successful, but some other problem encountered...
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Creates a new Degree Plan for the given student async.
+        /// </summary>
+        /// <param name="studentId">The ID of the student for whom to create a new Degree Plan</param>
+        /// <exception cref="System.InvalidOperationException">Thrown when a degree plan cannot be created for the provided student</exception>
+        /// <exception cref="System.ArgumentNullException">Thrown when the provided studentId argument is empty or null</exception>
+        /// <returns>DegreePlanAcademicHistory which includes the newly created Degree Plan along with the student's Academic History</returns>
+        [Obsolete("Obsolete with API 1.18. Use AddDegreePlan6Async instead")]
+        public async Task<DegreePlanAcademicHistory2> AddDegreePlan5Async(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Student ID cannot be null or empty");
+            }
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion5);
+
+                var response = await ExecutePostRequestWithResponseAsync<string>(studentId, urlPath, headers: headers);
+                var createdDegreePlan = JsonConvert.DeserializeObject<DegreePlanAcademicHistory2>(await response.Content.ReadAsStringAsync());
+
+                return createdDegreePlan;
+            }
+            // If the HTTP request fails, the degree plan probably wasn't created successfully...
+            catch (HttpRequestFailedException hre)
+            {
+                logger.Error(hre.ToString());
+                throw new InvalidOperationException(string.Format("Degree Plan creation for student {0} failed.", studentId), hre);
+            }
+            // HTTP request successful, but some other problem encountered...
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Creates a new Degree Plan for the given student async.
+        /// </summary>
+        /// <param name="studentId">The ID of the student for whom to create a new Degree Plan</param>
+        /// <exception cref="System.InvalidOperationException">Thrown when a degree plan cannot be created for the provided student</exception>
+        /// <exception cref="System.ArgumentNullException">Thrown when the provided studentId argument is empty or null</exception>
+        /// <returns>DegreePlanAcademicHistory3 which includes the newly created Degree Plan along with the student's Academic History</returns>
+        public async Task<DegreePlanAcademicHistory3> AddDegreePlan6Async(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Student ID cannot be null or empty");
+            }
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion6);
+
+                var response = await ExecutePostRequestWithResponseAsync<string>(studentId, urlPath, headers: headers);
+                var createdDegreePlan = JsonConvert.DeserializeObject<DegreePlanAcademicHistory3>(await response.Content.ReadAsStringAsync());
+
+                return createdDegreePlan;
+            }
+            // If the HTTP request fails because of a conflict indicate that with a specific type of exception.
+            catch (HttpRequestFailedException hre)
+            {
+                if (hre.StatusCode == HttpStatusCode.Conflict)
+                {
+                    logger.Error(hre.Message);
+                    throw new DegreePlanException() { Code = DegreePlanExceptionCodes.AddPlanConflict };
+                }
+                else
+                {
+                    logger.Error(hre.ToString());
+                    throw new InvalidOperationException(string.Format("Degree Plan creation for student {0} failed.", studentId), hre);
+                }
+
+            }
+            // HTTP request successful, but some other problem encountered...
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Updates a degree plan. This can include adding/removing terms and adding/removing courses.
+        /// </summary>
+        /// <param name="updatedPlan">The updated plan snapshot</param>
+        /// <returns>The newly-updated degree plan</returns>
+        /// <exception cref="System.ArgumentNullException">Thrown when the updated DegreePlan object is null</exception>
+        [Obsolete("Obsolete with API 1.5. Use UpdateDegreePlan3")]
+        public DegreePlan2 UpdateDegreePlan(DegreePlan2 updatedPlan)
+        {
+            //make sure plan is legit
+            if (updatedPlan == null)
+            {
+                throw new ArgumentNullException("updatedPlan", "Updated degree plan object cannot be null");
+            }
+
+            string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath);
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+
+            DegreePlan2 newDegreePlan = null;
+
+            try
+            {
+                var response = ExecutePutRequestWithResponse<DegreePlan2>(updatedPlan, urlPath, headers: headers);
+                newDegreePlan = JsonConvert.DeserializeObject<DegreePlan2>(response.Content.ReadAsStringAsync().Result);
+            }
+            catch (HttpRequestFailedException hrfe)
+            {
+                if (hrfe.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    throw new DegreePlanException() { Code = DegreePlanExceptionCodes.StalePlan };
+                }
+                else
+                {
+                    throw new InvalidOperationException("Unable to update degree plan.");
+                }
+            }
+            return newDegreePlan;
+        }
+        /// <summary>
+        /// Updates a degree plan. This can include adding/removing terms and adding/removing courses async.
+        /// </summary>
+        /// <param name="updatedPlan">The updated plan snapshot</param>
+        /// <returns>The newly-updated degree plan</returns>
+        /// <exception cref="System.ArgumentNullException">Thrown when the updated DegreePlan object is null</exception>
+        [Obsolete("Obsolete with API 1.5. Use UpdateDegreePlan3Async")]
+        public async Task<DegreePlan2> UpdateDegreePlanAsync(DegreePlan2 updatedPlan)
+        {
+            //make sure plan is legit
+            if (updatedPlan == null)
+            {
+                throw new ArgumentNullException("updatedPlan", "Updated degree plan object cannot be null");
+            }
+
+            string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath);
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+
+            DegreePlan2 newDegreePlan = null;
+
+            try
+            {
+                var response = await ExecutePutRequestWithResponseAsync<DegreePlan2>(updatedPlan, urlPath, headers: headers);
+                newDegreePlan = JsonConvert.DeserializeObject<DegreePlan2>(await response.Content.ReadAsStringAsync());
+            }
+            catch (HttpRequestFailedException hrfe)
+            {
+                if (hrfe.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    throw new DegreePlanException() { Code = DegreePlanExceptionCodes.StalePlan };
+                }
+                else
+                {
+                    throw new InvalidOperationException("Unable to update degree plan.");
+                }
+            }
+            return newDegreePlan;
+        }
+        /// <summary>
+        /// Updates a degree plan. This can include adding/removing terms and adding/removing courses.
+        /// </summary>
+        /// <param name="updatedPlan">The updated plan snapshot</param>
+        /// <returns>The newly-updated degree plan</returns>
+        /// <exception cref="System.ArgumentNullException">Thrown when the updated DegreePlan object is null</exception>
+        [Obsolete("Obsolete with API 1.5. Use UpdateDegreePlan4Async")]
+        public DegreePlan3 UpdateDegreePlan3(DegreePlan3 updatedPlan)
+        {
+            //make sure plan is legit
+            if (updatedPlan == null)
+            {
+                throw new ArgumentNullException("updatedPlan", "Updated degree plan object cannot be null");
+            }
+
+            string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath);
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
+
+            DegreePlan3 newDegreePlan = null;
+
+            try
+            {
+                var response = ExecutePutRequestWithResponse<DegreePlan3>(updatedPlan, urlPath, headers: headers);
+                newDegreePlan = JsonConvert.DeserializeObject<DegreePlan3>(response.Content.ReadAsStringAsync().Result);
+            }
+            catch (HttpRequestFailedException hrfe)
+            {
+                if (hrfe.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    throw new DegreePlanException() { Code = DegreePlanExceptionCodes.StalePlan };
+                }
+                else
+                {
+                    throw new InvalidOperationException("Unable to update degree plan.");
+                }
+            }
+            return newDegreePlan;
+        }
+        /// <summary>
+        /// Updates a degree plan. This can include adding/removing terms and adding/removing courses async.
+        /// </summary>
+        /// <param name="updatedPlan">The updated plan snapshot</param>
+        /// <returns>The newly-updated degree plan</returns>
+        /// <exception cref="System.ArgumentNullException">Thrown when the updated DegreePlan object is null</exception>
+        [Obsolete("Obsolete with API 1.5. Use UpdateDegreePlan4")]
+        public async Task<DegreePlan3> UpdateDegreePlan3Async(DegreePlan3 updatedPlan)
+        {
+            //make sure plan is legit
+            if (updatedPlan == null)
+            {
+                throw new ArgumentNullException("updatedPlan", "Updated degree plan object cannot be null");
+            }
+
+            string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath);
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
+
+            DegreePlan3 newDegreePlan = null;
+
+            try
+            {
+                var response = await ExecutePutRequestWithResponseAsync<DegreePlan3>(updatedPlan, urlPath, headers: headers);
+                newDegreePlan = JsonConvert.DeserializeObject<DegreePlan3>(await response.Content.ReadAsStringAsync());
+            }
+            catch (HttpRequestFailedException hrfe)
+            {
+                if (hrfe.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    throw new DegreePlanException() { Code = DegreePlanExceptionCodes.StalePlan };
+                }
+                else
+                {
+                    throw new InvalidOperationException("Unable to update degree plan.");
+                }
+            }
+            return newDegreePlan;
+        }
+
+        /// <summary>
+        /// Updates a degree plan. This can include adding/removing terms and adding/removing courses.
+        /// </summary>
+        /// <param name="updatedPlan">The updated plan snapshot</param>
+        /// <returns>The newly-updated degree plan along with the student's Academic History</returns>
+        /// <exception cref="System.ArgumentNullException">Thrown when the updated DegreePlan object is null</exception>
+        public DegreePlanAcademicHistory UpdateDegreePlan4(DegreePlan4 updatedPlan)
+        {
+            //make sure plan is legit
+            if (updatedPlan == null)
+            {
+                throw new ArgumentNullException("updatedPlan", "Updated degree plan object cannot be null");
+            }
+
+            string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath);
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion4);
+
+            DegreePlanAcademicHistory updatedResponse = null;
+
+            try
+            {
+                var response = ExecutePutRequestWithResponse<DegreePlan4>(updatedPlan, urlPath, headers: headers);
+                updatedResponse = JsonConvert.DeserializeObject<DegreePlanAcademicHistory>(response.Content.ReadAsStringAsync().Result);
+            }
+            catch (HttpRequestFailedException hrfe)
+            {
+                if (hrfe.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    throw new DegreePlanException() { Code = DegreePlanExceptionCodes.StalePlan };
+                }
+                else
+                {
+                    throw new InvalidOperationException("Unable to update degree plan.");
+                }
+            }
+            return updatedResponse;
+        }
+        /// <summary>
+        /// Updates a degree plan. This can include adding/removing terms and adding/removing courses Async.
+        /// </summary>
+        /// <param name="updatedPlan">The updated plan snapshot</param>
+        /// <returns>The newly-updated degree plan along with the student's Academic History</returns>
+        /// <exception cref="System.ArgumentNullException">Thrown when the updated DegreePlan object is null</exception>
+        [Obsolete("Obsolete with API 1.11. Use UpdateDegreePlan5Async instead")]
+        public async Task<DegreePlanAcademicHistory> UpdateDegreePlan4Async(DegreePlan4 updatedPlan)
+        {
+            //make sure plan is legit
+            if (updatedPlan == null)
+            {
+                throw new ArgumentNullException("updatedPlan", "Updated degree plan object cannot be null");
+            }
+
+            string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath);
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion4);
+
+            DegreePlanAcademicHistory updatedResponse = null;
+
+            try
+            {
+                var response = await ExecutePutRequestWithResponseAsync<DegreePlan4>(updatedPlan, urlPath, headers: headers);
+                updatedResponse = JsonConvert.DeserializeObject<DegreePlanAcademicHistory>(await response.Content.ReadAsStringAsync());
+            }
+            catch (HttpRequestFailedException hrfe)
+            {
+                if (hrfe.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    throw new DegreePlanException() { Code = DegreePlanExceptionCodes.StalePlan };
+                }
+                else
+                {
+                    throw new InvalidOperationException("Unable to update degree plan.");
+                }
+            }
+            return updatedResponse;
+        }
+
+        /// <summary>
+        /// Updates a degree plan. This can include adding/removing terms and adding/removing courses Async.
+        /// </summary>
+        /// <param name="updatedPlan">The updated plan snapshot</param>
+        /// <returns>The newly-updated degree plan along with the student's Academic History</returns>
+        /// <exception cref="System.ArgumentNullException">Thrown when the updated DegreePlan object is null</exception>
+        [Obsolete("Obsolete with API 1.18. Use UpdateDegreePlan6Async")]
+        public async Task<DegreePlanAcademicHistory2> UpdateDegreePlan5Async(DegreePlan4 updatedPlan)
+        {
+            //make sure plan is legit
+            if (updatedPlan == null)
+            {
+                throw new ArgumentNullException("updatedPlan", "Updated degree plan object cannot be null");
+            }
+
+            string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath);
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion5);
+
+            DegreePlanAcademicHistory2 updatedResponse = null;
+
+            try
+            {
+                var response = await ExecutePutRequestWithResponseAsync<DegreePlan4>(updatedPlan, urlPath, headers: headers);
+                updatedResponse = JsonConvert.DeserializeObject<DegreePlanAcademicHistory2>(await response.Content.ReadAsStringAsync());
+            }
+            catch (HttpRequestFailedException hrfe)
+            {
+                if (hrfe.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    throw new DegreePlanException() { Code = DegreePlanExceptionCodes.StalePlan };
+                }
+                else
+                {
+                    throw new InvalidOperationException("Unable to update degree plan.");
+                }
+            }
+            return updatedResponse;
+        }
+
+        /// <summary>
+        /// Updates a degree plan. This can include adding/removing terms and adding/removing courses Async.
+        /// </summary>
+        /// <param name="updatedPlan">The updated plan snapshot</param>
+        /// <returns>The newly-updated degree plan along with the student's Academic History</returns>
+        /// <exception cref="System.ArgumentNullException">Thrown when the updated DegreePlan object is null</exception>
+        public async Task<DegreePlanAcademicHistory3> UpdateDegreePlan6Async(DegreePlan4 updatedPlan)
+        {
+            //make sure plan is legit
+            if (updatedPlan == null)
+            {
+                throw new ArgumentNullException("updatedPlan", "Updated degree plan object cannot be null");
+            }
+
+            string urlPath = UrlUtility.CombineUrlPath(_degreePlansPath);
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion6);
+
+            DegreePlanAcademicHistory3 updatedResponse = null;
+
+            try
+            {
+                var response = await ExecutePutRequestWithResponseAsync<DegreePlan4>(updatedPlan, urlPath, headers: headers);
+                updatedResponse = JsonConvert.DeserializeObject<DegreePlanAcademicHistory3>(await response.Content.ReadAsStringAsync());
+            }
+            catch (HttpRequestFailedException hrfe)
+            {
+                if (hrfe.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    throw new DegreePlanException() { Code = DegreePlanExceptionCodes.StalePlan };
+                }
+                else
+                {
+                    throw new InvalidOperationException("Unable to update degree plan.");
+                }
+            }
+            return updatedResponse;
+        }
+
+        /// <summary>
+        /// Register From plan
+        /// </summary>
+        /// <param name="degreePlanId"></param>
+        /// <param name="termId"></param>
+        /// <returns></returns>
+        [Obsolete("Obsolete with API 1.5. Use Register")]
+        public RegistrationResponse RegisterFromPlan(int degreePlanId, string termId)
+        {
+            if (degreePlanId == 0)
+            {
+                throw new ArgumentNullException("degreePlanId", "degreePlanId must contain a valid value.");
+            }
+            if (string.IsNullOrEmpty(termId))
+            {
+                throw new ArgumentNullException("termId", "termId must contain a valid value.");
+            }
+            string query = UrlUtility.BuildEncodedQueryString(new[] { "termId", termId });
+
+            var urlPath = UrlUtility.CombineUrlPath(new[] { _degreePlansPath, degreePlanId.ToString(), "registration" });
+            urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, query);
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+
+            try
+            {
+                var response = ExecutePutRequestWithResponse<string>(termId, urlPath, headers: headers);
+                var messages = JsonConvert.DeserializeObject<RegistrationResponse>(response.Content.ReadAsStringAsync().Result);
+                return messages;
+            }
+            catch (Exception exception)
+            {
+                logger.Error(exception.ToString());
+                throw new InvalidOperationException("Unable to register from plan.", exception);
+            }
+        }
+
+        /// <summary>
+        /// Register From plan async
+        /// </summary>
+        /// <param name="degreePlanId"></param>
+        /// <param name="termId"></param>
+        /// <returns></returns>
+        [Obsolete("Obsolete with API 1.5. Use RegisterAsync")]
+        public async Task<RegistrationResponse> RegisterFromPlanAsync(int degreePlanId, string termId)
+        {
+            if (degreePlanId == 0)
+            {
+                throw new ArgumentNullException("degreePlanId", "degreePlanId must contain a valid value.");
+            }
+            if (string.IsNullOrEmpty(termId))
+            {
+                throw new ArgumentNullException("termId", "termId must contain a valid value.");
+            }
+            string query = UrlUtility.BuildEncodedQueryString(new[] { "termId", termId });
+
+            var urlPath = UrlUtility.CombineUrlPath(new[] { _degreePlansPath, degreePlanId.ToString(), "registration" });
+            urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, query);
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+
+            try
+            {
+                var response = await ExecutePutRequestWithResponseAsync<string>(termId, urlPath, headers: headers);
+                var messages = JsonConvert.DeserializeObject<RegistrationResponse>(await response.Content.ReadAsStringAsync());
+                return messages;
+            }
+            catch (Exception exception)
+            {
+                logger.Error(exception.ToString());
+                throw new InvalidOperationException("Unable to register from plan.", exception);
+            }
+        }
+
+        /// <summary>
+        /// Register sections.
+        /// </summary>
+        /// <param name="degreePlanId"></param>
+        /// <param name="sectionRegistrations"></param>
+        /// <returns></returns>
+        [Obsolete("Obsolete with API 1.5. Use Register")]
+        public RegistrationResponse RegisterSections(int degreePlanId, IEnumerable<SectionRegistration> sectionRegistrations)
+        {
+            if (degreePlanId == 0)
+            {
+                throw new ArgumentNullException("degreePlanId", "degreePlanId must contain a valid value.");
+            }
+            if (sectionRegistrations == null)
+            {
+                throw new ArgumentNullException("sectionRegistrations", "sectionRegistration must contain a valid value.");
+            }
+
+            var urlPath = UrlUtility.CombineUrlPath(new[] { _degreePlansPath, degreePlanId.ToString(), "section-registration" });
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+
+            try
+            {
+                var response = ExecutePutRequestWithResponse<IEnumerable<SectionRegistration>>(sectionRegistrations, urlPath, headers: headers);
+                var messages = JsonConvert.DeserializeObject<RegistrationResponse>(response.Content.ReadAsStringAsync().Result);
+                return messages;
+            }
+            catch (Exception exception)
+            {
+                logger.Error(exception.ToString());
+                throw new InvalidOperationException("Unable to register from sections.", exception);
+            }
+        }
+
+        /// <summary>
+        /// Register sections async.
+        /// </summary>
+        /// <param name="degreePlanId"></param>
+        /// <param name="sectionRegistrations"></param>
+        /// <returns></returns>
+        [Obsolete("Obsolete with API 1.5. Use RegisterAsync")]
+        public async Task<RegistrationResponse> RegisterSectionsAsync(int degreePlanId, IEnumerable<SectionRegistration> sectionRegistrations)
+        {
+            if (degreePlanId == 0)
+            {
+                throw new ArgumentNullException("degreePlanId", "degreePlanId must contain a valid value.");
+            }
+            if (sectionRegistrations == null)
+            {
+                throw new ArgumentNullException("sectionRegistrations", "sectionRegistration must contain a valid value.");
+            }
+
+            var urlPath = UrlUtility.CombineUrlPath(new[] { _degreePlansPath, degreePlanId.ToString(), "section-registration" });
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+
+            try
+            {
+                var response = await ExecutePutRequestWithResponseAsync<IEnumerable<SectionRegistration>>(sectionRegistrations, urlPath, headers: headers);
+                var messages = JsonConvert.DeserializeObject<RegistrationResponse>(await response.Content.ReadAsStringAsync());
+                return messages;
+            }
+            catch (Exception exception)
+            {
+                logger.Error(exception.ToString());
+                throw new InvalidOperationException("Unable to register from sections.", exception);
+            }
+        }
+
+        /// <summary>
+        /// Get a planning student by ID Async
+        /// </summary>
+        /// <returns>Returns a planning student</returns>
+        /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<PlanningStudent> GetPlanningStudentAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "ID cannot be empty/null for PlanningStudent retrieval.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _studentsPath, id };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderPlanningVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<PlanningStudent>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get PlanningStudent");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets all the CampusOrganization2 objects matching the query criteria.
+        /// </summary>
+        /// <param name="criteria">CampusOrganizationQueryCriteria object</param>
+        /// <returns>CampusOrganization2 objects</returns>
+        public async Task<IEnumerable<CampusOrganization2>> GetCampusOrganizations2Async(List<string> campusOrganizationIds)
+        {
+            if (campusOrganizationIds == null || !campusOrganizationIds.Any())
+            {
+                throw new ArgumentNullException("campusOrganizationIds", "CampusOrganizationIds are required to query the CampusOrganization2 records");
+            }
+            try
+            {
+                // Build url path from qapi path and requirements path
+                string[] pathStrings = new string[] { _qapiPath, _campusOrganization2Path };
+                var urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                // Add the required headers
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var criteria = new CampusOrganizationQueryCriteria() { CampusOrganizationIds = campusOrganizationIds };
+                // Use URL path and criteria to call web api method
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+
+                return JsonConvert.DeserializeObject<IEnumerable<CampusOrganization2>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to fetch the requested CampusOrganization2 objects");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously returns a student profile configuration
+        /// </summary>
+        /// <returns>The requested <see cref="StudentProfileConfiguration">StudentProfileConfiguration</see> object</returns>
+        public async Task<StudentProfileConfiguration> GetStudentProfileConfigurationAsync()
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                string urlPath = UrlUtility.CombineUrlPath(_configurationPath, _studentProfilePath);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<StudentProfileConfiguration>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the student profile configuration information.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a given student's Colleague Self-Service Quick Registration information for the provided academic term codes.
+        /// If the Colleague Self-Service Quick Registration workflow is disabled then no quick registration sections will be returned for any academic terms.
+        /// If the Colleague Self-Service Quick Registration workflow is enabled then quick registration sections will be returned for any academic terms. Quick registration sections are any course sections in
+        /// Colleague Self-Service Quick Registration terms that the student has planned to register for but has not yet registered.
+        /// </summary>
+        /// <param name="studentId">ID of the student for whom Colleague Self-Service Quick Registration data will be retrieved</param>
+        public async Task<StudentQuickRegistration> GetStudentQuickRegistrationSectionsAsync(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "A student ID is required when retrieving a student's quick registration data.");
+            }
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _quickRegistrationSectionsPath);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<StudentQuickRegistration>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, string.Format("Unable to retrieve Colleague Self-Service Quick Registration information for student {0}.", studentId));
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Returns all education goals
+        /// </summary>
+        /// <param name="useCache">Flag indicating whether or not to bypass the cache</param>
+        /// <returns>Collection of <see cref="EducationGoal">education goals</see></returns>
+        public async Task<IEnumerable<EducationGoal>> GetEducationGoalsAsync(bool useCache = true)
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var responseString = await ExecuteGetRequestWithResponseAsync(_educationGoalsPath, headers: headers, useCache: useCache);
+                var dropReasons = JsonConvert.DeserializeObject<IEnumerable<EducationGoal>>(await responseString.Content.ReadAsStringAsync());
+
+                return dropReasons;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the education goals.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Returns all registration reasons
+        /// </summary>
+        /// <param name="useCache">Flag indicating whether or not to bypass the cache</param>
+        /// <returns>Collection of <see cref="RegistrationReason">registration reasons</see></returns>
+        public async Task<IEnumerable<RegistrationReason>> GetRegistrationReasonsAsync(bool useCache = true)
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var responseString = await ExecuteGetRequestWithResponseAsync(_registrationReasonsPath, headers: headers, useCache: useCache);
+                var dropReasons = JsonConvert.DeserializeObject<IEnumerable<RegistrationReason>>(await responseString.Content.ReadAsStringAsync());
+
+                return dropReasons;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the registration reasons.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Returns all registration marketing sources
+        /// </summary>
+        /// <param name="useCache">Flag indicating whether or not to bypass the cache</param>
+        /// <returns>Collection of <see cref="RegistrationMarketingSource">registration marketing sources</see></returns>
+        public async Task<IEnumerable<RegistrationMarketingSource>> GetRegistrationMarketingSourcesAsync(bool useCache = true)
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var responseString = await ExecuteGetRequestWithResponseAsync(_registrationMarketingSourcesPath, headers: headers, useCache: useCache);
+                var dropReasons = JsonConvert.DeserializeObject<IEnumerable<RegistrationMarketingSource>>(await responseString.Content.ReadAsStringAsync());
+
+                return dropReasons;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the registration marketing sources.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the configuration information needed for Colleague Self-Service instant enrollment
+        /// </summary>
+        /// <returns>The requested <see cref="InstantEnrollmentConfiguration"/></returns>
+        public async Task<InstantEnrollmentConfiguration> GetInstantEnrollmentConfigurationAsync()
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                string urlPath = UrlUtility.CombineUrlPath(_configurationPath, _instantEnrollmentPath);
+                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var configuration = JsonConvert.DeserializeObject<InstantEnrollmentConfiguration>(await responseString.Content.ReadAsStringAsync());
+                return configuration;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the Colleague Self-Service instant enrollment configuration information.");
+                throw;
+            }
+        }
+        /// <summary>
+        /// To post proposed registration payload in order to retrieve cost of sections selected for instant enrollment.
+        /// </summary>
+        /// <param name="proposedRegistration"></param>
+        /// <returns>InstantEnrollmentProposedRegistrationResult</returns>
+        public async Task<InstantEnrollmentProposedRegistrationResult> InstantEnrollmentProposedRegistrationAsync(InstantEnrollmentProposedRegistration proposedRegistration)
+        {
+            if (proposedRegistration == null)
+            {
+                throw new ArgumentNullException("proposedRegistration", "Proposed Registration cannot be null.");
+            }
+
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianInstantEnrollmentFormatVersion1);
+                // Do not log the request body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
+                string urlPath = UrlUtility.CombineUrlPath(_instantEnrollmentPath, _proposedRegistrationPath);
+                var response = await ExecutePostRequestWithResponseAsync(proposedRegistration, urlPath, headers: headers);
+                var proposedRegistrationResult = JsonConvert.DeserializeObject<InstantEnrollmentProposedRegistrationResult>(await response.Content.ReadAsStringAsync());
+                return proposedRegistrationResult;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to complete proposed registration for instant enrollment.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// To post a zero cost registration payload in order to register sections selected for instant enrollment.
+        /// </summary>
+        /// <param name="zeroCostRegistration"></param>
+        /// <returns>InstantEnrollmentZeroCostRegistrationResult</returns>
+        public async Task<InstantEnrollmentZeroCostRegistrationResult> InstantEnrollmentZeroCostRegistrationAsync(InstantEnrollmentZeroCostRegistration zeroCostRegistration)
+        {
+            if (zeroCostRegistration == null)
+            {
+                throw new ArgumentNullException("zeroCostRegistration", "Zero Cost Registration cannot be null.");
+            }
+
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianInstantEnrollmentFormatVersion1);
+
+                // Do not log the request body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
+
+                string urlPath = UrlUtility.CombineUrlPath(_instantEnrollmentPath, _zeroCostRegistrationPath);
+                var response = await ExecutePostRequestWithResponseAsync(zeroCostRegistration, urlPath, headers: headers);
+                var zeroCostRegistrationResult = JsonConvert.DeserializeObject<InstantEnrollmentZeroCostRegistrationResult>(await response.Content.ReadAsStringAsync());
+                return zeroCostRegistrationResult;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to complete zero cost registration for instant enrollment.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// To post proposed registration payload in order to register, and pay for by electronic check, sections selected for instant enrollment.
+        /// </summary>
+        /// <param name="echeckRegistration"></param>
+        /// <returns>InstantEnrollmentEcheckRegistrationResult</returns>
+        public async Task<InstantEnrollmentEcheckRegistrationResult> InstantEnrollmentEcheckRegistrationAsync(InstantEnrollmentEcheckRegistration echeckRegistration)
+        {
+            if (echeckRegistration == null)
+            {
+                throw new ArgumentNullException("echeckRegistration", "Echeck Registration cannot be null.");
+            }
+
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianInstantEnrollmentFormatVersion1);
+                // Do not log the request body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
+                string urlPath = UrlUtility.CombineUrlPath(_instantEnrollmentPath, _echeckRegistrationPath);
+                var response = await ExecutePostRequestWithResponseAsync(echeckRegistration, urlPath, headers: headers);
+                var echeckRegistrationResult = JsonConvert.DeserializeObject<InstantEnrollmentEcheckRegistrationResult>(await response.Content.ReadAsStringAsync());
+                return echeckRegistrationResult;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to complete echeck registration for instant enrollment.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Start an instant enrollment payment gateway transaction, which includes registering the student and creating the student if needed.
+        /// </summary>
+        /// <param name="proposedRegistration">A <see cref="InstantEnrollmentPaymentGatewayRegistration">InstantEnrollmentProposedRegistration</see>containing the information needed to start the payment gateway transaction.</param>
+        /// <returns>A <see cref="InstantEnrollmentStartPaymentGatewayRegistrationResult">InstantEnrollmentStartPaymentGatewayRegistrationResult</see> containing the result of the operation.</returns>
+        public async Task<InstantEnrollmentStartPaymentGatewayRegistrationResult> InstantEnrollmentStartPaymentGatewayRegistrationAsync(InstantEnrollmentPaymentGatewayRegistration proposedRegistration)
+        {
+            if (proposedRegistration == null)
+            {
+                throw new ArgumentNullException("proposedRegistration", "Proposed Registration cannot be null.");
+            }
+
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianInstantEnrollmentFormatVersion1);
+                // Do not log the request body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
+                string urlPath = UrlUtility.CombineUrlPath(_instantEnrollmentPath, _startPaymentGatewayRegistrationPath);
+                var response = await ExecutePostRequestWithResponseAsync(proposedRegistration, urlPath, headers: headers);
+                var registrationResult = JsonConvert.DeserializeObject<InstantEnrollmentStartPaymentGatewayRegistrationResult>(await response.Content.ReadAsStringAsync());
+                return registrationResult;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to complete instant enrollment start payment gateway registration.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves instant enrollment payment acknowledgement paragraph text for a given <see cref="InstantEnrollmentPaymentAcknowledgementParagraphRequest"/>
+        /// </summary>
+        /// <param name="paragraphRequest">An <see cref="InstantEnrollmentPaymentAcknowledgementParagraphRequest">InstantEnrollmentPaymentAcknowledgementParagraphRequest</see>containing the information needed to retrieve instant enrollment payment acknowledgement text.</param>
+        /// <returns>Instant enrollment payment acknowledgement text</returns>
+        public async Task<IEnumerable<string>> GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(InstantEnrollmentPaymentAcknowledgementParagraphRequest paragraphRequest)
+        {
+            if (paragraphRequest == null)
+            {
+                var nullRequestMsg = "An instant enrollment payment acknowledgement paragraph request is required to get instant enrollment payment acknowledgement paragraph text.";
+                throw new ArgumentNullException("paragraphRequest", nullRequestMsg);
+            }
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianInstantEnrollmentFormatVersion1);
+                string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _instantEnrollmentPath, _paymentAcknowledgementParagraphTextPath);
+                var response = await ExecutePostRequestWithResponseAsync(paragraphRequest, urlPath, headers: headers);
+                var registrationResult = JsonConvert.DeserializeObject<IEnumerable<string>>(await response.Content.ReadAsStringAsync());
+                return registrationResult;
+            }
+            catch (Exception ex)
+            {
+                string exceptionMsg = string.Format("An error occurred while attempting to retrieve instant enrollment payment acknowledgement paragraph text for person {0}", paragraphRequest.PersonId);
+                if (!string.IsNullOrEmpty(paragraphRequest.CashReceiptId))
+                {
+                    exceptionMsg += string.Format(" for cash receipt {0}", paragraphRequest.CashReceiptId);
+                }
+                logger.Error(ex, exceptionMsg);
+                throw new ApplicationException(exceptionMsg);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves instant enrollment cash receipt acknowledgement for a given <see cref="InstantEnrollmentCashReceiptAcknowledgementRequest"/>
+        /// </summary>
+        /// <param name="cashReceiptRequest">An <see cref="InstantEnrollmentCashReceiptAcknowledgementRequest">InstantEnrollmentCashReceiptAcknowledgementRequest</see>containing the information needed to retrieve instant enrollment cash receipt acknowledgement.</param>
+        /// <returns>Instant enrollment cash receipt acknowledgement</returns>
+        public async Task<InstantEnrollmentCashReceiptAcknowledgement> GetInstantEnrollmentCashReceiptAcknowledgementAsync(InstantEnrollmentCashReceiptAcknowledgementRequest cashReceiptRequest)
+        {
+            if (cashReceiptRequest == null)
+            {
+                var nullRequestMsg = "An instant enrollment cash receipt acknowledgement request is required to get instant enrollment cash receipt acknowledgement.";
+                throw new ArgumentNullException("cashReceiptRequest", nullRequestMsg);
+            }
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianInstantEnrollmentFormatVersion1);
+                string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _instantEnrollmentPath, _cashReceiptAcknowledgementPath);
+                var response = await ExecutePostRequestWithResponseAsync(cashReceiptRequest, urlPath, headers: headers);
+                var registrationResult = JsonConvert.DeserializeObject<InstantEnrollmentCashReceiptAcknowledgement>(await response.Content.ReadAsStringAsync());
+                return registrationResult;
+            }
+            catch (Exception ex)
+            {
+                string exceptionMsg = "An error occurred while attempting to retrieve an instant enrollment cash receipt acknowledgement";
+                if (!string.IsNullOrEmpty(cashReceiptRequest.TransactionId))
+                {
+                    exceptionMsg += string.Format(" for e-commerce transaction id {0}", cashReceiptRequest.TransactionId);
+                }
+                if (!string.IsNullOrEmpty(cashReceiptRequest.CashReceiptId))
+                {
+                    exceptionMsg += string.Format(" for cash receipt id {0}", cashReceiptRequest.CashReceiptId);
+                }
+                logger.Error(ex, exceptionMsg);
+                throw new ApplicationException(exceptionMsg);
+            }
+        }
+
+        /// <summary>
+        /// Get a student's programs async.
+        /// </summary>
+        /// <returns>Returns the set of student's programs</returns>
+        /// <param name="id">The ID of the student whose programs are being requested</param>
+        /// <param name="currentOnly">Boolean that indicates whether to get only current programs, or current and past programs</param>
+        /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<StudentProgram2>> GetInstantEnrollmentStudentPrograms2Async(string id, bool currentOnly = true)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "ID cannot be empty/null for IEnumerable<StudentProgram2> retrieval.");
+            }
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianInstantEnrollmentFormatVersion1);
+                string query = UrlUtility.BuildEncodedQueryString(new[] { "currentOnly", currentOnly.ToString() });
+                string urlPath = UrlUtility.CombineUrlPath(_studentsPath, id, "programs");
+                urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, query);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<StudentProgram2>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get IEnumerable<StudentProgram2>");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Search for sections brings back a page containing a page worth of sections that meet the criteria and associated filters asynchronously.
+        /// </summary>
+        /// <param name="sectionSearchCriteria">A <see cref="SectionSearchCriteria">Section Search Criteria</see> containing keywords, course Ids or Section Ids, along with filter settings</param>
+        /// <returns><see cref="SectionPage">SectionPage</see> containing the page information for total number of sections, sections on the current page, and filters</returns>
+        public async Task<SectionPage> SearchSectionsAsync(SectionSearchCriteria sectionSearchCriteria, int pageSize, int pageIndex)
+        {
+            if (sectionSearchCriteria.Keyword == null) sectionSearchCriteria.Keyword = string.Empty;
+            if (!string.IsNullOrEmpty(sectionSearchCriteria.Keyword))
+            {
+                sectionSearchCriteria.Keyword = sectionSearchCriteria.Keyword.Replace("/", "_~");
+            }
+
+            try
+            {
+                // Build url path + subject
+                var queryString = UrlUtility.BuildEncodedQueryString("pageSize", pageSize.ToString(), "pageIndex", pageIndex.ToString());
+                var urlPath = UrlUtility.CombineUrlPathAndArguments(_sectionsSearchPath, queryString);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                // Use URL path to call web api method (including query string)
+                var response = await ExecutePostRequestWithResponseAsync(sectionSearchCriteria, urlPath, headers: headers);
+
+                var sectionPage = JsonConvert.DeserializeObject<SectionPage>(await response.Content.ReadAsStringAsync());
+
+                return sectionPage;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Requests the full set of case types
+        /// </summary>
+        /// <returns>A set of Case Types</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<CaseType>> GetCaseTypesAsync()
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_caseTypesPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<CaseType>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get case types");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get case types");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Requests the full set of case priorities
+        /// </summary>
+        /// <returns>A set of Case Priority</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<CasePriority>> GetCasePrioritiesAsync()
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_casePrioritiesPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<CasePriority>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get case priorities");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get case priorities");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Requests the full set of case categories
+        /// </summary>
+        /// <returns>A set of Case categories</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<CaseCategory>> GetCaseCategoriesAsync()
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_caseCategoriesPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<CaseCategory>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get case categories");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get case categories");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Requests the full set of case closure reasons
+        /// </summary>
+        /// <returns>A set of Case closure reasons</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<CaseClosureReason>> GetCaseClosureReasonsAsync()
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_caseClosureReasonsPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<CaseClosureReason>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get case closure reasons");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get case closure reasons");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Add Retention Alert case for a student.
+        /// </summary>
+        /// <param name="retentionAlertCase">Retention Alert Case information</param>
+        /// <returns>Retention Alert Case Create Response</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="ArgumentNullException">The student academic program must be provided.</exception>
+        public async Task<RetentionAlertCaseCreateResponse> AddRetentionAlertCaseAsync(RetentionAlertCase retentionAlertCase)
+        {
+            if (retentionAlertCase == null)
+            {
+                throw new ArgumentNullException("retentionAlertCase", "retentionAlertCase cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasePath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(retentionAlertCase, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertCaseCreateResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Update Retention Alert case for a student.
+        /// </summary>
+        /// <param name="retentionAlertCase">Retention Alert Case information</param>
+        /// <returns>Retention Alert Case Create Response</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="ArgumentNullException">The student academic program must be provided.</exception>
+        public async Task<RetentionAlertCaseCreateResponse> UpdateRetentionAlertCaseAsync(string id, RetentionAlertCase retentionAlertCase)
+        {
+            if (retentionAlertCase == null)
+            {
+                throw new ArgumentNullException("retentionAlertCase", "retentionAlertCase cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasePath, id);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePutRequestWithResponseAsync(retentionAlertCase, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertCaseCreateResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieve Retention Alert Cases information
+        /// </summary>
+        /// <param name="criteria"></param>
+        /// <returns>Retention Alert Work Case list</returns>
+        public async Task<IEnumerable<RetentionAlertWorkCase>> QueryRetentionAlertWorkCasesAsync(RetentionAlertQueryCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria", "Criteria cannot be empty/null for Retention alert cases.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _retentionAlertCasesPath };
+                var urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<RetentionAlertWorkCase>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get Retention Alert work Cases");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves retention alert contributions
+        /// </summary>
+        /// <param name="criteria">Contributions Query Criteria</param>
+        /// <returns>Retention alert contributions list</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<RetentionAlertWorkCase>> QueryRetentionAlertContributionsAsync(ContributionsQueryCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria", "Criteria cannot be empty/null for Retention alert contributions.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _retentionAlertContributionsPath };
+                var urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<RetentionAlertWorkCase>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get retention alert contributions");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get retention alert contributions");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets the retention alert case detail.
+        /// </summary>
+        /// <param name="caseId">The case identifier.</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException">caseId - Case ID is required to retrieve retention alert case detail.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<RetentionAlertCaseDetail> GetRetentionAlertCaseDetailAsync(string caseId)
+        {
+            if (string.IsNullOrEmpty(caseId))
+            {
+                throw new ArgumentNullException("caseId", "Case ID is required to retrieve retention alert case detail.");
+            }
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCaseDetailPath, caseId);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<RetentionAlertCaseDetail>(await response.Content.ReadAsStringAsync());
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get retention alert case detail");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get retention alert case detail");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Adds the retention alert case note asynchronous.
+        /// </summary>
+        /// <param name="caseId">Case ID</param>
+        /// <param name="retentionAlertCaseNote">The retention alert case note.</param>
+        /// <returns>Retention alert work case action response</returns>
+        /// <exception cref="ArgumentNullException">retentionAlertCaseNote - retentionAlertCaseNote cannot be null.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<RetentionAlertWorkCaseActionResponse> AddRetentionAlertCaseNoteAsync(string caseId, RetentionAlertWorkCaseNote retentionAlertCaseNote)
+        {
+            if (string.IsNullOrEmpty(caseId))
+            {
+                throw new ArgumentNullException("caseId", "caseId cannot be null.");
+            }
+            if (retentionAlertCaseNote == null)
+            {
+                throw new ArgumentNullException("retentionAlertCaseNote", "retentionAlertCaseNote cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseNoteVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(retentionAlertCaseNote, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to add retention alert case note");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to add retention alert case note");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Adds a followup to a retention alert case, this will not update the Case Owner with the current user asynchronous.
+        /// </summary>
+        /// <param name="caseId">Case ID</param>
+        /// <param name="retentionAlertCaseNote">The retention alert case note.</param>
+        /// <returns>Retention alert work case action response</returns>
+        /// <exception cref="ArgumentNullException">retentionAlertCaseNote - retentionAlertCaseNote cannot be null.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<RetentionAlertWorkCaseActionResponse> AddRetentionAlertCaseFollowUpAsync(string caseId, RetentionAlertWorkCaseNote retentionAlertCaseNote)
+        {
+            if (string.IsNullOrEmpty(caseId))
+            {
+                throw new ArgumentNullException("caseId", "caseId cannot be null.");
+            }
+            if (retentionAlertCaseNote == null)
+            {
+                throw new ArgumentNullException("retentionAlertCaseNote", "retentionAlertCaseNote cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseFollowUpVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(retentionAlertCaseNote, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to add retention alert case note");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to add retention alert case note");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Adds the retention alert case comm code asynchronous.
+        /// </summary>
+        /// <param name="caseId">Case ID</param>
+        /// <param name="retentionAlertCaseCommCode">The retention alert case comm code.</param>
+        /// <returns>Retention alert work case action response</returns>
+        /// <exception cref="ArgumentNullException">retentionAlertCaseCommCode - retentionAlertCaseCommCode cannot be null.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<RetentionAlertWorkCaseActionResponse> AddRetentionAlertCaseCommCodeAsync(string caseId, RetentionAlertWorkCaseCommCode retentionAlertCaseCommCode)
+        {
+            if (string.IsNullOrEmpty(caseId))
+            {
+                throw new ArgumentNullException("caseId", "caseId cannot be null.");
+            }
+            if (retentionAlertCaseCommCode == null)
+            {
+                throw new ArgumentNullException("retentionAlertCaseCommCode", "retentionAlertCaseCommCode cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseCommCodeVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(retentionAlertCaseCommCode, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to add retention alert communication code");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to add retention alert communication code");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Adds the retention alert case type asynchronous.
+        /// </summary>
+        /// <param name="caseId">Case ID</param>
+        /// <param name="retentionAlertCaseType">Type of the retention alert case.</param>
+        /// <returns>Retention alert work case action response</returns>
+        /// <exception cref="ArgumentNullException">retentionAlertCaseType - retentionAlertCaseType cannot be null.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<RetentionAlertWorkCaseActionResponse> AddRetentionAlertCaseTypeAsync(string caseId, RetentionAlertWorkCaseType retentionAlertCaseType)
+        {
+            if (string.IsNullOrEmpty(caseId))
+            {
+                throw new ArgumentNullException("caseId", "caseId cannot be null.");
+            }
+            if (retentionAlertCaseType == null)
+            {
+                throw new ArgumentNullException("retentionAlertCaseType", "retentionAlertCaseType cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseTypeVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(retentionAlertCaseType, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to add retention alert case Type");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to add retention alert case Type");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Changes the retention alert case priority asynchronous.
+        /// </summary>
+        /// <param name="caseId">Case ID</param>
+        /// <param name="retentionAlertCasePriority">The retention alert case priority.</param>
+        /// <returns>Retention alert work case action response</returns>
+        /// <exception cref="ArgumentNullException">retentionAlertCasePriority - retentionAlertCasePriority cannot be null.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<RetentionAlertWorkCaseActionResponse> ChangeRetentionAlertCasePriorityAsync(string caseId, RetentionAlertWorkCasePriority retentionAlertCasePriority)
+        {
+            if (string.IsNullOrEmpty(caseId))
+            {
+                throw new ArgumentNullException("caseId", "caseId cannot be null.");
+            }
+            if (retentionAlertCasePriority == null)
+            {
+                throw new ArgumentNullException("retentionAlertCasePriority", "retentionAlertCasePriority cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCasePriorityVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(retentionAlertCasePriority, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to change retention alert case priority");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to change retention alert case priority");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Closes the retention alert case asynchronous.
+        /// </summary>
+        /// <param name="caseId">Case ID</param>
+        /// <param name="retentionAlertCaseClose">The retention alert case close.</param>
+        /// <returns>Retention alert work case action response</returns>
+        /// <exception cref="ArgumentNullException">retentionAlertCaseClose - retentionAlertCaseClose cannot be null.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<RetentionAlertWorkCaseActionResponse> CloseRetentionAlertCaseAsync(string caseId, RetentionAlertWorkCaseClose retentionAlertCaseClose)
+        {
+            if (string.IsNullOrEmpty(caseId))
+            {
+                throw new ArgumentNullException("caseId", "caseId cannot be null.");
+            }
+            if (retentionAlertCaseClose == null)
+            {
+                throw new ArgumentNullException("retentionAlertCaseClose", "retentionAlertCaseClose cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseCloseVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(retentionAlertCaseClose, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to close retention alert case");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to close retention alert case");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Set Reminder for Retention Alert Case.
+        /// </summary>
+        /// <param name="caseId">Case ID</param>
+        /// <param name="reminder">Retention Alert reminder information</param>
+        /// <returns>Retention alert work case action response</returns>
+        /// <exception cref="ArgumentNullException">retentionAlertCaseClose - retentionAlertCaseClose cannot be null.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<RetentionAlertWorkCaseActionResponse> SetRetentionAlertCaseReminderAsync(string caseId, RetentionAlertWorkCaseSetReminder reminder)
+        {
+            if (string.IsNullOrEmpty(caseId))
+            {
+                throw new ArgumentNullException("caseId", "caseId cannot be null.");
+            }
+            if (reminder == null)
+            {
+                throw new ArgumentNullException("reminder", "reminder cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseSetReminderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(reminder, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to set reminder for alert case");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to set reminder for alert case");
+                throw;
+            }
+        }
+
+        public async Task<RetentionAlertWorkCaseActionResponse> ManageRetentionAlertCaseRemindersAsync(string caseId, RetentionAlertWorkCaseManageReminders reminders)
+        {
+            if (string.IsNullOrEmpty(caseId))
+            {
+                throw new ArgumentNullException("caseId", "caseId cannot be null or empty.");
+            }
+            if (reminders == null)
+            {
+                throw new ArgumentNullException("reminders", "reminders cannot be null.");
+            }
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseManageRemindersVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(reminders, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to clear case reminders.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to clear case reminder dates.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets the retention alert permissions
+        /// </summary>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <returns>Retention alert permissions for the current user</returns>
+        public async Task<RetentionAlertPermissions> GetRetentionAlertPermissionsAsync()
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertPath, _permissionsPath);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<RetentionAlertPermissions>(await response.Content.ReadAsStringAsync());
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get retention alert permissions");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get retention alert permissions");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Sends the retention alert mail asynchronous.
+        /// </summary>
+        /// <param name="caseId">Case ID</param>
+        /// <param name="retentionAlertWorkCaseSendMail">The retention alert send mail.</param>
+        /// <returns>Retention alert send mail response</returns>
+        /// <exception cref="ArgumentNullException">retentionAlertWorkCaseSendMail - retentionAlertWorkCaseSendMail cannot be null.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<RetentionAlertWorkCaseActionResponse> SendRetentionAlertWorkCaseMailAsync(string caseId, RetentionAlertWorkCaseSendMail retentionAlertWorkCaseSendMail)
+        {
+            if (caseId == null)
+            {
+                throw new ArgumentNullException("caseId", "caseId cannot be null.");
+            }
+            if (retentionAlertWorkCaseSendMail == null)
+            {
+                throw new ArgumentNullException("retentionAlertWorkCaseSendMail", "retentionAlertWorkCaseSendMail cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-send-mail");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseSendMailVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(retentionAlertWorkCaseSendMail, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to send retention alert case mail");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to send retention alert case mail");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves retention alert open cases
+        /// </summary>
+        /// <returns>Retention alert open cases list</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<RetentionAlertOpenCase>> GetRetentionAlertOpenCasesAsync()
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertPath, _openCases);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<RetentionAlertOpenCase>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get retention alert open cases");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get retention alert open cases");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves retention alert closed cases grouped by closure reason
+        /// </summary>
+        /// <param name="categoryId">Retention Alert Case Category Id</param>
+        /// <returns>Retrieves retention alert closed cases grouped by closure reason</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<RetentionAlertClosedCasesByReason>> GetRetentionAlertClosedCasesByReasonAsync(string categoryId)
+        {
+            if (string.IsNullOrEmpty(categoryId))
+            {
+                throw new ArgumentNullException("categoryId", "categoryId cannot be null or empty.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertPath, _closedCasesByReason, categoryId);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<RetentionAlertClosedCasesByReason>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get retention alert open cases");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get retention alert open cases");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Reassigns the retention alert case 
+        /// </summary>
+        /// <param name="caseId">Case ID</param>
+        /// <param name="retentionAlertWorkCaseReassign">The retention alert case reassign object</param>
+        /// <returns>Retention alert Work case action response</returns>
+        /// <exception cref="ArgumentNullException">retentionAlertWorkCaseReassign - retentionAlertWorkCaseReassign cannot be null.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<RetentionAlertWorkCaseActionResponse> ReassignRetentionAlertWorkCaseAsync(string caseId, RetentionAlertWorkCaseReassign retentionAlertWorkCaseReassign)
+        {
+            if (caseId == null)
+            {
+                throw new ArgumentNullException("caseId", "caseId cannot be null.");
+            }
+            if (retentionAlertWorkCaseReassign == null)
+            {
+                throw new ArgumentNullException("retentionAlertWorkCaseReassign", "retentionAlertWorkCaseReassign cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, _caseHistoryPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseReassignVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(retentionAlertWorkCaseReassign, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to reassign retention alert case");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to reassign retention alert case");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a Summmary of Retnetion Alert Case Grouped by Retention Alert Category 
+        /// </summary>
+        /// <param name="caseCategoryId">Retention Alert Case Category Ids to use to group cases by Retention Alert Category.</param>
+        /// <returns>A Summary of Retention Alert Cases Grouped by Category</returns>
+        /// <exception cref="ArgumentNullException">caseIds - caseIds can not be null.</exception>
+        /// <exception cref="ArgumentException">caseIds - caseIds cannot be empty.</exception>
+        public async Task<RetentionAlertGroupOfCasesSummary> GetRetentionAlertCaseOwnerSummaryAsync(string caseCategoryId)
+        {
+            if (string.IsNullOrEmpty(caseCategoryId))
+            {
+                throw new ArgumentNullException("caseCategoryId", "caseCategoryId cannot be null or empty.");
+            }
+
+            try
+            {
+                string[] pathStrings = new string[] { _retentionAlertPath, _retentionAlertCaseOwnerSummary, caseCategoryId };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertGroupOfCasesSummary>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get a Group of Cases Summary");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get a Group of Cases Summary");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Queries the retention alert case category org roles asynchronous.
+        /// </summary>
+        /// <param name="caseCategoryIds">The case category ids.</param>
+        /// <returns>Retention Alert CaseCategory Org Roles</returns>
+        /// <exception cref="ArgumentException">caseCategoryIds - caseCategoryIds cannot be null or empty.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<List<RetentionAlertCaseCategoryOrgRoles>> QueryRetentionAlertCaseCategoryOrgRolesAsync(List<string> caseCategoryIds)
+        {
+            if (caseCategoryIds == null || !caseCategoryIds.Any())
+            {
+                throw new ArgumentNullException("caseCategoryIds", "caseCategoryIds cannot be null or empty.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _retentionAlertCaseCategoryOrgRoles };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(caseCategoryIds, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<List<RetentionAlertCaseCategoryOrgRoles>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get a List of Case Category Org Roles");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get a List of Case Category Org Roles");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Set the Case Worker email preference
+        /// </summary>
+        /// <param name="orgEntityId"></param>
+        /// <param name="sendEmailPreference"></param>
+        /// <returns></returns>
+        public async Task<RetentionAlertSendEmailPreference> SetRetentionAlertEmailPreferenceAsync(string orgEntityId, RetentionAlertSendEmailPreference sendEmailPreference)
+        {
+            if (string.IsNullOrEmpty(orgEntityId))
+            {
+                throw new ArgumentNullException("orgEntityId", "orgEntityId cannot be null or empty.");
+            }
+            if (sendEmailPreference == null)
+            {
+                throw new ArgumentNullException("sendEmailPreference", "sendEmailPreference cannot be null.");
+            }
+
+            try
+            {
+                string[] pathStrings = new string[] { _retentionAlertCaseWorker, orgEntityId, _emailPreference };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(sendEmailPreference, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertSendEmailPreference>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to set retention alert case worker email preference.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to set retention alert case worker email preference.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the Case Worker email preference
+        /// </summary>
+        /// <param name="orgEntityId"></param>
+        /// <returns></returns>
+        public async Task<RetentionAlertSendEmailPreference> GetRetentionAlertEmailPreferenceAsync(string orgEntityId)
+        {
+            if (string.IsNullOrEmpty(orgEntityId))
+            {
+                throw new ArgumentNullException("orgEntityId", "orgEntityId cannot be null or empty.");
+            }
+
+            try
+            {
+                string[] pathStrings = new string[] { _retentionAlertCaseWorker, orgEntityId, _emailPreference };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertSendEmailPreference>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get retention alert case worker email preference.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get retention alert case worker email preference.");
+                throw;
+            }
+        }
+
+
+        /// <summary>
+        /// Query persons matching the criteria using the ELF duplicate checking criteria configured for Instant Enrollment.
+        /// </summary>
+        /// <param name="criteria">The <see cref="Dtos.Base.PersonMatchCriteriaInstantEnrollment">criteria</see> to query by.</param>
+        /// <returns>Result of a person biographic/demographic matching inquiry for Instant Enrollment</returns>
+        public async Task<InstantEnrollmentPersonMatchResult> QueryPersonMatchInstantEnrollmentResultsByPostAsync(PersonMatchCriteriaInstantEnrollment criteria)
+        {
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _personsPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianInstantEnrollmentFormatVersion1);
+                // Do not log the request body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
+                var response = await ExecutePostRequestWithResponseAsync<PersonMatchCriteriaInstantEnrollment>(criteria, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<InstantEnrollmentPersonMatchResult>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to retrieve instant enrollment person-matching results.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get student transfer equivalency work for a student
+        /// </summary>
+        /// <param name="studentId">Student ID</param>
+        /// <returns>Returns a list of transfer equivalencies for a student.</returns>
+        public async Task<IEnumerable<TransferEquivalencies>> GetStudentTransferWorkAsync(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "studentId cannot be null or empty.");
+            }
+
+            try
+            {
+                string[] pathStrings = new string[] { _studentsPath, studentId, _studentTransferWorkPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<TransferEquivalencies>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to retrieve transfer and non course equivalency work for student");
+                throw;
+            }
+        }
+
+        #region OBSOLETE TAX INFORMATION METHODS
+
+        // These two methos have been moved to the BASE client.
+
+        /// <summary>
+        /// Get a 1098-T tax form PDF
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the 1098-T.</param>
+        /// <param name="recordId">The record ID where the 1098-T pdf data is stored</param>
+        /// <returns>Byte array containing PDF data</returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use Get1098tTaxFormPdf2Async in the BASE client instead.")]
+        public async Task<byte[]> Get1098tTaxFormPdf(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
+
+            try
+            {
+                // Build url path and create and execute a request to get the tax form pdf
+                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxForm1098tPdfPath, recordId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                headers.Add(AcceptHeaderKey, "application/pdf");
+                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
+                headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = response.Content.ReadAsByteArrayAsync().Result;
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve 1098-T tax form pdf.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a T2202A tax form PDF
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the T2202A.</param>
+        /// <param name="recordId">The record ID where the T2202A pdf data is stored</param>
+        /// <returns>Byte array containing PDF data</returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use GetT2202aTaxFormPdf2Async in the BASE client instead.")]
+        public async Task<byte[]> GetT2202aTaxFormPdf(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
+
+            try
+            {
+                // Build url path and create and execute a request to get the tax form pdf
+                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxFormT2202aPdfPath, recordId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                headers.Add(AcceptHeaderKey, "application/pdf");
+                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
+                headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = response.Content.ReadAsByteArrayAsync().Result;
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve T2202A tax form pdf.");
+                throw;
+            }
+        }
+
+        #endregion
     }
 }
 

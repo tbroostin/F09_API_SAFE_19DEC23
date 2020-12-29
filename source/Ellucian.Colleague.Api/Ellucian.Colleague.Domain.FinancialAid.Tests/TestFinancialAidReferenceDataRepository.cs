@@ -1,4 +1,4 @@
-﻿//Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.FinancialAid.Entities;
 using Ellucian.Colleague.Domain.FinancialAid.Repositories;
@@ -201,6 +201,24 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 Description = "CommonLine Loan Description",
                 Explanation = "Explanation",
                 Category = "TEACH",
+                LoanType = "",
+                ShoppingSheetGroup = ""
+            },
+            new AwardRecord()
+            {
+                Code = "Goofy",
+                Description = "Goofy award Description",
+                Explanation = "Explanation",
+                Category = "GRANT",
+                LoanType = "",
+                ShoppingSheetGroup = ""
+            },
+            new AwardRecord()
+            {
+                Code = "SNEEZY",
+                Description = "SNEEZY award Description",
+                Explanation = "Explanation",
+                Category = "Loan",
                 LoanType = "",
                 ShoppingSheetGroup = ""
             }
@@ -447,6 +465,12 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 Code = "CL", 
                 Description = "Commonline Loans",
                 LoanFlag = "Y"
+            },
+            new AwardCategoryRecord()
+            {
+                Code = "GRANT",
+                Description = "Grants",
+                LoanFlag = "N"
             }
         };
 
@@ -692,6 +716,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             public string Code;
             public string Description;
             public string ShoppingSheetGroupCode;
+            public string IsDirectCost;
         }
 
         public List<BudgetComponentRecord> BudgetComponentData = new List<BudgetComponentRecord>()
@@ -702,42 +727,48 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 AwardYear = "2014",
                 Code = "TUITION",
                 Description = "Tuition Budget",
-                ShoppingSheetGroupCode = "TF"
+                ShoppingSheetGroupCode = "TF",
+                IsDirectCost = "I"
             },
             new BudgetComponentRecord()
             {
                 AwardYear = "2014",
                 Code = "HOUSING",
                 Description = "Housing Budget",
-                ShoppingSheetGroupCode = "HM"
+                ShoppingSheetGroupCode = "HM",
+                IsDirectCost = "I"
             },
             new BudgetComponentRecord()
             {
                 AwardYear = "2014",
                 Code = "FUEL",
                 Description = "Commuter Fuel Budget",
-                ShoppingSheetGroupCode = "TP"
+                ShoppingSheetGroupCode = "TP",
+                IsDirectCost = "I"
             },
             new BudgetComponentRecord()
             {
                 AwardYear = "2015",
                 Code = "TUITION",
                 Description = "Tuition Budget",
-                ShoppingSheetGroupCode = "TF"
+                ShoppingSheetGroupCode = "TF",
+                IsDirectCost = "I"
             },
             new BudgetComponentRecord()
             {
                 AwardYear = "2015",
                 Code = "HOUSING",
                 Description = "Housing Budget",
-                ShoppingSheetGroupCode = "HM"
+                ShoppingSheetGroupCode = "HM",
+                IsDirectCost = "I"
             },
             new BudgetComponentRecord()
             {
                 AwardYear = "2015",
                 Code = "FUEL",
                 Description = "Commuter Fuel Budget",
-                ShoppingSheetGroupCode = "TP"
+                ShoppingSheetGroupCode = "TP",
+                IsDirectCost = "I"
             }
         };
 

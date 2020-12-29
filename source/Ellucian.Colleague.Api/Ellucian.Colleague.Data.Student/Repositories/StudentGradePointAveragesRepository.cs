@@ -1,7 +1,9 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Student.DataContracts;
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
@@ -23,6 +25,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     public class StudentGradePointAveragesRepository : BaseColleagueRepository, IStudentGradePointAveragesRepository
     {
         private int readSize;
+        private RepositoryException exception;
+        const string AllStudentGradePointAveragesCache = "AllStudentGPAs";
+        const int AllStudentGPACacheTimeout = 20;
 
         public StudentGradePointAveragesRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings settings)
             : base(cacheProvider, transactionFactory, logger)
@@ -30,6 +35,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             // Using Level 1 Cache Timeout Value for data that changes rarely.
             CacheTimeout = Level1CacheTimeoutValue;
             readSize = settings.BulkReadSize;
+            exception = new RepositoryException();
         }
 
         #region GET Method
@@ -43,121 +49,181 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <param name="acadPeriod"></param>
         /// <param name="gradeDate"></param>
         /// <returns></returns>
-        public async Task<Tuple<IEnumerable<StudentAcademicCredit>, int>> GetStudentGpasAsync(int offset, int limit, StudentAcademicCredit sgpa, string gradeDate)
+        public async Task<Tuple<IEnumerable<StudentAcademicCredit>, int>> GetStudentGpasAsync(int offset, int limit, StudentAcademicCredit sgpa, string gradeDate = "")
         {
             List<StudentAcademicCredit> studentGpas = new List<StudentAcademicCredit>();
             Collection<PersonSt> personStDataContracts = null;
             List<StudentAcadCred> stcDataContracts = new List<StudentAcadCred>();
-            List<string> personStIds = new List<string>();
-            IEnumerable<string> subList = null;
+
+            var totalCount = 0;
+            string[] personStIds = null;
             string[] limitingKeys = null;
             string[] stAcadCredIds = null;
-            var totalCount = 0;
+            IEnumerable<string> subList = null;
 
-            string criteria = string.Empty;
-
-            //student id filter
-            if (sgpa != null && !string.IsNullOrEmpty(sgpa.StudentId))
-            {
-                criteria = string.Format("WITH STC.ATT.CRED NE '' AND STC.PERSON.ID EQ '{0}'", sgpa.StudentId);
-                limitingKeys = await DataReader.SelectAsync("STUDENT.ACAD.CRED", criteria);
-                if (limitingKeys == null || !limitingKeys.Any())
-                {
-                    return new Tuple<IEnumerable<StudentAcademicCredit>, int>(new List<StudentAcademicCredit>(), 0);
-                }
-            }
-
-            //Academic period named query
-            if (sgpa != null && sgpa.AcademicPeriods!= null && sgpa.AcademicPeriods.Any())
-            {
-                criteria = "WITH STC.ATT.CRED NE '' AND STC.TERM EQ '?'";
-                stAcadCredIds = await DataReader.SelectAsync("STUDENT.ACAD.CRED", criteria, sgpa.AcademicPeriods.ToArray());
-                if (stAcadCredIds == null || !stAcadCredIds.Any())
-                {
-                    return new Tuple<IEnumerable<StudentAcademicCredit>, int>(new List<StudentAcademicCredit>(), 0);
-                }
-                if(limitingKeys == null)
-                {
-                    limitingKeys = stAcadCredIds;
-                }
-                else
-                {
-                    limitingKeys = limitingKeys.Intersect(stAcadCredIds).ToArray();
-                }
-                if (limitingKeys == null || !limitingKeys.Any())
-                {
-                    return new Tuple<IEnumerable<StudentAcademicCredit>, int>(new List<StudentAcademicCredit>(), 0);
-                }
-            }
-
-            //Grade date(verified date) named query
-            if (!string.IsNullOrEmpty(gradeDate)) 
-            {
-                criteria = string.Format("WITH STC.ATT.CRED NE '' AND STC.VERIFIED.GRADE.DATE EQ '{0}'", gradeDate);
-                limitingKeys = await DataReader.SelectAsync("STUDENT.ACAD.CRED", limitingKeys, criteria);
-                if (limitingKeys == null || !limitingKeys.Any())
-                {
-                    return new Tuple<IEnumerable<StudentAcademicCredit>, int>(new List<StudentAcademicCredit>(), 0);
-                }
-            }
-
+            string acadIdsCriteria = "WITH STC.ATT.CRED NE ''";
+            string criteria = await GenerateCriteriaAsync(sgpa, gradeDate);
             if (string.IsNullOrEmpty(criteria))
             {
-                limitingKeys = await DataReader.SelectAsync("PERSON.ST", "WITH PST.STUDENT.ACAD.CRED BY.EXP PST.STUDENT.ACAD.CRED SAVING PST.STUDENT.ACAD.CRED");                
-
                 //Now use sac limiting list to get person ids who have sac records.
-                personStIds = (await DataReader.SelectAsync("STUDENT.ACAD.CRED", limitingKeys, "WITH STC.ATT.CRED NE '' SAVING UNIQUE STC.PERSON.ID")).ToList();
-                if (personStIds == null || !personStIds.Any())
-                {
-                    return new Tuple<IEnumerable<StudentAcademicCredit>, int>(new List<StudentAcademicCredit>(), 0);
-                }
+                criteria = "WITH STC.ATT.CRED NE '' SAVING UNIQUE STC.PERSON.ID";
             }
             else
             {
-                criteria = "SAVING UNIQUE STC.PERSON.ID";
-                personStIds = (await DataReader.SelectAsync("STUDENT.ACAD.CRED", limitingKeys, criteria)).ToList();
-                if (personStIds == null || !personStIds.Any())
+                if (sgpa != null && !string.IsNullOrEmpty(sgpa.StudentId))
+                {
+                    acadIdsCriteria = string.Format("WITH STC.ATT.CRED NE '' AND STC.PERSON.ID EQ '{0}' AND {1}", sgpa.StudentId, criteria);
+                }
+                else
+                {
+                    acadIdsCriteria = string.Format("WITH STC.ATT.CRED NE '' AND {0}", criteria);
+                }
+                criteria = string.Format("WITH STC.ATT.CRED NE '' AND {0} SAVING UNIQUE STC.PERSON.ID", criteria);
+            }
+
+            try
+            {
+                string gpaCacheKey = CacheSupport.BuildCacheKey(AllStudentGradePointAveragesCache,
+                                     (sgpa != null && sgpa.AcademicPeriods != null && sgpa.AcademicPeriods.Any()) ? sgpa.AcademicPeriods : null,
+                                      sgpa != null ? sgpa.StudentId : string.Empty, gradeDate);
+
+
+                var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                        this,
+                        ContainsKey,
+                        GetOrAddToCacheAsync,
+                        AddOrUpdateCacheAsync,
+                        transactionInvoker,
+                        gpaCacheKey,
+                        "STUDENT.ACAD.CRED",
+                        offset,
+                        limit,
+                        AllStudentGPACacheTimeout,
+                        async () =>
+                        {
+                            //student id filter
+                            if (sgpa != null && !string.IsNullOrEmpty(sgpa.StudentId))
+                            {
+                                //readr the person st record to get st acad id's.
+                                var student = await DataReader.ReadRecordAsync<PersonSt>(sgpa.StudentId);
+                                if (student == null)
+                                {
+                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                }
+                                personStIds = student.PstStudentAcadCred.ToArray();
+                            }                            
+                            
+                            CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
+                            {
+                                limitingKeys = personStIds != null && personStIds.Any() ? personStIds.Distinct().ToList() : null,
+                                criteria = criteria.ToString(),
+                            };
+                            return requirements;
+                        }
+                );
+
+                if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
                 {
                     return new Tuple<IEnumerable<StudentAcademicCredit>, int>(new List<StudentAcademicCredit>(), 0);
                 }
-            }
 
-            totalCount = personStIds.Count();
-            Array.Sort(personStIds.ToArray());
-            subList = personStIds.Skip(offset).Take(limit);
-            personStDataContracts = await DataReader.BulkReadRecordAsync<PersonSt>(subList.Distinct().ToArray());
+                totalCount = keyCacheObject.TotalCount.Value;
+                subList = keyCacheObject.Sublist.ToArray();
+                personStDataContracts = await DataReader.BulkReadRecordAsync<PersonSt>(subList.Distinct().ToArray());
 
-            if (personStDataContracts == null || !personStDataContracts.Any())
-            {
-                return new Tuple<IEnumerable<StudentAcademicCredit>, int>(new List<StudentAcademicCredit>(), 0);
-            }
-
-            List<StudentAcadCred> tempCreds = new List<StudentAcadCred>();
-            int totalAcadCount = personStDataContracts.Where(sac => sac.PstStudentAcadCred != null && sac.PstStudentAcadCred.Any())
-                                                      .SelectMany(i => i.PstStudentAcadCred).Distinct().Count();
-
-            var stAcadKeys = personStDataContracts.Where(sac => sac.PstStudentAcadCred != null && sac.PstStudentAcadCred.Any())
-                                                  .SelectMany(i => i.PstStudentAcadCred).Distinct();
-
-            for (var i = 0; i < totalAcadCount; i += readSize)
-            {
-                var courseSubList = stAcadKeys.Skip(i).Take(readSize);
-                var records = await DataReader.BulkReadRecordAsync<StudentAcadCred>(courseSubList.ToArray());
-                if (records != null)
+                if (personStDataContracts == null || !personStDataContracts.Any())
                 {
-                    tempCreds.AddRange(records);
+                    return new Tuple<IEnumerable<StudentAcademicCredit>, int>(new List<StudentAcademicCredit>(), 0);
                 }
-            }
 
-            foreach (var personStDataContract in personStDataContracts)
+                //Make sure we have all the st acad creds, just incase if total # is more than read size
+                List<StudentAcadCred> tempCreds = new List<StudentAcadCred>();
+                var stAcadKeys = personStDataContracts.Where(sac => sac.PstStudentAcadCred != null && sac.PstStudentAcadCred.Any())
+                                                      .SelectMany(i => i.PstStudentAcadCred).Distinct().ToList();
+                int totalAcadCount = stAcadKeys.Count();
+                for (var i = 0; i < totalAcadCount; i += readSize)
+                {
+                    var courseSubList = stAcadKeys.Skip(i).Take(readSize);
+                    var records = await DataReader.BulkReadRecordAsync<StudentAcadCred>(courseSubList.ToArray());
+                    if (records != null)
+                    {
+                        tempCreds.AddRange(records);
+                    }
+                }
+
+                /*
+                    we still need these id's based criteria. Reason, when we do Read record async, it only returns ids in student acad cred & so, 
+                    we dont know how many of those id's qualify for STC.ATT.CRED NE '' condition.
+                */
+                if (limitingKeys == null) limitingKeys = stAcadKeys.ToArray();
+                stAcadCredIds = await DataReader.SelectAsync("STUDENT.ACAD.CRED", limitingKeys, acadIdsCriteria);
+                foreach (var personStDataContract in personStDataContracts)
+                {
+                    string[] credIds = personStDataContract.PstStudentAcadCred.Intersect(stAcadCredIds).ToArray();
+                    var creds = tempCreds.Where(cr => credIds.Contains(cr.Recordkey)).Select(rec => rec);
+                    if ((personStDataContract != null) && (!string.IsNullOrWhiteSpace(personStDataContract.RecordGuid)))
+                    {
+                        studentGpas.Add(BuildStudentAcadCred(personStDataContract, creds));
+                    }
+                    else
+                    {
+                        exception.AddError(new RepositoryError("Data.Access", string.Format("Unable to locate guid for personSt id: '{0}'", personStDataContract.Recordkey)));
+                    }
+                }
+
+                if (exception.Errors != null && exception.Errors.Any())
+                {
+                    throw exception;
+                }
+
+                return studentGpas.Any() ? new Tuple<IEnumerable<StudentAcademicCredit>, int>(studentGpas, totalCount) :
+                    new Tuple<IEnumerable<StudentAcademicCredit>, int>(new List<StudentAcademicCredit>(), 0);
+            }
+            catch (RepositoryException ex)
             {
-                string[] credIds = personStDataContract.PstStudentAcadCred.Intersect(limitingKeys).ToArray();
-                var creds = tempCreds.Where(cr => credIds.Contains(cr.Recordkey)).Select(rec => rec);
-                studentGpas.Add(BuildStudentAcadCred(personStDataContract, creds));
+                throw ex;
+            }
+            catch (Exception e)
+            {
+                exception.AddError(new RepositoryError("Bad.Data", e.Message));
+                throw exception;
+            }
+        }
+
+        /// <summary>
+        /// Gets criteria.
+        /// </summary>
+        /// <param name="filter">filter criteria</param>
+        /// <param name="gradeDateNQ">grade date named query</param>
+        /// <returns></returns>
+        private async Task<string> GenerateCriteriaAsync(StudentAcademicCredit filter, string gradeDateNQ)
+        {
+            string criteria = string.Empty;
+            //Grade date(verified date) named query
+            if (!string.IsNullOrEmpty(gradeDateNQ))
+            {
+                DateTime gradesDate;
+                var gradeFormattedDate = (DateTime.TryParse(gradeDateNQ, out gradesDate)) ? await GetUnidataFormatDateAsync(gradesDate) : gradeDateNQ;
+
+                criteria = string.Format("STC.VERIFIED.GRADE.DATE EQ '{0}'", gradeFormattedDate);
             }
 
-            return studentGpas.Any() ? new Tuple<IEnumerable<StudentAcademicCredit>, int>(studentGpas, totalCount) :
-                new Tuple<IEnumerable<StudentAcademicCredit>, int>(new List<StudentAcademicCredit>(), 0);
+            //Academic period named query                    
+            if (filter != null && filter.AcademicPeriods != null && filter.AcademicPeriods.Any())
+            {
+                if (string.IsNullOrEmpty(criteria))
+                {
+                    var acadPeriodIds = string.Join(" ", filter.AcademicPeriods.Select(i => string.Format("'{0}'", i)));
+                    criteria = string.Format("STC.TERM EQ {0}", acadPeriodIds);
+                }
+                else
+                {
+                    var acadPeriodIds = string.Join(" ", filter.AcademicPeriods.Select(i => string.Format("'{0}'", i)));
+                    criteria = string.Format("{0} AND STC.TERM EQ {1}", criteria, acadPeriodIds);
+                }
+            }            
+
+            return criteria;
         }
 
         /// <summary>
@@ -202,7 +268,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             foreach (var stAcadCredDC in stAcadCredDCs)
             {
                 StudentGPAInfo studentGPAInfo = new StudentGPAInfo();
-
+                studentGPAInfo.SourceKey = stAcadCredDC.Recordkey;
                 studentGPAInfo.Term = stAcadCredDC.StcTerm;
                 studentGPAInfo.StcReportingTerm = stAcadCredDC.StcReportingTerm;
                 studentGPAInfo.StcAttCredit = stAcadCredDC.StcAttCred;
@@ -275,31 +341,110 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 return null;
             }
-            List<StudentAcademicCredentialProgramInfo> list = new List<StudentAcademicCredentialProgramInfo>();
-            var acadCredDCs = await DataReader.BulkReadRecordAsync<AcadCredentials>(markAcadCredIds.Distinct().ToArray());
 
-            if(acadCredDCs != null || acadCredDCs.Any())
+            List<StudentAcademicCredentialProgramInfo> list = new List<StudentAcademicCredentialProgramInfo>();
+            List<RepositoryError> _errors = new List<RepositoryError>();
+
+            try
             {
-                foreach (var acadCredDC in acadCredDCs)
+                var acadCredDCs = await DataReader.BulkReadRecordWithInvalidKeysAsync<AcadCredentials>( markAcadCredIds.Distinct().ToArray() );
+
+                if( acadCredDCs.InvalidKeys != null && acadCredDCs.InvalidKeys.Any() )
                 {
-                    if(!string.IsNullOrEmpty(acadCredDC.AcadAcadProgram) && !string.IsNullOrEmpty(acadCredDC.AcadPersonId))
+                    foreach( var invalidKey in acadCredDCs.InvalidKeys )
                     {
-                        var studProgramId = string.Join("*", acadCredDC.AcadPersonId, acadCredDC.AcadAcadProgram);
-                        var studProg = await DataReader.ReadRecordAsync<StudentPrograms>(studProgramId );
-                        if(studProg != null)
+                        //Log that error, don't throw. err5 per specs
+                        string errorMessage = string.Format( "student-grade-point-averages: ACAD.CREDENTIALS '{0}' does not exist, credential omitted from earnedDegrees.", invalidKey );
+                        logger.Error( errorMessage );
+                    }
+                }
+
+                if( acadCredDCs.BulkRecordsRead != null || acadCredDCs.BulkRecordsRead.Any() )
+                {
+                    var stProgIds = acadCredDCs.BulkRecordsRead.Where( i => !string.IsNullOrEmpty( i.AcadPersonId ) && !string.IsNullOrEmpty( i.AcadAcadProgram ) )
+                                               .Select( p => string.Join( "*", p.AcadPersonId, p.AcadAcadProgram ) ).ToList();
+                    if( stProgIds != null && stProgIds.Any() )
+                    {
+                        var stProgRecs = await DataReader.BulkReadRecordAsync<StudentPrograms>( stProgIds.Distinct().ToArray() );
+
+                        if( stProgRecs != null && stProgRecs.Any() )
                         {
-                            StudentAcademicCredentialProgramInfo studentCredentialsProgramInfo = new StudentAcademicCredentialProgramInfo();
-                            studentCredentialsProgramInfo.AcadCcdDate = acadCredDC.AcadCcdDate.FirstOrDefault().HasValue? acadCredDC.AcadCcdDate.FirstOrDefault().Value : default(DateTime?);
-                            studentCredentialsProgramInfo.AcadDegreeDate = acadCredDC.AcadDegreeDate.HasValue ? acadCredDC.AcadDegreeDate.Value : default(DateTime?);
-                            studentCredentialsProgramInfo.AcademicAcadProgram = acadCredDC.AcadAcadProgram;
-                            studentCredentialsProgramInfo.AcademicCredentialsId = acadCredDC.Recordkey;
-                            studentCredentialsProgramInfo.AcadPersonId = acadCredDC.AcadPersonId;
-                            studentCredentialsProgramInfo.StudentProgramGuid = studProg.RecordGuid;
-                            list.Add(studentCredentialsProgramInfo);
+                            foreach( var acadCredDC in acadCredDCs.BulkRecordsRead )
+                            {
+                                if( !string.IsNullOrEmpty( acadCredDC.AcadAcadProgram ) && !string.IsNullOrEmpty( acadCredDC.AcadPersonId ) )
+                                {
+                                    var studProgramId = string.Join( "*", acadCredDC.AcadPersonId, acadCredDC.AcadAcadProgram );
+                                    var studProg = stProgRecs.FirstOrDefault( i => i.Recordkey.Equals( studProgramId, StringComparison.InvariantCultureIgnoreCase ) );
+                                    if( studProg != null )
+                                    {
+                                        StudentAcademicCredentialProgramInfo studentCredentialsProgramInfo = new StudentAcademicCredentialProgramInfo();
+                                        studentCredentialsProgramInfo.AcadCcdDate = acadCredDC.AcadCcdDate.FirstOrDefault().HasValue ? acadCredDC.AcadCcdDate.FirstOrDefault().Value : default( DateTime? );
+                                        studentCredentialsProgramInfo.AcadDegreeDate = acadCredDC.AcadDegreeDate.HasValue ? acadCredDC.AcadDegreeDate.Value : default( DateTime? );
+                                        studentCredentialsProgramInfo.AcademicAcadProgram = acadCredDC.AcadAcadProgram;
+                                        studentCredentialsProgramInfo.AcademicCredentialsId = acadCredDC.Recordkey;
+                                        studentCredentialsProgramInfo.AcadPersonId = acadCredDC.AcadPersonId;
+                                        studentCredentialsProgramInfo.StudentProgramGuid = studProg.RecordGuid;
+                                        list.Add( studentCredentialsProgramInfo );
+                                    }
+                                    else
+                                    {
+                                        //err7 per specs
+                                        string message = string.Format( "student-grade-point-averages: STUDENT.PROGRAMS '{0}' does not exist for ACAD.CREDENTIALS '{1}', credential omitted from earnedDegrees.", studProgramId, acadCredDC.Recordkey );
+                                        RepositoryError error = new RepositoryError( acadCredDC.RecordGuid, acadCredDC.Recordkey, "Bad.Data", message );
+                                        _errors.Add( error );
+                                    }
+                                }
+                                else if( string.IsNullOrEmpty( acadCredDC.AcadAcadProgram ) )
+                                {
+                                    //err6 per specs
+                                    string message = string.Format( "student-grade-point-averages: ACAD.ACAD.PROGRAMS not populated for ACAD.CREDENTIALS '{0}', credential omitted from earnedDegrees.", acadCredDC.Recordkey );
+                                    RepositoryError error = new RepositoryError( acadCredDC.RecordGuid, acadCredDC.Recordkey, "Bad.Data", message );
+                                    _errors.Add( error );
+                                }
+                            }
+
+                            if( _errors.Any() )
+                            {
+                                exception.AddErrors( _errors );
+                                throw exception;
+                            }
+                        }
+                        else
+                        {
+                            //err7 per specs
+                            foreach( var stProgId in stProgIds.ToList() )
+                            {
+                                try
+                                {
+                                    string[] key = stProgId.Split( new string[] { "*" }, StringSplitOptions.None );
+                                    string stId = key[ 0 ];
+                                    string acadacadId = key[ 1 ];
+                                    var record = acadCredDCs.BulkRecordsRead.FirstOrDefault( i => i.AcadPersonId.Equals( stId, StringComparison.InvariantCultureIgnoreCase ) && i.AcadAcadProgram.Equals( key[ 1 ], StringComparison.InvariantCultureIgnoreCase ) );
+                                    string message = string.Format( "student-grade-point-averages: STUDENT.PROGRAMS '{0}' does not exist for ACAD.CREDENTIALS '{1}', credential omitted from earnedDegrees.", stProgId, record.Recordkey );
+                                    logger.Error( message );
+                                }
+                                catch( Exception e )
+                                {
+                                    //Do Nothing, don't error out.
+                                    logger.Error( e.Message );
+                                }
+                            }
                         }
                     }
                 }
             }
+            catch(RepositoryException e)
+            {
+                //Don't throw exception but just log.
+                if(e.Errors != null && e.Errors.Any())
+                {
+                    e.Errors.ToList().ForEach( er =>
+                     {
+                         logger.Error( er.Message );
+                     } );
+                }
+            }
+
             return list;
         }
 

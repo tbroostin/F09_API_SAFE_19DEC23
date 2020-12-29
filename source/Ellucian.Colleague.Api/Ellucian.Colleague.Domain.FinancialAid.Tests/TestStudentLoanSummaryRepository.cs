@@ -31,13 +31,15 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             public string CodPersonId;
             public List<string> FaInterviewIds;
             public List<string> FaIsirNsldsIds;
+            public List<string> FaSaYears;
         }
 
         public FaStudentRecord FaStudent = new FaStudentRecord()
         {
             CodPersonId = "1",
             FaInterviewIds = new List<string>() { "1", "2", "3", "4" },
-            FaIsirNsldsIds = new List<string>() { "1", "2" }
+            FaIsirNsldsIds = new List<string>() { "1", "2" },
+            FaSaYears = new List<string>() { "2020"}
         };
 
         #endregion
@@ -268,7 +270,14 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                         studentLoanSummary.PlusLoanMpnExpirationDate = GetActiveMpnExpirationDate(studentId, studentMpnRecords, "P");
                     }
                 }
-            }            
+            }
+
+            var informedBorrowerItems = new List<InformedBorrowerItem>();
+            var informedBorrowerItem = new InformedBorrowerItem();
+            informedBorrowerItem.FaYear = "2020";
+            informedBorrowerItem.IsInformedBorrowerComplete = true;
+            informedBorrowerItems.Add(informedBorrowerItem);
+            studentLoanSummary.InformedBorrowerItem = informedBorrowerItems;
 
             if (FaStudent.FaIsirNsldsIds != null && FaStudent.FaIsirNsldsIds.Count() > 0)
             {

@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
@@ -132,7 +132,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             }
         };
 
-        public Task<DraftBudgetAdjustment> SaveAsync(DraftBudgetAdjustment budgetAdjustment)
+        public Task<DraftBudgetAdjustment> SaveAsync(DraftBudgetAdjustment budgetAdjustment, IList<string> majorComponentStartPosition)
         {
             throw new NotImplementedException();
         }

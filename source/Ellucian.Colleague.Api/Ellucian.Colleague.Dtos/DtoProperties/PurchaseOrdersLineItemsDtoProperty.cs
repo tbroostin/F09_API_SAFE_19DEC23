@@ -33,6 +33,13 @@ namespace Ellucian.Colleague.Dtos
         [JsonProperty("commodityCode", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public GuidObject2 CommodityCode { get; set; }
 
+
+        /// <summary>
+        /// The fixed asset designation associated with the line item.
+        /// </summary>
+        [JsonProperty("fixedAssetDesignation", DefaultValueHandling = DefaultValueHandling.Ignore)]        
+        public GuidObject2 FixedAssetDesignation { get; set; }
+
         /// <summary>
         /// The vendor part number for the line item.
         /// </summary>
@@ -81,6 +88,12 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>
         [JsonProperty("discountAmount", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public string DiscountAmount { get; set; }
+
+        /// <summary>
+        /// The status of the line item.
+        /// </summary>
+        [JsonProperty("status", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public EnumProperties.LineItemStatus? Status { get; set; }
 
         /// <summary>
         /// A discount applied to the line item in addition to the overall vendor discount, e.g. discount based on quantity purchased.

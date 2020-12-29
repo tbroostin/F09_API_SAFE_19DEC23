@@ -1017,5 +1017,86 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
         }
+
+
+        [TestClass]
+        public class FacultyController_GetFacultyOfficeHoursAsync : FacultyControllerTestSetup
+        {
+            private List<string> facultyIds;
+            private List<FacultyOfficeHours> facultyList;
+            
+
+            [TestInitialize]
+            public async void Initialize()
+            {
+                await InitializeFacultyController();
+                
+                facultyIds = new List<string>() { "0000036", "0000045", "0000046", "0000048", "9999999" };
+                facultyList = new List<FacultyOfficeHours>();
+
+                FacultyOfficeHours facOffHours1 = new FacultyOfficeHours() {
+                    facultyId = "0000036",
+                    OfficeHours = new List<OfficeHours>()
+                    {
+                        new OfficeHours()
+                        {
+                            OfficeStartDate = DateTime.Today,
+                            OfficeEndDate = DateTime.Now.AddDays(10),
+                            OfficeStartTime = DateTime.Today,
+                            OfficeEndTime = DateTime.Today,
+                            OfficeBuilding = "ARM",
+                            OfficeRoom = "100",
+                            OfficeFrequency = "W",
+                            DaysOfWeek = new List<DayOfWeek>() {DayOfWeek.Monday,DayOfWeek.Thursday}
+                        },
+                        new OfficeHours()
+                        {
+                            OfficeStartDate = DateTime.Today,
+                            OfficeEndDate = DateTime.Now.AddDays(10),
+                            OfficeStartTime = DateTime.Today,
+                            OfficeEndTime = DateTime.Today,
+                            OfficeBuilding = "ARM",
+                            OfficeRoom = "200",
+                            OfficeFrequency = "M",
+                            DaysOfWeek = new List<DayOfWeek>() {DayOfWeek.Sunday,DayOfWeek.Wednesday}
+
+                        }
+                    },
+                };
+                facultyList.Add(facOffHours1);              
+                facultyServiceMock.Setup(x => x.GetFacultyOfficeHoursAsync(facultyIds)).Returns(Task.FromResult<IEnumerable<FacultyOfficeHours>>(facultyList));
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                facultyController = null;
+                facultyService = null;
+            }
+
+            [TestMethod]
+            public async Task ReturnsFacultyDtos()
+            {
+                // act
+                var response = await facultyController.GetFacultyOfficeHoursAsync(facultyIds);
+                facultyServiceMock.Setup(x => x.GetFacultyOfficeHoursAsync(facultyIds)).Returns(Task.FromResult<IEnumerable<FacultyOfficeHours>>(facultyList));
+                // assert
+                Assert.IsTrue(response is IEnumerable<FacultyOfficeHours>);
+                Assert.AreEqual(1, response.Count());
+                Assert.AreEqual(2, response.FirstOrDefault().OfficeHours.Count);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task RethrowsNullArgumentException()
+            {
+                // arrange
+                facultyIds = null;
+                facultyServiceMock.Setup(x => x.GetFacultyOfficeHoursAsync(facultyIds)).Throws(new ArgumentNullException());
+
+                // act
+                var response = await facultyController.GetFacultyOfficeHoursAsync(facultyIds);
+            }         
+        }
     }
 }

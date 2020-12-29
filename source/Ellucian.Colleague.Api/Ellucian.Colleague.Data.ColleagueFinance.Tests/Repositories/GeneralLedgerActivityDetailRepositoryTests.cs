@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -36,6 +36,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private SoDescs soDescsDataContract;
         private UnDescs unDescsDataContract;
         private ObDescs obDescsDataContract;
+
+        private BudgetDevDefaults budgetDevDefaultsDataContract;
+        private GenLdgr genLdgrDataContract;
+        private BudWork budWorkDataContract;
+
         private Collection<GlaFyr> glaFyrDataContracts;
         private EncFyr encFyrDataContract;
         private GetGlAccountDescriptionResponse glAccountDescriptionResponse;
@@ -54,7 +59,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private List<string> glAssetValues = new List<string>() { "1" };
         private List<string> glLiabilityValues = new List<string>() { "2" };
         private List<string> glFundBalValues = new List<string>() { "3" };
-        
+
+        IList<string> majorComponentStartPosition = new List<string>() { "1", "4", "7", "10", "13", "19" };
+
         [TestInitialize]
         public void Initialize()
         {
@@ -75,6 +82,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             PopulateEncDataContract();
             BuildGlSourceCodes();
             PopulateDescsDataContracts();
+            BuildJustificationNotes();
             InitializeMockStatements();
         }
 
@@ -95,6 +103,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             soDescsDataContract = null;
             unDescsDataContract = null;
             obDescsDataContract = null;
+            budgetDevDefaultsDataContract = null;
+            genLdgrDataContract = null;
+            budWorkDataContract = null;
             encFyrDataContract = null;
             glSourceCodes = null;
         }
@@ -105,6 +116,178 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         [TestMethod]
         public async Task QueryGlActivityDetailAsync_FullDataSet_Success()
         {
+            BuildJustificationNotes();
+
+            // Get GLA records for the one GL account for the fiscal year.
+            var expectedGlaRecords = glaFyrDataContracts.Where(x => x.Recordkey.Contains(param1_glAccount)).ToList();
+
+            this.param3_costCenterStructure = await testGlConfigurationRepository.GetCostCenterStructureAsync();
+
+            // Populate the domain entities.
+            GlAccountActivityDetail activityDetailDomain = await QueryGlActivityDetailAsync();
+
+            // List of GLA records that are actuals.
+            var expectedActualsGlaRecords = new List<GlaFyr>();
+
+            // List of GLA records that are budget.
+            var expectedBudgetGlaRecords = new List<GlaFyr>();
+
+            // Loop through the selected GLA records and separate actuals from encumbrances and budget.
+            foreach (var dataContract in expectedGlaRecords)
+            {
+                var source = dataContract.GlaSource;
+                var matchingSource = glSourceCodes.ValsEntityAssociation.FirstOrDefault(x => x.ValInternalCodeAssocMember == source);
+                var sp2Code = matchingSource.ValActionCode2AssocMember;
+
+                // Actuals have an action code of 1.
+                if (sp2Code == "1")
+                {
+                    expectedActualsGlaRecords.Add(dataContract);
+                }
+                else if (sp2Code == "2")
+                {
+                    expectedBudgetGlaRecords.Add(dataContract);
+                }
+            }
+
+            // Sum of the debit minus credit for each selected actuals GLA.FYR data contract.
+            var expectedActualsGlaAmount = expectedActualsGlaRecords.Sum(x => x.GlaDebit - x.GlaCredit);
+            // Assert the total actual amount from the data contracts is equal to the one from the domain entities.
+            Assert.AreEqual(expectedActualsGlaAmount, activityDetailDomain.ActualAmount);
+
+            // The number of JE transactions has to be the same.
+            IEnumerable<GlTransaction> jeActualsDomainTransactions = activityDetailDomain.Transactions.Where(x => x.Source == "JE").ToList();
+            var glaJeRecords = expectedActualsGlaRecords.Where(x => x.GlaSource == "JE").ToList();
+            Assert.AreEqual(jeActualsDomainTransactions.Count(), glaJeRecords.Count());
+
+            // The number of PJ transactions has to be the same.
+            IEnumerable<GlTransaction> pjActualsDomainTransactions = activityDetailDomain.Transactions.Where(x => x.Source == "PJ").ToList();
+            var glaPjRecords = expectedActualsGlaRecords.Where(x => x.GlaSource == "PJ").ToList();
+            Assert.AreEqual(pjActualsDomainTransactions.Count(), glaPjRecords.Count());
+
+            // Keep the count of actual transactions.
+            var actualsDomainTransactionCount = jeActualsDomainTransactions.Count() + pjActualsDomainTransactions.Count();
+
+            // Sum of the debit minus credit for each selected budget GLA.FYR data contract.
+            var expectedBudgetGlaAmount = expectedBudgetGlaRecords.Sum(x => x.GlaDebit - x.GlaCredit);
+            // Assert the total budget amount from the data contracts is equal to the one from the domain entities.
+            Assert.AreEqual(expectedBudgetGlaAmount, activityDetailDomain.BudgetAmount);
+
+            // The number of AB transactions has to be the same.
+            IEnumerable<GlTransaction> abBudgetDomainTransactions = activityDetailDomain.Transactions.Where(x => x.Source == "AB").ToList();
+            var glaAbRecords = expectedBudgetGlaRecords.Where(x => x.GlaSource == "AB").ToList();
+            Assert.AreEqual(abBudgetDomainTransactions.Count(), glaAbRecords.Count());
+
+            // The number of BU transactions has to be the same.
+            IEnumerable<GlTransaction> buBudgetDomainTransactions = activityDetailDomain.Transactions.Where(x => x.Source == "BU").ToList();
+            var glaBuRecords = expectedBudgetGlaRecords.Where(x => x.GlaSource == "BU").ToList();
+            Assert.AreEqual(buBudgetDomainTransactions.Count(), glaBuRecords.Count());
+
+            // The number of BC transactions has to be the same.
+            IEnumerable<GlTransaction> bcBudgetDomainTransactions = activityDetailDomain.Transactions.Where(x => x.Source == "BC").ToList();
+            var glaBcRecords = expectedBudgetGlaRecords.Where(x => x.GlaSource == "BC").ToList();
+            Assert.AreEqual(bcBudgetDomainTransactions.Count(), glaBcRecords.Count());
+
+            // Keep the count of budget transactions.
+            var budgetDomainTransactionCount = abBudgetDomainTransactions.Count() + buBudgetDomainTransactions.Count() + bcBudgetDomainTransactions.Count();
+
+            // Sum of the amount from each encumbrance entry in the ENC.FYR data contract.
+            var expectedEncumbranceEncAmount = encFyrDataContract.EncPoEntityAssociation.Sum(x => x.EncPoAmtAssocMember);
+            // Add the sum from the requisition entries.
+            expectedEncumbranceEncAmount += encFyrDataContract.EncReqEntityAssociation.Sum(x => x.EncReqAmtAssocMember);
+            // Assert the total encumbrance amount from the data contract is equal to the one from the domain entities.
+            Assert.AreEqual(expectedEncumbranceEncAmount, activityDetailDomain.EncumbranceAmount);
+
+            // The number of encumbrance transactions has to be the same as the number of entries in the ENC.FYR record.
+            IEnumerable<GlTransaction> encDomainTransactions = activityDetailDomain.Transactions.Where(x => x.GlTransactionType == GlTransactionType.Encumbrance || x.GlTransactionType == GlTransactionType.Requisition).ToList().ToList();
+            var encumbranceRecordCount = encFyrDataContract.EncPoEntityAssociation.Count() + encFyrDataContract.EncReqEntityAssociation.Count();
+            Assert.AreEqual(encDomainTransactions.Count(), encumbranceRecordCount);
+
+            // The number of selected data contracts for actuals and budget from GLA plus the one encumbrance
+            // data contract has to match the number of transactions in the domain.
+            Assert.AreEqual(expectedActualsGlaRecords.Count() + expectedBudgetGlaRecords.Count() + encumbranceRecordCount, activityDetailDomain.Transactions.Count());
+
+            // Make sure the GL account domain entity has the correct number of transactions.
+            Assert.AreEqual(actualsDomainTransactionCount + budgetDomainTransactionCount + encumbranceRecordCount, activityDetailDomain.Transactions.Count());
+
+            // Loop through the actuals data contracts and compare each property with the actuals domain transactions.
+            foreach (var glaDataContract in expectedActualsGlaRecords)
+            {
+                GlTransaction actualTransaction = activityDetailDomain.Transactions.FirstOrDefault(x => x.Id == glaDataContract.Recordkey);
+
+                Assert.IsNotNull(actualTransaction);
+                Assert.AreEqual(glaDataContract.GlaDebit - glaDataContract.GlaCredit, actualTransaction.Amount);
+                Assert.AreEqual(glaDataContract.GlaRefNo, actualTransaction.ReferenceNumber);
+                Assert.AreEqual(glaDataContract.GlaDescription, actualTransaction.Description);
+                Assert.AreEqual(glaDataContract.GlaSource, actualTransaction.Source);
+                Assert.AreEqual(glaDataContract.GlaTrDate, actualTransaction.TransactionDate);
+            }
+
+            // Loop through the budget data contracts and compare each property with the budget domain transactions.
+            foreach (var glaDataContract in expectedBudgetGlaRecords)
+            {
+                GlTransaction budgetTransaction = activityDetailDomain.Transactions.FirstOrDefault(x => x.Id == glaDataContract.Recordkey);
+
+                Assert.IsNotNull(budgetTransaction);
+                Assert.AreEqual(glaDataContract.GlaDebit - glaDataContract.GlaCredit, budgetTransaction.Amount);
+                Assert.AreEqual(glaDataContract.GlaRefNo, budgetTransaction.ReferenceNumber);
+                Assert.AreEqual(glaDataContract.GlaDescription, budgetTransaction.Description);
+                Assert.AreEqual(glaDataContract.GlaSource, budgetTransaction.Source);
+                Assert.AreEqual(glaDataContract.GlaTrDate, budgetTransaction.TransactionDate);
+            }
+
+            // Loop through the encumbrace entries in the data contract and compare each property with the encumbrance type domain transactions.
+            foreach (var encPoTransaction in encFyrDataContract.EncPoEntityAssociation)
+            {
+                GlTransaction encumbranceTransaction = activityDetailDomain.Transactions.FirstOrDefault(x => x.Source == "EP"
+                    && x.ReferenceNumber == encPoTransaction.EncPoNoAssocMember);
+
+                Assert.IsNotNull(encumbranceTransaction);
+                Assert.AreEqual(encPoTransaction.EncPoAmtAssocMember, encumbranceTransaction.Amount);
+                Assert.AreEqual(encPoTransaction.EncPoNoAssocMember, encumbranceTransaction.ReferenceNumber);
+                Assert.AreEqual(encPoTransaction.EncPoIdAssocMember, encumbranceTransaction.DocumentId);
+                Assert.AreEqual(encPoTransaction.EncPoVendorAssocMember, encumbranceTransaction.Description);
+                Assert.AreEqual("EP", encumbranceTransaction.Source);
+                Assert.AreEqual(encPoTransaction.EncPoDateAssocMember, encumbranceTransaction.TransactionDate);
+            }
+
+            // Loop through the requisition entries in the data contract and compare each property with the requisition type domain transactions.
+            foreach (var encReqTransaction in encFyrDataContract.EncReqEntityAssociation)
+            {
+                GlTransaction encumbranceTransaction = activityDetailDomain.Transactions.FirstOrDefault(x => x.Source == "ER"
+                    && x.ReferenceNumber == encReqTransaction.EncReqNoAssocMember);
+
+                Assert.IsNotNull(encumbranceTransaction);
+                Assert.AreEqual(encReqTransaction.EncReqAmtAssocMember, encumbranceTransaction.Amount);
+                Assert.AreEqual(encReqTransaction.EncReqNoAssocMember, encumbranceTransaction.ReferenceNumber);
+                Assert.AreEqual(encReqTransaction.EncReqIdAssocMember, encumbranceTransaction.DocumentId);
+                Assert.AreEqual(encReqTransaction.EncReqVendorAssocMember, encumbranceTransaction.Description);
+                Assert.AreEqual(encReqTransaction.EncReqDateAssocMember, encumbranceTransaction.TransactionDate);
+            }
+
+            // Get the actuals memo amount from the GL.ACCTS data contract and compare it to the domain entity amount.
+            var actualsPendingPosting = glAcctsDataContract.GlActualMemos[1];
+            Assert.AreEqual(actualsPendingPosting, activityDetailDomain.MemoActualsAmount);
+
+            // Get the budget memo amount from the GL.ACCTS data contract and compare it to the domain entity amount.
+            var budgetPendingPosting = glAcctsDataContract.GlBudgetMemos[1];
+            Assert.AreEqual(budgetPendingPosting, activityDetailDomain.MemoBudgetAmount);
+
+            // Compare the Unit ID between contract and domain.
+            Assert.AreEqual(unDescsDataContract.Recordkey, activityDetailDomain.UnitId);
+
+            // Compare the cost center description between contract and domain.
+            Assert.AreEqual("Fund 10 : Source 01", activityDetailDomain.Name);
+
+            Assert.AreEqual(true, activityDetailDomain.ShowJustificationNotes);
+            Assert.AreEqual("Line 1\r\n\r\n Line 3", activityDetailDomain.JustificationNotes);
+        }
+
+        [TestMethod]
+        public async Task QueryGlActivityDetailAsync_FullDataSet_Success_No_Justification_Notes()
+        {
+            genLdgrDataContract = null;
+
             // Get GLA records for the one GL account for the fiscal year.
             var expectedGlaRecords = glaFyrDataContracts.Where(x => x.Recordkey.Contains(param1_glAccount)).ToList();
 
@@ -2935,6 +3118,29 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             glSourceCodes.buildAssociations();
         }
 
+        private void BuildJustificationNotes()
+        {
+            budgetDevDefaultsDataContract = new BudgetDevDefaults()
+            {
+                BudDevShowNotes = "Y"
+            };
+
+            genLdgrDataContract = new GenLdgr()
+            {
+                GenLdgrBudgetId = "FY2020"
+            };
+
+            var notes = new List<string>();
+            notes.Add("Line 1");
+            notes.Add("");
+            notes.Add("Line 3");
+
+            budWorkDataContract = new BudWork()
+            {
+                BwNotes = notes
+            };
+        }
+
         private void InitializeMockStatements()
         {
             // Mock the bulkread for GLA.FYR records.
@@ -2983,6 +3189,21 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 return Task.FromResult(obDescsDataContract);
             });
 
+            dataReaderMock.Setup(dr => dr.ReadRecordAsync<BudgetDevDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(budgetDevDefaultsDataContract);
+            });
+
+            dataReaderMock.Setup(dr => dr.ReadRecordAsync<GenLdgr>(It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(genLdgrDataContract);
+            });
+
+            dataReaderMock.Setup(dr => dr.ReadRecordAsync<BudWork>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(budWorkDataContract);
+            });
+
             glAccountDescriptionResponse = new GetGlAccountDescriptionResponse();
             glAccountDescriptionResponse.GlAccountIds = new List<string>() { this.param1_glAccount };
             glAccountDescriptionResponse.GlDescriptions = new List<string>() { "Test description for the GL account" };
@@ -2996,7 +3217,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private async Task<GlAccountActivityDetail> QueryGlActivityDetailAsync()
         {
             GeneralLedgerClassConfiguration glClassConfiguration = new GeneralLedgerClassConfiguration(glClassName, glExpenseValues, glRevenueValues, glAssetValues, glLiabilityValues, glFundBalValues);
-            return await glaRepository.QueryGlActivityDetailAsync(this.param1_glAccount, this.param2_fiscalYear, this.param3_costCenterStructure, glClassConfiguration);
+            return await glaRepository.QueryGlActivityDetailAsync(this.param1_glAccount, this.param2_fiscalYear, this.param3_costCenterStructure, glClassConfiguration,
+                majorComponentStartPosition);
             // Task.Run(() => new GlAccountActivityDetail("12"));
             
         }

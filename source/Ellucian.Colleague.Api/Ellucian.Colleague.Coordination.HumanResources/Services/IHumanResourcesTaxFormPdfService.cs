@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using System.Threading.Tasks;
@@ -11,6 +11,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
     public interface IHumanResourcesTaxFormPdfService
     {
         /// <summary>
+        /// Gets the boolean value that indicates if the client is set up to use the Guam version of the W2 form.
+        /// </summary>
+        /// <returns>Boolean value where true = Guam and false = USA</returns>
+        Task<bool> GetW2GuamFlag();
+
+        /// <summary>
         /// Returns the pdf data to print a W-2 tax form.
         /// </summary>
         /// <param name="personId">ID of the person assigned to and requesting the W-2.</param>
@@ -18,14 +24,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns>TaxFormW2PdfData domain entity</returns>
         Task<FormW2PdfData> GetW2TaxFormDataAsync (string personId, string recordId);
         
-        /// <summary>
-        /// Populates the W-2 PDF with the supplied data.
-        /// </summary>
-        /// <param name="pdfData">W-2 PDF data</param>
-        /// <param name="documentPath">Path to the PDF template</param>
-        /// <returns>Byte array containing PDF data for the W-2 tax form</returns>
-        byte[] PopulateW2Pdf(FormW2PdfData pdfData, string documentPath);
-
         /// <summary>
         /// Populates the W-2 PDF with the supplied data using RDLC instead of PDF Sharp.
         /// </summary>
@@ -81,13 +79,5 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <param name="pathToReport">Path to the PDF template</param>
         /// <returns>Byte array containing PDF data for the W-2c tax form</returns>
         byte[] PopulateW2cPdfReport(FormW2cPdfData pdfData, string pdfTemplatePath);
-
-        /// <summary>
-        /// Populates the W-2c PDF with the supplied data.
-        /// </summary>
-        /// <param name="pdfData">W-2c PDF data</param>
-        /// <param name="documentPath">Path to the PDF template</param>
-        /// <returns>Byte array containing PDF data for the W-2c tax form</returns>
-        byte[] PopulateW2cPdf(FormW2cPdfData pdfData, string pdfTemplatePath);
     }
 }

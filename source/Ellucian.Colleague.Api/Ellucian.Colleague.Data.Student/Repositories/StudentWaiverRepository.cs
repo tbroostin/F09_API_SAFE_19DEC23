@@ -149,11 +149,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 }
                                 catch (Exception ex)
                                 {
-                                    if (logger.IsInfoEnabled)
-                                    {
-                                        logger.Info("Waiver recordkey " + waiverItem.Recordkey + " Error creating or adding RequisiteWaiver for academic credit id " + requisite.SrwvAcadReqmtsAssocMember);
-                                        logger.Info("Exception message: " + ex.Message);
-                                    }
+                                    logger.Error(ex, "Waiver recordkey " + waiverItem.Recordkey + " Error creating or adding RequisiteWaiver for academic credit id " + requisite.SrwvAcadReqmtsAssocMember);
                                 }
                             }
                         }
@@ -161,11 +157,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                     catch (Exception ex)
                     {
-                        if (logger.IsInfoEnabled)
-                        {
-                            logger.Info("Error creating Waiver object for STUDENT.REQUISITE.WAIVER with ID " + waiverItem.Recordkey);
-                            logger.Info("Exception message: " + ex.Message);
-                        }
+                        logger.Error(ex, "Error creating Waiver object for STUDENT.REQUISITE.WAIVER with ID " + waiverItem.Recordkey);
                     }
                 }
             }

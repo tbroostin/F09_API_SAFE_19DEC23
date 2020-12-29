@@ -41,7 +41,7 @@ namespace Ellucian.Colleague.Dtos
         /// <summary>
         /// A status of an academic catalog
         /// </summary>
-        [DataMember(Name = "status")]
-        public LifeCycleStatus status { get; set;  }
+        [DataMember(Name = "status", EmitDefaultValue = false)]
+        public LifeCycleStatus? Status { get; set;  }
     }
 }

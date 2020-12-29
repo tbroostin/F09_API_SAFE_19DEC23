@@ -1,4 +1,4 @@
-﻿/*Copyright 2014-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2014-2019 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -864,6 +864,32 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Entities
             {
                 configuration.IgnoreAwardCategoriesOnChecklist = IgnoreAwardCategoriesOnChecklist;
                 CollectionAssert.AreEqual(IgnoreAwardCategoriesOnChecklist, configuration.IgnoreAwardCategoriesOnChecklist);
+            }
+
+            [TestMethod]
+            public void ShowBudgetDetailsOnAwardLetter_InitializedFalseTest()
+            {
+                Assert.IsFalse(configuration.ShowBudgetDetailsOnAwardLetter);
+            }
+
+            [TestMethod]
+            public void ShowBudgetDetailsOnAwardLetterGetSetTest()
+            {
+                configuration.ShowBudgetDetailsOnAwardLetter = true;
+                Assert.IsTrue(configuration.ShowBudgetDetailsOnAwardLetter);
+            }
+
+            [TestMethod]
+            public void StudentAwardLetterBudgetDetailsDescription_InitializedNullTest()
+            {
+                Assert.IsNull(configuration.StudentAwardLetterBudgetDetailsDescription);
+            }
+
+            [TestMethod]
+            public void StudentAwardLetterBudgetDetailsDescription_GetSetTest()
+            {
+                configuration.StudentAwardLetterBudgetDetailsDescription = "Description";
+                Assert.AreEqual("Description", configuration.StudentAwardLetterBudgetDetailsDescription);
             }
         }
     }

@@ -15,6 +15,21 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
     public class AccountsPayableTax : CodeItem
     {
         /// <summary>
+        /// Allow AccountsPayable / Purchase Entry Flag
+        /// </summary>
+        public bool AllowAccountsPayablePurchaseEntry { get; set; }
+
+        /// <summary>
+        /// Is the tax code is under UseTax category
+        /// </summary>
+        public bool IsUseTaxCategory { get; set; }
+
+        /// <summary>
+        /// Tax category of the tax code
+        /// </summary>
+        public string TaxCategory { get; set; }
+
+        /// <summary>
         /// Accounts Payable Tax codes constructor.
         /// </summary>
         /// <param name="code">code</param>

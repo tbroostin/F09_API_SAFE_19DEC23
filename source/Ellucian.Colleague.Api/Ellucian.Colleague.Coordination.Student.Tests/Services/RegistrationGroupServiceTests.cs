@@ -146,7 +146,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public void RegistrationGroupService_GetSectionRegistrationDates()
             {
-                var sectionRegistrationDateDTOs = registrationGroupService.GetSectionRegistrationDatesAsync(sectionIds).Result;
+                var sectionRegistrationDateDTOs = registrationGroupService.GetSectionRegistrationDatesAsync(sectionIds,true).Result;
                 Assert.AreEqual(sectionIds.Count(), sectionRegistrationDateDTOs.Count());
             }
         }

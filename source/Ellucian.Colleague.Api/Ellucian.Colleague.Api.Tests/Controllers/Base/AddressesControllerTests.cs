@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -39,6 +39,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         private Mock<ILogger> loggerMock;
         private Mock<IAdapterRegistry> adapterRegistryMock;
         private Mock<IReferenceDataRepository> refRepoMock;
+        private Dtos.Base.AddressQueryCriteria addressQueryCriteria;
         private IReferenceDataRepository refRepo;
 
         private AddressesController addressesController;
@@ -65,6 +66,12 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             addressesRepositoryMock = new Mock<IAddressRepository>();
             refRepoMock = new Mock<IReferenceDataRepository>();
             refRepo = refRepoMock.Object;
+
+            addressQueryCriteria = new Dtos.Base.AddressQueryCriteria()
+            {
+                PersonIds = new List<string>() { "00000", "00000" },
+                AddressIds = new List<string>() { "0012355", "0012356" }
+            };
 
             addressesCollection = new List<Dtos.Addresses>();
 
@@ -108,9 +115,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                     new County(Guid.NewGuid().ToString(), "BOS","Boston County")
                 };
             refRepoMock.Setup(repo => repo.Counties).Returns(counties);
-            
+
             allAddresses = new TestAddressRepository().GetAddressData().ToList();
-          
+
             foreach (var source in allAddresses)
             {
                 var address = new Ellucian.Colleague.Dtos.Addresses
@@ -131,11 +138,11 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                     CorrectionDigit = source.CorrectionDigit,
                     Locality = source.City,
                     PostalCode = source.PostalCode,
-                    
+
                 };
 
-                var region = new Dtos.AddressRegion() { Code = source.State};
-                var title = states.FirstOrDefault(x=> x.Code == source.State);
+                var region = new Dtos.AddressRegion() { Code = source.State };
+                var title = states.FirstOrDefault(x => x.Code == source.State);
                 if (title != null)
                     region.Title = title.Description;
 
@@ -148,7 +155,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             }
 
             var expected = addressesCollection.FirstOrDefault(x => x.Id == usAddressGuid);
-            
+
             addressesController = new AddressesController(adapterRegistryMock.Object,
                 addressesServiceMock.Object, addressesRepositoryMock.Object, loggerMock.Object)
             {
@@ -185,7 +192,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             int Offset = 0;
             int Limit = 4;
             var AddressesTuple =
-                new Tuple<IEnumerable<Dtos.Addresses>, int>(addressesCollection.Take(4), addressesCollection.Count()); 
+                new Tuple<IEnumerable<Dtos.Addresses>, int>(addressesCollection.Take(4), addressesCollection.Count());
 
             addressesServiceMock.Setup(i => i.GetAddressesAsync(Offset, Limit, true)).ReturnsAsync(AddressesTuple);
 
@@ -200,7 +207,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 
             Assert.IsNotNull(results);
             Assert.AreEqual(4, results.Count());
-           
+
             foreach (var actual in results)
             {
                 var expected = addressesCollection.FirstOrDefault(i => i.Id.Equals(actual.Id));
@@ -235,6 +242,14 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         {
             addressesServiceMock.Setup(i => i.GetAddressesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
             await addressesController.GetAddressesAsync(It.IsAny<Paging>());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AddressesController_QueryAddressesAsync_PermissionException()
+        {
+            addressesServiceMock.Setup(i => i.QueryAddressPermissionAsync(It.IsAny<IEnumerable<string>>())).Throws(new PermissionsException());
+            await addressesController.QueryAddressesAsync(addressQueryCriteria);
         }
 
         [TestMethod]

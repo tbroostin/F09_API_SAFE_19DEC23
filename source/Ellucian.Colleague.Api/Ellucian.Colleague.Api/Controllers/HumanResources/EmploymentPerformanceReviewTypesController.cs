@@ -1,4 +1,4 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -19,6 +19,7 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
+using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
@@ -47,8 +48,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <summary>
         /// Return all employmentPerformanceReviewTypes
         /// </summary>
-                /// <returns>List of EmploymentPerformanceReviewTypes <see cref="Dtos.EmploymentPerformanceReviewTypes"/> objects representing matching employmentPerformanceReviewTypes</returns>
-        [HttpGet]
+        /// <returns>List of EmploymentPerformanceReviewTypes <see cref="Dtos.EmploymentPerformanceReviewTypes"/> objects representing matching employmentPerformanceReviewTypes</returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.EmploymentPerformanceReviewTypes>> GetEmploymentPerformanceReviewTypesAsync()
                 {
@@ -61,8 +62,18 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 }
             }
             try
-            {                    return await _employmentPerformanceReviewTypesService.GetEmploymentPerformanceReviewTypesAsync(bypassCache);
-                            }
+            {
+                var employmentPerformanceReviewTypes = await _employmentPerformanceReviewTypesService.GetEmploymentPerformanceReviewTypesAsync(bypassCache);
+
+                if (employmentPerformanceReviewTypes != null && employmentPerformanceReviewTypes.Any())
+                {
+                    AddEthosContextProperties(await _employmentPerformanceReviewTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _employmentPerformanceReviewTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              employmentPerformanceReviewTypes.Select(a => a.Id).ToList()));
+                }
+
+                return employmentPerformanceReviewTypes;                
+            }
             catch (KeyNotFoundException e)
             {
                 _logger.Error(e.ToString());
@@ -100,7 +111,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="guid">GUID to desired employmentPerformanceReviewTypes</param>
         /// <returns>A employmentPerformanceReviewTypes object <see cref="Dtos.EmploymentPerformanceReviewTypes"/> in EEDM format</returns>
-        [HttpGet]
+        [HttpGet, EedmResponseFilter]
         public async Task<Dtos.EmploymentPerformanceReviewTypes> GetEmploymentPerformanceReviewTypesByGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -110,6 +121,10 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                AddEthosContextProperties(
+                    await _employmentPerformanceReviewTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _employmentPerformanceReviewTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { guid }));
                 return await _employmentPerformanceReviewTypesService.GetEmploymentPerformanceReviewTypesByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)

@@ -1,7 +1,9 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
@@ -24,16 +26,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private readonly IConfigurationRepository _configurationRepository;
         private ILogger _logger;
 
-        IEnumerable<VisaTypeGuidItem> visaTypeEntities = null;
+
+        private IEnumerable<VisaTypeGuidItem> _visaTypeEntities = null;
         /// <summary>
         /// Constructor for PersonVisasService
         /// </summary>
         /// <param name="personVisasRepository">personVisasRepository</param>
         /// <param name="personRepository">personRepository</param>
         /// <param name="logger">logger</param>
-        public PersonVisasService(IAdapterRegistry adapterRegistry, 
-            IPersonVisaRepository personVisasRepository, 
-            IPersonRepository personRepository, 
+        public PersonVisasService(IAdapterRegistry adapterRegistry,
+            IPersonVisaRepository personVisasRepository,
+            IPersonRepository personRepository,
             IReferenceDataRepository referenceDataRepository,
             IConfigurationRepository configurationRepository,
             ICurrentUserFactory currentUserFactory,
@@ -50,7 +53,16 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
         #endregion
 
-        #region GET methods
+        private async Task<IEnumerable<VisaTypeGuidItem>> GetVisaTypesAsync(bool bypassCache)
+        {
+            if (_visaTypeEntities == null)
+            {
+                _visaTypeEntities = await _referenceDataRepository.GetVisaTypesAsync(bypassCache);
+            }
+            return _visaTypeEntities;
+        }
+
+        #region GET
 
         /// <summary>
         /// Gets all person visas based on paging
@@ -74,7 +86,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     personVisaDtos.Add(personVisaDto);
                 }
             }
-            return personVisaDtos.Any() ? new Tuple<IEnumerable<Dtos.PersonVisa>, int>(personVisaDtos, personVisaEntities.Item2) : 
+            return personVisaDtos.Any() ? new Tuple<IEnumerable<Dtos.PersonVisa>, int>(personVisaDtos, personVisaEntities.Item2) :
                                           new Tuple<IEnumerable<Dtos.PersonVisa>, int>(personVisaDtos, 0);
         }
 
@@ -87,45 +99,96 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<Dtos.PersonVisa>, int>> GetAll2Async(int offset, int limit, string person, string visaTypeCategory, string visaTypeDetail, bool bypassCache)
         {
+
+            List<Dtos.PersonVisa> personVisaDtos = new List<Dtos.PersonVisa>();
+            List<string> visaTypeCategories = null;
+
+
             CheckUserPersonVisasViewPermissions();
 
-            List<string> visaTypeCategories = null;
+            #region filters
 
             if (!string.IsNullOrEmpty(visaTypeCategory))
             {
                 if (visaTypeCategory.Equals("nonImmigrant") || visaTypeCategory.Equals("immigrant"))
                 {
-                    VisaTypeCategory visaTypeEnum = ConvertFilterVisaTypeCategoryToVisaTypeCategoryEntity(visaTypeCategory);
-                    visaTypeCategories = (await _referenceDataRepository.GetVisaTypesAsync(bypassCache)).Where(v => v.VisaTypeCategory.Equals(visaTypeEnum)).Select(i => i.Code).ToList();
+                    try
+                    {
+                        VisaTypeCategory visaTypeEnum = ConvertFilterVisaTypeCategoryToVisaTypeCategoryEntity(visaTypeCategory);
+                        visaTypeCategories = (await GetVisaTypesAsync(bypassCache)).Where(v => v.VisaTypeCategory.Equals(visaTypeEnum)).Select(i => i.Code).ToList();
+                    }
+                    catch (Exception)
+                    {
+                        return new Tuple<IEnumerable<Dtos.PersonVisa>, int>(personVisaDtos, 0);
+                    }
 
                 }
                 else
                 {
-                    return new Tuple<IEnumerable<Dtos.PersonVisa>, int>(new List<Dtos.PersonVisa>(), 0); ;
+                    return new Tuple<IEnumerable<Dtos.PersonVisa>, int>(personVisaDtos, 0);
                 }
             }
 
-            Tuple<IEnumerable<PersonVisa>, int> personVisaEntities = await _personVisasRepository.GetAllPersonVisas2Async(offset, limit, person, visaTypeCategories, visaTypeDetail, bypassCache);
-            List<Dtos.PersonVisa> personVisaDtos = new List<Dtos.PersonVisa>();
+            #endregion
 
-            if (personVisaEntities != null && personVisaEntities.Item2 > 0)
+            #region repository
+
+            Tuple<IEnumerable<PersonVisa>, int> personVisaEntities = null;
+
+
+            try {
+                personVisaEntities = await _personVisasRepository.GetAllPersonVisas2Async(offset, limit, person, visaTypeCategories, visaTypeDetail, bypassCache);
+            }
+
+            catch (RepositoryException ex)
             {
-                foreach (var personVisaEntity in personVisaEntities.Item1)
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+
+            if (personVisaEntities == null)
+            {
+                return new Tuple<IEnumerable<Dtos.PersonVisa>, int>(personVisaDtos, 0);
+            }
+
+            #endregion
+
+            #region convert
+
+            var personIds = personVisaEntities.Item1
+                   .Where(x => (!string.IsNullOrEmpty(x.PersonId)))
+                   .Select(x => x.PersonId).Distinct().ToList();
+
+            var personGuidCollection = await this._personRepository.GetPersonGuidsCollectionAsync(personIds);
+
+            foreach (var personVisaEntity in personVisaEntities.Item1)
+            {
+                try
                 {
-                    Dtos.PersonVisa personVisaDto = await ConvertPersonVisaEntityToDtoAsync(personVisaEntity, bypassCache);
-                    personVisaDtos.Add(personVisaDto);
+                    personVisaDtos.Add(await ConvertPersonVisaEntityToDto2Async(personVisaEntity, personGuidCollection,  bypassCache));                  
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(string.Concat("An error occurred extracting the person-visa: " , ex.Message), "Bad.Data", personVisaEntity.Guid, personVisaEntity.PersonId);
                 }
             }
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+            #endregion
 
             return personVisaDtos.Any() ? new Tuple<IEnumerable<Dtos.PersonVisa>, int>(personVisaDtos, personVisaEntities.Item2) :
                                           new Tuple<IEnumerable<Dtos.PersonVisa>, int>(personVisaDtos, 0);
-            
+
         }
 
         /// <summary>
-        /// Gets person visa record by person visa id
+        /// Gets person visa record by person visa guid
         /// </summary>
-        /// <param name="id">the guid for person visa record</param>
+        /// <param name="id">the guid for person visas record</param>
         /// <returns>Dtos.PersonVisa</returns>
         public async Task<Dtos.PersonVisa> GetPersonVisaByIdAsync(string id)
         {
@@ -136,38 +199,89 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 throw new ArgumentNullException("Must provide a personVisa id for retrieval");
             }
 
-            PersonVisa personVisaEntity = await _personVisasRepository.GetPersonVisaByIdAsync(id);
+            PersonVisa personVisaEntity = null;
 
-            if(personVisaEntity == null)
+            try
             {
-                throw new KeyNotFoundException("Person visa associated to id " + id + " not found.");
+                personVisaEntity = await _personVisasRepository.GetPersonVisaByIdAsync(id);
+            }
+            catch (Exception)
+            {
+                throw new KeyNotFoundException("No person-visas was found for GUID '" + id + "'.");
             }
 
-            if (string.IsNullOrEmpty(personVisaEntity.Type))
+            if ((personVisaEntity == null) || (string.IsNullOrEmpty(personVisaEntity.Type)))
             {
-                throw new KeyNotFoundException("Person visa associated to id " + id + " not found.");
+                throw new KeyNotFoundException("No person-visas was found for GUID '" + id + "'.");
             }
+
 
             Dtos.PersonVisa personVisaDto = await ConvertPersonVisaEntityToDtoAsync(personVisaEntity, false);
             return personVisaDto;
         }
 
         /// <summary>
-        /// Verifies if the user has the correct permissions to view a person's guardian.
+        /// Gets person visa record by person visa guid
         /// </summary>
-        private void CheckUserPersonVisasViewPermissions()
+        /// <param name="guid">the guid for person visa record</param>
+        /// <returns>Dtos.PersonVisa</returns>
+        public async Task<Dtos.PersonVisa> GetPersonVisaById2Async(string guid)
         {
-            // access is ok if the current user has the view or update person visas permission
-            if (!HasPermission(BasePermissionCodes.ViewAnyPersonVisa) && !HasPermission(BasePermissionCodes.UpdateAnyPersonVisa))
+            CheckUserPersonVisasViewPermissions();
+
+            if (string.IsNullOrEmpty(guid))
             {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view person-visas.");
-                throw new PermissionsException("User is not authorized to view person-visas.");
+                //throw new ArgumentNullException("Must provide a personVisa GUID for retrieval");
+                IntegrationApiExceptionAddError("Must provide a person-visas GUID for retrieval.", "Missing.GUID",
+                   "", "", System.Net.HttpStatusCode.NotFound);
+                throw IntegrationApiException;
             }
+
+            PersonVisa personVisaEntity = null;
+
+            try
+            {
+                personVisaEntity = await _personVisasRepository.GetPersonVisaByIdAsync(guid);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex, guid: guid);
+                throw IntegrationApiException;
+            }
+            catch (KeyNotFoundException)
+            {
+                //throw new KeyNotFoundException("No person-visas was found for GUID '" + guid + "'.");
+                IntegrationApiExceptionAddError("No person-visas was found for GUID '" + guid + "'.", "GUID.Not.Found",
+                    guid, "", System.Net.HttpStatusCode.NotFound);
+                throw IntegrationApiException;
+
+            }
+
+            if ((personVisaEntity == null) || (string.IsNullOrEmpty(personVisaEntity.Type)))
+            {
+                //throw new KeyNotFoundException("No person-visas was found for GUID '" + guid + "'.");
+                IntegrationApiExceptionAddError("No person-visas was found for GUID '" + guid + "'.", "GUID.Not.Found",
+                    guid, "", System.Net.HttpStatusCode.NotFound);
+                throw IntegrationApiException;
+            }
+
+            var personIds = new List<string> { personVisaEntity.PersonId };
+            var personGuidCollection = await this._personRepository.GetPersonGuidsCollectionAsync(personIds);
+
+            var personVisaDto = await ConvertPersonVisaEntityToDto2Async(personVisaEntity, personGuidCollection, false);
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+            return personVisaDto;
         }
 
         #endregion
 
-        #region POST Method
+        #region PUT/POST
+
         /// <summary>
         /// Creates a new person visa record
         /// </summary>
@@ -186,21 +300,20 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         }
 
         /// <summary>
-        /// Verifies if the user has the correct permissions to create a person's guardian.
+        /// Creates a new person visa record
         /// </summary>
-        private void CheckUserPersonVisasCreatePermissions()
+        /// <param name="personVisa">personVisa</param>
+        /// <returns>Dtos.PersonVisa</returns>
+        public async Task<Dtos.PersonVisa> PostPersonVisa2Async(Dtos.PersonVisa personVisa)
         {
-            // access is ok if the current user has the create person visas permission
-            if (!HasPermission(BasePermissionCodes.UpdateAnyPersonVisa))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to create person-visas.");
-                throw new PermissionsException("User is not authorized to create person-visas.");
-            }
+            if (personVisa == null)
+                throw new ArgumentNullException("PersonVisa", "Must provide a personVisa for create.");
+
+            CheckUserPersonVisasCreatePermissions();
+
+            return await this.PutPersonVisa2Async(string.Empty, personVisa);
         }
 
-        #endregion
-
-        #region PUT Method
         /// <summary>
         /// Updates existing person visa record
         /// </summary>
@@ -220,8 +333,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 throw new KeyNotFoundException("person id is a required property for personVisas");
             }
 
+            Validate(personVisa);
+
             var personVisaLookUpResult = await _personVisasRepository.GetRecordInfoFromGuidAsync(id);
-            var personLookUpResult = await _personVisasRepository.GetRecordInfoFromGuidAsync(personVisa.Person.Id);          
+            var personLookUpResult = await _personVisasRepository.GetRecordInfoFromGuidAsync(personVisa.Person.Id);
 
             if (personLookUpResult == null)
             {
@@ -240,31 +355,298 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             _personVisasRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
-            PersonVisaRequest personVisaRequest = await ConvertPersonVisaDtoToRequestAsync(personLookUpResult.PrimaryKey, personVisa);
+            var personVisaRequest = await ConvertPersonVisaDtoToRequestAsync(personLookUpResult.PrimaryKey, personVisa);
 
-            PersonVisaResponse personVisaResponse = await _personVisasRepository.UpdatePersonVisaAsync(personVisaRequest);
+            var personVisaResponse = await _personVisasRepository.UpdatePersonVisaAsync(personVisaRequest);
 
-            Dtos.PersonVisa personVisaDto = await this.GetPersonVisaByIdAsync(personVisaResponse.StrGuid);
+            //Dtos.PersonVisa personVisaDto = await this.GetPersonVisaByIdAsync(personVisaResponse.StrGuid);
+            return await ConvertPersonVisaEntityToDtoAsync(personVisaResponse, false);
+
+        }
+
+        /// <summary>
+        /// Updates existing person visa record
+        /// </summary>
+        /// <param name="id">the guid for person visa record</param>
+        /// <param name="personVisa">Dtos.PersonVisa</param>
+        /// <returns>Dtos.PersonVisa</returns>
+        public async Task<Dtos.PersonVisa> PutPersonVisa2Async(string id, Dtos.PersonVisa personVisa)
+        {
+            if (personVisa == null)
+            {
+                throw new ArgumentNullException("PersonVisa", "Must provide a personVisa for update.");
+            }
+
+            CheckUserPersonVisasUpdatePermissions();
+
+            if (string.IsNullOrEmpty(id))
+            {
+                id = personVisa.Id;
+            }
+
+            Validate2(personVisa);
+
+            _personVisasRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+
+            #region create domain entity from request
+
+            PersonVisaRequest personVisaRequest = null;
+
+            var personVisaLookUpResult = await _personVisasRepository.GetRecordInfoFromGuidAsync(id);
+            var personLookUpResult = await _personVisasRepository.GetRecordInfoFromGuidAsync(personVisa.Person.Id);
+
+            if (personLookUpResult == null)
+            {
+                IntegrationApiExceptionAddError("Person id associated to id " + personVisa.Person.Id + " not found.", "Validation.Exception", personVisa.Id);
+            }
+
+            if (personVisaLookUpResult != null && personLookUpResult != null && !personVisaLookUpResult.PrimaryKey.Equals(personLookUpResult.PrimaryKey, StringComparison.InvariantCultureIgnoreCase))
+            {
+                IntegrationApiExceptionAddError("The person id is for a different person than the id of the personVisas.", "Validation.Exception", personVisa.Id);
+            }
+
+            if ((personVisaLookUpResult != null && string.IsNullOrEmpty(personVisaLookUpResult.PrimaryKey)) ||
+                (personLookUpResult != null && string.IsNullOrEmpty(personLookUpResult.PrimaryKey)))
+            {
+                IntegrationApiExceptionAddError("Person id or personVisa id were not found.", "Validation.Exception", personVisa.Id);
+            }
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            try
+            {
+                personVisaRequest = await ConvertPersonVisaDtoToRequest2Async(personLookUpResult.PrimaryKey, personVisa);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError("Record not created/updated.  Error extracting request." + ex.Message, "Global.Internal.Error",
+                   !string.IsNullOrEmpty(personVisa.Id) ? personVisa.Id : null
+                  );
+            }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            #endregion
+
+            #region Create record from domain entity
+
+            PersonVisa personVisaResponse = null;
+            try
+            {
+
+                personVisaResponse = await _personVisasRepository.UpdatePersonVisaAsync(personVisaRequest);
+
+                if (personVisaResponse == null)
+                {
+                    IntegrationApiExceptionAddError("An unexpected error occurred attempting to create/update the person-visa record. "
+                        , "Global.Internal.Error", !string.IsNullOrEmpty(personVisa.Id) ? personVisa.Id : null);
+                }
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError("An unexpected error occurred attempting to create/update the person-visa record. " + ex.Message, "Global.Internal.Error",
+                     string.IsNullOrEmpty(personVisa.Id) ? personVisa.Id : null);
+            }
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+            #endregion
+
+            #region Build DTO response
+
+            Dtos.PersonVisa personVisaDto = null;
+            try
+            {
+                var personIds = new List<string> { personVisaResponse.PersonId };
+                var personGuidCollection = await this._personRepository.GetPersonGuidsCollectionAsync(personIds);
+
+                personVisaDto = await ConvertPersonVisaEntityToDto2Async(personVisaResponse, personGuidCollection, false);
+             
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError("Record updated. Error building response. " + ex.Message, "Global.Internal.Error",
+                       !string.IsNullOrEmpty(personVisaResponse.Guid) ? personVisaResponse.Guid : null,
+                       !string.IsNullOrEmpty(personVisaResponse.PersonId) ? personVisaResponse.PersonId : null); ;
+            }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            #endregion
 
             return personVisaDto;
         }
 
+        #endregion
+
+        #region Private methods 
+
         /// <summary>
-        /// Verifies if the user has the correct permissions to update a person's guardian.
+        /// Check for all required fields
         /// </summary>
-        private void CheckUserPersonVisasUpdatePermissions()
+        /// <param name="personVisa">personVisa</param>
+        private void Validate(Dtos.PersonVisa personVisa)
         {
-            // access is ok if the current user has the update person visas permission
-            if (!HasPermission(BasePermissionCodes.UpdateAnyPersonVisa))
+            if (personVisa.Person != null && string.IsNullOrEmpty(personVisa.Person.Id))
             {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to update person-visas.");
-                throw new PermissionsException("User is not authorized to update person-visas.");
+                throw new ArgumentNullException("Must provide an id for person.");
+            }
+
+            if (personVisa.VisaType == null)
+            {
+                throw new ArgumentNullException("Must provide a visaType category for update.");
+            }
+
+            if (personVisa.VisaType != null && personVisa.VisaType.VisaTypeCategory == null)
+            {
+                throw new ArgumentNullException("Must provide a visaType category for update.");
+            }
+
+            if (personVisa.VisaType != null && personVisa.VisaType.Detail != null && string.IsNullOrEmpty(personVisa.VisaType.Detail.Id))
+            {
+                throw new ArgumentNullException("Must provide an id category for visa type detail.");
+            }
+
+            if (personVisa.Entries != null && personVisa.Entries.Count() > 1)
+            {
+                throw new InvalidOperationException("Colleague only supports a single port of entry.");
+            }
+
+            if (personVisa.RequestedOn != null && personVisa.IssuedOn != null)
+            {
+                if (personVisa.RequestedOn > personVisa.IssuedOn)
+                {
+                    throw new InvalidOperationException("requestedOn date cannot be after issuedOn date.");
+                }
+            }
+
+            if (personVisa.RequestedOn != null && personVisa.ExpiresOn != null)
+            {
+                if (personVisa.RequestedOn > personVisa.ExpiresOn)
+                {
+                    throw new InvalidOperationException("requestedOn date cannot be after expiresOn date.");
+                }
+            }
+
+            if (personVisa.IssuedOn != null && personVisa.ExpiresOn != null)
+            {
+                if (personVisa.IssuedOn > personVisa.ExpiresOn)
+                {
+                    throw new InvalidOperationException("issuedOn date cannot be after expiresOn date.");
+                }
+            }
+
+            if (personVisa.Entries != null && personVisa.Entries.Count() == 1 && personVisa.IssuedOn != null && personVisa.ExpiresOn != null)
+            {
+                if (personVisa.Entries.First().EnteredOn < personVisa.IssuedOn)
+                {
+                    throw new InvalidOperationException("enteredOn date cannot be before issuedOn date.");
+                }
+
+                if (personVisa.Entries.First().EnteredOn > personVisa.ExpiresOn)
+                {
+                    throw new InvalidOperationException("enteredOn date cannot be after expiresOn date.");
+                }
             }
         }
 
-        #endregion
+        /// <summary>
+        /// Check for all required fields
+        /// </summary>
+        /// <param name="personVisa">personVisa</param>
+        private void Validate2(Dtos.PersonVisa personVisa)
+        {
+            if (personVisa == null)
+            {
+                IntegrationApiExceptionAddError("PersonVisa DTO must be provided.", "Missing.Request.Body");
+                throw IntegrationApiException;
+            }
 
-        #region DELETE Method
+            if ((personVisa.Person == null) || (personVisa.Person != null && string.IsNullOrEmpty(personVisa.Person.Id)))
+            {
+                IntegrationApiExceptionAddError("Must provide an id for person.", "Missing.Required.Property", personVisa.Id);
+            }
+
+            if (personVisa.VisaType == null)
+            {
+                IntegrationApiExceptionAddError("Must provide a visaType category.", "Missing.Required.Property", personVisa.Id);
+            }
+
+            if (personVisa.VisaType != null && personVisa.VisaType.VisaTypeCategory == null)
+            {
+                IntegrationApiExceptionAddError("Must provide a visaType category.", "Missing.Required.Property", personVisa.Id);
+            }
+
+            if (personVisa.VisaType != null && personVisa.VisaType.Detail != null && string.IsNullOrEmpty(personVisa.VisaType.Detail.Id))
+            {
+                IntegrationApiExceptionAddError("Must provide an id category for visa type detail.", "Missing.Required.Property", personVisa.Id);
+            }
+
+            if (personVisa.Entries != null && personVisa.Entries.Count() > 1)
+            {
+                IntegrationApiExceptionAddError("Colleague only supports a single port of entry.", "Validation.Exception", personVisa.Id);
+            }
+
+            if (personVisa.RequestedOn != null && personVisa.IssuedOn != null)
+            {
+                if (personVisa.RequestedOn > personVisa.IssuedOn)
+                {
+                    IntegrationApiExceptionAddError("requestedOn date cannot be after issuedOn date.", "Validation.Exception", personVisa.Id);
+                }
+            }
+
+            if (personVisa.RequestedOn != null && personVisa.ExpiresOn != null)
+            {
+                if (personVisa.RequestedOn > personVisa.ExpiresOn)
+                {
+                    IntegrationApiExceptionAddError("requestedOn date cannot be after expiresOn date.", "Validation.Exception", personVisa.Id);
+                }
+            }
+
+            if (personVisa.IssuedOn != null && personVisa.ExpiresOn != null)
+            {
+                if (personVisa.IssuedOn > personVisa.ExpiresOn)
+                {
+                    IntegrationApiExceptionAddError("issuedOn date cannot be after expiresOn date.", "Validation.Exception", personVisa.Id);
+                }
+            }
+
+            if (personVisa.Entries != null && personVisa.Entries.Count() == 1 && personVisa.IssuedOn != null && personVisa.ExpiresOn != null)
+            {
+                if (personVisa.Entries.First().EnteredOn < personVisa.IssuedOn)
+                {
+                    IntegrationApiExceptionAddError("enteredOn date cannot be before issuedOn date.", "Validation.Exception", personVisa.Id);
+                }
+
+                if (personVisa.Entries.First().EnteredOn > personVisa.ExpiresOn)
+                {
+                    IntegrationApiExceptionAddError("enteredOn date cannot be after expiresOn date.", "Validation.Exception", personVisa.Id);
+                }
+            }
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+        }
+
         /// <summary>
         /// Erases visa related infor from the respective columns, its not a hard delete rather soft delete
         /// </summary>
@@ -284,9 +666,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             await _personVisasRepository.DeletePersonVisaAsync(id, personVisaLookUpResult.PrimaryKey);
         }
-        #endregion
 
-        #region Convert Methods
         /// <summary>
         /// Converts person visa dto to person visa request
         /// </summary>
@@ -304,11 +684,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             if (personVisa.ExpiresOn != null && personVisa.VisaStatus != null)
             {
-                if (personVisa.ExpiresOn <= DateTime.Today && personVisa.VisaStatus == Ellucian.Colleague.Dtos.EnumProperties.VisaStatus.Current)
+                if (personVisa.ExpiresOn < DateTime.Today && personVisa.VisaStatus == Ellucian.Colleague.Dtos.EnumProperties.VisaStatus.Current)
                 {
                     throw new InvalidOperationException("Person visa cannot be current and have an expiration date in the past.");
                 }
-                if (personVisa.ExpiresOn >= DateTime.Today && personVisa.VisaStatus == Ellucian.Colleague.Dtos.EnumProperties.VisaStatus.Expired)
+                if (personVisa.ExpiresOn > DateTime.Today && personVisa.VisaStatus == Ellucian.Colleague.Dtos.EnumProperties.VisaStatus.Expired)
                 {
                     throw new InvalidOperationException("Person visa status should be 'current' when expiresOn date is in the future.");
                 }
@@ -333,21 +713,66 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         }
 
         /// <summary>
+        /// Converts person visa dto to person visa request
+        /// </summary>
+        /// <param name="entityId">entityId</param>
+        /// <param name="personVisa">Dtos.PersonVisa</param>
+        /// <returns>PersonVisaRequest</returns>
+        private async Task<PersonVisaRequest> ConvertPersonVisaDtoToRequest2Async(string entityId, Dtos.PersonVisa personVisa)
+        {
+
+            PersonVisaRequest personVisaRequest = new PersonVisaRequest(personVisa.Id, entityId);
+            if (personVisa.Entries != null && personVisa.Entries.Any())
+            {
+                personVisaRequest.EntryDate = (personVisa.Entries.First().EnteredOn == null) ? default(DateTime?) : personVisa.Entries.First().EnteredOn.Value.Date;
+            }
+
+            if (personVisa.ExpiresOn != null && personVisa.VisaStatus != null)
+            {
+                if (personVisa.ExpiresOn < DateTime.Today && personVisa.VisaStatus == Ellucian.Colleague.Dtos.EnumProperties.VisaStatus.Current)
+                {
+                    IntegrationApiExceptionAddError("Person visa cannot be current and have an expiration date in the past.", "Validation.Exception", personVisa.Id);
+                }
+                if (personVisa.ExpiresOn > DateTime.Today && personVisa.VisaStatus == Ellucian.Colleague.Dtos.EnumProperties.VisaStatus.Expired)
+                {
+                    IntegrationApiExceptionAddError("Person visa status should be 'current' when expiresOn date is in the future.","Validation.Exception", personVisa.Id);
+                }
+            }
+
+            if (personVisa.VisaStatus == Ellucian.Colleague.Dtos.EnumProperties.VisaStatus.Expired && personVisa.ExpiresOn == null)
+            {
+                IntegrationApiExceptionAddError("The expiresOn date is missing but required when setting the status to 'expired'.", "Validation.Exception", personVisa.Id);
+            }
+
+            personVisaRequest.ExpireDate = personVisa.ExpiresOn;
+            personVisaRequest.IssueDate = (personVisa.IssuedOn == null) ? default(DateTime?) : personVisa.IssuedOn;
+            personVisaRequest.PersonId = entityId;
+            personVisaRequest.RequestDate = (personVisa.RequestedOn == null) ? default(DateTime?) : personVisa.RequestedOn;
+            personVisaRequest.Status = (personVisa.ExpiresOn == null || personVisa.ExpiresOn >= DateTime.Today) ? "current" : "expired";
+            personVisaRequest.StrGuid = personVisa.Id;
+            personVisaRequest.VisaNo = personVisa.VisaId;
+
+            personVisaRequest.VisaType = await ConvertDtoVisaTypeToEntityVisaTypeCategoryAsync(personVisa, false);
+
+            return personVisaRequest;
+        }
+
+        /// <summary>
         /// Converts dto visa type to entity visa type category
         /// </summary>
         /// <param name="personVisa">Dtos.PersonVisa</param>
         /// <returns>string</returns>
         private async Task<string> ConvertDtoVisaTypeToEntityVisaTypeCategoryAsync(Dtos.PersonVisa personVisa, bool bypassCache)
         {
-            if (visaTypeEntities == null)
-            {
-                visaTypeEntities = await _referenceDataRepository.GetVisaTypesAsync(bypassCache);
-            }
+            
+            
+            _visaTypeEntities = await this.GetVisaTypesAsync(bypassCache);
+            
             //If VisaType.Detail is null then choose first one with nonImmigrant VisaTypeCategory
             VisaTypeGuidItem visaTypeEntity = null;
             string visaType = string.Empty;
 
-            if (visaTypeEntities != null)
+            if (_visaTypeEntities != null)
             {
                 if (personVisa.VisaType.Detail == null)
                 {
@@ -355,11 +780,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         Ellucian.Colleague.Domain.Base.Entities.VisaTypeCategory.Immigrant :
                         Ellucian.Colleague.Domain.Base.Entities.VisaTypeCategory.NonImmigrant;
 
-                    visaTypeEntity = visaTypeEntities.FirstOrDefault(i => i.VisaTypeCategory == visaTypeCategory);
+                    visaTypeEntity = _visaTypeEntities.FirstOrDefault(i => i.VisaTypeCategory == visaTypeCategory);
                 }
                 else
                 {
-                    visaTypeEntity = visaTypeEntities.FirstOrDefault(i => i.Guid == personVisa.VisaType.Detail.Id);
+                    visaTypeEntity = _visaTypeEntities.FirstOrDefault(i => i.Guid == personVisa.VisaType.Detail.Id);
                 }
 
                 if (visaTypeEntity == null)
@@ -392,7 +817,108 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             personVisaDto.ExpiresOn = personVisaEntity.ExpireDate.HasValue ? personVisaEntity.ExpireDate.Value.Date : default(DateTime?);
             personVisaDto.Entries = (personVisaEntity.EntryDate == null) ?
                 null :
-                new List<Dtos.PersonVisaEntry>() 
+                new List<Dtos.PersonVisaEntry>()
+                {
+                    new Dtos.PersonVisaEntry(){ EnteredOn = personVisaEntity.EntryDate}
+                };
+            return personVisaDto;
+        }
+
+        /// <summary>
+        /// Converts entity to dto
+        /// </summary>
+        /// <param name="personVisaEntity">PersonVisa</param>
+        /// <returns>Dtos.PersonVisa</returns>
+        private async Task<Dtos.PersonVisa> ConvertPersonVisaEntityToDto2Async(PersonVisa personVisaEntity,
+             Dictionary<string, string> personGuidCollection, bool bypassCache)
+        {
+
+            if (personVisaEntity == null)
+            {
+                IntegrationApiExceptionAddError("personVisaEntity is a required parameter.", "Bad.Data");
+                return null;
+            }
+
+           var personVisaDto = new Dtos.PersonVisa
+            {
+                Id = personVisaEntity.Guid               
+            };
+
+            if (personGuidCollection == null)
+            {
+                IntegrationApiExceptionAddError(string.Concat("Person GUID not found for person.id: '", personVisaEntity.PersonId, "'"), "GUID.Not.Found",
+                    personVisaEntity.Guid, personVisaEntity.PersonId);
+            }
+            else
+            {
+                var personGuid = string.Empty;
+                personGuidCollection.TryGetValue(personVisaEntity.PersonId, out personGuid);
+                if (string.IsNullOrEmpty(personGuid))
+                {
+                    IntegrationApiExceptionAddError(string.Concat("Person GUID not found for person.id: '", personVisaEntity.PersonId, "'"), "GUID.Not.Found", 
+                        personVisaEntity.Guid, personVisaEntity.PersonId);
+                }
+                else
+                {
+                    personVisaDto.Person = new Dtos.GuidObject2(personGuid);
+                }
+            }
+            if (!string.IsNullOrEmpty(personVisaEntity.Type))
+            {
+                try
+                {
+                    var visaTypeEntities = await this.GetVisaTypesAsync(bypassCache);
+                    if (visaTypeEntities == null)
+                    {
+                        IntegrationApiExceptionAddError("Unable to retrieve CORE.VALCODES-VISA.TYPES.", "Bad.Data", personVisaEntity.Guid, personVisaEntity.PersonId);
+                    }
+                    else
+                    {
+
+                        var visaTypeEntity = visaTypeEntities.FirstOrDefault(i => i.Code == personVisaEntity.Type);
+
+                        if (visaTypeEntity == null)
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("No GUID found, Entity: 'CORE.VALCODES-VISA.TYPES', Record ID: '", personVisaEntity.Type, "'"), "GUID.Not.Found"
+                                , personVisaEntity.Guid, personVisaEntity.PersonId);
+                        }
+                        else
+                        {
+                            personVisaDto.VisaType = new Dtos.VisaType2
+                            {
+                                VisaTypeCategory = ConvertEntityVisaTypeCategoryToVisaTypeCategoryDto(visaTypeEntity.VisaTypeCategory),
+                                Detail = new Dtos.GuidObject2(visaTypeEntity.Guid)
+                            };
+                        }
+                    }
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", personVisaEntity.Guid, personVisaEntity.PersonId);
+                }
+            }                     
+
+            if (!string.IsNullOrEmpty(personVisaEntity.VisaNumber))
+            {
+                personVisaDto.VisaId = personVisaEntity.VisaNumber;
+            }
+
+            Dtos.EnumProperties.VisaStatus visaStatus = Dtos.EnumProperties.VisaStatus.Current;
+
+            // If FPER.VISA.EXPIRE.DATE has a value in Colleague and the date is before today then on GET this will be set to "expired" 
+            // or after today's date otherwise it will be set to "current".  
+            if (personVisaEntity.ExpireDate != null && personVisaEntity.ExpireDate < DateTime.Today)
+            {
+                visaStatus = Dtos.EnumProperties.VisaStatus.Expired;
+            }
+            personVisaDto.VisaStatus = visaStatus;
+
+            personVisaDto.RequestedOn = personVisaEntity.RequestDate.HasValue ? personVisaEntity.RequestDate.Value.Date : default(DateTime?);
+            personVisaDto.IssuedOn = personVisaEntity.IssueDate.HasValue ? personVisaEntity.IssueDate.Value.Date : default(DateTime?);
+            personVisaDto.ExpiresOn = personVisaEntity.ExpireDate.HasValue ? personVisaEntity.ExpireDate.Value.Date : default(DateTime?);
+            personVisaDto.Entries = (personVisaEntity.EntryDate == null) ?
+                null :
+                new List<Dtos.PersonVisaEntry>()
                 {
                     new Dtos.PersonVisaEntry(){ EnteredOn = personVisaEntity.EntryDate}
                 };
@@ -426,15 +952,14 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private async Task<Dtos.VisaType2> ConvertToVisaTypeDtoAsync(string visaType, bool bypassCache)
         {
             Dtos.VisaType2 visaTypeDto = null;
-            if (visaTypeEntities == null)
-            {
-                visaTypeEntities = await _referenceDataRepository.GetVisaTypesAsync(bypassCache);
-            }
+
+            _visaTypeEntities = await this.GetVisaTypesAsync(bypassCache);
+
 
             Ellucian.Colleague.Domain.Base.Entities.VisaTypeGuidItem visaTypeEntity = null;
-            if(visaTypeEntities != null)
+            if (_visaTypeEntities != null)
             {
-                visaTypeEntity = visaTypeEntities.FirstOrDefault(i => i.Code == visaType);
+                visaTypeEntity = _visaTypeEntities.FirstOrDefault(i => i.Code == visaType);
                 if (visaTypeEntity == null)
                 {
                     throw new KeyNotFoundException("Visa type associated with visa type " + visaType + " not found");
@@ -500,6 +1025,46 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     return Dtos.VisaTypeCategory.NotSet;
             }
         }
+
+        /// <summary>
+        /// Verifies if the user has the correct permissions to view a person visa
+        /// </summary>
+        private void CheckUserPersonVisasViewPermissions()
+        {
+            // access is ok if the current user has the view or update person visas permission
+            if (!HasPermission(BasePermissionCodes.ViewAnyPersonVisa) && !HasPermission(BasePermissionCodes.UpdateAnyPersonVisa))
+            {
+                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view person-visas.");
+                throw new PermissionsException("User is not authorized to view person-visas.");
+            }
+        }
+
+
+        /// <summary>
+        /// Verifies if the user has the correct permissions to update a person visa
+        private void CheckUserPersonVisasUpdatePermissions()
+        {
+            // access is ok if the current user has the update person visas permission
+            if (!HasPermission(BasePermissionCodes.UpdateAnyPersonVisa))
+            {
+                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to update person-visas.");
+                throw new PermissionsException("User is not authorized to update person-visas.");
+            }
+        }
+
+        /// <summary>
+        /// Verifies if the user has the correct permissions to create a person visa
+        /// </summary>
+        private void CheckUserPersonVisasCreatePermissions()
+        {
+            // access is ok if the current user has the create person visas permission
+            if (!HasPermission(BasePermissionCodes.UpdateAnyPersonVisa))
+            {
+                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to create person-visas.");
+                throw new PermissionsException("User is not authorized to create person-visas.");
+            }
+        }
+
         #endregion
     }
 }

@@ -1,9 +1,6 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2019 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Dtos.HumanResources
 {
@@ -72,5 +69,16 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         /// The Id of this entity will be empty because the Non-Employee Position record comes from HRPER and not PERPOS
         /// </summary>
         public bool NonEmployeePosition { get; set; }
+
+        /// <summary>
+        /// Contains the list of work schedule items for this person's position. Each WorkScheduleItem represents a day
+        /// of the week with a corresponding unit (in hours) which together form a work schedule for this person's position.
+        /// </summary>
+        public List<WorkScheduleItem> WorkScheduleItems { get; set; }
+
+        /// <summary>
+        /// Decimal field that represents the full-time equivalent value of the employee in the position
+        /// </summary>
+        public Decimal? FullTimeEquivalent { get; set; }
     }
 }

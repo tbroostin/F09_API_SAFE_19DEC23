@@ -1,5 +1,6 @@
 ﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
 
+using Ellucian.Colleague.Domain.Base.Entities;
 using System;
 using System.Collections.Generic;
 
@@ -86,6 +87,26 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// The vendor types eProcurment, Travel
         /// </summary>
         public List<string> Categories { get; set; }
+
+        /// <summary>
+		/// Tax Id
+		/// </summary>
+		public string TaxId { get; set; }
+
+        /// <summary>
+        /// Tax Form
+        /// </summary>
+        public string TaxForm { get; set; }
+
+        /// <summary>
+        /// Person Phones for the vendor
+        /// </summary>
+        public List<Phone> Phones { get; set; }
+           
+        /// <summary>
+        /// List of addresses for the vendors
+        /// </summary>
+        public List<Domain.Base.Entities.Address> Addresses { get; set; }
 
         public string Id
         {

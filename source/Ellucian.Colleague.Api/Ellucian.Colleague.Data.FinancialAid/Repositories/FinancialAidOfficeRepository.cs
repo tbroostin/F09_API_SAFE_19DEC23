@@ -1,4 +1,4 @@
-﻿//Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -435,6 +435,10 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 singleConfiguration.ExcludeAwardCategoriesFromAwardLetterAndShoppingSheet = officeParametersRecord.FopExclAwdCatFromAwdltr == null ? new List<string>()
                     : officeParametersRecord.FopExclAwdCatFromAwdltr;
 
+                singleConfiguration.ShowBudgetDetailsOnAwardLetter = (!string.IsNullOrEmpty(officeParametersRecord.FopShowBudgetDetails) 
+                    && officeParametersRecord.FopShowBudgetDetails.ToUpper() == "Y");
+                singleConfiguration.StudentAwardLetterBudgetDetailsDescription = officeParametersRecord.FopBudgetDtlDesc;
+
                 singleConfiguration.CounselorPhoneType = officeParametersRecord.FopCounselorPhoneType;
 
                 singleConfiguration.CreateChecklistItemsForNewStudent =
@@ -519,7 +523,31 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                     LowToMediumBoundary = shoppingSheetParametersRecord.FsspGradRateLowToMed,
                     MediumToHighBoundary = shoppingSheetParametersRecord.FsspGradRateMedToHigh,
                     InstitutionRepaymentRate = shoppingSheetParametersRecord.FsspInstRepaymentRate,
-                    NationalRepaymentRateAverage = shoppingSheetParametersRecord.FsspNatRepaymentRateAvg
+                    NationalRepaymentRateAverage = shoppingSheetParametersRecord.FsspNatRepaymentRateAvg,
+                    TuitionAndFees = shoppingSheetParametersRecord.FsspTuitionAndFees,
+                    HousingAndMealsOn = shoppingSheetParametersRecord.FsspHmOnCampus,
+                    HousingAndMealsOff = shoppingSheetParametersRecord.FsspHmOffCampus,
+                    BooksAndSupplies = shoppingSheetParametersRecord.FsspBooksAndSupplies,
+                    Transportation = shoppingSheetParametersRecord.FsspTransportation,
+                    OtherEducationCosts = shoppingSheetParametersRecord.FsspOtherEducationCosts,
+                    SchoolScholarships = shoppingSheetParametersRecord.FsspSchoolSchol,
+                    StateScholarships = shoppingSheetParametersRecord.FsspStateSchol,
+                    OtherScholarships = shoppingSheetParametersRecord.FsspOtherSchol,
+                    PellGrants = shoppingSheetParametersRecord.FsspPellGrants,
+                    SchoolGrants = shoppingSheetParametersRecord.FsspSchoolGrants,
+                    StateGrants = shoppingSheetParametersRecord.FsspStateGrants,
+                    OtherGrants = shoppingSheetParametersRecord.FsspOtherGrants,
+                    DlSubLoans = shoppingSheetParametersRecord.FsspDlSubLoans,
+                    DlUnsubLoans = shoppingSheetParametersRecord.FsspDlUnsubLoans,
+                    PrivateLoans = shoppingSheetParametersRecord.FsspPrivateLoans,
+                    SchoolLoans = shoppingSheetParametersRecord.FsspSchoolLoans,
+                    OtherLoans = shoppingSheetParametersRecord.FsspOtherLoans,
+                    ParentPlusLoans = shoppingSheetParametersRecord.FsspParentPlusLoans,
+                    WorkStudy = shoppingSheetParametersRecord.FsspWorkStudy,
+                    OtherJobs = shoppingSheetParametersRecord.FsspOtherJobs,
+                    LoanAmountTextRuleId = shoppingSheetParametersRecord.FsspLoanAmtTextRuleId,
+                    EducationBenTextRuleId = shoppingSheetParametersRecord.FsspEducBenTextRuleId,
+                    NextStepsRuleId = shoppingSheetParametersRecord.FsspNextStepsRuleId
                 };      
             }
 

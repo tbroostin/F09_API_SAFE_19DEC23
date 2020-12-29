@@ -93,6 +93,11 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         public string ShipToCode { get; set; }
 
         /// <summary>
+        /// Requisition commodity code
+        /// </summary>
+        public string CommodityCode { get; set; }
+
+        /// <summary>
         /// The blanket purchase order ID associated to this requisition
         /// </summary>
         public string BlanketPurchaseOrder { get; set; }
@@ -121,6 +126,11 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// List of items associated to this requisition
         /// </summary>
         public List<LineItem> LineItems { get; set; }
+
+        /// <summary>
+        /// List of email addresses - confirmation email notifications would be sent to these email addresses on create / update .
+        /// </summary>
+        public List<string> ConfirmationEmailAddresses { get; set; }
 
     }
 }

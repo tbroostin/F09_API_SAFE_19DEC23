@@ -1,4 +1,4 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
@@ -9,6 +9,7 @@ using Ellucian.Web.Http.Configuration;
 using slf4net;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -82,12 +83,14 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <summary>
         /// Get all PayCycle objects, built from database data
         /// </summary>
+        /// <param name="lookbackDate">A optional date which is used to filter previous pay periods with end dates prior to this date.</param>
         /// <returns></returns>
-        public async Task<IEnumerable<PayCycle>> GetPayCyclesAsync()
+        public async Task<IEnumerable<PayCycle>> GetPayCyclesAsync(DateTime? lookbackDate = null)
         {
             var payControlRecords = await GetAllPayControlAsync();
-            var payCycleEntities = new List<PayCycle>();
-            var payCycleRecords = await DataReader.BulkReadRecordAsync<DataContracts.Paycycle>("");
+
+            var payCycleEntities = new List<PayCycle>();           
+            var payCycleRecords = await GetAllPayCyclesAsync();
             if (payCycleRecords == null)
             {
                 var message = string.Format("Unexpected: Bulk data read of pay cycle records returned null.");
@@ -104,13 +107,13 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         {
                             var payControlRecordsForThisCycle = payControlRecords.Where(pc => pc.Recordkey.EndsWith("*" + payCycleRecord.Recordkey));
                             // build the paycycle object (whose value will be referenced by the validPayCycleEntityToAdd variable)
-                            var validPayCycleEntityToAdd = await BuildPayCycle(payCycleRecord, payControlRecordsForThisCycle);
+                            var validPayCycleEntityToAdd = await BuildPayCycle(payCycleRecord, payControlRecordsForThisCycle, lookbackDate);
                             // if it was successfully created, we can add it to our list, and reset the variable
                             if (validPayCycleEntityToAdd != null)
-                            {                                
+                            {
                                 payCycleEntities.Add(validPayCycleEntityToAdd);
-                            }                            
-                            
+                            }
+
                         }
                         catch (Exception e)
                         {
@@ -120,6 +123,20 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 }
             }
             return payCycleEntities;
+        }
+
+        /// <summary>
+        /// Gets all reference pay cycles and caches them if not already cached
+        /// </summary>
+        /// <returns>List of Paycycle data contracts</returns>
+        private async Task<IEnumerable<DataContracts.Paycycle>> GetAllPayCyclesAsync()
+        {
+            var allPayCycles = await GetOrAddToCacheAsync<IEnumerable<DataContracts.Paycycle>>("AllPayCycles",
+                async () =>
+                {
+                    return await DataReader.BulkReadRecordAsync<DataContracts.Paycycle>("");                    
+                }, Level1CacheTimeoutValue);
+            return allPayCycles;
         }
 
         private PayPeriodStatus GetPayPeriodStatus(DataContracts.Paycntrl payControlRecord)
@@ -182,7 +199,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                   , Level1CacheTimeoutValue)).Where(pcf => pcf != null));
         }
 
-        private async Task<PayCycle> BuildPayCycle(DataContracts.Paycycle payCycleRecord, IEnumerable<DataContracts.Paycntrl> payControlRecordsForThisCycle)
+        private async Task<PayCycle> BuildPayCycle(DataContracts.Paycycle payCycleRecord, IEnumerable<DataContracts.Paycntrl> payControlRecordsForThisCycle, DateTime? lookbackDate = null)
         {
             if (payCycleRecord == null)
             {
@@ -199,8 +216,19 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 try
                 {
-                    var payPeriodEntity = await BuildPayPeriod(payPeriodRecord, payCycleRecord, payControlRecordsForThisCycle);
-                    payPeriodEntities.Add(payPeriodEntity);
+                    // if there is a lookback start date set: only add pays periods that have end dates AFTER that date
+                    if (lookbackDate.HasValue && payPeriodRecord.PcyEndDateAssocMember.HasValue)
+                    {
+                        // date checking for end dates that are on or after the lookback date
+                        if (DateTime.Compare(payPeriodRecord.PcyEndDateAssocMember.Value, lookbackDate.Value) >= 0) {
+                            payPeriodEntities.Add(await BuildPayPeriod(payPeriodRecord, payCycleRecord, payControlRecordsForThisCycle));
+                        }
+                    }
+                    // else if: check to see if there is a start and end date set. If so- add the pay period
+                    else if (payPeriodRecord.PcyStartDateAssocMember.HasValue && payPeriodRecord.PcyEndDateAssocMember.HasValue)
+                    {
+                        payPeriodEntities.Add(await BuildPayPeriod(payPeriodRecord, payCycleRecord, payControlRecordsForThisCycle));
+                    }
                 }
                 catch (Exception e)
                 {
@@ -218,7 +246,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             // obtain the specified work week start day and time 
             // - first try the pay cycle definition, otherwise the hrss default
             DayOfWeek workWeekStartDay = (DayOfWeek)0;
-            if (ConvertValueToDay(payCycleRecord.PcyWorkWeekStartDy, ref workWeekStartDay) || 
+            if (ConvertValueToDay(payCycleRecord.PcyWorkWeekStartDy, ref workWeekStartDay) ||
                 ConvertValueToDay((await GetHRSSDefaultsAsync()).HrssDfltWorkWeekStartDy, ref workWeekStartDay))
             {
                 return new PayCycle(payCycleRecord.Recordkey, payCycleRecord.PcyDesc, workWeekStartDay)
@@ -230,13 +258,13 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             else // make a note if the default cannot be obtained.  no pay cycle will be added in this scenario
             {
-                var message = string.Format("Unable to determine work week start day from provided data: {0}, {1}", 
-                    payCycleRecord.PcyWorkWeekStartDy, 
+                var message = string.Format("Unable to determine work week start day from provided data: {0}, {1}",
+                    payCycleRecord.PcyWorkWeekStartDy,
                     (await GetHRSSDefaultsAsync()).HrssDfltWorkWeekStartDy
                 );
                 logger.Info(message);
                 throw new Exception(message);
-            }           
+            }
         }
 
         private async Task<PayPeriod> BuildPayPeriod(DataContracts.PaycyclePayperiods payPeriodRecord, DataContracts.Paycycle payCycleRecord, IEnumerable<DataContracts.Paycntrl> payControlRecordsForThisCycle)

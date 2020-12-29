@@ -1,6 +1,7 @@
 ﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Coordination.HumanResources.Services;
+using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -20,6 +21,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         private Mock<IHumanResourcesReferenceDataRepository> _refRepoMock;
         private EmploymentClassificationService _employmentClassificationService;
         private const string DemographicGuid = "625c69ff-280b-4ed3-9474-662a43616a8a";
+        private IConfigurationRepository _configurationRepository;
+        private Mock<IConfigurationRepository> _configurationRepositoryMock;
 
         [TestInitialize]
         public void Initialize()
@@ -27,13 +30,18 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             MockInitialize();
             _allEmploymentClassifications = new TestEmploymentClassRepository().GetEmploymentClassifications();
             _refRepoMock = new Mock<IHumanResourcesReferenceDataRepository>();
+            _configurationRepositoryMock = new Mock<IConfigurationRepository>();
+            _configurationRepository = _configurationRepositoryMock.Object;
+
             _employmentClassificationService = new EmploymentClassificationService(_refRepoMock.Object, adapterRegistryMock.Object,
-                employeeCurrentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
+                employeeCurrentUserFactory, _configurationRepository, roleRepositoryMock.Object, loggerMock.Object);
         }
 
         [TestCleanup]
         public void Cleanup()
         {
+            _configurationRepository = null;
+            _configurationRepositoryMock = null;
             _allEmploymentClassifications = null;
             _refRepoMock = null;
             _employmentClassificationService = null;

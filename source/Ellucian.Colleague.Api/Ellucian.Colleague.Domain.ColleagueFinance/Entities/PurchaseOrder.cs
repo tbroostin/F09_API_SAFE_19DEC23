@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -72,6 +72,16 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// The purchase order ship to code 
         /// </summary>
         public string ShipToCode { get; set; }
+
+        /// <summary>
+        /// The purchase order shipping method (ship via)
+        /// </summary>
+        public string ShipViaCode { get; set; }
+
+        /// <summary>
+        /// The purchase order commodity code 
+        /// </summary>
+        public string CommodityCode { get; set; }
 
         /// <summary>
         /// The purchase order ship to code and description
@@ -219,6 +229,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         public string DefaultInitiator { get; set; }
 
         /// <summary>
+        /// Used as the default on the commodity code field of the purchase order line items.
+        /// </summary>
+        public string DefaultCommodityCode { get; set; }
+
+        /// <summary>
         /// Void GL Transaction Date
         /// </summary>
         public DateTime? VoidGlTranDate { get; set; }
@@ -230,6 +245,13 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         public bool bypassTaxForms { get; set; }
 
         public bool bypassApprovals { get; set; }
+        
+        public string PrepayVoucherId { get; set; }
+
+        /// <summary>
+        /// List of email addresses - confirmation email notifications would be sent to these email addresses on create / update .
+        /// </summary>
+        public List<string> ConfirmationEmailAddresses { get; set; }
 
         /// <summary>
         /// This constructor initializes the purchase order domain entity

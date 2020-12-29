@@ -1,4 +1,4 @@
-﻿/* Copyright 2017-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2019 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.Base.Reports;
 using Ellucian.Colleague.Coordination.HumanResources.Adapters;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
@@ -205,9 +205,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             personBenefitDeductionRepositoryMock.Setup(r => r.GetPersonBenefitDeductionsAsync(It.IsAny<IEnumerable<string>>()))
                 .Returns<IEnumerable<string>>(personIds => testPersonBenefitDeductionData.GetPersonBenefitDeductionsAsync(personIds));
 
-            personEmploymentStatusRepositoryMock.Setup(r => r.GetPersonEmploymentStatusesAsync(It.IsAny<IEnumerable<string>>()))
-                .Callback<IEnumerable<string>>(ids => testPersonEmploymentStatusData.personEmploymentStatusRecords.ForEach(r => r.personId = ids.First()))
-                .Returns<IEnumerable<string>>(ids => testPersonEmploymentStatusData.GetPersonEmploymentStatusesAsync(ids));
+            personEmploymentStatusRepositoryMock.Setup(r => r.GetPersonEmploymentStatusesAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<DateTime?>()))
+                //.Callback<IEnumerable<string>, DateTime?>(ids => testPersonEmploymentStatusData.personEmploymentStatusRecords.ForEach(r => r.personId = ids.First()))
+                .Returns<IEnumerable<string>>(ids => testPersonEmploymentStatusData.GetPersonEmploymentStatusesAsync(ids, null));
 
             loggerMock.Setup(l => l.IsErrorEnabled).Returns(true);
 
@@ -239,7 +239,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         private PayStatementReportDataContext createReportDataContext(PayStatementSourceData source)
         {
             return new PayStatementReportDataContext(source,
-                new PayrollRegisterEntry(source.Id, source.EmployeeId, source.PeriodEndDate.AddMonths(-1).AddDays(1), source.PeriodEndDate, "BW", 1, source.PaycheckReferenceId, source.StatementReferenceId),
+                new PayrollRegisterEntry(source.Id, source.EmployeeId, source.PeriodEndDate.AddMonths(-1).AddDays(1), source.PeriodEndDate, "BW", 1, source.PaycheckReferenceId, source.StatementReferenceId, false),
                 testPersonBenefitDeductionData.GetPersonBenefitDeductions(source.EmployeeId),
                 testPersonEmploymentStatusData.GetPersonEmploymentStatuses(new string[1] { source.EmployeeId }));
         }

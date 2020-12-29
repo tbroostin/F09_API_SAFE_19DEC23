@@ -1,5 +1,4 @@
-﻿/*Copyright 2014-2017 Ellucian Company L.P. and its affiliates.*/
-using System;
+﻿/*Copyright 2014-2019 Ellucian Company L.P. and its affiliates.*/
 using System.Linq;
 using System.Collections.Generic;
 using Ellucian.Colleague.Domain.FinancialAid.Entities;
@@ -18,6 +17,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             public int SubMaxAmount;
             public int UnsubMaxAmount;
             public int GradPlusMaxAmount;
+            public bool SuppressMaxAmt;
         }
 
         public List<TestLoanLimitation> testLoanLimitsData = new List<TestLoanLimitation>()
@@ -28,6 +28,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 SubMaxAmount = 99999,
                 UnsubMaxAmount = 99999,
                 GradPlusMaxAmount = 99999,
+                SuppressMaxAmt = true
             },
 
             new TestLoanLimitation()
@@ -36,6 +37,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 SubMaxAmount = 99999,
                 UnsubMaxAmount = 99999,
                 GradPlusMaxAmount = 99999,
+                SuppressMaxAmt = false
             },
 
             new TestLoanLimitation()
@@ -44,6 +46,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 SubMaxAmount = 99999,
                 UnsubMaxAmount = 99999,
                 GradPlusMaxAmount = 99999,
+                SuppressMaxAmt = true
             },
             new TestLoanLimitation()
             {
@@ -51,6 +54,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 SubMaxAmount = 12000,
                 UnsubMaxAmount = 18000,
                 GradPlusMaxAmount = 34999,
+                SuppressMaxAmt = false
             },
             new TestLoanLimitation()
             {
@@ -58,6 +62,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 SubMaxAmount = 12000,
                 UnsubMaxAmount = 18000,
                 GradPlusMaxAmount = 34999,
+                SuppressMaxAmt = true
             }
         };
 
@@ -69,7 +74,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 var limitData = testLoanLimitsData.FirstOrDefault(t => t.AwardYear == studentAwardYear.Code);
                 if (limitData != null)
                 {
-                    var limit = new StudentLoanLimitation(studentAwardYear.Code, studentId)
+                    var limit = new StudentLoanLimitation(studentAwardYear.Code, studentId, limitData.SuppressMaxAmt)
                     {
                         GradPlusMaximumAmount = limitData.GradPlusMaxAmount,
                         SubsidizedMaximumAmount = limitData.SubMaxAmount,

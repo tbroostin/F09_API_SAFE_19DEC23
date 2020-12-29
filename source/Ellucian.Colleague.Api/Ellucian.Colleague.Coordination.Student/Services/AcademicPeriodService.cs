@@ -3,6 +3,7 @@
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Adapters;
@@ -12,7 +13,9 @@ using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -23,7 +26,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private ILogger _logger;
 
         public AcademicPeriodService(
-            ITermRepository termRepository, 
+            ITermRepository termRepository,
             IAdapterRegistry adapterRegistry, 
             IConfigurationRepository configurationRepository,
             ICurrentUserFactory currentUserFactory,
@@ -99,7 +102,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="termCode">Specific term filter</param>
         /// <param name="category">Specific category (term, subterm, year)</param>
         /// <returns>Collection of AcademicPeriod DTO objects</returns>
-        public async Task<IEnumerable<Ellucian.Colleague.Dtos.AcademicPeriod4>> GetAcademicPeriods4Async(bool bypassCache, string registration = "", string termCode = "", string category = "")
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.AcademicPeriod4>> GetAcademicPeriods4Async(bool bypassCache, string registration = "", string termCode = "", 
+            string category = "", DateTimeOffset? startOn = null, DateTimeOffset? endOn = null, Dictionary<string, string> filterQualifiers = null)
         {
 
             var academicPeriodCollection = new List<Ellucian.Colleague.Dtos.AcademicPeriod4>();
@@ -113,7 +117,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // Filter on term code
                 if (!string.IsNullOrEmpty(termCode))
                 {
-                    var restrictedTerms = academicPeriodEntities.Where(te => te.Code.Equals(termCode, StringComparison.OrdinalIgnoreCase));
+                    var restrictedTerms = academicPeriodEntities.Where(te => te.Code.Equals(termCode, StringComparison.OrdinalIgnoreCase)).ToList();
                     academicPeriodEntities = restrictedTerms;
                 }
                 // Filter on category
@@ -121,19 +125,120 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (category.Equals("term", StringComparison.OrdinalIgnoreCase))
                     {
-                        var restrictedTerms = academicPeriodEntities.Where(te => te.Code.Equals(te.ReportingTerm, StringComparison.OrdinalIgnoreCase));
+                        var restrictedTerms = academicPeriodEntities.Where(te => te.Code.Equals(te.ReportingTerm, StringComparison.OrdinalIgnoreCase)).ToList();
                         academicPeriodEntities = restrictedTerms;
                     }
                     if (category.Equals("subterm", StringComparison.OrdinalIgnoreCase))
                     {
-                        var restrictedTerms = academicPeriodEntities.Where(te => te.Code.ToUpper() != te.ReportingTerm.ToUpper());
+                        var restrictedTerms = academicPeriodEntities.Where(te => te.Code.ToUpper() != te.ReportingTerm.ToUpper()).ToList();
                         academicPeriodEntities = restrictedTerms;
                     }
                     if (category.ToLower() != "term" && category.ToLower() != "subterm")
                     {
-                        academicPeriodEntities = null;
+                        return academicPeriodCollection;
                     }
                 }
+                if (academicPeriodEntities != null && academicPeriodEntities.Any() && ((startOn.HasValue) || (endOn.HasValue)))
+                {
+                    Expression<Func<AcademicPeriod, bool>> final = null;
+                    var parameter = Expression.Parameter(typeof(AcademicPeriod), "s");
+
+                    Expression startOnExpression = null;
+                    if (startOn.HasValue)
+                    {
+                        string startOperator = "";
+                        if (filterQualifiers != null && filterQualifiers.ContainsKey("StartOn"))
+                        {
+                            filterQualifiers.TryGetValue("StartOn", out startOperator);
+                        }
+                                                                     
+                        var propertyExpression = Expression.PropertyOrField(parameter, "StartDate");
+                        var constant = Expression.Constant(startOn.Value.Date, typeof(DateTime));
+
+                        if (string.IsNullOrEmpty(startOperator))
+                        {
+                            startOnExpression = Expression.Equal(propertyExpression, constant);
+                        }
+                        else
+                        {
+                            switch (startOperator)
+                            {
+                                case ("GE"):
+                                    startOnExpression = Expression.GreaterThanOrEqual(propertyExpression, constant); break;
+                                case ("GT"):
+                                    startOnExpression = Expression.GreaterThan(propertyExpression, constant); break;
+                                case ("LE"):
+                                    startOnExpression = Expression.LessThanOrEqual(propertyExpression, constant); break;
+                                case ("LT"):
+                                    startOnExpression = Expression.LessThan(propertyExpression, constant); break;
+                                case ("NE"):
+                                    startOnExpression = Expression.NotEqual(propertyExpression, constant); break;
+                                case ("EQ"):
+                                    startOnExpression = Expression.Equal(propertyExpression, constant); break;
+                                default:
+                                    startOnExpression = Expression.Equal(propertyExpression, constant); break;
+                            }
+                        }
+                    }
+
+                    Expression endOnExpression = null;
+                    if (endOn.HasValue)
+                    {
+                        string endOperator = "";
+                        if (filterQualifiers != null && filterQualifiers.ContainsKey("EndOn"))
+                        {
+                            filterQualifiers.TryGetValue("EndOn", out endOperator);
+                        }
+
+                        var propertyExpression = Expression.PropertyOrField(parameter, "EndDate");
+                        var constant = Expression.Constant(endOn.Value.Date, typeof(DateTime));
+
+                        if (string.IsNullOrEmpty(endOperator))
+                        {
+                            endOnExpression = Expression.Equal(propertyExpression, constant);
+                        }
+                        else
+                        {
+                            switch (endOperator)
+                            {
+                                case ("GE"):
+                                    endOnExpression = Expression.GreaterThanOrEqual(propertyExpression, constant); break;
+                                case ("GT"):
+                                    endOnExpression = Expression.GreaterThan(propertyExpression, constant); break;
+                                case ("LE"):
+                                    endOnExpression = Expression.LessThanOrEqual(propertyExpression, constant); break;
+                                case ("LT"):
+                                    endOnExpression = Expression.LessThan(propertyExpression, constant); break;
+                                case ("NE"):
+                                    endOnExpression = Expression.NotEqual(propertyExpression, constant); break;
+                                case ("EQ"):
+                                    endOnExpression = Expression.Equal(propertyExpression, constant); break;
+                                default:
+                                    endOnExpression = Expression.Equal(propertyExpression, constant); break;
+                            }
+                        }
+                    }
+
+                    if (startOnExpression != null && endOnExpression == null)
+                    {
+                        final = Expression.Lambda<Func<AcademicPeriod, bool>>(startOnExpression, parameter);
+                    }
+                    else if (startOnExpression == null && endOnExpression != null)
+                    {
+                        final = Expression.Lambda<Func<AcademicPeriod, bool>>(endOnExpression, parameter);
+                    }
+                    else if (startOnExpression != null && endOnExpression != null)
+                    {
+                        var combinedExpression = Expression.And(startOnExpression, endOnExpression);
+                        final = Expression.Lambda<Func<AcademicPeriod, bool>>(combinedExpression, parameter);
+                    }
+
+                    if (final != null)
+                    {
+                        academicPeriodEntities = academicPeriodEntities.AsQueryable().Where(final);
+                    }
+                }
+            
 
                 if (academicPeriodEntities != null && academicPeriodEntities.Any())
                 {
@@ -180,11 +285,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// including census dates and registration status
         /// </summary>
         /// <returns>AcademicPeriod DTO object</returns>
-        public async Task<Ellucian.Colleague.Dtos.AcademicPeriod3> GetAcademicPeriodByGuid3Async(string guid)
+        public async Task<Ellucian.Colleague.Dtos.AcademicPeriod3> GetAcademicPeriodByGuid3Async(string guid, bool bypassCache = false)
         {
             try
             {
-                var termEntities = await _termRepository.GetAsync(true);
+                var termEntities = await _termRepository.GetAsync(bypassCache);
                 var academicPeriods = _termRepository.GetAcademicPeriods(termEntities);
 
                 var academicPeriod = academicPeriods.Where(rt => rt.Guid == guid).FirstOrDefault();
@@ -207,11 +312,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// including census dates and registration status
         /// </summary>
         /// <returns>AcademicPeriod DTO object</returns>
-        public async Task<Ellucian.Colleague.Dtos.AcademicPeriod4> GetAcademicPeriodByGuid4Async(string guid)
+        public async Task<Ellucian.Colleague.Dtos.AcademicPeriod4> GetAcademicPeriodByGuid4Async(string guid, bool bypassCache = false)
         {
             try
             {
-                var termEntities = await _termRepository.GetAsync(true);
+                var termEntities = await _termRepository.GetAsync(bypassCache);
                 var academicPeriods = _termRepository.GetAcademicPeriods(termEntities);
 
                 var academicPeriod = academicPeriods.Where(rt => rt.Guid == guid).FirstOrDefault();
@@ -447,7 +552,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             var category = new Dtos.AcademicPeriodCategory3();
-            category.Parent = new Dtos.AcademicPeriodCategoryParent();
             switch (source.Category)
             {
                 case "year":
@@ -470,7 +574,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     category.Type = AcademicTimePeriod2.Subterm;
                     if (!string.IsNullOrEmpty(source.ParentId))
                     {
-                        category.Parent.AcademicPeriod = new GuidObject2(source.ParentId);
                         category.Parent = new Dtos.AcademicPeriodCategoryParent();
                         category.Parent.Id = source.ParentId;
                     }

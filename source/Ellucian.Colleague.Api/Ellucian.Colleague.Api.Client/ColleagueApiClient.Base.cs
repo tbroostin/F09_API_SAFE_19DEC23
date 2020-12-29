@@ -1,4 +1,7 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+
+using Ellucian.Colleague.Api.Client.Core;
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Rest.Client.Exceptions;
@@ -7,10 +10,11 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Net;
-using System.Threading.Tasks;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Api.Client
 {
@@ -38,6 +42,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecutePostRequestWithResponse(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<Ellucian.Colleague.Dtos.Base.Address>>(response.Content.ReadAsStringAsync().Result);
             }
@@ -62,6 +67,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_addressPath, id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Ellucian.Colleague.Dtos.Base.Address>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -796,7 +802,7 @@ namespace Ellucian.Colleague.Api.Client
         /// </summary>
         /// <param name="personIds">List of Person Ids to retrieve phone numbers for</param>
         /// <returns>List of PhoneNumber objects for requested person Ids</returns>
-        public IEnumerable<PhoneNumber> GetPersonPhonesByIds(IEnumerable<string> personIds)
+        public async Task<IEnumerable<PhoneNumber>> GetPersonPhonesByIds(IEnumerable<string> personIds)
         {
             PhoneNumberQueryCriteria criteria = new PhoneNumberQueryCriteria();
             criteria.PersonIds = personIds;
@@ -813,7 +819,8 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                var response = ExecutePostRequestWithResponse(criteria, urlPath, headers: headers);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<PhoneNumber>>(response.Content.ReadAsStringAsync().Result);
             }
             catch (Exception ex)
@@ -827,7 +834,7 @@ namespace Ellucian.Colleague.Api.Client
         /// </summary>
         /// <param name="personIds">List of Person Ids to retrieve phone numbers for</param>
         /// <returns>List of PilotPhoneNumber objects for requested person Ids</returns>
-        public IEnumerable<PilotPhoneNumber> GetPilotPersonPhonesByIds(IEnumerable<string> personIds)
+        public async Task<IEnumerable<PilotPhoneNumber>> GetPilotPersonPhonesByIds(IEnumerable<string> personIds)
         {
             PhoneNumberQueryCriteria criteria = new PhoneNumberQueryCriteria();
             criteria.PersonIds = personIds;
@@ -844,7 +851,8 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderPilotVersion1);
-                var response = ExecutePostRequestWithResponse(criteria, urlPath, headers: headers);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<PilotPhoneNumber>>(response.Content.ReadAsStringAsync().Result);
             }
             catch (Exception ex)
@@ -875,6 +883,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderPilotVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<PilotPhoneNumber>>(response.Content.ReadAsStringAsync().Result);
             }
@@ -900,6 +909,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_phoneNumberPath, id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<PhoneNumber>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -1148,6 +1158,31 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
+        /// Gets the user photo configuration.
+        /// </summary>
+        /// <returns></returns>
+        public async Task<PhotoConfiguration> GetUserPhotoConfigurationAsync()
+        {
+            try
+            {
+                string path = UrlUtility.CombineUrlPath("configuration/photo");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(path);
+                PhotoConfiguration photoConfig = new PhotoConfiguration()
+                {
+                    PhotosConfigured = JsonConvert.DeserializeObject<bool>(await response.Content.ReadAsStringAsync())
+                };
+                return photoConfig;
+            }
+            catch (Exception e)
+            {
+                logger.Debug(e, "Unable to get user photo configuration");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Gets the list of all available health conditions
         /// </summary>
         /// <returns>A list of health conditions</returns>
@@ -1194,6 +1229,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<Ellucian.Colleague.Dtos.Base.Address>>(await response.Content.ReadAsStringAsync());
             }
@@ -1218,6 +1254,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_addressPath, personId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Ellucian.Colleague.Dtos.Base.Address>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -1969,6 +2006,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<PhoneNumber>>(await response.Content.ReadAsStringAsync());
             }
@@ -1994,6 +2032,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_phoneNumberPath, id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<PhoneNumber>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -2149,6 +2188,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_personsPath, personId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderPersonProfileVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers, useCache: useCache);
                 return JsonConvert.DeserializeObject<Profile>(await response.Content.ReadAsStringAsync());
             }
@@ -2171,6 +2211,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_personsPath, personId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderProxyUserVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<PersonProxyDetails>(await response.Content.ReadAsStringAsync());
             }
@@ -2552,6 +2593,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_personsPath, personId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderPersonProfileVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, useCache: useCache, headers: headers);
                 return JsonConvert.DeserializeObject<Profile>(response.Content.ReadAsStringAsync().Result);
             }
@@ -2615,219 +2657,6 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get PersonEmergencyInformation");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Gets the list of tax form consent choices for a specified person
-        /// </summary>
-        /// <param name="personId">This is the person id.</param>
-        /// <returns>A list of tax form consent choices.</returns>
-        public async Task<IEnumerable<TaxFormConsent>> GetTaxFormConsents(string personId, TaxForms taxForm)
-        {
-            try
-            {
-                // Create and execute a request to get a list of tax form consents
-                string[] pathStrings = new string[] { _taxFormConsentsPath, personId, taxForm.ToString() };
-                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
-
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
-
-                var resource = JsonConvert.DeserializeObject<List<TaxFormConsent>>(await response.Content.ReadAsStringAsync());
-                return resource;
-            }
-            // Log any exception, then rethrow it and let calling code determine how to handle it.
-            catch (ResourceNotFoundException ex)
-            {
-                logger.Error(ex, "Unable to get tax form consents for Person ID {0}.", personId);
-                throw;
-            }
-            catch (Exception e)
-            {
-                logger.Error(e, "Unable to get tax form consents.");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Get a W-2 tax form PDF
-        /// </summary>
-        /// <param name="personId">ID of the person assigned to and requesting the W-2.</param>
-        /// <param name="recordId">The record ID where the W-2 pdf data is stored</param>
-        /// <returns>Byte array containing PDF data</returns>
-        public async Task<byte[]> GetW2TaxFormPdf(string personId, string recordId)
-        {
-            if (string.IsNullOrEmpty(personId))
-                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
-
-            if (string.IsNullOrEmpty(recordId))
-                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
-
-            try
-            {
-                // Build url path and create and execute a request to get the tax form pdf
-                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxFormW2PdfPath, recordId);
-
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                headers.Add(AcceptHeaderKey, "application/pdf");
-                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
-                headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
-                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
-
-                var resource = response.Content.ReadAsByteArrayAsync().Result;
-                return resource;
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex.GetBaseException(), "Unable to retrieve W-2 tax form pdf.");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Get a W-2c tax form PDF
-        /// </summary>
-        /// <param name="personId">ID of the person assigned to and requesting the W-2c.</param>
-        /// <param name="recordId">The record ID where the W-2c pdf data is stored</param>
-        /// <returns>Byte array containing PDF data</returns>
-        public async Task<byte[]> GetW2cTaxFormPdf(string personId, string recordId)
-        {
-            if (string.IsNullOrEmpty(personId))
-                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
-
-            if (string.IsNullOrEmpty(recordId))
-                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
-
-            try
-            {
-                // Build url path and create and execute a request to get the tax form pdf
-                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxFormW2cPdfPath, recordId);
-
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                headers.Add(AcceptHeaderKey, "application/pdf");
-                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
-                headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
-                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
-
-                var resource = response.Content.ReadAsByteArrayAsync().Result;
-                return resource;
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex.GetBaseException(), "Unable to retrieve W-2c tax form pdf.");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Get a 1095-C tax form PDF
-        /// </summary>
-        /// <param name="personId">ID of the person assigned to and requesting the 1095-C.</param>
-        /// <param name="recordId">The record ID where the 1095-C pdf data is stored</param>
-        /// <returns>Byte array containing PDF data</returns>
-        public async Task<byte[]> Get1095cTaxFormPdf(string personId, string recordId)
-        {
-            if (string.IsNullOrEmpty(personId))
-                throw new ArgumentNullException("personId", "PersonId ID cannot be null or empty.");
-
-            if (string.IsNullOrEmpty(recordId))
-                throw new ArgumentNullException("recordId", "Record ID cannot be null or empty.");
-
-            try
-            {
-                // Build url path and create and execute a request to get the tax form pdf
-                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxForm1095cPdfPath, recordId);
-
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                headers.Add(AcceptHeaderKey, "application/pdf");
-                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
-                headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
-                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
-
-                var resource = response.Content.ReadAsByteArrayAsync().Result;
-                return resource;
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex.GetBaseException(), "Unable to retrieve 1095-C tax form pdf.");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Get a T4 tax form PDF
-        /// </summary>
-        /// <param name="personId">ID of the person assigned to and requesting the T4.</param>
-        /// <param name="recordId">The record ID where the T4 pdf data is stored</param>
-        /// <returns>Byte array containing PDF data</returns>
-        public async Task<byte[]> GetT4TaxFormPdf(string personId, string recordId)
-        {
-            if (string.IsNullOrEmpty(personId))
-                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
-
-            if (string.IsNullOrEmpty(recordId))
-                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
-
-            try
-            {
-                // Build url path and create and execute a request to get the tax form pdf
-                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxFormT4PdfPath, recordId);
-
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                headers.Add(AcceptHeaderKey, "application/pdf");
-                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
-                headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
-                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
-
-                var resource = response.Content.ReadAsByteArrayAsync().Result;
-                return resource;
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex.GetBaseException(), "Unable to retrieve T4 tax form pdf.");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Get a T4A tax form PDF
-        /// </summary>
-        /// <param name="personId">ID of the person assigned to and requesting the T4A.</param>
-        /// <param name="recordId">The record ID where the T4A pdf data is stored</param>
-        /// <returns>Byte array containing PDF data</returns>
-        public async Task<byte[]> GetT4aTaxFormPdf(string personId, string recordId)
-        {
-            if (string.IsNullOrEmpty(personId))
-                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
-
-            if (string.IsNullOrEmpty(recordId))
-                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
-
-            try
-            {
-                // Build url path and create and execute a request to get the tax form pdf
-                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxFormT4aPdfPath, recordId);
-
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                headers.Add(AcceptHeaderKey, "application/pdf");
-                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
-                headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
-                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
-
-                var resource = response.Content.ReadAsByteArrayAsync().Result;
-                return resource;
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex.GetBaseException(), "Unable to retrieve T4A tax form pdf.");
                 throw;
             }
         }
@@ -2905,60 +2734,6 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get the proxy configuration.");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Create a new tax form consent entry.
-        /// </summary>
-        /// <param name="consent">TaxFormConsent DTO</param>
-        /// <returns>TaxFormConsent DTO</returns>
-        public async Task<TaxFormConsent> AddTaxFormConsent(TaxFormConsent consent)
-        {
-            try
-            {
-                // Create and execute a request to create a new 
-                string[] pathStrings = new string[] { _taxFormConsentsPath };
-                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
-
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                var response = await ExecutePostRequestWithResponseAsync<TaxFormConsent>(consent, urlPath, headers: headers);
-                var resource = JsonConvert.DeserializeObject<TaxFormConsent>(await response.Content.ReadAsStringAsync());
-                return resource;
-            }
-            catch (Exception e)
-            {
-                logger.Error(e, "Unable to create new consent entry.");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Gets the tax form configuration for the tax form passed in.
-        /// </summary>
-        /// <param name="taxFormId">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
-        /// <returns>Tax Form Configuration for the type of tax form.</returns>
-        public async Task<TaxFormConfiguration> GetTaxFormConfiguration(TaxForms taxFormId)
-        {
-            try
-            {
-                // Create and execute a request to get the tax form configuration
-                string[] pathStrings = new string[] { _configurationPath, _taxFormsPath, taxFormId.ToString() };
-                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
-
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
-
-                var resource = JsonConvert.DeserializeObject<TaxFormConfiguration>(await response.Content.ReadAsStringAsync());
-                return resource;
-            }
-            // Log any exception, then rethrow it and let calling code determine how to handle it.
-            catch (Exception e)
-            {
-                logger.Error(e, "Unable to get tax form configuration.");
                 throw;
             }
         }
@@ -3119,6 +2894,7 @@ namespace Ellucian.Colleague.Api.Client
                 var urlPath = UrlUtility.CombineUrlPath(_personsPath, profile.Id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderPersonProfileVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePutRequestWithResponseAsync<Profile>(profile, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<Profile>(await response.Content.ReadAsStringAsync());
             }
@@ -3145,6 +2921,7 @@ namespace Ellucian.Colleague.Api.Client
                 var urlPath = UrlUtility.CombineUrlPath(_personsPath, profile.Id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderPersonProfileVersion2);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePutRequestWithResponseAsync<Profile>(profile, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<Profile>(await response.Content.ReadAsStringAsync());
             }
@@ -3163,17 +2940,17 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="newState">The state that the message should be changed to.</param>
         /// <returns>The updated <see cref="WorkTask">Message Work Task</see> object.</returns>
         public async Task<WorkTask> UpdateMessageWorklistAsync(string messageId, string personId, ExecutionState newState)
-        { 
+        {
             if (messageId == null)
             {
                 throw new ArgumentNullException("message", "message cannot be null.");
             }
             try
             {
-        
+
                 var messages = await GetWorkTasksAsync(personId);
                 WorkTask msg = new WorkTask();
-                
+
                 foreach (var taskDto in messages)
                 {
                     if (taskDto.Id == messageId)
@@ -3183,7 +2960,7 @@ namespace Ellucian.Colleague.Api.Client
                 }
 
                 //var urlPath = UrlUtility.CombineUrlPathAndArguments(_messagePath, msgInfo);
-                var queryString = UrlUtility.BuildEncodedQueryString("personId", personId,"newState", newState.ToString());
+                var queryString = UrlUtility.BuildEncodedQueryString("personId", personId, "newState", newState.ToString());
                 var combinedUrl = UrlUtility.CombineUrlPathAndArguments(_messagePath, queryString);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
@@ -3195,7 +2972,7 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(ex, "Unable to update Message.");
                 throw;
             }
-            
+
         }
 
         /// <summary>
@@ -3232,7 +3009,7 @@ namespace Ellucian.Colleague.Api.Client
             }
             try
             {
-                var queryString = UrlUtility.BuildEncodedQueryString("workflowDefId", workflowDefId,"processCode", processCode, "subjectLine", subjectLine, "advisorId", advisorId);
+                var queryString = UrlUtility.BuildEncodedQueryString("workflowDefId", workflowDefId, "processCode", processCode, "subjectLine", subjectLine, "advisorId", advisorId);
                 var combinedUrl = UrlUtility.CombineUrlPathAndArguments(_messagePath, queryString);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
@@ -3261,6 +3038,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent);
                 var response = await ExecutePostRequestWithResponseAsync<PersonMatchCriteria>(criteria, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<PersonMatchResult>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -3499,34 +3277,6 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception e)
             {
                 logger.Error(e, "Error retrieving WorkTask items for person " + personId);
-                throw;
-            }
-        }
-        /// <summary>
-        /// Retrieve a set of tax form statement DTOs.
-        /// </summary>
-        /// <param name="personId">Person ID</param>
-        /// <param name="taxForm">Type of tax form</param>
-        /// <returns>Set of tax form statements</returns>
-        public async Task<IEnumerable<TaxFormStatement2>> GetTaxFormStatements2(string personId, TaxForms taxForm)
-        {
-            if (string.IsNullOrEmpty(personId))
-                throw new ArgumentNullException("personId", "personId is required.");
-
-            try
-            {
-                // Create and execute a request to get all projects
-                string urlPath = UrlUtility.CombineUrlPath(_taxFormStatementsPath, personId, taxForm.ToString());
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
-
-                var resource = JsonConvert.DeserializeObject<List<TaxFormStatement2>>(await response.Content.ReadAsStringAsync());
-                return resource;
-            }
-            catch (Exception e)
-            {
-                logger.Error(e, "Unable to get tax form statements.");
                 throw;
             }
         }
@@ -4409,11 +4159,1648 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
+        /// This method gets all of a person's correspondence requests
+        /// </summary>
+        /// <param name="studentId">Student Id for whom to retrieve documents</param>
+        /// <returns>A list of the given student's financial aid documents across all FA Years</returns>
+        public async Task<IEnumerable<CorrespondenceRequest>> GetCorrespondenceRequestsAsync(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId");
+            }
+
+            try
+            {
+                var query = UrlUtility.BuildEncodedQueryString("personId", personId);
+                var urlPath = UrlUtility.CombineUrlPathAndArguments(_correspondenceRequestsPath, query);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<CorrespondenceRequest>>(response.Content.ReadAsStringAsync().Result);
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get correspondence requests");
+                throw;
+            }
+        }
+
+
+        /// <summary>
+        /// Used to optionally update the correspondence request status and notify back office when a new attachment is added to a correspondence request.
+        /// </summary>
+        /// <param name="attachmentNotification">Object that carries Person ID (required), Communication Code (required), Assign Date (required) and optioanl instance. Used to identify the specific correspondence request.</param>
+        /// <returns>The Correspondence Request that was notified of an attachment. It may have an updated status description.</returns>
+        public async Task<CorrespondenceRequest> PutAttachmentNotificationAsync(CorrespondenceAttachmentNotification attachmentNotification)
+        {
+            if (attachmentNotification == null)
+            {
+                throw new ArgumentNullException("attachmentNotification");
+            }
+
+            if (string.IsNullOrWhiteSpace(attachmentNotification.PersonId))
+            {
+                throw new ArgumentException("Person Id is required in CorrespondenceAttachmentNotification");
+            }
+
+            if (string.IsNullOrWhiteSpace(attachmentNotification.CommunicationCode))
+            {
+                throw new ArgumentException("Communication Code is required in CorrespondenceAttachmentNotification");
+            }
+
+            var urlPath = UrlUtility.CombineUrlPath(new string[] { _correspondenceRequestsPath, _attachmentNotificationPath });
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+            try
+            {
+                var response = await ExecutePutRequestWithResponseAsync(attachmentNotification, urlPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<CorrespondenceRequest>(result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to PUT the new attachment notification.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously returns the Required Document Configuration.
+        /// </summary>
+        /// <returns>The Required Document Configuration object</returns>
+        public async Task<RequiredDocumentConfiguration> GetRequiredDocumentConfigurationAsync()
+        {
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_configurationPath, _requiredDocument);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var configuration = JsonConvert.DeserializeObject<RequiredDocumentConfiguration>(await responseString.Content.ReadAsStringAsync());
+
+                return configuration;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the Required Document Configuration.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Returns the authentication scheme for the given username
+        /// </summary>
+        /// <param name="username">Username</param>
+        /// <returns>Authentication scheme</returns>
+        public async Task<AuthenticationScheme> GetAuthenticationSchemeAsync(string username)
+        {
+            if (string.IsNullOrEmpty(username))
+            {
+                throw new ArgumentNullException("username", "Username is required to get authentication scheme.");
+            }
+
+            try
+            {
+                var query = UrlUtility.BuildEncodedQueryString("username", username);
+                var urlPath = UrlUtility.CombineUrlPathAndArguments(_authenticationSchemePath, query);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var authScheme = JsonConvert.DeserializeObject<AuthenticationScheme>(await responseString.Content.ReadAsStringAsync());
+
+                return authScheme;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the Authentication Scheme.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get attachments
+        /// </summary>
+        /// <param name="owner">Owner's PERSON ID (optional) to get attachments for</param>
+        /// <param name="collectionId">Collection Id (optional) to get attachments for</param>
+        /// <param name="tagOne">TagOne value to get attachments for</param>
+        /// <returns>List of <see cref="Attachment">Attachments</see></returns>
+        public async Task<IEnumerable<Attachment>> GetAttachmentsAsync(string owner = null, string collectionId = null, string tagOne = null)
+        {
+            try
+            {
+                var urlParms = new Dictionary<string, string>();
+                if (!string.IsNullOrEmpty(owner))
+                    urlParms.Add("owner", owner);
+                if (!string.IsNullOrEmpty(collectionId))
+                    urlParms.Add("collectionid", collectionId);
+                if (!string.IsNullOrEmpty(tagOne))
+                    urlParms.Add("tagone", tagOne);
+
+                var urlPath = urlParms.Count == 0 ? _attachmentsPath : UrlUtility.CombineEncodedUrlPathAndArguments(_attachmentsPath, urlParms);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+
+                var resource = JsonConvert.DeserializeObject<IEnumerable<Attachment>>(response.Content.ReadAsStringAsync().Result);
+                return resource;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get attachments.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the attachment's contents
+        /// </summary>
+        /// <param name="attachmentId">Id of the attachment whose content is requested</param>
+        /// <returns>A tuple whose item1 is the file's name, item2 is the file content in bytes, and item 3 is its encryption metadata</returns>
+        public async Task<Tuple<string, byte[], AttachmentEncryption>> GetAttachmentContentAsync(string attachmentId)
+        {
+            if (string.IsNullOrWhiteSpace(attachmentId))
+            {
+                throw new ArgumentNullException("attachmentId");
+            }
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(new string[] { _attachmentsPath, attachmentId, "content" });
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                IEnumerable<string> disposition;
+                response.Content.Headers.TryGetValues("content-disposition", out disposition);
+                var fileName = response.Content.Headers.ContentDisposition.FileName;
+                var contentBytes = await response.Content.ReadAsByteArrayAsync();
+
+                // get the encryption metadata, if present, from the response headers
+                AttachmentEncryption attachmentEncryption = null;
+                string encrKeyId = null;
+                IEnumerable<string> headerValues;
+                if (response.Headers.TryGetValues("X-Encr-Key-Id", out headerValues))
+                {
+                    encrKeyId = headerValues.FirstOrDefault();
+
+                    // get the rest of the encryption metadata
+                    string encrIV = null;
+                    string encrContentKey = null;
+                    string encrType = null;
+                    if (response.Headers.TryGetValues("X-Encr-IV", out headerValues))
+                        encrIV = headerValues.FirstOrDefault();
+                    if (response.Headers.TryGetValues("X-Encr-Content-Key", out headerValues))
+                        encrContentKey = headerValues.FirstOrDefault();
+                    if (response.Headers.TryGetValues("X-Encr-Type", out headerValues))
+                        encrType = headerValues.FirstOrDefault();
+
+                    attachmentEncryption = new AttachmentEncryption(encrKeyId, encrType, Convert.FromBase64String(encrContentKey),
+                            Convert.FromBase64String(encrIV));
+                }
+
+                return new Tuple<string, byte[], AttachmentEncryption>(fileName.Replace("\"", ""), contentBytes, attachmentEncryption);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get this attachment's content.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Query attachments
+        /// </summary>
+        /// <param name="criteria">Criteria to query attachments by</param>
+        /// <returns>List of <see cref="Attachment">Attachments matching the query criteria</see></returns>
+        public async Task<IEnumerable<Attachment>> QueryAttachmentsAsync(AttachmentSearchCriteria criteria)
+        {
+            if (criteria == null)
+                throw new ArgumentNullException("criteria");
+
+            var headers = new NameValueCollection
+            {
+                { AcceptHeaderKey, _mediaTypeHeaderVersion1 }
+            };
+
+            try
+            {
+                var response = await ExecutePostRequestWithResponseAsync(criteria, UrlUtility.CombineUrlPath(_qapiPath, _attachmentsPath), headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<IEnumerable<Attachment>>(result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to POST an attachment query.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Send an attachment record along with its contents.
+        /// </summary>
+        /// <param name="attachment">The attachment metadata record</param>
+        /// <param name="fileContent">The stream of the file content for this attachment</param>
+        /// <param name="attachmentEncryption">The attachment's encryption metadata</param>
+        /// <returns>Newly created <see cref="Attachment">Attachment</see></returns>
+        public async Task<Attachment> PostAttachmentAndContentsAsync(Attachment attachment, Stream fileContent, AttachmentEncryption attachmentEncryption)
+        {
+            if (attachment == null)
+            {
+                throw new ArgumentNullException("attachment");
+            }
+            if (fileContent == null)
+            {
+                throw new ArgumentNullException("fileContent");
+            }
+
+            // create the multi-part post request. 
+            // Use guid as boundary to guarantee no collision.
+            var multiPartContent = new MultipartContent("mixed", "----" + Guid.NewGuid().ToString());
+
+            // attachment metadata
+            var attachmentMetadata = new StringContent(JsonConvert.SerializeObject(attachment));
+            attachmentMetadata.Headers.ContentType = new MediaTypeHeaderValue(_mediaTypeHeaderVersion1);
+            attachmentMetadata.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment");
+            multiPartContent.Add(attachmentMetadata);
+
+            // attachment content
+            var attachmentContent = new StreamContent(fileContent);
+            attachmentContent.Headers.ContentType = new MediaTypeHeaderValue(attachment.ContentType);
+            attachmentContent.Headers.ContentDisposition = new ContentDispositionHeaderValue("datafile") { FileName = attachment.Name };
+            multiPartContent.Add(attachmentContent);
+
+            // use generic v1 header for accept, since this endpoint returns the attachment metadata only.
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+            // add attachment encryption metadata, if present
+            if (attachmentEncryption != null)
+            {
+                headers.Add("X-Encr-Content-Key", Convert.ToBase64String(attachmentEncryption.EncrContentKey));
+                headers.Add("X-Encr-IV", Convert.ToBase64String(attachmentEncryption.EncrIV));
+                headers.Add("X-Encr-Key-Id", attachmentEncryption.EncrKeyId);
+                headers.Add("X-Encr-Type", attachmentEncryption.EncrType);
+            }
+
+            try
+            {
+                var response = await ExecutePostHttpContentRequestWithResponseAsync(multiPartContent, _attachmentsPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<Attachment>(result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to POST an attachment and its contents.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Create the new attachment
+        /// </summary>
+        /// <param name="attachment">The attachment to create</param>
+        /// <returns>Newly created <see cref="Attachment">Attachment</see></returns>
+        public async Task<Attachment> PostAttachmentAsync(Attachment attachment, AttachmentEncryption attachmentEncryption)
+        {
+            if (attachment == null)
+            {
+                throw new ArgumentNullException("attachment");
+            }
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+            // add attachment encryption metadata, if present
+            if (attachmentEncryption != null)
+            {
+                headers.Add("X-Encr-Content-Key", Convert.ToBase64String(attachmentEncryption.EncrContentKey));
+                headers.Add("X-Encr-IV", Convert.ToBase64String(attachmentEncryption.EncrIV));
+                headers.Add("X-Encr-Key-Id", attachmentEncryption.EncrKeyId);
+                headers.Add("X-Encr-Type", attachmentEncryption.EncrType);
+            }
+
+            try
+            {
+                var response = await ExecutePostRequestWithResponseAsync(attachment, _attachmentsPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<Attachment>(result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to POST an attachment.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Update the attachment
+        /// </summary>
+        /// <param name="attachmentId">The ID of the attachment to update</param>
+        /// <param name="attachment">The attachment doc to update with</param>
+        /// <returns>Newly created <see cref="Attachment">Attachment</see></returns>
+        public async Task<Attachment> PutAttachmentAsync(string attachmentId, Attachment attachment)
+        {
+            if (attachment == null)
+            {
+                throw new ArgumentNullException("attachment");
+            }
+
+            if (string.IsNullOrWhiteSpace(attachmentId))
+            {
+                throw new ArgumentNullException("attachmentId");
+            }
+
+            if (attachmentId != attachment.Id)
+            {
+                throw new ArgumentException("The attachment ID from the URL does not match the one in the body");
+            }
+
+            var urlPath = UrlUtility.CombineUrlPath(new string[] { _attachmentsPath, attachmentId });
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+            try
+            {
+                var response = await ExecutePutRequestWithResponseAsync(attachment, urlPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<Attachment>(result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to PUT an attachment.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Delete the attachment
+        /// </summary>
+        /// <param name="attachmentId">Id of the attachment to delete</param>
+        public async Task DeleteAttachmentAsync(string attachmentId)
+        {
+            if (string.IsNullOrWhiteSpace(attachmentId))
+            {
+                throw new ArgumentNullException("attachmentId");
+            }
+            var urlPath = UrlUtility.CombineUrlPath(new string[] { _attachmentsPath, attachmentId });
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+            try
+            {
+                var response = await ExecuteDeleteRequestWithResponseAsync(urlPath, headers: headers);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to DELETE an attachment.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the attachment collection by ID
+        /// </summary>
+        /// <param name="attachmentCollectionId">The attachment collection Id</param>
+        /// <returns>The <see cref="AttachmentCollection">Attachment Collection</see></returns>
+        public async Task<AttachmentCollection> GetAttachmentCollectionByIdAsync(string attachmentCollectionId)
+        {
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_attachmentsCollectionPath, attachmentCollectionId);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+
+                var resource = JsonConvert.DeserializeObject<AttachmentCollection>(response.Content.ReadAsStringAsync().Result);
+                return resource;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get attachment collection by ID.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the attachment collections for current user
+        /// </summary>
+        /// <returns>List of <see cref="AttachmentCollection">Attachment Collections</see></returns>
+        public async Task<IEnumerable<AttachmentCollection>> GetAttachmentCollectionsByUserAsync()
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var response = await ExecuteGetRequestWithResponseAsync(_attachmentsCollectionPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+
+                var resource = JsonConvert.DeserializeObject<IEnumerable<AttachmentCollection>>(response.Content.ReadAsStringAsync().Result);
+                return resource;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get attachment collection by user.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Create the new attachment collection
+        /// </summary>
+        /// <param name="attachmentCollection">The <see cref="AttachmentCollection">Attachment Collection</see> to create</param>
+        /// <returns>Newly created <see cref="AttachmentCollection">Attachment Collection</see></returns>
+        public async Task<AttachmentCollection> PostAttachmentCollectionAsync(AttachmentCollection attachmentCollection)
+        {
+            if (attachmentCollection == null)
+            {
+                throw new ArgumentNullException("attachmentCollection");
+            }
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+            try
+            {
+                var response = await ExecutePostRequestWithResponseAsync(attachmentCollection, _attachmentsCollectionPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<AttachmentCollection>(result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to POST an attachment collection.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Update the attachment collection
+        /// </summary>
+        /// <param name="attachmentCollectionId">The ID of the attachment collection to update</param>
+        /// <param name="attachmentCollection">The updated <see cref="AttachmentCollection">Attachment Collection</see></param>
+        public async Task<AttachmentCollection> PutAttachmentCollectionAsync(string attachmentCollectionId, AttachmentCollection attachmentCollection)
+        {
+            if (attachmentCollection == null)
+            {
+                throw new ArgumentNullException("attachmentCollection");
+            }
+
+            if (string.IsNullOrWhiteSpace(attachmentCollectionId))
+            {
+                throw new ArgumentNullException("attachmentCollectionId");
+            }
+
+            if (attachmentCollectionId != attachmentCollection.Id)
+            {
+                throw new ArgumentException("The attachment collection ID from the URL does not match the one in the body");
+            }
+
+            var urlPath = UrlUtility.CombineUrlPath(new string[] { _attachmentsCollectionPath, attachmentCollectionId });
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+            try
+            {
+                var response = await ExecutePutRequestWithResponseAsync(attachmentCollection, urlPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<AttachmentCollection>(result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to PUT an attachment collection.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the attachment collection effective permissions for the current user
+        /// </summary>
+        /// <param name="attachmentCollectionId">The attachment collection Id</param>
+        /// <returns>The <see cref="AttachmentCollectionEffectivePermissions">Attachment Collection Effective Permissions</see></returns>
+        public async Task<AttachmentCollectionEffectivePermissions> GetAttachmentCollectionEffectivePermissionsAsync(string attachmentCollectionId)
+        {
+            if (string.IsNullOrEmpty(attachmentCollectionId))
+                throw new ArgumentNullException("attachmentCollectionId");
+
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_attachmentsCollectionPath, attachmentCollectionId, _attachmentsCollectionEffectivePermissionsPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                return JsonConvert.DeserializeObject<AttachmentCollectionEffectivePermissions>(response.Content.ReadAsStringAsync().Result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get attachment collection effective permissions.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a Content Key
+        /// </summary>
+        /// <param name="id">The encryption key ID to use to encrypt the content key</param>
+        /// <returns>The <see cref="ContentKey">Content Key</see></returns>
+        public async Task<ContentKey> GetContentKeyAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+                throw new ArgumentNullException("id");
+
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_contentKeysPath, id);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+
+                return JsonConvert.DeserializeObject<ContentKey>(response.Content.ReadAsStringAsync().Result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get a content key.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Post an encrypted content key to have it decrypted
+        /// </summary>
+        /// <param name="contentKeyRequest">The <see cref="ContentKeyRequest">Content Key Request</see></param>
+        /// <returns>The <see cref="ContentKey">Content Key</see></returns>
+        public async Task<ContentKey> PostContentKeyAsync(ContentKeyRequest contentKeyRequest)
+        {
+            if (contentKeyRequest == null)
+                throw new ArgumentNullException("contentKeyRequest");
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+            try
+            {
+                var response = await ExecutePostRequestWithResponseAsync(contentKeyRequest, _contentKeysPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<ContentKey>(result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to POST a content key.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get all <see cref="AgreementPeriod">agreement periods</see>
+        /// </summary>
+        /// <param name="useCache">Defaults to true: If true, cached repository data will be returned when possible, otherwise fresh data is returned.</param>
+        /// <returns>All agreement periods</returns>
+        public async Task<IEnumerable<AgreementPeriod>> GetAgreementPeriodsAsync(bool useCache = true)
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(_agreementPeriodsPath, headers: headers, useCache: useCache);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<AgreementPeriod>>(response.Content.ReadAsStringAsync().Result);
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get agreement periods.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieve person agreements using person agreement query criteria
+        /// </summary>
+        /// <param name="criteria">Query criteria for retrieving person agreements</param>
+        /// <returns>Collection of person agreements for a given person</returns>
+        public async Task<IEnumerable<PersonAgreement>> QueryPersonAgreementsByPostAsync(PersonAgreementQueryCriteria criteria)
+        {
+            if (criteria == null || string.IsNullOrEmpty(criteria.PersonId))
+            {
+                throw new ArgumentNullException("id", "A person ID is required to retrieve person agreements by person ID.");
+            }
+            try
+            {
+                // Build url path from qapi path and person-agreements path
+                string[] pathStrings = new string[] { _qapiPath, _personAgreementsPath };
+                var urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<IEnumerable<Ellucian.Colleague.Dtos.Base.PersonAgreement>>(response.Content.ReadAsStringAsync().Result);
+            }
+            catch (Exception ex)
+            {
+                string message = string.Format("Person agreements data for person {0} could not be retrieved.", criteria.PersonId);
+                logger.Error(ex.GetBaseException(), message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Updates a <see cref="PersonAgreement">person agreement</see>. Users can only update the status and the date and time that action was taken on the person agreement.
+        /// </summary>
+        /// <param name="agreement">The <see cref="PersonAgreement">person agreement</see> to update</param>
+        /// <returns>An updated <see cref="PersonAgreement">person agreement</see></returns>
+        /// <accessComments>Authenticated users can only update their own person agreements.</accessComments>
+        public async Task<PersonAgreement> UpdatePersonAgreementAsync(PersonAgreement agreement)
+        {
+            if (agreement == null)
+            {
+                throw new ArgumentNullException("agreement", "A person agreement is required when updating a person agreement.");
+            }
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePutRequestWithResponseAsync(agreement, _personAgreementsPath, headers: headers);
+                return JsonConvert.DeserializeObject<Ellucian.Colleague.Dtos.Base.PersonAgreement>(response.Content.ReadAsStringAsync().Result);
+            }
+            catch (Exception ex)
+            {
+                string message = string.Format("An error occurred while updating person agreement {0} for person {1}.", agreement.Id, agreement.PersonId);
+                logger.Error(ex.GetBaseException(), message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously returns the Session Configuration.
+        /// </summary>
+        /// <returns>The Session Configuration object</returns>
+        public async Task<SessionConfiguration> GetSessionConfigurationAsync()
+        {
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_configurationPath, _sessionPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var configuration = JsonConvert.DeserializeObject<SessionConfiguration>(await responseString.Content.ReadAsStringAsync());
+
+                return configuration;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the Session Configuration.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Requests a user ID recovery
+        /// </summary>
+        /// <param name="userIdRecoveryRequest">User ID Recovery Request information</param>
+        /// <returns></returns>
+        public async Task RequestUserIdRecoveryAsync(UserIdRecoveryRequest userIdRecoveryRequest)
+        {
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_sessionPath, _recoverUserIdPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent);
+                var responseString = await ExecutePostRequestWithResponseAsync<UserIdRecoveryRequest>(userIdRecoveryRequest, urlPath, headers: headers);
+                return;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to recover user ID.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Requests a password reset token
+        /// </summary>
+        /// <param name="passwordResetTokenRequest">Password Reset Token Request information</param>
+        /// <returns></returns>
+        public async Task RequestPasswordResetTokenAsync(PasswordResetTokenRequest passwordResetTokenRequest)
+        {
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_sessionPath, _passwordResetTokenRequestPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent);
+                var responseString = await ExecutePostRequestWithResponseAsync<PasswordResetTokenRequest>(passwordResetTokenRequest, urlPath, headers: headers);
+                return;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to request password reset token.");
+                throw;
+            }
+        }
+
+        public async Task ResetPasswordAsync(ResetPassword resetPassword)
+        {
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_sessionPath, _resetPasswordPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent);
+                var responseString = await ExecutePostRequestWithResponseAsync<ResetPassword>(resetPassword, urlPath, headers: headers);
+                return;
+            }
+            catch (Exception ex)
+            {
+                logger.Info(ex, "Unable to reset password.");
+                throw;
+            }
+
+        }
+
+        /// <summary>
+        /// Asynchronously returns a list of County objects.
+        /// </summary>
+        /// <returns>The requested <see cref="County">county</see> object</returns>
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.Base.County>> GetCountiesAsync()
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var responseString = await ExecuteGetRequestWithResponseAsync(_countiesPath, headers: headers);
+                var configuration = JsonConvert.DeserializeObject<IEnumerable<Ellucian.Colleague.Dtos.Base.County>>(await responseString.Content.ReadAsStringAsync());
+
+                return configuration;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the counties.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets list of all Tax form box codes
+        /// </summary>
+        /// <returns>Returns List of Tax form box codes</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.Base.TaxFormBoxCodes>> GetAllTaxFormBoxCodesAsync()
+        {
+            try
+            {
+                // Create and execute a request to get the list of tax form box codes
+                string[] pathStrings = new string[] { _taxFormBoxCodesPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<List<Ellucian.Colleague.Dtos.Base.TaxFormBoxCodes>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get tax form box codes.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get tax form box codes.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the health check response
+        /// </summary>
+        /// <returns>The <see cref="HealthCheckResponse">Health check response</see></returns>
+        public async Task<HealthCheckResponse> GetHealthCheckResponseAsync()
+        {
+            try
+            {
+                var headers = new NameValueCollection
+                {
+                    { AcceptHeaderKey, _mediaTypeHeaderVersion1 }
+                };
+
+                var response = await ExecuteGetRequestWithResponseAsync(_healthPath, headers: headers);
+
+                return JsonConvert.DeserializeObject<HealthCheckResponse>(response.Content.ReadAsStringAsync().Result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get health check response.");
+                throw;
+            }
+        }
+
+
+        ///////////////////////////////////////////////////////////////////////////////////
+        ///                                                                             ///
+        ///                               CF Team                                       ///                                                                             
+        ///                         TAX INFORMATION VIEWS                               ///
+        ///           TAX FORMS CONFIGURATION, CONSENTs, STATEMENTs, PDFs               ///
+        ///                                                                             ///
+        ///////////////////////////////////////////////////////////////////////////////////
+
+        #region Tax Form Configuration, Consents, Statements and PDFs
+
+        #region Tax Form Configuration
+
+        /// <summary>
+        /// Gets the tax form configuration for the tax form passed in.
+        /// </summary>
+        /// <param name="taxForm">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
+        /// <returns>Tax Form Configuration for the type of tax form.</returns>
+        public async Task<TaxFormConfiguration2> GetTaxFormConfiguration2Async(string taxForm)
+        {
+            if (string.IsNullOrWhiteSpace(taxForm))
+                throw new ArgumentNullException("taxForm", "The tax form type must be specified.");
+
+            try
+            {
+                // Create and execute a request to get the tax form configuration
+                string[] pathStrings = new string[] { _configurationPath, _taxFormsPath, taxForm.ToString() };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<TaxFormConfiguration2>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get tax form configuration.");
+                throw;
+            }
+        }
+
+        #endregion
+
+        #region Tax Form Consents
+
+        /// <summary>
+        /// Create a new tax form consent entry.
+        /// </summary>
+        /// <param name="consent">TaxFormConsent DTO</param>
+        /// <returns>TaxFormConsent DTO</returns>
+        public async Task<TaxFormConsent2> AddTaxFormConsent2Async(TaxFormConsent2 consent)
+        {
+            try
+            {
+                // Create and execute a request to create a new 
+                string[] pathStrings = new string[] { _taxFormConsentsPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                var response = await ExecutePostRequestWithResponseAsync<TaxFormConsent2>(consent, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<TaxFormConsent2>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to create new consent entry.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets the list of tax form consent choices for a specified person
+        /// </summary>
+        /// <param name="personId">This is the person ID.</param>
+        /// <returns>A list of tax form consent choices.</returns>
+        public async Task<IEnumerable<TaxFormConsent2>> GetTaxFormConsents2Async(string personId, string taxForm)
+        {
+            if (string.IsNullOrWhiteSpace(taxForm))
+                throw new ArgumentNullException("taxForm", "The tax form type must be specified.");
+
+            if (string.IsNullOrWhiteSpace(taxForm))
+                throw new ArgumentNullException("taxForm", "The tax form type must be specified.");
+
+            try
+            {
+                // Create and execute a request to get a list of tax form consents
+                string[] pathStrings = new string[] { _taxFormConsentsPath, personId, taxForm.ToString() };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<TaxFormConsent2>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get tax form consents for Person ID {0}.", personId);
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get tax form consents.");
+                throw;
+            }
+        }
+
+        #endregion
+
+        #region Tax Form Statements
+
+        /// <summary>
+        /// Retrieve a set of tax form statement DTOs.
+        /// </summary>
+        /// <param name="personId">Person ID</param>
+        /// <param name="taxForm">The type of tax form: 1099-MISC, W-2, etc.</param>
+        /// <returns>Set of tax form statements</returns>
+        public async Task<IEnumerable<TaxFormStatement3>> GetTaxFormStatements3Async(string personId, string taxForm)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId is required.");
+
+
+            if (string.IsNullOrWhiteSpace(taxForm))
+                throw new ArgumentNullException("taxForm", "The tax form type must be specified.");
+
+            try
+            {
+                var mediaTypeHeader = _mediaTypeHeaderVersion2;
+                switch (taxForm)
+                {
+                    case Domain.Base.TaxFormTypes.Form1099NEC:
+                        mediaTypeHeader = _mediaTypeHeaderVersion1;
+                        break;
+                    case Domain.Base.TaxFormTypes.Form1095C:
+                    case Domain.Base.TaxFormTypes.Form1098:
+                    case Domain.Base.TaxFormTypes.Form1099MI:
+                    case Domain.Base.TaxFormTypes.FormT2202A:
+                    case Domain.Base.TaxFormTypes.FormT4:
+                    case Domain.Base.TaxFormTypes.FormT4A:
+                    case Domain.Base.TaxFormTypes.FormW2C:
+                    case Domain.Base.TaxFormTypes.FormW2:
+                        break;
+                }
+
+                // Create and execute a request to get all projects
+                string urlPath = UrlUtility.CombineUrlPath(_taxFormStatementsPath, personId, taxForm);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, mediaTypeHeader);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<TaxFormStatement3>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get tax form statements.");
+                throw;
+            }
+        }
+
+        #endregion
+
+        #region Tax Form PDFs
+
+        /// <summary>
+        /// Get a W-2 tax form PDF.
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the W-2.</param>
+        /// <param name="recordId">The record ID where the W-2 pdf data is stored</param>
+        /// <returns>Byte array containing PDF data</returns>
+        public async Task<byte[]> GetW2TaxFormPdf2Async(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
+
+            try
+            {
+                // Build url path and create and execute a request to get the tax form pdf
+                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxFormW2PdfPath, recordId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderPdfVersion2);
+
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = response.Content.ReadAsByteArrayAsync().Result;
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve W-2 tax form pdf.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a W-2c tax form PDF.
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the W-2c.</param>
+        /// <param name="recordId">The record ID where the W-2c pdf data is stored</param>
+        /// <returns>Byte array containing PDF data</returns>
+        public async Task<byte[]> GetW2cTaxFormPdf2Async(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
+
+            try
+            {
+                // Build url path and create and execute a request to get the tax form pdf
+                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxFormW2cPdfPath, recordId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderPdfVersion2);
+
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = response.Content.ReadAsByteArrayAsync().Result;
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve W-2c tax form pdf.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a 1095-C tax form PDF.
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the 1095-C.</param>
+        /// <param name="recordId">The record ID where the 1095-C pdf data is stored</param>
+        /// <returns>Byte array containing PDF data</returns>
+        public async Task<byte[]> Get1095cTaxFormPdf2Async(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "PersonId ID cannot be null or empty.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("recordId", "Record ID cannot be null or empty.");
+
+            try
+            {
+                // Build url path and create and execute a request to get the tax form pdf
+                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxForm1095cPdfPath, recordId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderPdfVersion2);
+
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = response.Content.ReadAsByteArrayAsync().Result;
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve 1095-C tax form pdf.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a T4 tax form PDF.
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the T4.</param>
+        /// <param name="recordId">The record ID where the T4 pdf data is stored</param>
+        /// <returns>Byte array containing PDF data</returns>
+        public async Task<byte[]> GetT4TaxFormPdf2Async(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
+
+            try
+            {
+                // Build url path and create and execute a request to get the tax form pdf
+                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxFormT4PdfPath, recordId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderPdfVersion2);
+
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = response.Content.ReadAsByteArrayAsync().Result;
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve T4 tax form pdf.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a T4A tax form PDF.
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the T4A.</param>
+        /// <param name="recordId">The record ID where the T4A pdf data is stored</param>
+        /// <returns>Byte array containing PDF data</returns>
+        public async Task<byte[]> GetT4aTaxFormPdf2Async(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
+
+            try
+            {
+                // Build url path and create and execute a request to get the tax form pdf
+                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxFormT4aPdfPath, recordId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderPdfVersion2);
+
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = response.Content.ReadAsByteArrayAsync().Result;
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve T4A tax form pdf.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a 1099-MISC tax form PDF.
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the 1099-MISC.</param>
+        /// <param name="recordId">The record ID where the 1099-MISC pdf data is stored</param>
+        /// <returns>Byte array containing PDF data</returns>
+        public async Task<byte[]> Get1099MiscTaxFormPdf2Async(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
+
+            try
+            {
+                // Build url path and create and execute a request to get the tax form pdf
+                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxForm1099MiPdfPath, recordId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderPdfVersion2);
+
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = response.Content.ReadAsByteArrayAsync().Result;
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve 1099-MISC tax form pdf.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a 1099-NEC tax form PDF
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the 1099-NEC.</param>
+        /// <param name="recordId">The record ID where the 1099-NEC pdf data is stored</param>
+        /// <returns>Byte array containing PDF data</returns>
+        public async Task<byte[]> Get1099NecTaxFormPdfAsync(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
+
+            try
+            {
+                // Build url path and create and execute a request to get the tax form pdf
+                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxForm1099NecPdfPath, recordId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderPdfVerion1);
+
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = response.Content.ReadAsByteArrayAsync().Result;
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve 1099-NEC tax form pdf.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a 1098-T tax form PDF
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the 1098-T.</param>
+        /// <param name="recordId">The record ID where the 1098-T pdf data is stored</param>
+        /// <returns>Byte array containing PDF data</returns>
+        public async Task<byte[]> Get1098tTaxFormPdf2Async(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
+
+            try
+            {
+                // Build url path and create and execute a request to get the tax form pdf
+                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxForm1098tPdfPath, recordId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderPdfVersion2);
+
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = response.Content.ReadAsByteArrayAsync().Result;
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve 1098-T tax form pdf.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a T2202A tax form PDF
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the T2202A.</param>
+        /// <param name="recordId">The record ID where the T2202A pdf data is stored</param>
+        /// <returns>Byte array containing PDF data</returns>
+        public async Task<byte[]> GetT2202aTaxFormPdf2Async(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
+
+            try
+            {
+                // Build url path and create and execute a request to get the tax form pdf
+                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxFormT2202aPdfPath, recordId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderPdfVersion2);
+
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = response.Content.ReadAsByteArrayAsync().Result;
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve T2202A tax form pdf.");
+                throw;
+            }
+        }
+
+        #endregion
+
+
+        #region OBSOLETE METHODS
+
+        /// <summary>
+        /// Gets the tax form configuration for the tax form passed in.
+        /// </summary>
+        /// <param name="taxFormId">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
+        /// <returns>Tax Form Configuration for the type of tax form.</returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use GetTaxFormConfiguration2Async.")]
+        public async Task<TaxFormConfiguration> GetTaxFormConfiguration(Dtos.Base.TaxForms taxFormId)
+        {
+            try
+            {
+                // Create and execute a request to get the tax form configuration
+                string[] pathStrings = new string[] { _configurationPath, _taxFormsPath, taxFormId.ToString() };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<TaxFormConfiguration>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get tax form configuration.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Create a new tax form consent entry.
+        /// </summary>
+        /// <param name="consent">TaxFormConsent DTO</param>
+        /// <returns>TaxFormConsent DTO</returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use AddTaxFormConsent2Async.")]
+        public async Task<TaxFormConsent> AddTaxFormConsent(TaxFormConsent consent)
+        {
+            try
+            {
+                // Create and execute a request to create a new 
+                string[] pathStrings = new string[] { _taxFormConsentsPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync<TaxFormConsent>(consent, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<TaxFormConsent>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to create new consent entry.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets the list of tax form consent choices for a specified person
+        /// </summary>
+        /// <param name="personId">This is the person id.</param>
+        /// <returns>A list of tax form consent choices.</returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use GetTaxFormConsents2Async.")]
+        public async Task<IEnumerable<TaxFormConsent>> GetTaxFormConsents(string personId, Dtos.Base.TaxForms taxForm)
+        {
+            try
+            {
+                // Create and execute a request to get a list of tax form consents
+                string[] pathStrings = new string[] { _taxFormConsentsPath, personId, taxForm.ToString() };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<TaxFormConsent>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get tax form consents for Person ID {0}.", personId);
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get tax form consents.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieve a set of tax form statement DTOs
+        /// </summary>
+        /// <param name="personId">Person ID</param>
+        /// <param name="taxForm">Type of tax form</param>
+        /// <returns>Set of tax form statements</returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use GetTaxFormStatements3Async.")]
+        public async Task<IEnumerable<TaxFormStatement2>> GetTaxFormStatements2(string personId, Dtos.Base.TaxForms taxForm)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId is required.");
+
+            try
+            {
+                // Create and execute a request to get all projects
+                string urlPath = UrlUtility.CombineUrlPath(_taxFormStatementsPath, personId, taxForm.ToString());
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<TaxFormStatement2>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get tax form statements.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a W-2 tax form PDF
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the W-2.</param>
+        /// <param name="recordId">The record ID where the W-2 pdf data is stored</param>
+        /// <returns>Byte array containing PDF data</returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use GetW2TaxFormPdf2Async.")]
+        public async Task<byte[]> GetW2TaxFormPdf(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
+
+            try
+            {
+                // Build url path and create and execute a request to get the tax form pdf
+                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxFormW2PdfPath, recordId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                headers.Add(AcceptHeaderKey, "application/pdf");
+                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
+                headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = response.Content.ReadAsByteArrayAsync().Result;
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve W-2 tax form pdf.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a W-2c tax form PDF
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the W-2c.</param>
+        /// <param name="recordId">The record ID where the W-2c pdf data is stored</param>
+        /// <returns>Byte array containing PDF data</returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use GetW2cTaxFormPdf2Async.")]
+        public async Task<byte[]> GetW2cTaxFormPdf(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
+
+            try
+            {
+                // Build url path and create and execute a request to get the tax form pdf
+                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxFormW2cPdfPath, recordId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                headers.Add(AcceptHeaderKey, "application/pdf");
+                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
+                headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = response.Content.ReadAsByteArrayAsync().Result;
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve W-2c tax form pdf.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a 1095-C tax form PDF
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the 1095-C.</param>
+        /// <param name="recordId">The record ID where the 1095-C pdf data is stored</param>
+        /// <returns>Byte array containing PDF data</returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use Get1095cTaxFormPdf2Async.")]
+        public async Task<byte[]> Get1095cTaxFormPdf(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "PersonId ID cannot be null or empty.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("recordId", "Record ID cannot be null or empty.");
+
+            try
+            {
+                // Build url path and create and execute a request to get the tax form pdf
+                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxForm1095cPdfPath, recordId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                headers.Add(AcceptHeaderKey, "application/pdf");
+                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
+                headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = response.Content.ReadAsByteArrayAsync().Result;
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve 1095-C tax form pdf.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a T4 tax form PDF
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the T4.</param>
+        /// <param name="recordId">The record ID where the T4 pdf data is stored</param>
+        /// <returns>Byte array containing PDF data</returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use GetT4TaxFormPdf2Async.")]
+        public async Task<byte[]> GetT4TaxFormPdf(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
+
+            try
+            {
+                // Build url path and create and execute a request to get the tax form pdf
+                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxFormT4PdfPath, recordId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                headers.Add(AcceptHeaderKey, "application/pdf");
+                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
+                headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = response.Content.ReadAsByteArrayAsync().Result;
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve T4 tax form pdf.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a T4A tax form PDF
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the T4A.</param>
+        /// <param name="recordId">The record ID where the T4A pdf data is stored</param>
+        /// <returns>Byte array containing PDF data</returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use GetT4aTaxFormPdf2Async.")]
+        public async Task<byte[]> GetT4aTaxFormPdf(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
+
+            try
+            {
+                // Build url path and create and execute a request to get the tax form pdf
+                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxFormT4aPdfPath, recordId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                headers.Add(AcceptHeaderKey, "application/pdf");
+                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
+                headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = response.Content.ReadAsByteArrayAsync().Result;
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve T4A tax form pdf.");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Get a 1099-MISC tax form PDF
         /// </summary>
         /// <param name="personId">ID of the person assigned to and requesting the 1099-MISC.</param>
         /// <param name="recordId">The record ID where the 1099-MISC pdf data is stored</param>
         /// <returns>Byte array containing PDF data</returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use Get1099MiscTaxFormPdf2Async.")]
         public async Task<byte[]> Get1099MiscTaxFormPdf(string personId, string recordId)
         {
             if (string.IsNullOrEmpty(personId))
@@ -4444,56 +5831,8 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
-        /// <summary>
-        /// This method gets all of a person's correspondence requests
-        /// </summary>
-        /// <param name="studentId">Student Id for whom to retrieve documents</param>
-        /// <returns>A list of the given student's financial aid documents across all FA Years</returns>
-        public async Task<IEnumerable<CorrespondenceRequest>> GetCorrespondenceRequestsAsync(string personId)
-        {
-            if (string.IsNullOrEmpty(personId))
-            {
-                throw new ArgumentNullException("personId");
-            }
+        #endregion
 
-            try
-            {
-                var query = UrlUtility.BuildEncodedQueryString("personId", personId);
-                var urlPath = UrlUtility.CombineUrlPathAndArguments(_correspondenceRequestsPath, query);
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
-                var resource = JsonConvert.DeserializeObject<IEnumerable<CorrespondenceRequest>>(response.Content.ReadAsStringAsync().Result);
-                return resource;
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex, "Unable to get correspondence requests");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Asynchronously returns the Required Document Configuration.
-        /// </summary>
-        /// <returns>The Required Document Configuration object</returns>
-        public async Task<RequiredDocumentConfiguration> GetRequiredDocumentConfigurationAsync()
-        {
-            try
-            {
-                var urlPath = UrlUtility.CombineUrlPath(_configurationPath, _requiredDocument);
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
-                var configuration = JsonConvert.DeserializeObject<RequiredDocumentConfiguration>(await responseString.Content.ReadAsStringAsync());
-
-                return configuration;
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex, "Unable to get the Required Document Configuration.");
-                throw;
-            }
-        }
+        #endregion
     }
 }

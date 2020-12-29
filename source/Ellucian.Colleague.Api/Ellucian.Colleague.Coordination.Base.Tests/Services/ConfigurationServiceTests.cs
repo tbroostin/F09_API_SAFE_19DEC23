@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -18,6 +18,7 @@ using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Configuration;
 using Ellucian.Colleague.Dtos.Base;
 using System.Linq;
+using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 {
@@ -45,11 +46,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         private Mock<IRoleRepository> roleRepoMock;
         private IRoleRepository roleRepo;
         private ICurrentUserFactory currentUserFactoryFake;
-        
+
         private IApiSettingsRepository ApiSettingsRepository;
         private ISettingsRepository XmlSettingsRepository;
         private IResourceRepository ResourceRepository;
-        
+        private IReferenceDataRepository ReferenceDataRepository;
+
         private Domain.Base.Entities.BackupConfiguration FakeBackupConfigurationEntity;
         private Dtos.Base.BackupConfiguration FakeBackupConfigurationDto;
         private ApiSettings FakeApiSettings;
@@ -57,10 +59,11 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         private ColleagueSettings FakeColleagueSettings;
         private DmiSettings FakeDmiSettings;
         private ApiBackupConfigData FakeApiBackupConfigData;
-        
+
         private Mock<IApiSettingsRepository> ApiSettingsRepositoryMock;
         private Mock<ISettingsRepository> XmlSettingsRepositoryMock;
         private Mock<IResourceRepository> ResourceRepositoryMock;
+        private Mock<IReferenceDataRepository> ReferenceDataRepositoryMock;
 
         private BackupConfigurationQueryCriteria fakeBackupConfigQueryCriteriaWithIds;
         private BackupConfigurationQueryCriteria fakeBackupConfigQueryCriteriaWithNamespace;
@@ -96,14 +99,17 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             // Mock the adapter registry to use the automappers between the EmergencyInformation domain entity and dto. 
             var emptyAdapterRegistryMock = new Mock<IAdapterRegistry>(); // An empty mock adapter registry to instantiate AutoMapperAdapter
 
-            
+
             ApiSettingsRepositoryMock = new Mock<IApiSettingsRepository>();
             XmlSettingsRepositoryMock = new Mock<ISettingsRepository>();
             ResourceRepositoryMock = new Mock<IResourceRepository>();
-            
+            ReferenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+
             ApiSettingsRepository = ApiSettingsRepositoryMock.Object;
             XmlSettingsRepository = XmlSettingsRepositoryMock.Object;
             ResourceRepository = ResourceRepositoryMock.Object;
+            ReferenceDataRepository = ReferenceDataRepositoryMock.Object;
+
 
             FakeApiSettings = new ApiSettings(1, "fakeName", 1);
             FakeApiSettings.BulkReadSize = 111;
@@ -166,7 +172,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             // Instantiate the service
             configurationService = new ConfigurationService(configRepoMock.Object, adapterRegistry, currentUserFactoryFake, roleRepo,
-                FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, logger);
+                FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, ReferenceDataRepository, logger);
 
             BuildConfigurationService();
         }
@@ -184,119 +190,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             testConfigurationRepository = null;
             currentUserFactory = null;
             backupConfigCurrentUserFactory = null;
-        }
-        #endregion
-
-        #region GetTaxFormConsentConfigurationAsync tests
-        [TestMethod]
-        public async Task GetTaxFormConsentConfigurationAsync_W2_Success()
-        {
-            var configurationDto = await this.configurationService.GetTaxFormConsentConfigurationAsync(Dtos.Base.TaxForms.FormW2);
-            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfigurationAsync(Domain.Base.Entities.TaxForms.FormW2);
-
-            Assert.AreEqual(Dtos.Base.TaxForms.FormW2, configurationDto.TaxFormId);
-            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
-            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
-        }
-
-        [TestMethod]
-        public async Task GetTaxFormConsentConfigurationAsync_1095_Success()
-        {
-            var configurationDto = await this.configurationService.GetTaxFormConsentConfigurationAsync(Dtos.Base.TaxForms.Form1095C);
-            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfigurationAsync(Domain.Base.Entities.TaxForms.Form1095C);
-
-            Assert.AreEqual(Dtos.Base.TaxForms.Form1095C, configurationDto.TaxFormId);
-            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
-            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
-        }
-
-        [TestMethod]
-        public async Task GetTaxFormConsentConfigurationAsync_1098_Success()
-        {
-            var configurationDto = await this.configurationService.GetTaxFormConsentConfigurationAsync(Dtos.Base.TaxForms.Form1098);
-            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfigurationAsync(Domain.Base.Entities.TaxForms.Form1098);
-
-            Assert.AreEqual(Dtos.Base.TaxForms.Form1098, configurationDto.TaxFormId);
-            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
-            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
-        }
-        
-        [TestMethod]
-        public async Task GetTaxFormConsentConfigurationAsync_T4_Success()
-        {
-            var configurationDto = await this.configurationService.GetTaxFormConsentConfigurationAsync(Dtos.Base.TaxForms.FormT4);
-            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfigurationAsync(Domain.Base.Entities.TaxForms.FormT4);
-
-            Assert.AreEqual(Dtos.Base.TaxForms.FormT4, configurationDto.TaxFormId);
-            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
-            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
-        }
-
-        [TestMethod]
-        public async Task GetTaxFormConsentConfigurationAsync_T4A_Success()
-        {
-            var configurationDto = await this.configurationService.GetTaxFormConsentConfigurationAsync(Dtos.Base.TaxForms.FormT4A);
-            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfigurationAsync(Domain.Base.Entities.TaxForms.FormT4A);
-
-            Assert.AreEqual(Dtos.Base.TaxForms.FormT4A, configurationDto.TaxFormId);
-            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
-            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
-        }
-
-        [TestMethod]
-        public async Task GetTaxFormConsentConfigurationAsync_T2202A_Success()
-        {
-            var configurationDto = await this.configurationService.GetTaxFormConsentConfigurationAsync(Dtos.Base.TaxForms.FormT2202A);
-            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfigurationAsync(Domain.Base.Entities.TaxForms.FormT2202A);
-
-            Assert.AreEqual(Dtos.Base.TaxForms.FormT2202A, configurationDto.TaxFormId);
-            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
-            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
-        }
-
-        [TestMethod]
-        public async Task GetTaxFormConsentConfigurationAsync_1099MI_Success()
-        {
-            var configurationDto = await this.configurationService.GetTaxFormConsentConfigurationAsync(Dtos.Base.TaxForms.Form1099MI);
-            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfigurationAsync(Domain.Base.Entities.TaxForms.Form1099MI);
-
-            Assert.AreEqual(Dtos.Base.TaxForms.Form1099MI, configurationDto.TaxFormId);
-            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
-            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
-        }
-
-        [TestMethod]
-        public async Task GetTaxFormConsentConfigurationAsync_1098_NullConfigurationReturned()
-        {
-            var expectedParam = "configuration";
-            var actualParam = "";
-            try
-            {
-                await this.configurationServiceToReturnNull.GetTaxFormConsentConfigurationAsync(Dtos.Base.TaxForms.Form1095C);
-            }
-            catch (ArgumentNullException anex)
-            {
-                actualParam = anex.ParamName;
-            }
-
-            Assert.AreEqual(expectedParam, actualParam);
-        }
-
-        [TestMethod]
-        public async Task GetTaxFormConsentConfigurationAsync_1099MI_NullConfigurationReturned()
-        {
-            var expectedParam = "configuration";
-            var actualParam = "";
-            try
-            {
-                await this.configurationServiceToReturnNull.GetTaxFormConsentConfigurationAsync(Dtos.Base.TaxForms.Form1099MI);
-            }
-            catch (ArgumentNullException anex)
-            {
-                actualParam = anex.ParamName;
-            }
-
-            Assert.AreEqual(expectedParam, actualParam);
         }
         #endregion
 
@@ -423,6 +316,16 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             Assert.AreEqual(rdcEntity.TextForBlankDueDate, rdcDto.TextForBlankDueDate);
         }
 
+        [TestMethod]
+        public async Task GetSessionConfigurationAsync_Success()
+        {
+            var sessionConfigurationDto = await this.configurationService.GetSessionConfigurationAsync();
+            var sessionConfigurationEntity = await testConfigurationRepository.GetSessionConfigurationAsync();
+
+            Assert.AreEqual(sessionConfigurationEntity.PasswordResetEnabled, sessionConfigurationDto.PasswordResetEnabled);
+            Assert.AreEqual(sessionConfigurationEntity.UsernameRecoveryEnabled, sessionConfigurationDto.UsernameRecoveryEnabled);
+        }
+
 
         /// <summary>
         /// Fake an ICurrentUserFactory implementation to construct ConfigurationService
@@ -468,6 +371,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             var taxFormConfigurationDtoAdapter = new AutoMapperAdapter<Domain.Base.Entities.TaxFormConfiguration, Dtos.Base.TaxFormConfiguration>(adapterRegistry.Object, loggerObject);
             adapterRegistry.Setup(x => x.GetAdapter<Domain.Base.Entities.TaxFormConfiguration, Dtos.Base.TaxFormConfiguration>()).Returns(taxFormConfigurationDtoAdapter);
 
+            var taxFormConfiguration2DtoAdapter = new AutoMapperAdapter<Domain.Base.Entities.TaxFormConfiguration2, Dtos.Base.TaxFormConfiguration2>(adapterRegistry.Object, loggerObject);
+            adapterRegistry.Setup(x => x.GetAdapter<Domain.Base.Entities.TaxFormConfiguration2, Dtos.Base.TaxFormConfiguration2>()).Returns(taxFormConfiguration2DtoAdapter);
+
             var userProfileConfigurationAdapter = new AutoMapperAdapter<Domain.Base.Entities.UserProfileConfiguration, Dtos.Base.UserProfileConfiguration>(adapterRegistry.Object, loggerObject);
             adapterRegistry.Setup(x => x.GetAdapter<Domain.Base.Entities.UserProfileConfiguration, Dtos.Base.UserProfileConfiguration>()).Returns(userProfileConfigurationAdapter);
 
@@ -504,22 +410,30 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             var requiredDocumentConfigurationAdapter = new AutoMapperAdapter<Domain.Base.Entities.RequiredDocumentConfiguration, Dtos.Base.RequiredDocumentConfiguration>(adapterRegistry.Object, logger);
             adapterRegistry.Setup(reg => reg.GetAdapter<Domain.Base.Entities.RequiredDocumentConfiguration, Dtos.Base.RequiredDocumentConfiguration>()).Returns(requiredDocumentConfigurationAdapter);
 
+            var sessionConfigurationAdapter = new AutoMapperAdapter<Domain.Base.Entities.SessionConfiguration, Dtos.Base.SessionConfiguration>(adapterRegistry.Object, logger);
+            adapterRegistry.Setup(reg => reg.GetAdapter<Domain.Base.Entities.SessionConfiguration, Dtos.Base.SessionConfiguration>()).Returns(sessionConfigurationAdapter);
+
             configurationService = new ConfigurationService(testConfigurationRepository, adapterRegistry.Object, currentUserFactory, roleRepository,
-                FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, loggerObject);
+                FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, ReferenceDataRepository, loggerObject);
 
             backupConfigurationService = new ConfigurationService(configRepo, adapterRegistry.Object, backupConfigCurrentUserFactory, roleRepo,
-                FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, loggerObject);
+                FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, ReferenceDataRepository, loggerObject);
 
             backupConfigurationServiceNoPermission = new ConfigurationService(configRepo, adapterRegistry.Object, currentUserFactory, roleRepo,
-                FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, loggerObject);
+                FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, ReferenceDataRepository, loggerObject);
 
             // Set up the mock statement to make the configuration repository method return null.
             Mock<IConfigurationRepository> testConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
             Domain.Base.Entities.TaxFormConfiguration configuration = new Domain.Base.Entities.TaxFormConfiguration(Domain.Base.Entities.TaxForms.Form1095C);
+            Domain.Base.Entities.TaxFormConfiguration2 configuration2 = new Domain.Base.Entities.TaxFormConfiguration2(Domain.Base.TaxFormTypes.Form1095C);
             configuration = null;
             testConfigurationRepositoryMock.Setup<Task<Domain.Base.Entities.TaxFormConfiguration>>(x => x.GetTaxFormConsentConfigurationAsync(It.IsAny<Domain.Base.Entities.TaxForms>())).Returns(() =>
             {
                 return Task.FromResult(configuration);
+            });
+            testConfigurationRepositoryMock.Setup<Task<Domain.Base.Entities.TaxFormConfiguration2>>(x => x.GetTaxFormConsentConfiguration2Async(It.IsAny<string>())).Returns(() =>
+            {
+                return Task.FromResult(configuration2);
             });
             testConfigurationRepositoryMock.Setup<Task<Domain.Base.Entities.PrivacyConfiguration>>(x => x.GetPrivacyConfigurationAsync()).Returns(
                 async () => await testConfigurationRepository.GetPrivacyConfigurationAsync());
@@ -527,7 +441,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             configRepoMock.Setup(repo => repo.GetSelfServiceConfigurationAsync()).Returns(testConfigurationRepository.GetSelfServiceConfigurationAsync());
 
             configurationServiceToReturnNull = new ConfigurationService(testConfigurationRepositoryMock.Object, adapterRegistry.Object, currentUserFactory, roleRepository,
-                FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, loggerObject);
+                FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, ReferenceDataRepository, loggerObject);
         }
 
         #region backup configuration
@@ -639,6 +553,288 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             // act
             await backupConfigurationServiceNoPermission.RestoreApiBackupConfigurationAsync();
         }
+
+        #endregion
+
+        #region GetTaxFormConsentConfigurationAsync tests
+
+        [TestMethod]
+        public async Task GetTaxFormConsentConfiguration2Async_W2_Success()
+        {
+            var configurationDto = await this.configurationService.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.FormW2);
+            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.FormW2);
+
+            Assert.AreEqual(Domain.Base.TaxFormTypes.FormW2, configurationDto.TaxForm);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormConsentConfiguration2Async_1095_Success()
+        {
+            var configurationDto = await this.configurationService.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.Form1095C);
+            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.Form1095C);
+
+            Assert.AreEqual(Domain.Base.TaxFormTypes.Form1095C, configurationDto.TaxForm);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormConsentConfiguration2Async_1098_Success()
+        {
+            var configurationDto = await this.configurationService.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.Form1098);
+            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.Form1098);
+
+            Assert.AreEqual(Domain.Base.TaxFormTypes.Form1098, configurationDto.TaxForm);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormConsentConfiguration2Async_T4_Success()
+        {
+            var configurationDto = await this.configurationService.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.FormT4);
+            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.FormT4);
+
+            Assert.AreEqual(Domain.Base.TaxFormTypes.FormT4, configurationDto.TaxForm);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormConsentConfiguration2Async_T4A_Success()
+        {
+            var configurationDto = await this.configurationService.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.FormT4A);
+            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.FormT4A);
+
+            Assert.AreEqual(Domain.Base.TaxFormTypes.FormT4A, configurationDto.TaxForm);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormConsentConfiguration2Async_T2202A_Success()
+        {
+            var configurationDto = await this.configurationService.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.FormT2202A);
+            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.FormT2202A);
+
+            Assert.AreEqual(Domain.Base.TaxFormTypes.FormT2202A, configurationDto.TaxForm);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormConsentConfiguration2Async_1099MI_Success()
+        {
+            var configurationDto = await this.configurationService.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.Form1099MI);
+            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.Form1099MI);
+
+            Assert.AreEqual(Domain.Base.TaxFormTypes.Form1099MI, configurationDto.TaxForm);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormConsentConfiguration2Async_1099NEC_Success()
+        {
+            var configurationDto = await this.configurationService.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.Form1099NEC);
+            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.Form1099NEC);
+
+            Assert.AreEqual(Domain.Base.TaxFormTypes.Form1099NEC, configurationDto.TaxForm);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormConsentConfiguration2Async_NonExistingForm()
+        {
+            var expectedParam = "taxForm";
+            var actualParam = "";
+            try
+            {
+                await this.configurationServiceToReturnNull.GetTaxFormConsentConfiguration2Async("FormXYZ");
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName;
+            }
+
+            Assert.AreEqual(expectedParam, actualParam);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormConsentConfiguration2Async_NullForm()
+        {
+            var expectedParam = "taxForm";
+            var actualParam = "";
+            try
+            {
+                await this.configurationServiceToReturnNull.GetTaxFormConsentConfiguration2Async(null);
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName;
+            }
+
+            Assert.AreEqual(expectedParam, actualParam);
+        }
+
+        //[TestMethod]
+        //public async Task GetTaxFormConsentConfiguration2Async_1098_NullConfigurationReturned()
+        //{
+        //    var expectedParam = "configuration";
+        //    var actualParam = "";
+        //    try
+        //    {
+        //        await this.configurationServiceToReturnNull.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.Form1095C);
+        //    }
+        //    catch (ArgumentNullException anex)
+        //    {
+        //        actualParam = anex.ParamName;
+        //    }
+
+        //    Assert.AreEqual(expectedParam, actualParam);
+        //}
+        //[TestMethod]
+        //public async Task GetTaxFormConsentConfiguration2Async_1099MI_NullConfigurationReturned()
+        //{
+        //    var expectedParam = "configuration";
+        //    var actualParam = "";
+        //    try
+        //    {
+        //        await this.configurationServiceToReturnNull.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.Form1099MI);
+        //    }
+        //    catch (ArgumentNullException anex)
+        //    {
+        //        actualParam = anex.ParamName;
+        //    }
+
+        //    Assert.AreEqual(expectedParam, actualParam);
+        //}
+
+        #region Obsolete
+
+        [TestMethod]
+        // Obsolete
+        public async Task GetTaxFormConsentConfigurationAsync_W2_Success()
+        {
+            var configurationDto = await this.configurationService.GetTaxFormConsentConfigurationAsync(Dtos.Base.TaxForms.FormW2);
+            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfigurationAsync(Domain.Base.Entities.TaxForms.FormW2);
+
+            Assert.AreEqual(Dtos.Base.TaxForms.FormW2, configurationDto.TaxFormId);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
+        }
+
+        [TestMethod]
+        // Obsolete
+        public async Task GetTaxFormConsentConfigurationAsync_1095_Success()
+        {
+            var configurationDto = await this.configurationService.GetTaxFormConsentConfigurationAsync(Dtos.Base.TaxForms.Form1095C);
+            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfigurationAsync(Domain.Base.Entities.TaxForms.Form1095C);
+
+            Assert.AreEqual(Dtos.Base.TaxForms.Form1095C, configurationDto.TaxFormId);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
+        }
+
+        [TestMethod]
+        // Obsolete
+        public async Task GetTaxFormConsentConfigurationAsync_1098_Success()
+        {
+            var configurationDto = await this.configurationService.GetTaxFormConsentConfigurationAsync(Dtos.Base.TaxForms.Form1098);
+            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfigurationAsync(Domain.Base.Entities.TaxForms.Form1098);
+
+            Assert.AreEqual(Dtos.Base.TaxForms.Form1098, configurationDto.TaxFormId);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
+        }
+
+        [TestMethod]
+        // Obsolete
+        public async Task GetTaxFormConsentConfigurationAsync_T4_Success()
+        {
+            var configurationDto = await this.configurationService.GetTaxFormConsentConfigurationAsync(Dtos.Base.TaxForms.FormT4);
+            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfigurationAsync(Domain.Base.Entities.TaxForms.FormT4);
+
+            Assert.AreEqual(Dtos.Base.TaxForms.FormT4, configurationDto.TaxFormId);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
+        }
+
+        [TestMethod]
+        // Obsolete
+        public async Task GetTaxFormConsentConfigurationAsync_T4A_Success()
+        {
+            var configurationDto = await this.configurationService.GetTaxFormConsentConfigurationAsync(Dtos.Base.TaxForms.FormT4A);
+            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfigurationAsync(Domain.Base.Entities.TaxForms.FormT4A);
+
+            Assert.AreEqual(Dtos.Base.TaxForms.FormT4A, configurationDto.TaxFormId);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
+        }
+
+        [TestMethod]
+        // Obsolete
+        public async Task GetTaxFormConsentConfigurationAsync_T2202A_Success()
+        {
+            var configurationDto = await this.configurationService.GetTaxFormConsentConfigurationAsync(Dtos.Base.TaxForms.FormT2202A);
+            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfigurationAsync(Domain.Base.Entities.TaxForms.FormT2202A);
+
+            Assert.AreEqual(Dtos.Base.TaxForms.FormT2202A, configurationDto.TaxFormId);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
+        }
+
+        [TestMethod]
+        // Obsolete
+        public async Task GetTaxFormConsentConfigurationAsync_1099MI_Success()
+        {
+            var configurationDto = await this.configurationService.GetTaxFormConsentConfigurationAsync(Dtos.Base.TaxForms.Form1099MI);
+            var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfigurationAsync(Domain.Base.Entities.TaxForms.Form1099MI);
+
+            Assert.AreEqual(Dtos.Base.TaxForms.Form1099MI, configurationDto.TaxFormId);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
+            Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
+        }
+
+        [TestMethod]
+        // Obsolete
+        public async Task GetTaxFormConsentConfigurationAsync_1098_NullConfigurationReturned()
+        {
+            var expectedParam = "configuration";
+            var actualParam = "";
+            try
+            {
+                await this.configurationServiceToReturnNull.GetTaxFormConsentConfigurationAsync(Dtos.Base.TaxForms.Form1095C);
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName;
+            }
+
+            Assert.AreEqual(expectedParam, actualParam);
+        }
+
+        [TestMethod]
+        // Obsolete
+        public async Task GetTaxFormConsentConfigurationAsync_1099MI_NullConfigurationReturned()
+        {
+            var expectedParam = "configuration";
+            var actualParam = "";
+            try
+            {
+                await this.configurationServiceToReturnNull.GetTaxFormConsentConfigurationAsync(Dtos.Base.TaxForms.Form1099MI);
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName;
+            }
+
+            Assert.AreEqual(expectedParam, actualParam);
+        }
+        #endregion
 
         #endregion
     }

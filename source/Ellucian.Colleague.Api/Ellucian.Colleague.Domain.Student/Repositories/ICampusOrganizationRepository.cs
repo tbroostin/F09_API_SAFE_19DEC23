@@ -13,5 +13,6 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<CampusInvolvement> GetGetCampusInvolvementByIdAsync(string id);
         Task<IEnumerable<CampusOrgAdvisorRole>> GetCampusOrgAdvisorsAsync(IEnumerable<string> hrpId);
         Task<IEnumerable<CampusOrgMemberRole>> GetCampusOrgMembersAsync(IEnumerable<string> hrpId);
+        Task<IEnumerable<CampusOrganization2>> GetCampusOrganizations2Async(List<string> campusOrgsIds);
     }
 }

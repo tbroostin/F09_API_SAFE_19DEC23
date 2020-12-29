@@ -55,5 +55,12 @@ namespace Ellucian.Colleague.Dtos.FinancialAid
         /// by the system. Inspect the AwardPeriodChangeRequest's Status and StatusReason attributes for details.
         /// </summary>
         public IEnumerable<AwardPeriodChangeRequest> AwardPeriodChangeRequests { get; set; }
+
+        /// <summary>
+        /// This is a flag that will determine whether or not to override the check
+        /// found in AwardPackageChangeRequestsDomainService
+        /// Defaultly set to false via optional parameter in SS
+        /// </summary>
+        public bool OverrideUnsubsidizedLoanCheck { get; set; }
     }
 }

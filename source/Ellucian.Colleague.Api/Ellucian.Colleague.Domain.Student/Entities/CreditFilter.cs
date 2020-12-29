@@ -53,6 +53,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// Indicates whether to include items that have no grade scheme, therefore are never graded.
         /// </summary>
         public bool IncludeNeverGradedCredits { get; set; }
+        /// <summary>
+        /// Additional Select Criteria on TRGR.
+        /// </summary>
+        public string AdditionalSelectCriteria { get; set; }
 
 
         public CreditFilter()
@@ -221,6 +225,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                 return false;
             }
 
+          
 
             return true;
         }

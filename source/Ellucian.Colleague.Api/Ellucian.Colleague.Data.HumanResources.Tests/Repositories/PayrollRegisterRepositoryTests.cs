@@ -160,7 +160,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             {
                 var actual = await getActual();
 
-                dataReaderMock.Verify(dr => dr.SelectAsync(It.IsAny<string>(), It.Is<string>(s => s == "WITH PTD.EMPLOYEE.ID EQ ? AND PTD.SEQ.NO NE \"\""), It.Is<string[]>(ids => ids.Count() == inputEmployeeIds.Count()), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>()));
+                dataReaderMock.Verify(dr => dr.SelectAsync(It.IsAny<string>(), It.Is<string>(s => s == "WITH PTD.EMPLOYEE.INDEX EQ ? AND PTD.SEQ.NO NE \"\""), It.Is<string[]>(ids => ids.Count() == inputEmployeeIds.Count()), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>()));
             }
 
             [TestMethod]

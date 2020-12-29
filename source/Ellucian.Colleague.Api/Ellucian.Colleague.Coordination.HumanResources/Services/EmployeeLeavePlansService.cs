@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -153,12 +153,24 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         }
 
         /// <summary>
-        /// Gets all EmployeeLeavePlan objects for the effective person id (supports employee, supervisor, and supervisor proxy access)
+        /// Gets all EmployeeLeavePlan objects for the effective person id (supports employee, supervisor, leave approver, supervisor proxy access,and time history admin)
         /// Used by Self Service.
         /// </summary>
         /// <returns>A list of EmployeeLeavePlan Dto objects</returns>
         public async Task<IEnumerable<Dtos.HumanResources.EmployeeLeavePlan>> GetEmployeeLeavePlansV2Async(string effectivePersonId = null, bool bypassCache = false)
         {
+            //determine the effective person id and whether the current user needs/has proxy authority for that effective person id
+            if (string.IsNullOrWhiteSpace(effectivePersonId))
+            {
+                effectivePersonId = CurrentUser.PersonId;
+            }
+            //To view other's info, logged in user must be a proxy or time history admin or a leave approver
+            else if (!CurrentUser.IsPerson(effectivePersonId) && !(HasProxyAccessForPerson(effectivePersonId, Domain.Base.Entities.ProxyWorkflowConstants.TimeManagementTimeApproval)
+                       || HasPermission(HumanResourcesPermissionCodes.ViewAllTimeHistory) || HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest)))
+            {
+                throw new PermissionsException(string.Format("User {0} does not have permission to view employee leave plan information for person {1}", CurrentUser.PersonId, effectivePersonId));
+            }
+
             var leavePlans = await GetLeavePlansV2Async(bypassCache);
             var leaveTypes = await GetLeaveCategoriesAsync(bypassCache);
             var earningTypes = await GetEarningTypes2Async(bypassCache);
@@ -182,18 +194,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw new ArgumentException("No earning types defined.");
             }
-
-            //determine the effective person id and whether the current user needs/has proxy authority for that effective person id
-            if (string.IsNullOrWhiteSpace(effectivePersonId))
-            {
-                effectivePersonId = CurrentUser.PersonId;
-            }
-            else if (!CurrentUser.IsPerson(effectivePersonId) && !HasProxyAccessForPerson(effectivePersonId, Domain.Base.Entities.ProxyWorkflowConstants.TimeManagementTimeApproval))
-            {
-                throw new PermissionsException(string.Format("User {0} does not have permission to view employee leave plan information for person {1}", CurrentUser.PersonId, effectivePersonId));
-            }
+       
 
             var employeeIds = new List<string>() { effectivePersonId };
+            // Supervisees for time card approver
             if (HasPermission(HumanResourcesPermissionCodes.ViewSuperviseeData))
             {
                 try
@@ -205,8 +209,20 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     logger.Error("Error getting supervisor employees", e.Message);
                 }
             }
+            // Supervisees for leave approver
+            if (HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest))
+            {
+                try
+                {
+                    employeeIds.AddRange((await supervisorsRepository.GetSuperviseesByPrimaryPositionForSupervisorAsync(effectivePersonId)));
+                }
+                catch (Exception e)
+                {
+                    logger.Error("Error getting supervisor employees", e.Message);
+                }
+            }
 
-            var employeeLeavePlanEntities = await employeeLeavePlansRepository.GetEmployeeLeavePlansByEmployeeIdsAsync(employeeIds, leavePlans, leaveTypes, earningTypes);
+            var employeeLeavePlanEntities = await employeeLeavePlansRepository.GetEmployeeLeavePlansByEmployeeIdsAsync(employeeIds.Distinct(), leavePlans, leaveTypes, earningTypes);
 
             var employeeLeavePlanEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.HumanResources.Entities.EmployeeLeavePlan, Dtos.HumanResources.EmployeeLeavePlan>();
             return employeeLeavePlanEntities.Select(lp => employeeLeavePlanEntityToDtoAdapter.MapToType(lp)).ToList();

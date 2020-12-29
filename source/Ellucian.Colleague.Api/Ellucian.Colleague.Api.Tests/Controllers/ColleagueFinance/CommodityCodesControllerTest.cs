@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -54,6 +54,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         CommodityCodesController CommodityCodesController;
         private IEnumerable<Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityCode> allCommodityCodeEntities;
         private List<Dtos.CommodityCode> allCommodityCodeDtos = new List<Dtos.CommodityCode>();
+        private List<Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode> allCFCommodityCodeDtos = new List<Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode>();
         private string commodityCodeGuid = "884a59d1-20e5-43af-94e3-f1504230bbbc";
 
         [TestInitialize]
@@ -194,5 +195,143 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         {
             await CommodityCodesController.DeleteCommodityCodeAsync(commodityCodeGuid);
         }
+
+        [TestMethod]
+        public async Task CommodityCodeController_GetAllCommodityCodesAsync()
+        {
+
+            CommodityCodeServiceMock.Setup(x => x.GetAllCommodityCodesAsync()).ReturnsAsync(allCFCommodityCodeDtos);
+
+            var allCommodityCodes = (await CommodityCodesController.GetAllCommodityCodesAsync()).ToList();
+            Assert.AreEqual(allCFCommodityCodeDtos.Count, allCommodityCodes.Count);
+        }
     }
+
+    #region GetCommodityCodeAsync Tests
+
+    [TestClass]
+    public class GetCommodityCodeAsyncTests
+    {
+        public TestContext TestContext { get; set; }
+
+        private Mock<ICommodityCodesService> _commodityCodesServiceMock;
+        private Mock<ILogger> _loggerMock;
+        private Mock<IAdapterRegistry> _adapterRegistryMock;
+               
+        private CommodityCodesController _commodityCodesController;
+
+        private string commodityCode;        
+        private Dtos.ColleagueFinance.ProcurementCommodityCode resultDto;        
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+            _commodityCodesServiceMock = new Mock<ICommodityCodesService>();
+            _loggerMock = new Mock<ILogger>();
+            _adapterRegistryMock = new Mock<IAdapterRegistry>();
+            
+            commodityCode = "100900";            
+
+            BuildData();
+            _commodityCodesServiceMock.Setup(s => s.GetCommodityCodeByCodeAsync(commodityCode)).ReturnsAsync(resultDto);
+            _commodityCodesController = new CommodityCodesController(_adapterRegistryMock.Object, _commodityCodesServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+        }
+
+        private void BuildData()
+        {
+            resultDto = new Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode
+            {
+                Code = commodityCode,
+                DefaultDescFlag = true,
+                Description = "Robotics Kit",
+                FixedAssetsFlag = "S",
+                Price = 10,
+                TaxCodes = new List<string>()
+            };
+
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            _commodityCodesController = null;
+            _loggerMock = null;
+            _commodityCodesServiceMock = null;
+            resultDto = null;
+        }
+
+        [TestMethod]
+        public async Task CommodityCodesController_GetCommodityCodeAsync_Success()
+        {
+            var actualDto = await _commodityCodesController.GetCommodityCodeAsync(commodityCode);
+            Assert.IsNotNull(actualDto);
+
+            Assert.AreEqual(resultDto.Code, actualDto.Code);
+            Assert.AreEqual(resultDto.DefaultDescFlag, actualDto.DefaultDescFlag);
+            Assert.AreEqual(resultDto.Description, actualDto.Description);
+            Assert.AreEqual(resultDto.FixedAssetsFlag, actualDto.FixedAssetsFlag);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CommodityCodesController_GetCommodityCodeAsync_NullCriteria()
+        {
+            var actualDto = await _commodityCodesController.GetCommodityCodeAsync(null);
+            Assert.IsNull(actualDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CommodityCodesController_GetCommodityCodeAsync_EmptyCriteria()
+        {
+            var actualDto = await _commodityCodesController.GetCommodityCodeAsync(string.Empty);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CommodityCodesController_GetCommodityCodeAsync_ArgumentNullException()
+        {
+            _commodityCodesServiceMock.Setup(s => s.GetCommodityCodeByCodeAsync(null)).Throws(new ArgumentNullException());
+            _commodityCodesController = new CommodityCodesController(_adapterRegistryMock.Object,_commodityCodesServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+
+            var results = await _commodityCodesController.GetCommodityCodeAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CommodityCodesController_GetCommodityCodeAsync_Exception()
+        {
+            _commodityCodesServiceMock.Setup(s => s.GetCommodityCodeByCodeAsync(It.IsAny<string>())).Throws(new Exception());
+            _commodityCodesController = new CommodityCodesController(_adapterRegistryMock.Object, _commodityCodesServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+
+            var results = await _commodityCodesController.GetCommodityCodeAsync(commodityCode);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CommodityCodesController_GetCommodityCodeAsync_KeyNotFoundException()
+        {
+            _commodityCodesServiceMock.Setup(s => s.GetCommodityCodeByCodeAsync(It.IsAny<string>())).Throws(new KeyNotFoundException());
+            _commodityCodesController = new CommodityCodesController(_adapterRegistryMock.Object, _commodityCodesServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+
+            var results = await _commodityCodesController.GetCommodityCodeAsync(commodityCode);
+        }
+    }
+
+    #endregion
 }

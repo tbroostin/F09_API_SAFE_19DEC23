@@ -1,4 +1,4 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -69,6 +69,31 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             return shipToDestinationsCollection;
         }
 
+        /// <summary>
+        /// Gets all Ship to Codes with descriptions
+        /// </summary>
+        /// <returns>Collection of ShipToCode</returns>
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.ShipToCode>> GetShipToCodesAsync()
+        {
+            var shipToCodeCollection = new List<Ellucian.Colleague.Dtos.ColleagueFinance.ShipToCode>();
+
+            var shipToCodesEntities = await _cfReferenceDataRepository.GetShipToCodesAsync();
+            if (shipToCodesEntities != null && shipToCodesEntities.Any())
+            {
+                //sort the entities on code, then by description
+                shipToCodesEntities = shipToCodesEntities.OrderBy(x => x.Code);
+                if (shipToCodesEntities != null && shipToCodesEntities.Any())
+                {
+                    foreach (var shipToCodeEntity in shipToCodesEntities)
+                    {
+                        //convert shipToCode entity to dto
+                        shipToCodeCollection.Add(await ConvertShipToCodeEntityToDto(shipToCodeEntity));
+                    }
+                }
+            }
+            return shipToCodeCollection;
+        }
+
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Get a ShipToDestinations from its GUID
@@ -111,6 +136,19 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             shipToDestinations.Place = await GetAddressCountry(source.placeCountryCode, source.placeCountryLocality, source.placeCountryRegionCode, source.placeCountryPostalCode, await GetHostCountry(), bypassCache);
                                                                                                                                                                         
             return shipToDestinations;
+        }
+
+        /// <summary>
+        /// Converts a ShipToCodes domain entity to its corresponding ShipToCodes DTO
+        /// </summary>
+        /// <param name="source">ShipToCodes domain entity</param>
+        /// <returns>ShipToCodes DTO</returns>
+        private async Task<Ellucian.Colleague.Dtos.ColleagueFinance.ShipToCode> ConvertShipToCodeEntityToDto(Ellucian.Colleague.Domain.ColleagueFinance.Entities.ShipToCode source)
+        {
+            var shipToCode = new Ellucian.Colleague.Dtos.ColleagueFinance.ShipToCode();
+            shipToCode.Code = source.Code;
+            shipToCode.Description = source.Description;
+            return shipToCode;
         }
 
         private IEnumerable<Domain.Base.Entities.Country> _countries = null;
@@ -278,7 +316,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             return null;
         }
-
+        
     }
  
 }

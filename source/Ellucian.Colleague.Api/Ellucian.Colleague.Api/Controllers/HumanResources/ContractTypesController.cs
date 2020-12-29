@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -62,7 +62,17 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             try
             {
                 AddDataPrivacyContextProperty((await _contractTypesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
-                return await _contractTypesService.GetContractTypesAsync(bypassCache);
+                
+                var contractTypes = await _contractTypesService.GetContractTypesAsync(bypassCache);
+
+                if (contractTypes != null && contractTypes.Any())
+                {
+                    AddEthosContextProperties(await _contractTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _contractTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              contractTypes.Select(a => a.Id).ToList()));
+                }
+
+                return contractTypes;                
             }
             catch (KeyNotFoundException e)
             {
@@ -120,6 +130,10 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             try
             {
                 AddDataPrivacyContextProperty((await _contractTypesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
+                AddEthosContextProperties(
+                    await _contractTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _contractTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { guid }));
                 return await _contractTypesService.GetContractTypesByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)

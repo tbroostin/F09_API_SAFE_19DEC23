@@ -166,6 +166,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
             }
         }
 
+
        
         public InstitutionsAttend(string guid, string id)
         {

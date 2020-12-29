@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -133,6 +133,187 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(ex, ex.Message);
                 throw CreateHttpResponseException("Unable to get the voucher.", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves list of voucher summary
+        /// </summary>
+        /// <param name="personId">ID logged in user</param>
+        /// <returns>list of Voucher Summary DTO</returns>
+        /// <accessComments>
+        /// Requires Staff record, requires permission VIEW.VOUCHER.
+        /// </accessComments>
+        [HttpGet]
+        public async Task<IEnumerable<VoucherSummary>> GetVoucherSummariesAsync([FromUri] string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                string message = "person Id must be specified.";
+                logger.Error(message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+
+            try
+            {
+                var Voucher = await voucherService.GetVoucherSummariesAsync(personId);
+                return Voucher;
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex, peex.Message);
+                throw CreateHttpResponseException("Insufficient permissions to get the Voucher summary.", HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException anex)
+            {
+                logger.Error(anex, anex.Message);
+                throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
+            }
+            catch (KeyNotFoundException knfex)
+            {
+                logger.Error(knfex, knfex.Message);
+                throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
+            }
+            // Application exceptions will be caught below.
+            catch (Exception ex)
+            {
+                logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException("Unable to get the Voucher summary.", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Create / Update a voucher.
+        /// </summary>
+        /// <param name="voucherCreateUpdateRequest">The voucher create update request DTO.</param>        
+        /// <returns>The voucher create response DTO.</returns>
+        /// <accessComments>
+        /// Requires Staff record, requires permission CREATE.UPDATE.VOUCHER.
+        /// </accessComments>
+        [HttpPost]
+        public async Task<Dtos.ColleagueFinance.VoucherCreateUpdateResponse> PostVoucherAsync([FromBody] Dtos.ColleagueFinance.VoucherCreateUpdateRequest voucherCreateUpdateRequest)
+        {
+            if (voucherCreateUpdateRequest == null)
+            {
+                throw CreateHttpResponseException("Request body must contain a valid voucher.", HttpStatusCode.BadRequest);
+            }
+            try
+            {
+                return await voucherService.CreateUpdateVoucherAsync(voucherCreateUpdateRequest);
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex.Message);
+                throw CreateHttpResponseException("Insufficient permissions to create/update the voucher.", HttpStatusCode.Forbidden);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message);
+                throw CreateHttpResponseException("Unable to create/update the voucher.", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Gets a payment address of person for voucher
+        /// </summary>
+        /// <returns> Payment address DTO</returns>
+        /// <accessComments>
+        /// Requires  permission CREATE.UPDATE.VOUCHER.
+        /// </accessComments>
+        [HttpGet]
+        public async Task<VendorsVoucherSearchResult> GetReimbursePersonAddressForVoucherAsync()
+        {
+            try
+            {
+                return await voucherService.GetReimbursePersonAddressForVoucherAsync();
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex.Message);
+                throw CreateHttpResponseException("Insufficient permissions to get the person address.", HttpStatusCode.Forbidden);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message);
+                throw CreateHttpResponseException("Unable to get the person address.", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Void a Voucher.
+        /// </summary>
+        /// <param name="voucherVoidRequest">The voucher void request DTO.</param>        
+        /// <returns>The voucher void response DTO.</returns>
+        /// <accessComments>
+        /// Requires Staff record, requires permission CREATE.UPDATE.VOUCHER.
+        /// </accessComments>
+        [HttpPost]
+        public async Task<Dtos.ColleagueFinance.VoucherVoidResponse> VoidVoucherAsync([FromBody] Dtos.ColleagueFinance.VoucherVoidRequest voucherVoidRequest)
+        {
+            if (voucherVoidRequest == null)
+            {
+                throw CreateHttpResponseException("Request body must contain a valid voucher detail.", HttpStatusCode.BadRequest);
+            }
+            try
+            {
+                return await voucherService.VoidVoucherAsync(voucherVoidRequest);
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex.Message);
+                throw CreateHttpResponseException("Insufficient permissions to void the voucher.", HttpStatusCode.Forbidden);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message);
+                throw CreateHttpResponseException("Unable to void the voucher.", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves list of vouchers
+        /// </summary>
+        /// <param name="vendorId">Vendor id</param>
+        /// <param name="invoiceNo">Invoice number</param>
+        /// <returns>List of <see cref="Voucher2">Vouchers</see></returns>
+        /// <accessComments>
+        /// Requires permission VIEW.VOUCHER.
+        /// </accessComments>
+        public async Task<IEnumerable<Voucher2>> GetVouchersByVendorAndInvoiceNoAsync(string vendorId, string invoiceNo)
+        {
+            if (string.IsNullOrEmpty(vendorId))
+            {
+                string message = "vendor Id must be specified.";
+                logger.Error(message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+
+            if (string.IsNullOrEmpty(invoiceNo))
+            {
+                string message = "invoice number must be specified.";
+                logger.Error(message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+
+            try
+            {
+                var voucherIds = await voucherService.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNo);
+                return voucherIds;
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex.Message);
+                throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException anex)
+            {
+                logger.Error(anex, anex.Message);
+                throw CreateHttpResponseException("Invalid argument to query the voucher.", HttpStatusCode.BadRequest);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw CreateHttpResponseException();
             }
         }
     }

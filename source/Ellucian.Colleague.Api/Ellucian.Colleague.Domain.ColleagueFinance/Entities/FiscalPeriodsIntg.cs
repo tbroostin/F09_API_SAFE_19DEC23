@@ -76,7 +76,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         {
             if (string.IsNullOrEmpty(guid))
             {
-                throw new ArgumentNullException(string.Concat("Guid can not be empty, Entity: ‘FISCAL.PERIODS.INTG', Record ID: ", id));
+                throw new ArgumentException(string.Concat("Guid can not be empty, Entity: ‘FISCAL.PERIODS.INTG', Record ID: ", id));
             }
             _guid = guid;
             _id = id;

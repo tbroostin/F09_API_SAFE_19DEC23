@@ -124,9 +124,47 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task ThrowsExceptionIfAccessReturnsException()
             {
                 StudentAttendanceRepository StudentAttendanceRepository = BuildInvalidStudentAttendanceRepository();
-                var StudentAttendances = await StudentAttendanceRepository.GetStudentAttendancesAsync(queryIds, null);
+                var StudentAttendances = await StudentAttendanceRepository.GetStudentAttendancesAsync(queryIds, DateTime.Today.AddDays(-11));
             }
 
+            [TestMethod]
+            public async Task GetsAllStudentAttendance_NullDate_NullAttendanceTypes_With_Comment_Are_Not_Selected()
+            {
+                studentCourseSecResponseData = BuildCulmulativeTotalsStudentCourseSecResponse();
+                scsIds = new List<string>() { studentCourseSecResponseData.ElementAt(0).Recordkey };
+                StudentAttendanceRepository = BuildCumulativeTotalsStudentAttendanceRepository();
+                var studentAttendances = await StudentAttendanceRepository.GetStudentAttendancesAsync(new List<string>() { "section6" }, null);
+
+                var expectedLastRecordedDate = studentCourseSecResponseData.ElementAt(0).ScsAttendanceEntityAssociation.ElementAt(0).ScsAbsentDatesAssocMember;
+                Assert.AreEqual(expectedLastRecordedDate, studentAttendances.ElementAt(0).LastAttendanceRecorded);
+            }
+
+            [TestMethod]
+            public async Task GetsAllStudentAttendance_NullDate_NullAttendanceTypes_Correct_Attendance_Counts()
+            {
+                studentCourseSecResponseData = BuildCulmulativeTotalsStudentCourseSecResponse();
+                scsIds = new List<string>() { studentCourseSecResponseData.ElementAt(1).Recordkey };
+                StudentAttendanceRepository = BuildCumulativeTotalsStudentAttendanceRepository();
+                var studentAttendances = await StudentAttendanceRepository.GetStudentAttendancesAsync(new List<string>() { "section7" }, null);
+
+                //cumulative totals 2 present, 2 late, 1 absent, 1 excused 
+                Assert.AreEqual(2, studentAttendances.ElementAt(0).NumberOfDaysPresent);
+                Assert.AreEqual(2, studentAttendances.ElementAt(0).NumberOfDaysLate);
+                Assert.AreEqual(1, studentAttendances.ElementAt(0).NumberOfDaysAbsent);
+                Assert.AreEqual(1, studentAttendances.ElementAt(0).NumberOfDaysExcused);
+            }
+
+            [TestMethod]
+            public async Task GetsAllStudentAttendance_NullDate_NullAbsentDates()
+            {
+                studentCourseSecResponseData = BuildCulmulativeTotalsStudentCourseSecResponse();
+                scsIds = new List<string>() { studentCourseSecResponseData.ElementAt(2).Recordkey };
+                StudentAttendanceRepository = BuildCumulativeTotalsStudentAttendanceRepository();
+                var studentAttendances = await StudentAttendanceRepository.GetStudentAttendancesAsync(new List<string>() { "section8" }, null);
+
+                var expectedLastRecordedDate = studentCourseSecResponseData.ElementAt(2).ScsAttendanceEntityAssociation.ElementAt(0).ScsAbsentDatesAssocMember;
+                Assert.AreEqual(expectedLastRecordedDate, studentAttendances.ElementAt(0).LastAttendanceRecorded);
+            }
 
             private Collection<StudentCourseSec> BuildStudentCourseSecResponse()
             {
@@ -208,10 +246,202 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 scs5.ScsAttendanceEntityAssociation.Add(scsa11);
                 studentCourseSecs.Add(scs5);
 
-
                 return studentCourseSecs;
             }
 
+            private Collection<StudentCourseSec> BuildCulmulativeTotalsStudentCourseSecResponse()
+            {
+                Collection<StudentCourseSec> studentCourseSecs = new Collection<StudentCourseSec>();
+
+                var studentCourseSec = new StudentCourseSec()
+                {
+                    Recordkey = "scs6",
+                    ScsCourseSection = "section6",
+                    ScsStudent = "student6",
+                    ScsAttendanceEntityAssociation = new List<StudentCourseSecScsAttendance>()
+                };
+
+                //add attendances record with date, comment and a status
+                var studentCourseSecAttendance = new StudentCourseSecScsAttendance()
+                {
+                    ScsAbsentDatesAssocMember = DateTime.Today.AddDays(-11),
+                    ScsAttendanceInstrMethodsAssocMember = "LEC",
+                    ScsAttendanceTypesAssocMember = "P",
+                    ScsAttendanceReasonAssocMember = "Comment with attendance status",
+                    ScsAttendanceStartTimesAssocMember = DateTime.Today.AddDays(-11).AddHours(-1),
+                    ScsAttendanceEndTimesAssocMember = DateTime.Today.AddDays(-11),
+
+                };
+                studentCourseSec.ScsAttendanceEntityAssociation.Add(studentCourseSecAttendance);
+
+                //add attendances record with date, comment and empty status
+                studentCourseSecAttendance = new StudentCourseSecScsAttendance()
+                {
+                    ScsAbsentDatesAssocMember = DateTime.Today.AddDays(-2),
+                    ScsAttendanceInstrMethodsAssocMember = "LEC",
+                    ScsAttendanceTypesAssocMember = string.Empty,
+                    ScsAttendanceReasonAssocMember = "Comment without attendance status",
+                    ScsAttendanceStartTimesAssocMember = DateTime.Today.AddDays(-2).AddHours(-1),
+                    ScsAttendanceEndTimesAssocMember = DateTime.Today.AddDays(-2),
+                };
+                studentCourseSec.ScsAttendanceEntityAssociation.Add(studentCourseSecAttendance);
+
+                //add attendances record with date, comment and null status
+                studentCourseSecAttendance = new StudentCourseSecScsAttendance()
+                {
+                    ScsAbsentDatesAssocMember = DateTime.Today.AddDays(-1),
+                    ScsAttendanceInstrMethodsAssocMember = "LEC",
+                    ScsAttendanceTypesAssocMember = null,
+                    ScsAttendanceReasonAssocMember = "Comment without attendance status",
+                    ScsAttendanceStartTimesAssocMember = DateTime.Today.AddDays(-1).AddHours(-1),
+                    ScsAttendanceEndTimesAssocMember = DateTime.Today.AddDays(-1),
+                };
+                studentCourseSec.ScsAttendanceEntityAssociation.Add(studentCourseSecAttendance);
+                studentCourseSecs.Add(studentCourseSec);
+
+                studentCourseSec = new StudentCourseSec()
+                {
+                    Recordkey = "scs7",
+                    ScsCourseSection = "section7",
+                    ScsStudent = "student7",
+                    ScsAttendanceEntityAssociation = new List<StudentCourseSecScsAttendance>()
+                };
+
+                //add attendances record with date, comment and a P status
+                studentCourseSecAttendance = new StudentCourseSecScsAttendance()
+                {
+                    ScsAbsentDatesAssocMember = DateTime.Today.AddDays(-11),
+                    ScsAttendanceInstrMethodsAssocMember = "LEC",
+                    ScsAttendanceTypesAssocMember = "P",
+                    ScsAttendanceReasonAssocMember = "Present attendance status",
+                    ScsAttendanceStartTimesAssocMember = DateTime.Today.AddDays(-11).AddHours(-1),
+                    ScsAttendanceEndTimesAssocMember = DateTime.Today.AddDays(-11),
+                };
+                studentCourseSec.ScsAttendanceEntityAssociation.Add(studentCourseSecAttendance);
+
+                //add attendances record with date, comment and a L status
+                studentCourseSecAttendance = new StudentCourseSecScsAttendance()
+                {
+                    ScsAbsentDatesAssocMember = DateTime.Today.AddDays(-10),
+                    ScsAttendanceInstrMethodsAssocMember = "LEC",
+                    ScsAttendanceTypesAssocMember = "L",
+                    ScsAttendanceReasonAssocMember = "Late attendance status",
+                    ScsAttendanceStartTimesAssocMember = DateTime.Today.AddDays(-10).AddHours(-1),
+                    ScsAttendanceEndTimesAssocMember = DateTime.Today.AddDays(-10),
+                };
+                studentCourseSec.ScsAttendanceEntityAssociation.Add(studentCourseSecAttendance);
+
+                //add attendances record with date, comment and a l status
+                studentCourseSecAttendance = new StudentCourseSecScsAttendance()
+                {
+                    ScsAbsentDatesAssocMember = DateTime.Today.AddDays(-9),
+                    ScsAttendanceInstrMethodsAssocMember = "LEC",
+                    ScsAttendanceTypesAssocMember = "l",
+                    ScsAttendanceReasonAssocMember = "late attendance status",
+                    ScsAttendanceStartTimesAssocMember = DateTime.Today.AddDays(-9).AddHours(-1),
+                    ScsAttendanceEndTimesAssocMember = DateTime.Today.AddDays(-9),
+                };
+                studentCourseSec.ScsAttendanceEntityAssociation.Add(studentCourseSecAttendance);
+
+                //add attendances record with date, comment and a E status
+                studentCourseSecAttendance = new StudentCourseSecScsAttendance()
+                {
+                    ScsAbsentDatesAssocMember = DateTime.Today.AddDays(-8),
+                    ScsAttendanceInstrMethodsAssocMember = "LEC",
+                    ScsAttendanceTypesAssocMember = "E",
+                    ScsAttendanceReasonAssocMember = "Excused attendance status",
+                    ScsAttendanceStartTimesAssocMember = DateTime.Today.AddDays(-8).AddHours(-1),
+                    ScsAttendanceEndTimesAssocMember = DateTime.Today.AddDays(-8),
+                };
+                studentCourseSec.ScsAttendanceEntityAssociation.Add(studentCourseSecAttendance);
+
+                //add attendances record with date, comment and a A status
+                studentCourseSecAttendance = new StudentCourseSecScsAttendance()
+                {
+                    ScsAbsentDatesAssocMember = DateTime.Today.AddDays(-7),
+                    ScsAttendanceInstrMethodsAssocMember = "LEC",
+                    ScsAttendanceTypesAssocMember = "A",
+                    ScsAttendanceReasonAssocMember = "Absent attendance status",
+                    ScsAttendanceStartTimesAssocMember = DateTime.Today.AddDays(-7).AddHours(-1),
+                    ScsAttendanceEndTimesAssocMember = DateTime.Today.AddDays(-7),
+                };
+                studentCourseSec.ScsAttendanceEntityAssociation.Add(studentCourseSecAttendance);
+
+                //add attendances record with date, comment and a p status
+                studentCourseSecAttendance = new StudentCourseSecScsAttendance()
+                {
+                    ScsAbsentDatesAssocMember = DateTime.Today.AddDays(-6),
+                    ScsAttendanceInstrMethodsAssocMember = "LEC",
+                    ScsAttendanceTypesAssocMember = "p",
+                    ScsAttendanceReasonAssocMember = "present attendance status",
+                    ScsAttendanceStartTimesAssocMember = DateTime.Today.AddDays(-6).AddHours(-1),
+                    ScsAttendanceEndTimesAssocMember = DateTime.Today.AddDays(-6),
+                };
+                studentCourseSec.ScsAttendanceEntityAssociation.Add(studentCourseSecAttendance);
+
+                //add attendances record with date, comment and a null status
+                studentCourseSecAttendance = new StudentCourseSecScsAttendance()
+                {
+                    ScsAbsentDatesAssocMember = DateTime.Today.AddDays(-5),
+                    ScsAttendanceInstrMethodsAssocMember = "LEC",
+                    ScsAttendanceTypesAssocMember = null,
+                    ScsAttendanceReasonAssocMember = "null attendance status",
+                    ScsAttendanceStartTimesAssocMember = DateTime.Today.AddDays(-5).AddHours(-1),
+                    ScsAttendanceEndTimesAssocMember = DateTime.Today.AddDays(-5),
+
+                };
+                studentCourseSec.ScsAttendanceEntityAssociation.Add(studentCourseSecAttendance);
+
+                //add attendances record with date, comment and a blank status
+                studentCourseSecAttendance = new StudentCourseSecScsAttendance()
+                {
+                    ScsAbsentDatesAssocMember = DateTime.Today.AddDays(-4),
+                    ScsAttendanceInstrMethodsAssocMember = "LEC",
+                    ScsAttendanceTypesAssocMember = string.Empty,
+                    ScsAttendanceReasonAssocMember = "blank attendance status",
+                    ScsAttendanceStartTimesAssocMember = DateTime.Today.AddDays(-4).AddHours(-1),
+                    ScsAttendanceEndTimesAssocMember = DateTime.Today.AddDays(-4),
+
+                };
+                studentCourseSec.ScsAttendanceEntityAssociation.Add(studentCourseSecAttendance);
+                studentCourseSecs.Add(studentCourseSec);
+
+                studentCourseSec = new StudentCourseSec()
+                {
+                    Recordkey = "scs8",
+                    ScsCourseSection = "section8",
+                    ScsStudent = "student8",
+                    ScsAttendanceEntityAssociation = new List<StudentCourseSecScsAttendance>()
+                };
+
+                //add attendances record with null absent date, comment and a status
+                studentCourseSecAttendance = new StudentCourseSecScsAttendance()
+                {
+                    ScsAbsentDatesAssocMember = null,
+                    ScsAttendanceInstrMethodsAssocMember = "LEC",
+                    ScsAttendanceTypesAssocMember = "P",
+                    ScsAttendanceReasonAssocMember = "Comment with attendance status",
+                    ScsAttendanceStartTimesAssocMember = DateTime.Today.AddDays(-11).AddHours(-1),
+                    ScsAttendanceEndTimesAssocMember = DateTime.Today.AddDays(-11),
+
+                };
+                studentCourseSec.ScsAttendanceEntityAssociation.Add(studentCourseSecAttendance);
+
+                //add attendances record with date, comment and empty status
+                studentCourseSecAttendance = new StudentCourseSecScsAttendance()
+                {
+                    ScsAbsentDatesAssocMember = DateTime.Today.AddDays(-2),
+                    ScsAttendanceInstrMethodsAssocMember = "LEC",
+                    ScsAttendanceTypesAssocMember = string.Empty,
+                    ScsAttendanceReasonAssocMember = "Comment without attendance status",
+                    ScsAttendanceStartTimesAssocMember = DateTime.Today.AddDays(-2).AddHours(-1),
+                    ScsAttendanceEndTimesAssocMember = DateTime.Today.AddDays(-2),
+                };
+                studentCourseSec.ScsAttendanceEntityAssociation.Add(studentCourseSecAttendance);
+                studentCourseSecs.Add(studentCourseSec);
+
+                return studentCourseSecs;
+            }
 
             private StudentAttendanceRepository BuildValidStudentAttendanceRepository()
             {
@@ -224,6 +454,23 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataAccessorMock.Setup(sacc => sacc.SelectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string[]>(), "?", true, 425)).Returns(Task.FromResult(scsIds.ToArray()));
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentCourseSec>(It.IsAny<string>(), It.IsAny<string[]>(), true)).Returns(Task.FromResult(studentCourseSecResponseData));
 
+                StudentAttendanceRepository repository = new StudentAttendanceRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                return repository;
+            }
+
+            private StudentAttendanceRepository BuildCumulativeTotalsStudentAttendanceRepository()
+            {
+                var recordKey = scsIds.ElementAt(0);
+                Collection<StudentCourseSec> responseData = new Collection<StudentCourseSec>(studentCourseSecResponseData.Where(key => key.Recordkey == recordKey).ToList());
+
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+                cacheProviderMock = new Mock<ICacheProvider>();
+
+                // Set up data accessor for the transaction factory 
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+                dataAccessorMock.Setup(sacc => sacc.SelectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string[]>(), "?", true, 425)).Returns(Task.FromResult(scsIds.ToArray()));
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentCourseSec>(It.IsAny<string>(), It.IsAny<string[]>(), true)).Returns(Task.FromResult(responseData));
 
                 StudentAttendanceRepository repository = new StudentAttendanceRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
                 return repository;
@@ -244,8 +491,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 return repository;
             }
-
-
         }
 
         [TestClass]
@@ -524,7 +769,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 meetingInstance = new SectionMeetingInstance("333", sectionId, meetingDate, startTimeOffset, endTimeOffset) { InstructionalMethod = "LEC" };
                 sectionAttendance = new SectionAttendance(sectionId, meetingInstance);
                 sectionAttendance.AddStudentSectionAttendance(new StudentSectionAttendance("studentCourseSec1", "A", null, "Reason for absense. "));
-                sectionAttendance.AddStudentSectionAttendance(new StudentSectionAttendance("studentCourseSec2", null, null,"Reason for absense. "));
+                sectionAttendance.AddStudentSectionAttendance(new StudentSectionAttendance("studentCourseSec2", null, null, "Reason for absense. "));
                 sectionAttendance.AddStudentSectionAttendance(new StudentSectionAttendance("studentCourseSec3", "P", null, null));
 
                 meetingInstances = new List<SectionMeetingInstance>()
@@ -622,8 +867,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 var response = new UpdateStudentAttendanceResponse()
                 {
                     ErrorFlag = false,
-                     UpdatedStudentCourseSecId = new List<string>() { "studentCourseSec1", null, "notFoundId"},
-                     ErroredStudentAttendances = new List<ErroredStudentAttendances>()
+                    UpdatedStudentCourseSecId = new List<string>() { "studentCourseSec1", null, "notFoundId" },
+                    ErroredStudentAttendances = new List<ErroredStudentAttendances>()
                      {
                          new ErroredStudentAttendances() { ErrorMessages = "Invalid Error - no corresponding student course sec Id" },
                          null,
@@ -734,7 +979,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             List<string> allScsIds;
             List<string> fewScsIds;
             Collection<StudentCourseSec> studentCourseSecResponseData;
-            Collection<StudentCourseSec> fewStudentCourseSecResponseData=new Collection<StudentCourseSec>();
+            Collection<StudentCourseSec> fewStudentCourseSecResponseData = new Collection<StudentCourseSec>();
             StudentAttendanceRepository StudentAttendanceRepository;
 
 
@@ -749,9 +994,9 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 //retrieve all course.sec records ids
                 allScsIds = studentCourseSecResponseData.Select(ss => ss.Recordkey).ToList();
                 //retrieve only selected course.sec.ids
-                fewScsIds = studentCourseSecResponseData.Where(s => queryIds.Contains(s.ScsCourseSection)).Select(a=>a.Recordkey).ToList();
-                List< StudentCourseSec> selectedCourseSec=studentCourseSecResponseData.Where(s => queryIds.Contains(s.ScsCourseSection)).ToList();
-                foreach(var courseSec in selectedCourseSec)
+                fewScsIds = studentCourseSecResponseData.Where(s => queryIds.Contains(s.ScsCourseSection)).Select(a => a.Recordkey).ToList();
+                List<StudentCourseSec> selectedCourseSec = studentCourseSecResponseData.Where(s => queryIds.Contains(s.ScsCourseSection)).ToList();
+                foreach (var courseSec in selectedCourseSec)
                 {
                     fewStudentCourseSecResponseData.Add(courseSec);
                 }
@@ -776,7 +1021,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 // Call Section Repository with a non-existant section
                 var nonExistingIds = new List<string>() { "notInListId" };
                 dataAccessorMock.Setup(sacc => sacc.SelectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string[]>(), "?", true, 425)).Returns(Task.FromResult(new List<string>().ToArray()));
-                var studentAttendances = await StudentAttendanceRepository.GetStudentSectionAttendancesAsync("student1",nonExistingIds);
+                var studentAttendances = await StudentAttendanceRepository.GetStudentSectionAttendancesAsync("student1", nonExistingIds);
                 Assert.AreEqual("student1", studentAttendances.StudentId);
                 Assert.AreEqual(0, studentAttendances.SectionWiseAttendances.Count);
 
@@ -809,7 +1054,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 var studentAttendances = await StudentAttendanceRepository.GetStudentSectionAttendancesAsync(null, queryIds);
             }
 
-          
+
 
 
             [TestMethod]
@@ -819,7 +1064,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.IsNotNull(studentAttendances);
                 Assert.AreEqual("student1", studentAttendances.StudentId);
                 //will not build sectiona ttendace when student attendance does not exist for student course sec record.
-                Assert.AreEqual(allScsIds.Count()-1, studentAttendances.SectionWiseAttendances.Count);
+                Assert.AreEqual(allScsIds.Count() - 1, studentAttendances.SectionWiseAttendances.Count);
             }
 
             [TestMethod]
@@ -835,7 +1080,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task Validate_Correct_DataInCollection()
             {
-                var studentAttendances = await StudentAttendanceRepository.GetStudentSectionAttendancesAsync("student1",null);
+                var studentAttendances = await StudentAttendanceRepository.GetStudentSectionAttendancesAsync("student1", null);
                 Assert.AreEqual("student1", studentAttendances.StudentId);
                 //will not build sectiona ttendace when student attendance does not exist for student course sec record.
                 Assert.AreEqual(allScsIds.Count() - 1, studentAttendances.SectionWiseAttendances.Count);
@@ -954,7 +1199,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     ScsStudent = "student1",
                     ScsAttendanceEntityAssociation = new List<StudentCourseSecScsAttendance>()
                 };
-                
+
                 studentCourseSecs.Add(scs6);
 
 

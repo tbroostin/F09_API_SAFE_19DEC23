@@ -1,4 +1,4 @@
-﻿/*Copyright 2014-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2014-2019 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -155,6 +155,158 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.FinancialAid
                 try
                 {
                     await actualController.GetStudentFinancialAidBudgetComponentsAsync(studentId);
+                }
+                catch (HttpResponseException hre)
+                {
+                    Assert.AreEqual(HttpStatusCode.BadRequest, hre.Response.StatusCode);
+                    loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), It.IsAny<string>()));
+                    throw;
+                }
+            }
+
+        }
+
+        [TestClass]
+        public class GetStudentBudgetComponentsForYearTests : StudentFinancialAidBudgetComponentsControllerTests
+        {
+            #region Test Context
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+            #endregion
+
+            public List<StudentBudgetComponent> studentBudgetComponentDtos;
+
+            public string studentId;
+            public string year;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                StudentBudgetComponentsControllerTestsInitialize();
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                studentId = "0003914";
+                year = "2018";
+
+                studentBudgetComponentDtos = new List<StudentBudgetComponent>()
+                {
+                    new StudentBudgetComponent()
+                    {
+                        StudentId = studentId,
+                        AwardYear = "2018",
+                        BudgetComponentCode = "TUITION",
+                        CampusBasedOriginalAmount = 5000,
+                        CampusBasedOverrideAmount = 5500
+                    },
+                    new StudentBudgetComponent()
+                    {
+                        StudentId = studentId,
+                        AwardYear = "2019",
+                        BudgetComponentCode = "TUITION",
+                        CampusBasedOriginalAmount = 5500,
+                        CampusBasedOverrideAmount = null
+                    },
+                    new StudentBudgetComponent()
+                    {
+                        StudentId = studentId,
+                        AwardYear = "2018",
+                        BudgetComponentCode = "BOOKS",
+                        CampusBasedOriginalAmount = 1500,
+                        CampusBasedOverrideAmount = null
+                    }
+                };
+
+                studentBudgetComponentServiceMock.Setup(s => s.GetStudentBudgetComponentsForYearAsync(It.IsAny<string>(), It.IsAny<string>()))
+                    .Returns<string, string>((id, awYear) => Task.FromResult(studentBudgetComponentDtos.Where(sbc => sbc.StudentId == id && sbc.AwardYear == awYear)));
+
+                actualController = new StudentFinancialAidBudgetComponentsController(adapterRegistryMock.Object, studentBudgetComponentServiceMock.Object, loggerMock.Object);
+            }
+
+            [TestMethod]
+            public async Task ExpectedEqualsActualTest()
+            {
+                var actualStudentBudgets = await actualController.GetStudentFinancialAidBudgetComponentsForYearAsync(studentId, year);
+                var expectedBudgetComponents = studentBudgetComponentDtos.Where(bc => bc.AwardYear == year).ToList();
+
+                CollectionAssert.AreEqual(expectedBudgetComponents, actualStudentBudgets.ToList(), studentBudgetComponentDtoComparer);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentIdIsRequiredTest()
+            {
+                try
+                {
+                    await actualController.GetStudentFinancialAidBudgetComponentsForYearAsync(null, year);
+                }
+                catch (HttpResponseException hre)
+                {
+                    Assert.AreEqual(HttpStatusCode.BadRequest, hre.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task AwardYearIsRequiredTest()
+            {
+                try
+                {
+                    await actualController.GetStudentFinancialAidBudgetComponentsForYearAsync(studentId, null);
+                }
+                catch (HttpResponseException hre)
+                {
+                    Assert.AreEqual(HttpStatusCode.BadRequest, hre.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PermissionsExceptionTest()
+            {
+                studentBudgetComponentServiceMock.Setup(s => s.GetStudentBudgetComponentsForYearAsync(It.IsAny<string>(), It.IsAny<string>()))
+                    .Throws(new PermissionsException("pex"));
+
+                try
+                {
+                    await actualController.GetStudentFinancialAidBudgetComponentsForYearAsync(studentId, year);
+                }
+                catch (HttpResponseException hre)
+                {
+                    Assert.AreEqual(HttpStatusCode.Forbidden, hre.Response.StatusCode);
+                    loggerMock.Verify(l => l.Error(It.IsAny<PermissionsException>(), It.IsAny<string>()));
+                    throw;
+                }
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GenericExceptionTest()
+            {
+                studentBudgetComponentServiceMock.Setup(s => s.GetStudentBudgetComponentsForYearAsync(It.IsAny<string>(), It.IsAny<string>()))
+                    .Throws(new Exception("ex"));
+
+                try
+                {
+                    await actualController.GetStudentFinancialAidBudgetComponentsForYearAsync(studentId, year);
                 }
                 catch (HttpResponseException hre)
                 {

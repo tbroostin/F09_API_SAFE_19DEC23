@@ -1,7 +1,8 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Data.Colleague;
@@ -455,11 +456,158 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             }
         }
 
-        #region GetTaxFormConsentConfigurationAsync
+        #region TaxFormConsentConfiguration version 1 and 2
+
         [TestClass, System.Runtime.InteropServices.GuidAttribute("23894E0F-C5FD-4566-A92B-776992289D6A")]
         public class ConfigurationRepository_GetTaxFormConfiguration : ConfigurationRepositoryTests
         {
             #region W-2
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_Success_W2()
+            {
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormW2);
+
+                // Check that the W-2 consent paragraphs are the same
+                Assert.AreEqual(expectedHrWebDefaults.HrwebW2oConText, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(expectedHrWebDefaults.HrwebW2oWhldText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+
+                var actualAvailabilityConfiguration = await this.ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.FormW2);
+                // Make sure the domain entity set has the same number of year/date entries as the data contract set for W-2.
+                Assert.AreEqual(expectedQtdYtdParameterW2.WebW2ParametersEntityAssociation.Count, actualAvailabilityConfiguration.Availabilities.Count);
+
+                // Make sure each data contract entry is reflected in the domain entity set for W-2.
+                foreach (var dataContract in expectedQtdYtdParameterW2.WebW2ParametersEntityAssociation)
+                {
+                    // Get the domain entity with matching data
+                    var domainEntity = actualAvailabilityConfiguration.Availabilities.Where(x =>
+                        x.TaxYear == dataContract.QypWebW2YearsAssocMember
+                        && x.Available == DateTime.Compare(dataContract.QypWebW2AvailableDatesAssocMember.Value, DateTime.Now) <= 0).ToList();
+
+                    // Make sure the domainEntity list contains only one object.
+                    Assert.AreEqual(1, domainEntity.Count);
+                }
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_W2_DataReaderReturnsNull()
+            {
+                dataReaderMock.Setup<Task<HrwebDefaults>>(datareader => datareader.ReadRecordAsync<HrwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+                {
+                    HrwebDefaults defaults = new HrwebDefaults();
+                    defaults = null;
+                    return Task.FromResult(defaults);
+                });
+
+                dataReaderMock.Setup<Task<QtdYtdParameterW2>>(datareader => datareader.ReadRecordAsync<QtdYtdParameterW2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+                {
+                    QtdYtdParameterW2 parameters = new QtdYtdParameterW2();
+                    parameters = null;
+                    return Task.FromResult(parameters);
+                });
+
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormW2);
+
+                // Check W-2
+                Assert.IsTrue(actualConfiguration is TaxFormConfiguration2);
+                Assert.AreEqual(null, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(null, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+                Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_W2_NullTaxYear()
+            {
+                expectedQtdYtdParameterW2.QypWebW2Years[0] = null;
+
+                var actualAvailabilityConfiguration = await this.ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.FormW2);
+
+                // Make sure the domain entity set has the same number of year/date entries as the data contract set for W-2
+                Assert.AreEqual(expectedQtdYtdParameterW2.WebW2ParametersEntityAssociation.Count - 1, actualAvailabilityConfiguration.Availabilities.Count);
+
+                // Make sure each domain entity returned is reflected in the original data contract set for W-2
+                foreach (var domainEntity in actualAvailabilityConfiguration.Availabilities)
+                {
+                    // Get the domain entity with matching data
+                    var dataContract = expectedQtdYtdParameterW2.WebW2ParametersEntityAssociation.Where(x =>
+                        x.QypWebW2YearsAssocMember == domainEntity.TaxYear
+                        && (DateTime.Compare(x.QypWebW2AvailableDatesAssocMember.Value, DateTime.Now) <= 0) == domainEntity.Available).ToList();
+
+                    // Make sure the domainEntity list contains only one object
+                    Assert.AreEqual(1, dataContract.Count);
+                }
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_W2_EmptyTaxYear()
+            {
+                expectedQtdYtdParameterW2.QypWebW2Years[0] = string.Empty;
+
+                var actualAvailabilityConfiguration = await this.ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.FormW2);
+
+                // Make sure the domain entity set has the same number of year/date entries as the data contract set for W-2
+                Assert.AreEqual(expectedQtdYtdParameterW2.WebW2ParametersEntityAssociation.Count - 1, actualAvailabilityConfiguration.Availabilities.Count);
+
+                // Make sure each domain entity returned is reflected in the original data contract set for W-2
+                foreach (var domainEntity in actualAvailabilityConfiguration.Availabilities)
+                {
+                    // Get the domain entity with matching data
+                    var dataContract = expectedQtdYtdParameterW2.WebW2ParametersEntityAssociation.Where(x =>
+                        x.QypWebW2YearsAssocMember == domainEntity.TaxYear
+                        && (DateTime.Compare(x.QypWebW2AvailableDatesAssocMember.Value, DateTime.Now) <= 0) == domainEntity.Available).ToList();
+
+                    // Make sure the domainEntity list contains only one object
+                    Assert.AreEqual(1, dataContract.Count);
+                }
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_NullAvailableDate_W2()
+            {
+                expectedQtdYtdParameterW2.QypWebW2AvailableDates[0] = null;
+
+                var actualAvailabilityConfiguration = await this.ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.FormW2);
+
+                // Make sure the domain entity set has the same number of year/date entries as the data contract set
+                Assert.AreEqual(expectedQtdYtdParameterW2.WebW2ParametersEntityAssociation.Count - 1, actualAvailabilityConfiguration.Availabilities.Count);
+
+                // Make sure each domain entity returned is reflected in the original data contract set.
+                foreach (var domainEntity in actualAvailabilityConfiguration.Availabilities)
+                {
+                    // Get the domain entity with matching data
+                    var dataContract = expectedQtdYtdParameterW2.WebW2ParametersEntityAssociation.Where(x =>
+                        x.QypWebW2YearsAssocMember == domainEntity.TaxYear
+                        && (DateTime.Compare(x.QypWebW2AvailableDatesAssocMember.Value, DateTime.Now) <= 0) == domainEntity.Available).ToList();
+
+                    // Make sure the domainEntity list contains only one object.
+                    Assert.AreEqual(1, dataContract.Count);
+                }
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_EmptyAssociation_W2()
+            {
+                dataReaderMock.Setup<Task<QtdYtdParameterW2>>(
+                    dataReader => dataReader.ReadRecordAsync<QtdYtdParameterW2>(It.IsAny<string>(), It.IsAny<string>(), true))
+                    .Returns(() =>
+                    {
+                        // Build the association for W2 data
+                        expectedQtdYtdParameterW2.buildAssociations();
+
+                        // Make the W-2 association null
+                        expectedQtdYtdParameterW2.WebW2ParametersEntityAssociation = null;
+
+                        return Task.FromResult(expectedQtdYtdParameterW2);
+                    });
+
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormW2);
+
+                // The availability list should be empty
+                Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
+            }
+
+
+            // Obsolete
             [TestMethod]
             public async Task GetTaxFormConfigurationAsync_Success_W2()
             {
@@ -485,7 +633,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Assert.AreEqual(1, domainEntity.Count);
                 }
             }
-
+            // Obsolete
             [TestMethod]
             public async Task GetTaxFormConfigurationAsync_W2_DataReaderReturnsNull()
             {
@@ -511,7 +659,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.AreEqual(null, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
                 Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
             }
-
+            // Obsolete
             [TestMethod]
             public async Task GetTaxFormConfigurationAsync_W2_NullTaxYear()
             {
@@ -534,7 +682,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Assert.AreEqual(1, dataContract.Count);
                 }
             }
-
+            // Obsolete
             [TestMethod]
             public async Task GetTaxFormConfigurationAsync_W2_EmptyTaxYear()
             {
@@ -557,7 +705,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Assert.AreEqual(1, dataContract.Count);
                 }
             }
-
+            // Obsolete
             [TestMethod]
             public async Task GetTaxFormConfigurationAsync_NullAvailableDate_W2()
             {
@@ -580,7 +728,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Assert.AreEqual(1, dataContract.Count);
                 }
             }
-
+            // Obsolete
             [TestMethod]
             public async Task GetTaxFormConfigurationAsync_EmptyAssociation_W2()
             {
@@ -605,6 +753,150 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             #endregion
 
             #region 1095-C
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_Success_1095C()
+            {
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.Form1095C);
+
+                // Check that the 1095-C consent paragraphs are the same
+                Assert.AreEqual(expectedHrWebDefaults.Hrweb1095cConText, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(expectedHrWebDefaults.Hrweb1095cWhldText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+
+                var actualAvailabilityConfiguration = await this.ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.Form1095C);
+                // Make sure the domain entity set has the same number of year/date entries as the data contract set for 1095-C.
+                Assert.AreEqual(expectedQtdYtdParameter1095C.Qyp1095cParametersEntityAssociation.Count, actualAvailabilityConfiguration.Availabilities.Count);
+
+                foreach (var dataContract in expectedQtdYtdParameter1095C.Qyp1095cParametersEntityAssociation)
+                {
+                    // Get the domain entity with matching data
+                    var domainEntity = actualAvailabilityConfiguration.Availabilities.Where(x =>
+                        x.TaxYear == dataContract.QypWeb1095cYearsAssocMember
+                        && x.Available == DateTime.Compare(dataContract.QypWeb1095cAvailDatesAssocMember.Value, DateTime.Now) <= 0).ToList();
+
+                    // Make sure the domainEntity list contains only one object.
+                    Assert.AreEqual(1, domainEntity.Count);
+                }
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_1095C_DataReaderReturnsNull()
+            {
+                dataReaderMock.Setup<Task<HrwebDefaults>>(datareader => datareader.ReadRecordAsync<HrwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+                {
+                    HrwebDefaults defaults = new HrwebDefaults();
+                    defaults = null;
+                    return Task.FromResult(defaults);
+                });
+
+                dataReaderMock.Setup<Task<QtdYtdParameter1095C>>(datareader => datareader.ReadRecordAsync<QtdYtdParameter1095C>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+                {
+                    QtdYtdParameter1095C parameters = new QtdYtdParameter1095C();
+                    parameters = null;
+                    return Task.FromResult(parameters);
+                });
+
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.Form1095C);
+
+                // Check 1095-C
+                Assert.IsTrue(actualConfiguration is TaxFormConfiguration2);
+                Assert.AreEqual(null, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(null, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+                Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_1095C_NullTaxYear()
+            {
+                expectedQtdYtdParameter1095C.QypWeb1095cYears[0] = null;
+
+                var actualAvailabilityConfiguration = await this.ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.Form1095C);
+
+                // Make sure the domain entity set has the same number of year/date entries as the data contract set for 1095-C
+                Assert.AreEqual(expectedQtdYtdParameter1095C.Qyp1095cParametersEntityAssociation.Count - 1, actualAvailabilityConfiguration.Availabilities.Count);
+
+                // Make sure each domain entity returned is reflected in the original data contract set for 1095-C
+                foreach (var domainEntity in actualAvailabilityConfiguration.Availabilities)
+                {
+                    // Get the domain entity with matching data
+                    var dataContract = expectedQtdYtdParameter1095C.Qyp1095cParametersEntityAssociation.Where(x =>
+                        x.QypWeb1095cYearsAssocMember == domainEntity.TaxYear
+                        && (DateTime.Compare(x.QypWeb1095cAvailDatesAssocMember.Value, DateTime.Now) <= 0) == domainEntity.Available).ToList();
+
+                    // Make sure the domainEntity list contains only one object
+                    Assert.AreEqual(1, dataContract.Count);
+                }
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_EmptyTaxYear_1095C()
+            {
+                expectedQtdYtdParameter1095C.QypWeb1095cYears[0] = string.Empty;
+
+                var actualAvailabilityConfiguration = await this.ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.Form1095C);
+
+                // Make sure the domain entity set has the same number of year/date entries as the data contract set for 1095-C
+                Assert.AreEqual(expectedQtdYtdParameter1095C.Qyp1095cParametersEntityAssociation.Count - 1, actualAvailabilityConfiguration.Availabilities.Count);
+
+                // Make sure each domain entity returned is reflected in the original data contract set for 1095-C
+                foreach (var domainEntity in actualAvailabilityConfiguration.Availabilities)
+                {
+                    // Get the domain entity with matching data
+                    var dataContract = expectedQtdYtdParameter1095C.Qyp1095cParametersEntityAssociation.Where(x =>
+                        x.QypWeb1095cYearsAssocMember == domainEntity.TaxYear
+                        && (DateTime.Compare(x.QypWeb1095cAvailDatesAssocMember.Value, DateTime.Now) <= 0) == domainEntity.Available).ToList();
+
+                    // Make sure the domainEntity list contains only one object
+                    Assert.AreEqual(1, dataContract.Count);
+                }
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_NullAvailableDate_1095C()
+            {
+                expectedQtdYtdParameter1095C.QypWeb1095cAvailDates[0] = null;
+
+                var actualAvailabilityConfiguration = await this.ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.Form1095C);
+
+                // Make sure the domain entity set has the same number of year/date entries as the data contract set for 1095-C
+                Assert.AreEqual(expectedQtdYtdParameter1095C.Qyp1095cParametersEntityAssociation.Count - 1, actualAvailabilityConfiguration.Availabilities.Count);
+
+                // Make sure each domain entity returned is reflected in the original data contract set for 1095-C
+                foreach (var domainEntity in actualAvailabilityConfiguration.Availabilities)
+                {
+                    // Get the domain entity with matching data
+                    var dataContract = expectedQtdYtdParameter1095C.Qyp1095cParametersEntityAssociation.Where(x =>
+                        x.QypWeb1095cYearsAssocMember == domainEntity.TaxYear
+                        && (DateTime.Compare(x.QypWeb1095cAvailDatesAssocMember.Value, DateTime.Now) <= 0) == domainEntity.Available).ToList();
+
+                    // Make sure the domainEntity list contains only one object
+                    Assert.AreEqual(1, dataContract.Count);
+                }
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_EmptyAssociation_1095C()
+            {
+                dataReaderMock.Setup<Task<QtdYtdParameter1095C>>(
+                    dataReader => dataReader.ReadRecordAsync<QtdYtdParameter1095C>(It.IsAny<string>(), It.IsAny<string>(), true))
+                    .Returns(() =>
+                    {
+                        // Build the association for 1095-C data
+                        expectedQtdYtdParameter1095C.buildAssociations();
+
+                        // Make the 1095-C association null
+                        expectedQtdYtdParameter1095C.Qyp1095cParametersEntityAssociation = null;
+
+                        return Task.FromResult(expectedQtdYtdParameter1095C);
+                    });
+
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.Form1095C);
+
+                // The availability list should be empty.
+                Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
+            }
+
+            // Obsolete
             [TestMethod]
             public async Task GetTaxFormConfigurationAsync_Success_1095C()
             {
@@ -629,7 +921,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Assert.AreEqual(1, domainEntity.Count);
                 }
             }
-
+            // Obsolete
             [TestMethod]
             public async Task GetTaxFormConfigurationAsync_1095C_DataReaderReturnsNull()
             {
@@ -655,7 +947,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.AreEqual(null, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
                 Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
             }
-
+            // Obsolete
             [TestMethod]
             public async Task GetTaxFormConfigurationAsync_1095C_NullTaxYear()
             {
@@ -678,7 +970,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Assert.AreEqual(1, dataContract.Count);
                 }
             }
-
+            // Obsolete
             [TestMethod]
             public async Task GetTaxFormConfigurationAsync_EmptyTaxYear_1095C()
             {
@@ -701,7 +993,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Assert.AreEqual(1, dataContract.Count);
                 }
             }
-
+            // Obsolete
             [TestMethod]
             public async Task GetTaxFormConfigurationAsync_NullAvailableDate_1095C()
             {
@@ -724,7 +1016,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Assert.AreEqual(1, dataContract.Count);
                 }
             }
-
+            // Obsolete
             [TestMethod]
             public async Task GetTaxFormConfigurationAsync_EmptyAssociation_1095C()
             {
@@ -746,9 +1038,41 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // The availability list should be empty.
                 Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
             }
+
             #endregion
 
             #region 1098
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_Success_1098()
+            {
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.Form1098);
+
+                // Check that the 1095-C consent paragraphs are the same
+                Assert.AreEqual(parm1098DataContract.P1098ConsentText, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(parm1098DataContract.P1098WhldConsentText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_1098_DataReaderReturnsNull()
+            {
+                dataReaderMock.Setup<Task<Parm1098>>(datareader => datareader.ReadRecordAsync<Parm1098>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+                {
+                    Parm1098 defaults = new Parm1098();
+                    defaults = null;
+                    return Task.FromResult(defaults);
+                });
+
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.Form1098);
+
+                // Check 1098
+                Assert.IsTrue(actualConfiguration is TaxFormConfiguration2);
+                Assert.AreEqual(null, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(null, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+                Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
+            }
+
+            // Obsolete
             [TestMethod]
             public async Task GetTaxFormConfigurationAsync_Success_1098()
             {
@@ -758,7 +1082,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.AreEqual(parm1098DataContract.P1098ConsentText, actualConfiguration.ConsentParagraphs.ConsentText);
                 Assert.AreEqual(parm1098DataContract.P1098WhldConsentText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
             }
-
+            // Obsolete
             [TestMethod]
             public async Task GetTaxFormConfigurationAsync_1098_DataReaderReturnsNull()
             {
@@ -780,6 +1104,29 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             #endregion
 
             #region T4
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_Success_T4()
+            {
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT4);
+
+                // Check that the 1095-C consent paragraphs are the same
+                Assert.AreEqual(parmT4DataContract.Pt4ConText, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(parmT4DataContract.Pt4WhldText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_T4_DataReaderReturnsNull()
+            {
+                parmT4DataContract = null;
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT4);
+
+                Assert.IsTrue(actualConfiguration is TaxFormConfiguration2);
+                Assert.AreEqual(null, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(null, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+            }
+
+            // Obsolete
             [TestMethod]
             public async Task GetTaxFormConfigurationAsync_Success_T4()
             {
@@ -789,7 +1136,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.AreEqual(parmT4DataContract.Pt4ConText, actualConfiguration.ConsentParagraphs.ConsentText);
                 Assert.AreEqual(parmT4DataContract.Pt4WhldText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
             }
-
+            // Obsolete
             [TestMethod]
             public async Task GetTaxFormConfigurationAsync_T4_DataReaderReturnsNull()
             {
@@ -803,6 +1150,29 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             #endregion
 
             #region T4A
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_Success_T4A()
+            {
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT4A);
+
+                // Check that the 1095-C consent paragraphs are the same
+                Assert.AreEqual(parmT4ADataContract.Pt4aConText, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(parmT4ADataContract.Pt4aWhldText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_T4A_DataReaderReturnsNull()
+            {
+                parmT4ADataContract = null;
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT4A);
+
+                Assert.IsTrue(actualConfiguration is TaxFormConfiguration2);
+                Assert.AreEqual(null, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(null, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+            }
+
+            // Obsolete
             [TestMethod]
             public async Task GetTaxFormConfigurationAsync_Success_T4A()
             {
@@ -812,7 +1182,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.AreEqual(parmT4ADataContract.Pt4aConText, actualConfiguration.ConsentParagraphs.ConsentText);
                 Assert.AreEqual(parmT4ADataContract.Pt4aWhldText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
             }
-
+            // Obsolete
             [TestMethod]
             public async Task GetTaxFormConfigurationAsync_T4A_DataReaderReturnsNull()
             {
@@ -826,6 +1196,29 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             #endregion
 
             #region T2202A
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_Success_T2202A()
+            {
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT2202A);
+
+                // Check that the 1095-C consent paragraphs are the same
+                Assert.AreEqual(cnstRptParmsContract.CnstConsentText, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(cnstRptParmsContract.CnstWhldConsentText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_T2202A_DataReaderReturnsNull()
+            {
+                cnstRptParmsContract = null;
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT2202A);
+
+                Assert.IsTrue(actualConfiguration is TaxFormConfiguration2);
+                Assert.AreEqual(null, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(null, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+            }
+
+            // Obsolete
             [TestMethod]
             public async Task GetTaxFormConfigurationAsync_Success_T2202A()
             {
@@ -835,7 +1228,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.AreEqual(cnstRptParmsContract.CnstConsentText, actualConfiguration.ConsentParagraphs.ConsentText);
                 Assert.AreEqual(cnstRptParmsContract.CnstWhldConsentText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
             }
-
+            // Obsolete
             [TestMethod]
             public async Task GetTaxFormConfigurationAsync_T2202A_DataReaderReturnsNull()
             {
@@ -850,7 +1243,171 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         }
         #endregion
 
+        #region GetTaxFormAvailabilityConfiguration2Async 1098
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_AllYearsAvailable()
+        {
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.Form1098T);
+
+            Assert.AreEqual(TaxFormTypes.Form1098T, actualConfiguration.TaxForm);
+            foreach (var dataContract in taxForm1098YearsContracts)
+            {
+                var actualAvailabilityYears = actualConfiguration.Availabilities.Where(x =>
+                    x.TaxYear == dataContract.Tf98yTaxYear.ToString()
+                    && x.Available).ToList();
+                Assert.AreEqual(1, actualAvailabilityYears.Count);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_NullParm1098Contract()
+        {
+            parm1098DataContract = null;
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.Form1098T);
+
+            Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_NullTaxFormInParm1098()
+        {
+            parm1098DataContract.P1098TTaxForm = null;
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.Form1098T);
+
+            Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_EmptyTaxFormInParm1098()
+        {
+            parm1098DataContract.P1098TTaxForm = "";
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.Form1098T);
+
+            Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_TaxFormStatusDataReadReturnsNull()
+        {
+            taxFormStatusContract = null;
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.Form1098T);
+
+            Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_TaxFormStatusTfsGenDateNull()
+        {
+            taxFormStatusContract.TfsGenDate = null;
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.Form1098T);
+
+            Assert.AreEqual(2, actualConfiguration.Availabilities.Where(a => a.Available).Count());
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_TaxFormStatusTfsStatusGEN()
+        {
+            taxFormStatusContract.TfsStatus = "GEN";
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.Form1098T);
+
+            Assert.AreEqual(taxForm1098YearsContracts.Count - 1, actualConfiguration.Availabilities.Where(a => a.Available).Count());
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_TaxFormStatusTfsStatusMOD()
+        {
+            taxFormStatusContract.TfsStatus = "MOD";
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.Form1098T);
+
+            Assert.AreEqual(taxForm1098YearsContracts.Count - 1, actualConfiguration.Availabilities.Where(a => a.Available).Count());
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_TaxFormStatusTfsStatusUNF()
+        {
+            taxFormStatusContract.TfsStatus = "UNF";
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.Form1098T);
+
+            Assert.AreEqual(taxForm1098YearsContracts.Count - 1, actualConfiguration.Availabilities.Where(a => a.Available).Count());
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_TaxForm1098YearsTf98yTaxYearNull()
+        {
+            foreach (var year in taxForm1098YearsContracts)
+            {
+                year.Tf98yTaxYear = null;
+            }
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.Form1098T);
+
+            Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_TaxForm1098YearsTf98yWebEnabledNull()
+        {
+            foreach (var year in taxForm1098YearsContracts)
+            {
+                year.Tf98yWebEnabled = null;
+            }
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.Form1098T);
+
+            Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_TaxForm1098YearsTf98yWebEnabledNo()
+        {
+            foreach (var year in taxForm1098YearsContracts)
+            {
+                year.Tf98yWebEnabled = "N";
+            }
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.Form1098T);
+
+            Assert.AreEqual(3, actualConfiguration.Availabilities.Count);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_1098E_AllYearsAvailable()
+        {
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.Form1098E);
+
+            Assert.AreEqual(TaxFormTypes.Form1098E, actualConfiguration.TaxForm);
+            foreach (var dataContract in taxForm1098YearsContracts)
+            {
+                var actualAvailabilityYears = actualConfiguration.Availabilities.Where(x =>
+                    x.TaxYear == dataContract.Tf98yTaxYear.ToString()
+                    && x.Available).ToList();
+                Assert.AreEqual(1, actualAvailabilityYears.Count);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_1098E_NullTaxFormInParm1098()
+        {
+            parm1098DataContract.P1098TTaxForm = null;
+            parm1098DataContract.P1098ETaxForm = null;
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.Form1098E);
+
+            Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_1098E_EmptyTaxFormInParm1098()
+        {
+            parm1098DataContract.P1098TTaxForm = "";
+            parm1098DataContract.P1098ETaxForm = "";
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.Form1098E);
+
+            Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
+        }
+
+        #endregion
         #region GetTaxFormAvailabilityConfigurationAsync 1098
+
+        //OBSOLETE TESTS
+
         [TestMethod]
         public async Task GetTaxFormAvailabilityConfigurationAsync_AllYearsAvailable()
         {
@@ -1010,7 +1567,58 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         }
         #endregion
 
+        #region GetTaxFormAvailabilityConfiguration2Async T2202A
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_AllT2202aYearsAvailable()
+        {
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.FormT2202A);
+
+            Assert.AreEqual(TaxFormTypes.FormT2202A, actualConfiguration.TaxForm);
+            foreach (var dataContract in cnstRptParmsContract.CnstT2202aPdfParmsEntityAssociation)
+            {
+                var actualAvailabilityYears = actualConfiguration.Availabilities.Where(x =>
+                    x.TaxYear == dataContract.CnstT2202aPdfTaxYearAssocMember.ToString()
+                    && x.Available).ToList();
+                Assert.AreEqual(1, actualAvailabilityYears.Count);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_NullCnstRptParmsContract()
+        {
+            cnstRptParmsContract = null;
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.FormT2202A);
+
+            Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_CnstRptParmsTaxYearNull()
+        {
+            foreach (var year in cnstRptParmsContract.CnstT2202aPdfParmsEntityAssociation)
+            {
+                year.CnstT2202aPdfTaxYearAssocMember = null;
+            }
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.FormT2202A);
+
+            Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_CnstRptParmsWebEnabledNull()
+        {
+            foreach (var year in cnstRptParmsContract.CnstT2202aPdfParmsEntityAssociation)
+            {
+                year.CnstT2202aPdfWebFlagAssocMember = null;
+            }
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.FormT2202A);
+
+            Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
+        }
+        #endregion
         #region GetTaxFormAvailabilityConfigurationAsync T2202A
+
         [TestMethod]
         public async Task GetTaxFormAvailabilityConfigurationAsync_AllT2202aYearsAvailable()
         {
@@ -1060,6 +1668,55 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         }
         #endregion
 
+        #region GetTaxFormAvailabilityConfiguration2Async T4
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_T4_AllYearsAvailable()
+        {
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.FormT4);
+
+            Assert.AreEqual(TaxFormTypes.FormT4, actualConfiguration.TaxForm);
+            foreach (var dataContract in expectedQtdYtdParameterT4.WebT4ParameterEntityAssociation)
+            {
+                var actualAvailabilityYears = actualConfiguration.Availabilities.Where(x =>
+                    x.TaxYear == dataContract.QypWebT4YearsAssocMember
+                    && x.Available).ToList();
+                Assert.AreEqual(1, actualAvailabilityYears.Count);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_T4_NullQtdYtdParameterT4()
+        {
+            expectedQtdYtdParameterT4 = null;
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.FormT4);
+
+            Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_T4_TaxYearNull()
+        {
+            foreach (var year in expectedQtdYtdParameterT4.WebT4ParameterEntityAssociation)
+            {
+                year.QypWebT4YearsAssocMember = null;
+            }
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.FormT4);
+
+            Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
+        }
+
+        [TestMethod]
+        public async Task GetTaxFormAvailabilityConfiguration2Async_T4_AvailableDateNull()
+        {
+            foreach (var year in expectedQtdYtdParameterT4.WebT4ParameterEntityAssociation)
+            {
+                year.QypWebT4AvailableDatesAssocMember = null;
+            }
+            var actualConfiguration = await ConfigRepository.GetTaxFormAvailabilityConfiguration2Async(TaxFormTypes.FormT4);
+
+            Assert.AreEqual(0, actualConfiguration.Availabilities.Count);
+        }
+        #endregion
         #region GetTaxFormAvailabilityConfigurationAsync T4
 
         [TestMethod]
@@ -1111,6 +1768,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         }
 
         #endregion
+
 
         #region Configuration for UserProfile
         [TestClass]
@@ -1237,10 +1895,11 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 dataReaderMock.Setup(r => r.ReadRecordAsync<CorewebDefaults>("CORE.PARMS", "COREWEB.DEFAULTS", true))
                        .ReturnsAsync(corewebDefaults);
 
-                var configuration = await ConfigRepository.GetUserProfileConfiguration2Async();
+                var configuration = await ConfigRepository.GetUserProfileConfiguration2Async(null);
                 Assert.AreEqual(0, configuration.ViewableAddressTypes.Count());
                 Assert.AreEqual(0, configuration.ViewablePhoneTypes.Count());
                 Assert.AreEqual(0, configuration.ViewableEmailTypes.Count());
+                Assert.AreEqual(0, configuration.ChangeRequestAddressTypes.Count());
                 Assert.IsTrue(configuration.AllAddressTypesAreViewable);
                 Assert.IsTrue(configuration.AllEmailTypesAreViewable);
                 Assert.IsTrue(configuration.AllPhoneTypesAreViewable);
@@ -1638,7 +2297,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
                 .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
             // Construct referenceData repository
-            ConfigRepository = new ConfigurationRepository(cacheProvider, transFactoryMock.Object, FakeApiSettingsWithGmtColleagueTimeZone, logger);
+            ConfigRepository = new ConfigurationRepository(cacheProvider, transFactoryMock.Object, FakeApiSettingsWithGmtColleagueTimeZone, logger, colleagueSettings);
 
             return ConfigRepository;
         }
@@ -1667,7 +2326,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 (It.IsAny<ReadBackupConfigDataRequest>())).ReturnsAsync(FakeBackupConfigReadResponse);
 
             ConfigRepository = new ConfigurationRepository(
-                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger);
+                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger, colleagueSettings);
 
             // Act
             var actual = await ConfigRepository.AddBackupConfigurationAsync(FakeBackupConfigurationData);
@@ -1698,7 +2357,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 (It.IsAny<WriteBackupConfigDataRequest>())).ReturnsAsync(fakeWriteResponse);
 
             ConfigRepository = new ConfigurationRepository(
-                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger);
+                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger, colleagueSettings);
 
             // Act
             var actual = await ConfigRepository.AddBackupConfigurationAsync(FakeBackupConfigurationData);
@@ -1710,7 +2369,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         public async Task ConfigurationRepository_AddBackupConfigurationAsync_Nullarg()
         {
             ConfigRepository = new ConfigurationRepository(
-                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger);
+                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger, colleagueSettings);
             // Act
             var actual = await ConfigRepository.AddBackupConfigurationAsync(null);
         }
@@ -1727,7 +2386,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 (It.IsAny<ReadBackupConfigDataRequest>())).ReturnsAsync(FakeBackupConfigReadResponse);
 
             ConfigRepository = new ConfigurationRepository(
-                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger);
+                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger, colleagueSettings);
 
             // Act
             var actualSet = await ConfigRepository.GetBackupConfigurationByIdsAsync(new List<string>() { "56c1fb34-9e3e-49a0-b2b0-60751a877855" });
@@ -1757,7 +2416,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 (It.IsAny<ReadBackupConfigDataRequest>())).ReturnsAsync(fakeReadResponse);
 
             ConfigRepository = new ConfigurationRepository(
-                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger);
+                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger, colleagueSettings);
 
             // Act
             var actual = await ConfigRepository.GetBackupConfigurationByIdsAsync(new List<string>() { "56c1fb34-9e3e-49a0-b2b0-60751a877855" });
@@ -1768,7 +2427,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         public async Task ConfigurationRepository_GetBackupConfigurationAsync_NullIds()
         {
             ConfigRepository = new ConfigurationRepository(
-                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger);
+                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger, colleagueSettings);
             // Act
             var actual = await ConfigRepository.GetBackupConfigurationByIdsAsync(null);
         }
@@ -1778,7 +2437,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         public async Task ConfigurationRepository_GetBackupConfigurationAsync_NullNamespace()
         {
             ConfigRepository = new ConfigurationRepository(
-                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger);
+                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger, colleagueSettings);
             // Act
             var actual = await ConfigRepository.GetBackupConfigurationByNamespaceAsync(null);
         }
@@ -1847,6 +2506,39 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         public class ConfigurationRepository_GetRequiredDocumentConfigurationAsync : ConfigurationRepositoryTests
         {
             [TestMethod]
+            public async Task GetRequiredDocumentConfiguration_CoreWebDefaultFailure()
+            {
+                var association = new List<OfficeCollectionMapOfcomap>()
+                {
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "OFFICEA", OfcoCollectionIdsAssocMember = "COLLECTIONA"},
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "", OfcoCollectionIdsAssocMember = "COLLECTIONC"},
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "OFFICEB", OfcoCollectionIdsAssocMember = "COLLECTIONB"},
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "OFFICEB", OfcoCollectionIdsAssocMember = ""},
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "OFFICEC", OfcoCollectionIdsAssocMember = "COLLECTIONC"},
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "OFFICEC", OfcoCollectionIdsAssocMember = "COLLECTIONC"},
+                };
+
+                var officeMap = new OfficeCollectionMap()
+                {
+                    OfcoDefaultCollection = "NO_OFFICE_CODE_COLLECTION",
+                    OfcoDfltOfficeCollection = "UNMAPPED_COLLECTION",
+                    OfcomapEntityAssociation = association
+                };
+
+                // Setup response to OFFICE.COLLECTION.MAP read
+                dataReaderMock.Setup(r => r.ReadRecordAsync<OfficeCollectionMap>("CORE.PARMS", "OFFICE.COLLECTION.MAP", true))
+                       .ReturnsAsync(officeMap);
+
+                // Setup response to CoreWebDefaults  read
+                dataReaderMock.Setup(r => r.ReadRecordAsync<CorewebDefaults>("CORE.PARMS", "COREWEB.DEFAULTS", true))
+                       .ThrowsAsync(new Exception());
+
+                var configuration = await ConfigRepository.GetRequiredDocumentConfigurationAsync();
+                Assert.IsNull(configuration);
+
+            }
+
+            [TestMethod]
             public async Task GetsRequiredDocumentConfiguration_AllSettingsNullOrBlank()
             {
                 var corewebDefaultsNull = new CorewebDefaults()
@@ -1858,9 +2550,12 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     CorewebBlankDueDateText = ""
                 };
 
-                // Setup response to phoneType valcode read
+
+                // Setup response to CoreWebDefaults  read
                 dataReaderMock.Setup(r => r.ReadRecordAsync<CorewebDefaults>("CORE.PARMS", "COREWEB.DEFAULTS", true))
                        .ReturnsAsync(corewebDefaultsNull);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<OfficeCollectionMap>("CORE.PARMS", "OFFICE.COLLECTION.MAP", true))
+                        .ReturnsAsync(null);
 
                 var configuration = await ConfigRepository.GetRequiredDocumentConfigurationAsync();
                 Assert.AreEqual(false, configuration.SuppressInstance);
@@ -1868,6 +2563,9 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.AreEqual(WebSortField.OfficeDescription, configuration.SecondarySortField);
                 Assert.AreEqual("", configuration.TextForBlankStatus);
                 Assert.AreEqual("", configuration.TextForBlankDueDate);
+                Assert.IsNull(configuration.RequiredDocumentCollectionMapping.RequestsWithoutOfficeCodeCollection);
+                Assert.IsNull(configuration.RequiredDocumentCollectionMapping.UnmappedOfficeCodeCollection);
+                Assert.AreEqual(0, configuration.RequiredDocumentCollectionMapping.OfficeCodeMapping.Count);
             }
 
             [TestMethod]
@@ -1887,9 +2585,30 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     CorewebBlankDueDateText = "Due"
                 };
 
+                var association = new List<OfficeCollectionMapOfcomap>()
+                {
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "OFFICEA", OfcoCollectionIdsAssocMember = "COLLECTIONA"},
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "", OfcoCollectionIdsAssocMember = "COLLECTIONC"},
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "OFFICEB", OfcoCollectionIdsAssocMember = "COLLECTIONB"},
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "OFFICEB", OfcoCollectionIdsAssocMember = ""},
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "OFFICEC", OfcoCollectionIdsAssocMember = "COLLECTIONC"},
+                    new OfficeCollectionMapOfcomap() { OfcoOfficeCodesAssocMember = "OFFICEC", OfcoCollectionIdsAssocMember = "COLLECTIONC"},
+                };
+
+                var officeMap = new OfficeCollectionMap()
+                {
+                    OfcoDefaultCollection = "NO_OFFICE_CODE_COLLECTION",
+                    OfcoDfltOfficeCollection = "UNMAPPED_COLLECTION",
+                    OfcomapEntityAssociation = association
+                };
+
                 dataReaderMock.Setup(r => r.ReadRecordAsync<Dflts>("CORE.PARMS", "DEFAULTS", true));
                 dataReaderMock.Setup(r => r.ReadRecordAsync<CorewebDefaults>("CORE.PARMS", "COREWEB.DEFAULTS", true))
                        .ReturnsAsync(corewebDefaults);
+
+                // Setup response to OFFICE.COLLECTION.MAP read
+                dataReaderMock.Setup(r => r.ReadRecordAsync<OfficeCollectionMap>("CORE.PARMS", "OFFICE.COLLECTION.MAP", true))
+                       .ReturnsAsync(officeMap);
 
                 var configuration = await ConfigRepository.GetRequiredDocumentConfigurationAsync();
                 Assert.AreEqual(true, configuration.SuppressInstance);
@@ -1897,6 +2616,98 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.AreEqual(WebSortField.Description, configuration.SecondarySortField);
                 Assert.AreEqual("Asap", configuration.TextForBlankStatus);
                 Assert.AreEqual("Due", configuration.TextForBlankDueDate);
+                Assert.IsNotNull(configuration.RequiredDocumentCollectionMapping);
+                var actualMapping = configuration.RequiredDocumentCollectionMapping;
+                Assert.AreEqual(3, actualMapping.OfficeCodeMapping.Count);
+                var officeMapping = actualMapping.OfficeCodeMapping;
+                Assert.AreEqual("OFFICEA", officeMapping[0].OfficeCode);
+                Assert.AreEqual("COLLECTIONA", officeMapping[0].AttachmentCollection);
+                Assert.AreEqual("OFFICEB", officeMapping[1].OfficeCode);
+                Assert.AreEqual("COLLECTIONB", officeMapping[1].AttachmentCollection);
+                Assert.AreEqual("OFFICEC", officeMapping[2].OfficeCode);
+                Assert.AreEqual("COLLECTIONC", officeMapping[2].AttachmentCollection);
+            }
+
+            #endregion
+        }
+
+        #region Configuration for SessionConfiguration
+        [TestClass]
+        public class ConfigurationRepository_GetSessionConfigurationAsync : ConfigurationRepositoryTests
+        {
+            [TestMethod]
+            public async Task GetSessionConfiguration_AllSettingsBlank_BecomeFalse()
+            {
+                var response = new GetSessionConfigurationResponse()
+                {
+                    PasswordResetEnabled = "",
+                    UsernameRecoveryEnabled = "",
+                    ErrorOccurred = "0",
+                    ErrorMessage = ""
+                };
+
+                transManagerMock.Setup(e => e.ExecuteAnonymousAsync<GetSessionConfigurationRequest, GetSessionConfigurationResponse>(It.IsAny<GetSessionConfigurationRequest>()))
+                    .ReturnsAsync(response);
+
+                var sessionConfiguration = await ConfigRepository.GetSessionConfigurationAsync();
+                Assert.IsFalse(sessionConfiguration.PasswordResetEnabled);
+                Assert.IsFalse(sessionConfiguration.UsernameRecoveryEnabled);
+            }
+
+            [TestMethod]
+            public async Task GetSessionConfiguration_AllSettingsN_BecomeFalse()
+            {
+                var response = new GetSessionConfigurationResponse()
+                {
+                    PasswordResetEnabled = "N",
+                    UsernameRecoveryEnabled = "N",
+                    ErrorOccurred = "0",
+                    ErrorMessage = ""
+                };
+
+                transManagerMock.Setup(e => e.ExecuteAnonymousAsync<GetSessionConfigurationRequest, GetSessionConfigurationResponse>(It.IsAny<GetSessionConfigurationRequest>()))
+                    .ReturnsAsync(response);
+
+                var sessionConfiguration = await ConfigRepository.GetSessionConfigurationAsync();
+                Assert.IsFalse(sessionConfiguration.PasswordResetEnabled);
+                Assert.IsFalse(sessionConfiguration.UsernameRecoveryEnabled);
+            }
+
+            [TestMethod]
+            public async Task GetSessionConfiguration_AllSettingsY_BecomeTrue()
+            {
+                var response = new GetSessionConfigurationResponse()
+                {
+                    PasswordResetEnabled = "Y",
+                    UsernameRecoveryEnabled = "Y",
+                    ErrorOccurred = "0",
+                    ErrorMessage = ""
+                };
+
+                transManagerMock.Setup(e => e.ExecuteAnonymousAsync<GetSessionConfigurationRequest, GetSessionConfigurationResponse>(It.IsAny<GetSessionConfigurationRequest>()))
+                    .ReturnsAsync(response);
+
+                var sessionConfiguration = await ConfigRepository.GetSessionConfigurationAsync();
+                Assert.IsTrue(sessionConfiguration.PasswordResetEnabled);
+                Assert.IsTrue(sessionConfiguration.UsernameRecoveryEnabled);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task GetSessionConfiguration_ErrorOccurred_ThrowsException()
+            {
+                var response = new GetSessionConfigurationResponse()
+                {
+                    PasswordResetEnabled = "",
+                    UsernameRecoveryEnabled = "",
+                    ErrorOccurred = "1",
+                    ErrorMessage = "Error message from transaction"
+                };
+
+                transManagerMock.Setup(e => e.ExecuteAnonymousAsync<GetSessionConfigurationRequest, GetSessionConfigurationResponse>(It.IsAny<GetSessionConfigurationRequest>()))
+                    .ReturnsAsync(response);
+
+                var sessionConfiguration = await ConfigRepository.GetSessionConfigurationAsync();
             }
 
             #endregion

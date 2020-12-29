@@ -165,5 +165,12 @@ namespace Ellucian.Colleague.Dtos
 
         [JsonProperty("status", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public GuidObject2 Status { get; set; }
+
+        /// <summary>
+        /// Additional classifications associated with the course.
+        /// </summary>
+
+        [JsonProperty("additionalClassifications", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public IEnumerable<CourseAdditionalClassifications> AdditionalClassifications { get; set; }
     }
 }

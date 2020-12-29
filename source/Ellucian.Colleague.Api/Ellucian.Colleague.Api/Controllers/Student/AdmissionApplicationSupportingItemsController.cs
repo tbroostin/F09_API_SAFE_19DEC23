@@ -53,6 +53,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <returns>List of AdmissionApplicationSupportingItems <see cref="Dtos.AdmissionApplicationSupportingItems"/> objects representing matching admissionApplicationSupportingItems</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
@@ -90,7 +91,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -119,6 +120,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired admissionApplicationSupportingItems</param>
         /// <returns>A admissionApplicationSupportingItems object <see cref="Dtos.AdmissionApplicationSupportingItems"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         public async Task<Dtos.AdmissionApplicationSupportingItems> GetAdmissionApplicationSupportingItemsByGuidAsync(string guid)
         {
@@ -152,7 +154,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -182,6 +184,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID of the admissionApplicationSupportingItems to update</param>
         /// <param name="admissionApplicationSupportingItems">DTO of the updated admissionApplicationSupportingItems</param>
         /// <returns>A AdmissionApplicationSupportingItems object <see cref="Dtos.AdmissionApplicationSupportingItems"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPut, EedmResponseFilter]
         public async Task<Dtos.AdmissionApplicationSupportingItems> PutAdmissionApplicationSupportingItemsAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.AdmissionApplicationSupportingItems admissionApplicationSupportingItems)
         {
@@ -226,7 +229,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -265,6 +268,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="admissionApplicationSupportingItems">DTO of the new admissionApplicationSupportingItems</param>
         /// <returns>A admissionApplicationSupportingItems object <see cref="Dtos.AdmissionApplicationSupportingItems"/> in HeDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPost, EedmResponseFilter]
         public async Task<Dtos.AdmissionApplicationSupportingItems> PostAdmissionApplicationSupportingItemsAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.AdmissionApplicationSupportingItems admissionApplicationSupportingItems)
         {
@@ -301,7 +305,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {

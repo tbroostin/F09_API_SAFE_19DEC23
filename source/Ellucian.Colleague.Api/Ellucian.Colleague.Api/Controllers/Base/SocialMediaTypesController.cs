@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -14,6 +14,7 @@ using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Api.Utility;
 using System.Threading.Tasks;
 using Ellucian.Web.Http.Filters;
+using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -45,6 +46,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// If the request header "Cache-Control" attribute is set to "no-cache" the data returned will be pulled fresh from the database, otherwise cached data is returned.
         /// </summary>
         /// <returns>All <see cref="Dtos.SocialMediaType">Social Media Types.</see></returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Dtos.SocialMediaType>> GetSocialMediaTypesAsync()
         {
@@ -55,10 +57,18 @@ namespace Ellucian.Colleague.Api.Controllers
                 {
                     bypassCache = true;
                 }
-            } 
+            }
             try
             {
-                return await _demographicService.GetSocialMediaTypesAsync(bypassCache);
+                var socialMediaTypes = await _demographicService.GetSocialMediaTypesAsync(bypassCache);
+
+                if (socialMediaTypes != null && socialMediaTypes.Any())
+                {
+                    AddEthosContextProperties(await _demographicService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _demographicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              socialMediaTypes.Select(a => a.Id).ToList()));
+                }
+                return socialMediaTypes;
             }
             catch (Exception ex)
             {
@@ -72,10 +82,15 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Retrieves an Social Media Type by ID.
         /// </summary>
         /// <returns>A <see cref="Dtos.SocialMediaType">Social Media Type.</see></returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Dtos.SocialMediaType> GetSocialMediaTypeByIdAsync(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                    await _demographicService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _demographicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { id }));
                 return await _demographicService.GetSocialMediaTypeByIdAsync(id);
             }
             catch (Exception ex)

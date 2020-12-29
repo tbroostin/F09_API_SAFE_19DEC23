@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Adapters;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -89,7 +89,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if (!CurrentUser.IsPerson(id))
             {
                 string message = CurrentUser + " cannot view relationship information for person " + id;
-                logger.Info(message);
+                logger.Error(message);
                 throw new PermissionsException(message);
             }
 
@@ -208,7 +208,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if (!CurrentUser.IsPerson(id))
             {
                 string message = CurrentUser + " cannot view relationship information for person " + id;
-                logger.Info(message);
+                logger.Error(message);
                 throw new PermissionsException(message);
             }
 

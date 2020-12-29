@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.ComponentModel;
@@ -13,6 +13,8 @@ using Ellucian.Web.License;
 using slf4net;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using System.Net;
+using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 {
@@ -36,6 +38,57 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         {
             this.generalLedgerAccountService = generalLedgerAccountService;
             this.logger = logger;
+        }
+
+        /// <summary>
+        /// Retrieves the list of active expense GL account DTOs for which the user has access.
+        /// </summary>
+        /// <param name="glClass">Optional: null for all the user GL accounts, expense for only the expense type GL accounts.</param>
+        /// <returns>A collection of expense GL account DTOs for the user.</returns>
+        /// <accessComments>
+        /// No permission is needed. The user can only access those GL accounts
+        /// for which they have GL account security access granted.
+        /// </accessComments>
+        [HttpGet]
+        public async Task<IEnumerable<GlAccount>> GetUserGeneralLedgerAccountsAsync([FromUri(Name = "glClass")] string glClass)
+        {
+            {
+                try
+                {
+                    Stopwatch watch = null;
+                    if (logger.IsInfoEnabled)
+                    {
+                        watch = new Stopwatch();
+                        watch.Start();
+                    }
+
+                    var glUserAccounts = await generalLedgerAccountService.GetUserGeneralLedgerAccountsAsync(glClass);
+
+                    if (logger.IsInfoEnabled)
+                    {
+                        watch.Stop();
+                        logger.Info("GL account LookUp CONTROLLER timing: GetUserGeneralLedgerAccountsAsync completed in " + watch.ElapsedMilliseconds.ToString() + " ms");
+                    }
+
+                    return glUserAccounts;
+                }
+                catch (ConfigurationException cnex)
+                {
+                    logger.Error(cnex, cnex.Message);
+                    throw CreateHttpResponseException("Invalid configuration.", HttpStatusCode.NotFound);
+                }
+                catch (ArgumentNullException anex)
+                {
+                    logger.Error(anex, anex.Message);
+                    throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
+                }
+                // Application exceptions will be caught below.
+                catch (Exception ex)
+                {
+                    logger.Error(ex.Message);
+                    throw CreateHttpResponseException("Unable to get the GL accounts.", HttpStatusCode.BadRequest);
+                }
+            }
         }
 
         /// <summary>

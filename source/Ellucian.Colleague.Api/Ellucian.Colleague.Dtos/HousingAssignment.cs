@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -7,6 +7,7 @@ using Ellucian.Colleague.Dtos.Converters;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Newtonsoft.Json;
 using Ellucian.Colleague.Dtos.DtoProperties;
+using Ellucian.Colleague.Dtos.Attributes;
 
 namespace Ellucian.Colleague.Dtos
 {
@@ -20,6 +21,7 @@ namespace Ellucian.Colleague.Dtos
         /// A reference to the student assigned a room.
         /// </summary>
         [JsonProperty("person")]
+        [FilterProperty("criteria")]
         public GuidObject2 Person { get; set; }
 
         /// <summary>
@@ -32,25 +34,29 @@ namespace Ellucian.Colleague.Dtos
         /// The academic period associated with the housing assignment.
         /// </summary>
         [JsonProperty("academicPeriod", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
         public GuidObject2 AcademicPeriod { get; set; }
 
         /// <summary>
         /// The date the housing assignment starts.
         /// </summary>
         [JsonProperty("startOn")]
+        [FilterProperty("criteria")]
         public DateTimeOffset? StartOn { get; set; }
 
         /// <summary>
         /// The date the housing assignment ends
         /// </summary>
         [JsonProperty("endOn", DefaultValueHandling = DefaultValueHandling.Ignore, NullValueHandling = NullValueHandling.Ignore)]
+        [FilterProperty("criteria")]
         public DateTimeOffset? EndOn { get; set; }
 
         /// <summary>
         /// The status of the room assignment.
         /// </summary>
         [JsonProperty("status")]
-        public HousingAssignmentsStatus Status { get; set; }
+        [FilterProperty("criteria")]
+        public HousingAssignmentsStatus? Status { get; set; }
 
         /// <summary>
         /// The date the housing assignment ends.

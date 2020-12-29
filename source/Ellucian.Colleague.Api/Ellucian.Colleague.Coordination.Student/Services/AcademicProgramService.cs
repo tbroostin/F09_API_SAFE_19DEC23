@@ -12,6 +12,7 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Dtos;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -229,7 +230,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="bypassCache">Flag to bypass cache</param>
         /// <returns>Collection of <see cref="Dtos.AcademicProgram4">academicPrograms</see> objects</returns> 
         public async Task<IEnumerable<Colleague.Dtos.AcademicProgram4>> GetAcademicPrograms4Async( 
-            string academicCatalog, bool bypassCache = false)
+            string academicCatalog = "", string recruitmentProgram = "", Dtos.AcademicProgram4 criteria = null, bool bypassCache = false)
         {
             var academicProgramDtoCollection = new List<Colleague.Dtos.AcademicProgram4>();
             var academicProgramCollection = await _studentReferenceDataRepository.GetAcademicProgramsAsync(bypassCache);
@@ -254,6 +255,29 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                
                 academicProgramCollection = academicProgramCollection.Where(p => catalog.AcadPrograms.Contains(p.Code));
+            }
+
+            // Per specs, this should return all the records. There is only one value of "active" in the enum. Also only one of the named queries or 
+            //criteria filter is allowed to be passed in to the controller. Repository doesn't have any special filtering and all the filtering is done here.
+            if (!string.IsNullOrWhiteSpace(recruitmentProgram) && !recruitmentProgram.ToLower().Equals("active"))
+            {
+                return new List<Colleague.Dtos.AcademicProgram4>();
+            }
+
+            //filter criteria academic level
+            if (criteria != null && criteria.AcademicLevel != null && !string.IsNullOrEmpty(criteria.AcademicLevel.Id))
+            {
+                var acadLevels = await GetAcademicLevelsAsync(bypassCache);
+                if(acadLevels == null)
+                {
+                    return academicProgramDtoCollection;
+                }
+                var acadLevel = acadLevels.FirstOrDefault(al => al.Guid.Equals(criteria.AcademicLevel.Id, StringComparison.OrdinalIgnoreCase));
+                if(acadLevel == null)
+                {
+                    return academicProgramDtoCollection;
+                }
+                academicProgramCollection = academicProgramCollection.Where(al => al.AcadLevelCode.Equals(acadLevel.Code, StringComparison.OrdinalIgnoreCase)).ToList();
             }
 
             var institutionIds = academicProgramCollection.Select(x => x.AuthorizingInstitute.FirstOrDefault())
@@ -497,7 +521,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             academicProgramDto.Sites = await ConvertSiteCodeToGuidAsync(academicProgramEntity.Location, bypassCache);
             academicProgramDto.AcademicLevel = await ConvertAcadLevelCodeToGuid(academicProgramEntity.AcadLevelCode, bypassCache);
             academicProgramDto.Credentials = await ConvertCredentialCodeToGuid(academicProgramEntity.DegreeCode, academicProgramEntity.CertificateCodes, bypassCache);
-            academicProgramDto.Disciplines = await ConvertDisciplineCodeToGuid(academicProgramEntity.MajorCodes, academicProgramEntity.MinorCodes, academicProgramEntity.SpecializationCodes, bypassCache);
+            academicProgramDto.Disciplines = await ConvertDisciplineCodeToGuid2Async(academicProgramEntity.MajorCodes, academicProgramEntity.MinorCodes, academicProgramEntity.SpecializationCodes, 
+                bypassCache, academicProgramEntity.StartDate, academicProgramEntity.EndDate);
             academicProgramDto.StartDate = academicProgramEntity.StartDate;
             academicProgramDto.EndDate = academicProgramEntity.EndDate;
             academicProgramDto.ProgramOwners = await ConvertDeptCodeToGuid(academicProgramEntity.DeptartmentCodes, bypassCache);
@@ -626,9 +651,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return guidObjects;
         }
 
-        private async Task<List<Ellucian.Colleague.Dtos.AcademicProgramDisciplines>> ConvertDisciplineCodeToGuid(List<string> majorCodes, List<string> minorCodes, List<string> specializationCodes, bool bypassCache = false)
+        private async Task<List<Ellucian.Colleague.Dtos.AcademicProgramDisciplines>> ConvertDisciplineCodeToGuid(List<string> majorCodes, List<string> minorCodes, List<string> specializationCodes, 
+            bool bypassCache = false, DateTime? startOn = null, DateTime? endOn = null)
         {
             List<Ellucian.Colleague.Dtos.AcademicProgramDisciplines> disciplineObjects = null;
+
+            var startOnDate = startOn.HasValue ? startOn.Value : default(DateTime?);
+            var endonDate = endOn.HasValue ? endOn.Value : default(DateTime?);
 
             if ((majorCodes != null) && (majorCodes.Any()))
             {
@@ -640,8 +669,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         if (disciplineObjects == null)
                         {
                             disciplineObjects = new List<Ellucian.Colleague.Dtos.AcademicProgramDisciplines>();
-                        }
-                        disciplineObjects.Add(new Dtos.AcademicProgramDisciplines() {Discipline = new Dtos.GuidObject2(discipline.Guid)});
+                        }                        
+                        disciplineObjects.Add(new Dtos.AcademicProgramDisciplines()
+                        {
+                            Discipline = new Dtos.GuidObject2(discipline.Guid),
+                            StartOn = startOnDate,
+                            EndOn = endonDate,
+                        });
                     }
                 }
             }
@@ -657,7 +691,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         {
                             disciplineObjects = new List<Ellucian.Colleague.Dtos.AcademicProgramDisciplines>();
                         }
-                        disciplineObjects.Add(new Dtos.AcademicProgramDisciplines() {Discipline = new Dtos.GuidObject2(discipline.Guid)});
+                        disciplineObjects.Add(new Dtos.AcademicProgramDisciplines()
+                        {
+                            Discipline = new Dtos.GuidObject2(discipline.Guid),
+                            StartOn = startOnDate,
+                            EndOn = endonDate,
+                        });
                     }
                 }
             }
@@ -673,14 +712,94 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         {
                             disciplineObjects = new List<Ellucian.Colleague.Dtos.AcademicProgramDisciplines>();
                         }
-                        disciplineObjects.Add(new Dtos.AcademicProgramDisciplines() {Discipline = new Dtos.GuidObject2(discipline.Guid)});
+                        disciplineObjects.Add(new Dtos.AcademicProgramDisciplines()
+                        {
+                            Discipline = new Dtos.GuidObject2(discipline.Guid),
+                            StartOn = startOnDate,
+                            EndOn = endonDate,
+                        });
+                    }
+                }
+            }
+            return disciplineObjects;
+        }
+
+        private async Task<List<Dtos.AcademicProgramDiscipline2>> ConvertDisciplineCodeToGuid2Async(List<string> majorCodes, List<string> minorCodes, List<string> specializationCodes,
+            bool bypassCache = false, DateTime? startOn = null, DateTime? endOn = null)
+        {
+            List<Dtos.AcademicProgramDiscipline2> disciplineObjects = null;
+
+            var startOnDate = startOn.HasValue ? startOn.Value : default(DateTime?);
+            var endonDate = endOn.HasValue ? endOn.Value : default(DateTime?);
+
+            if ((majorCodes != null) && (majorCodes.Any()))
+            {
+                foreach (var major in majorCodes)
+                {
+                    var discipline = (await GetOtherMajorsAsync(bypassCache)).FirstOrDefault(a => a.Code == major);
+                    if (discipline != null)
+                    {
+                        if (disciplineObjects == null)
+                        {
+                            disciplineObjects = new List<AcademicProgramDiscipline2>();
+                        }
+                        disciplineObjects.Add(new Dtos.AcademicProgramDiscipline2()
+                        {
+                            Discipline = new Dtos.GuidObject2(discipline.Guid),
+                            StartOn = startOnDate,
+                            EndOn = endonDate,
+                            ProgramConstraintType = Dtos.EnumProperties.ProgramConstraint.RequiredDiscipline
+                        });
                     }
                 }
             }
 
+            if ((minorCodes != null) && (minorCodes.Any()))
+            {
+                foreach (var minor in minorCodes)
+                {
+                    var discipline = (await GetOtherMinorsAsync(bypassCache)).FirstOrDefault(a => a.Code == minor);
+                    if (discipline != null)
+                    {
+                        if (disciplineObjects == null)
+                        {
+                            disciplineObjects = new List<Dtos.AcademicProgramDiscipline2>();
+                        }
+                        disciplineObjects.Add(new Dtos.AcademicProgramDiscipline2()
+                        {
+                            Discipline = new Dtos.GuidObject2(discipline.Guid),
+                            StartOn = startOnDate,
+                            EndOn = endonDate,
+                            ProgramConstraintType = Dtos.EnumProperties.ProgramConstraint.RequiredDiscipline
+                        });
+                    }
+                }
+            }
+
+            if ((specializationCodes != null) && (specializationCodes.Any()))
+            {
+                foreach (var specializationCode in specializationCodes)
+                {
+                    var discipline = (await GetOtherSpecialsAsync(bypassCache)).FirstOrDefault(a => a.Code == specializationCode);
+                    if (discipline != null)
+                    {
+                        if (disciplineObjects == null)
+                        {
+                            disciplineObjects = new List<Ellucian.Colleague.Dtos.AcademicProgramDiscipline2>();
+                        }
+                        disciplineObjects.Add(new Dtos.AcademicProgramDiscipline2()
+                        {
+                            Discipline = new Dtos.GuidObject2(discipline.Guid),
+                            StartOn = startOnDate,
+                            EndOn = endonDate,
+                            ProgramConstraintType = Dtos.EnumProperties.ProgramConstraint.RequiredDiscipline
+                        });
+                    }
+                }
+            }
             return disciplineObjects;
         }
-        
+
         #endregion
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
@@ -79,12 +79,12 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             return budgetAdjustment;
         }
 
-        public async Task<BudgetAdjustment> CreateAsync(BudgetAdjustment budgetAdjustment)
+        public async Task<BudgetAdjustment> CreateAsync(BudgetAdjustment budgetAdjustment, IList<string> majorComponentStartPosition)
         {
             throw new NotImplementedException();
         }
 
-        public async Task<BudgetAdjustment> UpdateAsync(string id, BudgetAdjustment budgetAdjustment)
+        public async Task<BudgetAdjustment> UpdateAsync(string id, BudgetAdjustment budgetAdjustment, IList<string> majorComponentStartPosition)
         {
             return budgetAdjustment;
         }
@@ -778,7 +778,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             return "AJK";
         }
 
-        public async Task<List<string>> ValidateBudgetAdjustmentAsync(BudgetAdjustment budgetAdjustmentEntity)
+        public async Task<List<string>> ValidateBudgetAdjustmentAsync(BudgetAdjustment budgetAdjustmentEntity, IList<string> majorComponentStartPosition)
         {
             return new List<string>() { "Test Message" };
         }

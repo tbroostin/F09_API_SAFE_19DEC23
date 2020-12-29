@@ -1,0 +1,2055 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Ellucian.Dmi.Client</name>
+    </assembly>
+    <members>
+        <member name="T:Ellucian.Dmi.Client.ColleagueClaims">
+            <summary>
+            Security claims for requests sent to/from Colleague.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.ColleagueClaims.ClaimType">
+            <summary>
+            Gets or sets the type of the claim.
+            </summary>
+            <value>
+            The type of the claim.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.ColleagueClaims.ClaimValue">
+            <summary>
+            Gets or sets the claim value.
+            </summary>
+            <value>
+            The claim value.
+            </value>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.Das.BatchReadData">
+            <summary>
+            The BatchReadData class contains code to represent an object populated during a batch data read operation
+            through the DAS Data Reader
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.BatchReadData.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Client.Das.BatchReadData"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.BatchReadData.BatchName">
+            <summary>
+            Gets or sets the name of the batch to be read from Colleague.
+            </summary>
+            <value>
+            The name of the batch.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.BatchReadData.FileName">
+            <summary>
+            Gets or sets the name of the Colleague file against which the batch read operation will be performed.
+            </summary>
+            <value>
+            The name of the Colleague file.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.BatchReadData.Keys">
+            <summary>
+            Gets or sets the keys which are to be read from Colleague in the batch read operation.
+            </summary>
+            <value>
+            The keys.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.BatchReadData.Records">
+            <summary>
+            Gets or sets the collection of Colleague record objects that were read during the batch read operation.
+            </summary>
+            <value>
+            The collection of Colleague record objects.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.BatchReadData.InvalidKeys">
+            <summary>
+            Gets or sets the list of invalid keys that were encountered during the Colleague batch read operation.
+            </summary>
+            <value>
+            The list of invalid keys.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.BatchReadData.BatchReadStatusCode">
+            <summary>
+            Gets or sets the batch read status code for the Colleague batch read operation.
+            </summary>
+            <value>
+            The batch read status code.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.BatchReadData.BatchReadStatusCode2">
+            <summary>
+            Gets or sets the secondary batch read status code for the Colleague batch read operation.
+            </summary>
+            <value>
+            The secondary batch read status code.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.BatchReadData.BatchReadStatusMessage">
+            <summary>
+            Gets or sets the batch read status message, if applicable, for the Colleague batch read operation.
+            </summary>
+            <value>
+            The batch read status message.
+            </value>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.Das.DasSession">
+            <summary>
+            The DasSession class contains code to interact via DMI with the DAS listener of a Colleague environment
+            </summary>
+            <seealso cref="T:System.IDisposable" />
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.DasSession.DatabaseType">
+            <summary>
+            Gets the database type to which this DAS session is connected.
+            </summary>
+            <value>
+            The database type.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.DasSession.InstalledApplications">
+            <summary>
+            Gets the list of applications installed in the Colleague environment to which this
+            DAS session is connected.
+            </summary>
+            <value>
+            The list of installed applications.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.DasSession.DateConversionString">
+            <summary>
+            Gets the UniData date conversion string configured to be used in the Colleague environment
+            to which this DAS session is connected.
+            </summary>
+            <value>
+            The date conversion string.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.DasSession.IntlParamsRecord">
+            <summary>
+            Gets the international parameters record that is configured in the Colleague environment to
+            which this DAS session is connected.
+            </summary>
+            <value>
+            The international parameters record.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.DasSession.Timeout">
+            <summary>
+            Gets the configured DAS session timeout value for the Colleague environment to which this
+            DAS session is connected.
+            </summary>
+            <value>
+            The timeout.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.DasSession.DasUnsuccessfulLoginCounter">
+            <summary>
+            Gets the unsuccessful login counter for logins attempted through this DAS session instance.
+            </summary>
+            <value>
+            The unsuccessful login counter.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.DasSession.EnvironmentName">
+            <summary>
+            Gets or sets the name of the Colleague environment to which this DAS session is connected.
+            </summary>
+            <value>
+            The name of the Colleague environment.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.DasSession.Host">
+            <summary>
+            Gets or sets the IP address or host name for DAS listener to which this DAS session is connected.
+            </summary>
+            <value>
+            The IP address or host name.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.DasSession.Port">
+            <summary>
+            Gets or sets the port number for the DAS listener to which this DAS session is connected.
+            </summary>
+            <value>
+            The port number.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.DasSession.ProcessLevel">
+            <summary>
+            Gets or sets the current Colleague process level for the current DAS session.
+            </summary>
+            <value>
+            The Colleague process level.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.DasSession.Token">
+            <summary>
+            Gets the security token for the currently connected DAS session.
+            </summary>
+            <value>
+            The security token.
+            </value>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.#cctor">
+            <summary>
+            Initializes the <see cref="T:Ellucian.Dmi.Client.Das.DasSession"/> class.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.#ctor(Ellucian.Colleague.Configuration.DasSettings)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Client.Das.DasSession"/> class.
+            </summary>
+            <param name="dasSettings">The DAS settings to use for this DAS session.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.#ctor(System.String,Ellucian.Dmi.Client.LegacyDmiClient)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Client.Das.DasSession"/> class.
+            </summary>
+            <param name="environmentName">Name of the environment we are connecting to.</param>
+            <param name="dmiClient">The DMI client to use for this DAS session.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.LoginAsync(System.String,System.String)">
+            <summary>
+            Logs in to the DAS listeners as an asynchronous operation.
+            </summary>
+            <param name="username">The username.</param>
+            <param name="password">The password.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.BootstrapDasSession(System.String)">
+            <summary>
+            Bootstraps the DAS session connection. This involves reading some environment variables
+            (such as Installed Applications, International Parameters) and setting the timeout
+            for the DAS connection
+            </summary>
+            <param name="SDLGSstring">The SDLGS response subset.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.LogoutAsync">
+            <summary>
+            Logs out from the DAS listener as an asynchronous operation.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.ReadRecordAsync(System.String,System.String)">
+            <summary>
+            Reads a record from Colleague as an asynchronous operation.
+            </summary>
+            <param name="entity">The entity/file to read from.</param>
+            <param name="id">The record ID.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.ReadRecordColumnsAsync(System.String,System.String,System.String[])">
+            <summary>
+            Reads the data from specific columns of a Colleague record as an asynchronous operation.
+            </summary>
+            <param name="entity">The entity.</param>
+            <param name="id">The identifier.</param>
+            <param name="columnNames">The column names.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.ReadMultipleRecordColumnsAsync(System.String,System.String[],System.String[])">
+            <summary>
+            Reads the data from specific columns of a Colleague record as an asynchronous operation.
+            </summary>
+            <param name="entity">The entity.</param>
+            <param name="keys">The ids to read.</param>
+            <param name="columnNames">The column names.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.ReadMultipleRecordsAsync(System.String,System.Collections.Generic.List{System.String})">
+            <summary>
+            Reads multiple records from Colleague as an asynchronous operation.
+            </summary>
+            <param name="file">The file.</param>
+            <param name="keys">The keys.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.StartProcessAsync">
+            <summary>
+            Raises the process level of the DAS listener as an asynchronous operation.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.EndProcessAsync">
+            <summary>
+            Lowers the process level of the DAS listener as an asynchronous operation.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.BatchReadRecordsAsync(System.String,System.String,System.Collections.Generic.List{System.String})">
+            <summary>
+            Performs a batch read operation of Colleague records as an asynchronous operation.
+            </summary>
+            <param name="batchName">Name of the batch.</param>
+            <param name="file">The Colleague file against which the read operation is being performed.</param>
+            <param name="keys">The list of keys we are attempting to read from Colleague in the batch read operation.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.OpenBatchAsync(Ellucian.Dmi.Client.Das.BatchReadData)">
+            <summary>
+            Begin a batch read operation from Colleague as an asynchronous operation.
+            </summary>
+            <param name="batchReadData">The batch read data object.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.SetBatchKeysAsync(Ellucian.Dmi.Client.Das.BatchReadData)">
+            <summary>
+            Sets the batch of keys to read in a batch read operation from Colleague as an asynchronous operation.
+            </summary>
+            <param name="batchReadData">The batch read data object.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.FetchBatchResultsAsync(Ellucian.Dmi.Client.Das.BatchReadData)">
+            <summary>
+            Fetches the batch read results from Colleague as an asynchronous operation.
+            </summary>
+            <param name="batchReadData">The batch read data object.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.CloseBatchAsync(Ellucian.Dmi.Client.Das.BatchReadData)">
+            <summary>
+            Ends the batch read operation from Colleague as an asynchronous operation.
+            </summary>
+            <param name="batchReadData">The batch read data object.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.SelectAsync(System.String)">
+            <summary>
+            Execute a select statement against Colleague as an asynchronous operation.
+            </summary>
+            <param name="query">The query.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.ValidateQueryTokensAsync(System.String[])">
+            <summary>
+            Validate the query statement tokens as an asynchronous operation.
+            </summary>
+            <param name="tokens">The query statement broken up as an array of token values.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.GetRfspecsAsync(System.String)">
+            <summary>
+            Gets the Rfspecs object for the given runtime file specification as an asynchronous operation.
+            </summary>
+            <param name="rfspecsId">The rfspecs record ID.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.CreateListAsync(System.Int32,System.Collections.Generic.List{System.String})">
+            <summary>
+            Load a list of keys into the DAS for the purposes of limiting query results from a subsequent select statement
+            as an asynchronous operation
+            </summary>
+            <param name="listNumber">The list number.</param>
+            <param name="keys">The keys.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.GetListAsync(System.Int32,System.Int32,System.Int32)">
+            <summary>
+            Gets the set of keys from a previously executed select statement as an asynchronous operation
+            </summary>
+            <param name="listNumber">The list number.</param>
+            <param name="startIndex">The start index.</param>
+            <param name="size">The size.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.ClearListAsync(System.Int32)">
+            <summary>
+            Clear the active list of record IDs from the DAS as an asynchronous operation.
+            </summary>
+            <param name="listNumber">The list number.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.SendDasRequestAsync(System.String)">
+            <summary>
+            Send a DMI request to the DAS as an asynchronous operation.
+            In case the DAS session token has expired/no longer exists, 
+            get a new token, and resend the request.
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.GetColumnarReadPositionsAsync(System.String,System.String[])">
+            <summary>
+            Get the columnar read positions for a Columnar I/O read from Colleague as an asynchronous operation.
+            </summary>
+            <param name="physicalFileName">Name of the physical file.</param>
+            <param name="columnNames">The column names.</param>
+            <returns></returns>
+            <exception cref="T:System.Exception"></exception>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.ParseReadRecordDasResponse(System.String)">
+            <summary>
+            Parses the DAS response from the transaction to read a record as an asynchronous operation.
+            </summary>
+            <param name="dasResponse">The DAS response from a DMI request to read a record.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.ParseBatchReadSubset(System.String,System.String)">
+            <summary>
+            Parses the batch read subset as an asynchronous operation
+            </summary>
+            <param name="fileName">Name of the Colleague file associated with this batch read response subset.</param>
+            <param name="subset">The sbios subset returned from the DAS.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.Disconnect">
+            <summary>
+            Disconnects from the DMI Listener and cleans up all appropriate objects.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.DisconnectAsync">
+            <summary>
+            Disconnects from the DAS Listener as an asynchronous operation.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSession.DisposeAsync">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources as
+            an asynchronous operation.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.Das.DasSessionPool">
+            <summary>
+            Handles the pool of DasSession connections
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.DasSessionPool.dasSettings">
+            <summary>
+            Gets the DAS settings associated with the given pooled connection.
+            </summary>
+            <value>
+            The das settings.
+            </value>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSessionPool.#cctor">
+            <summary>
+            Initializes the <see cref="T:Ellucian.Dmi.Client.Das.DasSessionPool"/> class.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSessionPool.SetDasSettings(Ellucian.Colleague.Configuration.DasSettings)">
+            <summary>
+            Sets the colleague settings. Use in cases where the settings are not stored in web/app.config.
+            </summary>
+            <param name="inputDasSettings">The DAS settings to use.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSessionPool.SetSizeAsync(System.Int32)">
+            <summary>
+            Sets the maximum pool size of the named pool with the specified size.
+            </summary>
+            <param name="poolSize">The size of the connection pool.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSessionPool.ShrinkPoolAsync(System.String)">
+            <summary>
+            Removes all idle connections from the named pool, disconnecting each of them.
+            This allows the pool to shrink without impacting active connections.
+            </summary>
+            <param name="poolName">The name of the connection pool to shrink.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSessionPool.CloseAllConnectionsAsync">
+            <summary>
+            Closes all open DMI server connections.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSessionPool.CreatePoolCollectionsAsync(slf4net.ILogger,System.String)">
+            <summary>
+            Creates the concurrent collection objects for the named connection pool.
+            </summary>
+            <param name="logger">The logger object to use</param>
+            <param name="poolName">The name of the new connection pool to create.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSessionPool.ConnectionPoolName(System.String,System.Int32,System.Boolean)">
+            <summary>
+            Returns a string identifier consisting of the unique components of a DMI connection
+            that can be used to identify the connection pool for a distinct DMI listener.
+            </summary>
+            <param name="address">IP address or DNS name.</param>
+            <param name="port">DMI port number.</param>
+            <param name="secure">Boolean indicating the use of a secure connection.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSessionPool.CreateConnectionAsync(slf4net.ILogger)">
+            <summary>
+            Creates a DMI server connection object to the DMI listener as an asynchronous operation using settings from
+            the configuration file.
+            </summary>
+            <param name="logger">The logger object to use.</param>
+            <returns>
+            Returns a connected DasSession instance.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSessionPool.GetAsync(slf4net.ILogger)">
+            <summary>
+            Waits for an available slot in the active connection pool and when the active connections are
+            below the pool size, it will then try to get a connection from the idle connection pool. If there are
+            no available idle connections, this will return a null which indicates that a new server connection
+            may be created.
+            </summary>
+            <param name="logger">The logger object to use.</param>
+            <returns>
+            A DasSession instance from the pool.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSessionPool.ReturnConnectionToPoolAsync(slf4net.ILogger,Ellucian.Dmi.Client.Das.DasSession)">
+            <summary>
+            Moves a pooled connection object to an idle connection pool.
+            </summary>
+            <param name="logger">The logger object to use</param>
+            <param name="session">The DAS session to return to the pool.</param>
+            <returns>
+            Returns a boolean indicating whether the DasSession instance was successfully returned to the pool.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSessionPool.PutAsync(slf4net.ILogger,Ellucian.Dmi.Client.Das.DasSession,System.String)">
+            <summary>
+            Adds a connection object to an idle connection pool.
+            </summary>
+            <param name="logger">The logger object to use</param>
+            <param name="session">The DAS session.</param>
+            <param name="poolName">The name of the connection pool to which to add the connection</param>
+            <returns>
+            Returns a boolean indicating whether the DasSession instance was successfully added to the connection pool
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasSessionPool.ReleaseConnectionPoolLock(slf4net.ILogger,System.String)">
+            <summary>
+            Release one thread from the pool lock.
+            </summary>
+            <param name="logger">The logger object to use</param>
+            <param name="poolName">The name of the connection pool to release the thread from</param>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.Das.DatabaseTypes">
+            <summary>
+            Enumeration for all supported Colleague database types
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Client.Das.DatabaseTypes.UniData">
+            <summary>
+            UniData database type
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Client.Das.DatabaseTypes.SqlServer">
+            <summary>
+            SQL Server database type
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Client.Das.DatabaseTypes.Oracle">
+            <summary>
+            Oracle database type
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Client.Das.DatabaseTypes.PostgreSQL">
+            <summary>
+            PostgreSQL database type
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.Das.DasUtils">
+            <summary>
+            Contains helper methods for extracting and parsing data from DMI response strings/subsets
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasUtils.Field(System.String,System.Char,System.Int32)">
+            <summary>
+            Extracts a component of a string based upon the provided delimiter and field position parameters.
+            </summary>
+            <param name="input">The input string from which to extract.</param>
+            <param name="delim">The delimiter to search for in the string.</param>
+            <param name="field">The field/section of the string to return.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasUtils.Fields(System.String,System.Char,System.Int32)">
+            <summary>
+            Extracts multiple components of a string based upon the provided delimiter and field position parameters.
+            </summary>
+            <param name="input">The input string from which to extract.</param>
+            <param name="delim">The delimiter to search for in the string.</param>
+            <param name="firstField">The field/section of the string at which to start the extraction, returning that field and all remaining data.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasUtils.Fields(System.String,System.Char,System.Int32,System.Int32)">
+            <summary>
+            Extracts multiple components of a string based upon the provided delimiter and field position parameters.
+            </summary>
+            <param name="input">The input string from which to extract.</param>
+            <param name="delim">The delimiter to search for in the string.</param>
+            <param name="firstField">The field/section of the string at which to start the extraction, returning that field and all data up to, and including the last field (per the specified parameter)</param>
+            <param name="lastField">The last field/section of the string to return.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasUtils.FieldCount(System.String,System.Char)">
+            <summary>
+            Returns the total number of fields in a given string per the specified delimiter parameter.
+            </summary>
+            <param name="input">The input string being counted.</param>
+            <param name="delim">The delimiter to use when counting fields.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasUtils.TryParseErrorSubset(System.String,System.Collections.Generic.List{System.String}@)">
+            <summary>
+            Tries to parse an error subset from the specified string, assumed to be a DMI transaction response.
+            </summary>
+            <param name="input">The input string to parse, assumed to be a DMI transaction response.</param>
+            <param name="errorMessages">The list of error messages to return as output, if found, within the input string.</param>
+            <returns>Boolean value indicating whether this was string, assumed to be a DMI transaction response, that contained an error subset.</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasUtils.ReplaceDmiTxHeader(System.String,System.String)">
+            <summary>
+            Replaces the existing DMI transaction header portion of a transaction string with a new DMI transaction header.
+            </summary>
+            <param name="tx">The existing DMI transaction string.</param>
+            <param name="newHeader">The new DMI transaction header to replace in the provided DMI transaction string.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.DasUtils.GetEndOfHeaderIndex(System.String)">
+            <summary>
+            Gets the index marking the end of the DMI transaction header within the specified DMI transaction string.
+            </summary>
+            <param name="tx">The DMI transaction string in which to search for the end of the DMI transaction header.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.Das.IntlParams">
+            <summary>
+            .NET representation of the Colleague INTL.PARAMS database file
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.IntlParams.HostCountry">
+            <summary>
+            CDD Name: HOST.COUNTRY
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.IntlParams.HostDate2">
+            <summary>
+            CDD Name: HOST.DATE2
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.IntlParams.HostDate4">
+            <summary>
+            CDD Name: HOST.DATE4
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.IntlParams.HostDateLong">
+            <summary>
+            CDD Name: HOST.DATE.LONG
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.IntlParams.HostShortDateFormat">
+            <summary>
+            CDD Name: HOST.SHORT.DATE.FORMAT
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.IntlParams.HostDateDelimiter">
+            <summary>
+            CDD Name: HOST.DATE.DELIMITER
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.IntlParams.HostLongDateFormat">
+            <summary>
+            CDD Name: HOST.LONG.DATE.FORMAT
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.IntlParams.HostLongDatePad">
+            <summary>
+            CDD Name: HOST.LONG.DATE.PAD
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.IntlParams.HostLongMonth">
+            <summary>
+            CDD Name: HOST.LONG.MONTH
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.IntlParams.HostLongYear">
+            <summary>
+            CDD Name: HOST.LONG.YEAR
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.IntlParams.HostShortDatePad">
+            <summary>
+            CDD Name: HOST.SHORT.DATE.PAD
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.Das.ReadRecordData">
+            <summary>
+            Represents result of a raw record read
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.ReadRecordData.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Client.Das.ReadRecordData"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.ReadRecordData.Key">
+            <summary>
+            Gets or sets the record key.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.ReadRecordData.File">
+            <summary>
+            Gets or sets the file.
+            </summary>
+            <value>
+            The file.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.ReadRecordData.Record">
+            <summary>
+            Gets or sets the record string read as part of the read record DAS transaction.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.ReadRecordData.ReadStatusCode">
+            <summary>
+            Gets or sets the read status code.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.ReadRecordData.ReadStatusCode2">
+            <summary>
+            Gets or sets the read status code 2.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.ReadRecordData.ReadStatusMessage">
+            <summary>
+            Gets or sets the read status message.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.ReadRecordData.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object" />, is equal to this instance.
+            </summary>
+            <param name="obj">The <see cref="T:System.Object" /> to compare with this instance.</param>
+            <returns>
+              <c>true</c> if the specified <see cref="T:System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.ReadRecordData.Equals(Ellucian.Dmi.Client.Das.ReadRecordData)">
+            <summary>
+            Determines whether the specified ReadRecordData object is equal to this instance.
+            </summary>
+            <param name="target">The ReadRecordData object to use for this comparison.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.ReadRecordData.GetHashCode">
+            <summary>
+            Returns a hash code for this instance.
+            </summary>
+            <returns>
+            A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+            </returns>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.Das.ReadStatus">
+            <summary>
+            Enumeration for primary read status results during Colleague I/O operations. Results correspond
+            to MIO.STAT.values in UT.INSERTS > I_COMMON
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Client.Das.ReadStatus.Normal">
+            <summary>
+            Normal status; corresponds to MIO.STAT.NORMAL
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Client.Das.ReadStatus.Fail">
+            <summary>
+            Failure status; corresponds to MIO.STAT.FAIL
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Client.Das.ReadStatus.Locked">
+            <summary>
+            Locked record status; correspond to MIO.STAT.LOCKED
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.Das.ReadStatus2">
+            <summary>
+            Enumeration for primary read status results during Colleague I/O operations. Results correspond
+            to MIO.STAT2.values in UT.INSERTS > I_COMMON
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Client.Das.ReadStatus2.Normal">
+            <summary>
+            Normal status; corresponds to MIO.STAT.NORMAL
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Client.Das.ReadStatus2.RecordNotFound">
+            <summary>
+            Record not found status; corresponds to MIO.STAT2.REC.NOT.FOUND
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Client.Das.ReadStatus2.UnopenedFile">
+            <summary>
+            Unopened file status; corresponds to MIO.STAT2.UNOPENED.FILE
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Client.Das.ReadStatus2.NullKey">
+            <summary>
+            Null key status; corresponds to MIO.STAT2.NULL.KEY
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Client.Das.ReadStatus2.InvalidKeyVar">
+            <summary>
+            Invalid key variable status; corresponds to MIO.STAT2.INVALID.KEY.VAR
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Client.Das.ReadStatus2.WriteFail">
+            <summary>
+            Write fail status; corresponds to MIO.STAT2.WRITE.FAIL
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Client.Das.ReadStatus2.IoFailure">
+            <summary>
+            IO failure status; corresponds to MIO.STAT2.IO.FAILURE
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Client.Das.ReadStatus2.BadProcessLevel">
+            <summary>
+            Bad process level status; corresponds to MIO.STAT2.BAD.PROCESS.LEVEL
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Client.Das.ReadStatus2.DataChanged">
+            <summary>
+            Data changed status; corresponds to MIO.STAT2.DATA.CHANGED
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Client.Das.ReadStatus2.Unknown">
+            <summary>
+            Unknown status; to be used in error cases that fall outside of those above
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.Das.Rfspecs">
+            <summary>
+            Object representing the contents of RFSPECS attributes from Colleague
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.Rfspecs.RfspecsId">
+            <summary>
+            Gets or sets the RFSPECS record ID.
+            Corresponds to the RFSPECS.ID attribute in the RFSPECS entity
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.Rfspecs.RfspecsParameters">
+            <summary>
+            Gets or sets the RFSPECS parameters.
+            Corresponds to the RFSPECS.PARAMETERS attribute in the RFSPECS entity
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.Rfspecs.RfspecsTransactionLogExpireDate">
+            <summary>
+            Gets or sets the RFSPECS transaction log expiration date.
+            Corresponds to the RFSPECS.TX.LOG.EXP.DATE attribute in the RFSPECS entity
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.Rfspecs.RfspecsNewFormula">
+            <summary>
+            Gets or sets the RFSPECS new formula.
+            Corresponds to the RFSPECS.NEW.FORMULA attribute in the RFSPECS entity
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.Rfspecs.RfspecsCreatingApplication">
+            <summary>
+            Gets or sets the RFSPECS creating application.
+            Corresponds to the RFSPECS.CREATING.APPL attribute in the RFSPECS entity
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.Rfspecs.RfspecsFileCrossReference">
+            <summary>
+            Gets or sets the RFSPECS cross reference file.
+            Corresponds to the RFSPECS.FILE.XREF attribute in the RFSPECS entity
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.Rfspecs.RfspecsIndexInformation">
+            <summary>
+            Gets or sets the RFSPECS index information.
+            Corresponds to the RFSPECS.INDEX.INFO attribute in the RFSPECS entity
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.Rfspecs.RfspecsVirtualSubroutines">
+            <summary>
+            Gets or sets the RFSPECS virtual subroutines.
+            Corresponds to the RFSPECS.VIRTUAL.SUBRS attribute in the RFSPECS entity
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.Rfspecs.RfspecsRecordSecurityInstructions">
+            <summary>
+            Gets or sets the RFSPECS record security instructions.
+            Corresponds to the RFSPECS.REC.SEC.INSTR attribute in the RFSPECS entity
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.Rfspecs.RfspecsOpcodeStartIndex">
+            <summary>
+            Gets or sets the RFSPECS opcode start index.
+            Corresponds to the RFSPECS.START.INSTR attribute in the RFSPECS entity
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.Rfspecs.Opcodes">
+            <summary>
+            Gets or sets the list of all RFSPECS opcodes.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.Rfspecs.IndexNames">
+            <summary>
+            Gets or sets the index names defined to this file.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.Rfspecs.IndexStorageNames">
+            <summary>
+            Gets or sets the index database storage names defined to this file.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.Rfspecs.IndexNoNulls">
+            <summary>
+            Gets or sets the index no-nulls setting defined to this file.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.Rfspecs.GuidModelInformation">
+            <summary>
+            Gets or sets the GUID model information for this file.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.Das.SelectResult">
+            <summary>
+            Object to hold Colleague metadata related to the results from a database-issued
+            query statement
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.SelectResult.Query">
+            <summary>
+            Gets or sets the query value passed in by the developer to issue against the Colleague database.
+            </summary>
+            <value>
+            The query.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.SelectResult.DasQuery">
+            <summary>
+            Gets or sets the DAS query value. This query is the validated/translated and actually sent to
+            the DAS listener for the query against the Colleague database
+            </summary>
+            <value>
+            The DAS query.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.SelectResult.FileName">
+            <summary>
+            Gets or sets the name of the file the query is being issued against.
+            </summary>
+            <value>
+            The name of the file.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.SelectResult.Keys">
+            <summary>
+            Gets or sets the keys that were retrieved by the query against the Colleague database.
+            </summary>
+            <value>
+            The keys.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.SelectResult.SelectionError">
+            <summary>
+            Gets or sets a value indicating whether an error occurred during the query.
+            </summary>
+            <value>
+              <c>true</c> if [selection error]; otherwise, <c>false</c>.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.Das.SelectResult.SelectionErrorMessage">
+            <summary>
+            Gets or sets the selection error message if an error occurred during the query.
+            </summary>
+            <value>
+            The selection error message.
+            </value>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.Das.SelectResult.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Client.Das.SelectResult"/> class.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.DMIF.DMIF">
+            <summary>
+            Defines the DMIF (DMIFile transfer) protocol
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.DMIF.DMIFileTransferClient">
+            <summary>
+            The DMIFileTransferClient class contains code to interact with app server's DMI listener via DMIF protocol for file transfers.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DMIF.DMIFileTransferClient.#cctor">
+            <summary>
+            Initializes the <see cref="T:Ellucian.Dmi.Client.DMIF.DMIFileTransferClient"/> class.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DMIF.DMIFileTransferClient.#ctor(Ellucian.Colleague.Configuration.DmiSettings,slf4net.ILogger)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Client.DMIF.DMIFileTransferClient"/> class.
+            </summary>
+            <param name="dmiSettings">The DAS settings to use for this DAS session.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DMIF.DMIFileTransferClient.SendUploadRequestAsync(System.String,System.Int64,System.IO.Stream)">
+            <summary>
+            Send an upload request and start the upload process
+            </summary>
+            <param name="fullDestinationFilePath"></param>
+            <param name="fileSize"></param>
+            <param name="sourceFileStream"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DMIF.DMIFileTransferClient.SendDownloadRequestAsync(System.String,System.String)">
+            <summary>
+            Send a download request and start a download process.
+            </summary>
+            <param name="sourceFilePath"></param>
+            <param name="destinationFilePath"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.DMIF.DMIFException">
+            <summary>
+            Definition of an exception that may occur when using the DMIF client.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DMIF.DMIFException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Client.DMIF.DMIFException"/> class.
+            </summary>
+            <param name="message">The message that describes the error.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DMIF.DMIFException.#ctor(System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Client.DMIF.DMIFException"/> class.
+            </summary>
+            <param name="message">The error message that explains the reason for the exception.</param>
+            <param name="innerException">The exception that is the cause of the current exception, or a null reference if no inner exception is specified.</param>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.BaseLoginRequest">
+            <summary>
+            This data contract represents the base parameters for authentication against DMI.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.BaseLoginRequest.#ctor">
+            <summary>
+            Default Constructor.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.BaseLoginRequest.Password">
+            <summary>
+            This string represents the DMI registry password for the current user. 
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.BaseLoginRequest.InitialMnemonic">
+            <summary>
+            This string represents a starting process for the current user.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.BaseLoginRequest.PersonID">
+            <summary>
+            This string represents a Person ID or OPERS record.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.BaseLoginRequest.LoginAttributes">
+            <summary>
+            This string represents additional internal login attributes parsed by DMI.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.StandardLoginRequest">
+            <summary>
+            This data contract represents the parameters for authentication against DMI.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.StandardLoginRequest.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardLoginRequest.UserID">
+            <summary>
+            This string represents the current user ID for authentication.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.ProxyLoginRequest">
+            <summary>
+            This data contract represents the parameters for proxy authentication against DMI.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.ProxyLoginRequest.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.ProxyLoginRequest.UserIDs">
+            <summary>
+            This string list represents the list of user IDs for proxy authentication.  
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.StandardLoginResponse">
+            <summary>
+            This data contract represents the response to authentication against DMI.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardLoginResponse.Success">
+            <summary>
+            This boolean flag indicates the success of authentication.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardLoginResponse.ValidAccountCodes">
+            <summary>
+            This list represents a list of internal environment codes.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardLoginResponse.ValidAccountDescriptions">
+            <summary>
+            This list represents a list of internal environment descriptions.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardLoginResponse.ValidEnvisionApplications">
+            <summary>
+            This list represents a list of valid Envision applications for the environment.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardLoginResponse.ValidEnvisionApplicationDescriptions">
+            <summary>
+            This list represents a list of descriptions for the valid Envision applications.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardLoginResponse.ErrorCategory">
+            <summary>
+            This string represents a category for the authentication error.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardLoginResponse.ErrorCode">
+            <summary>
+            This string represents a code for the authentication error.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardLoginResponse.ErrorMessage">
+            <summary>
+            This string represents a plaintext message for the authentication error.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.GetClaimsRequest">
+            <summary>
+            This data contract represents the request to retrieve claims info.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.GetClaimsRequest.#ctor">
+            <summary>
+            Default Constructor.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.GetClaimsResponse">
+            <summary>
+            This data contract represents the response to retrieve claims info.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.GetClaimsResponse.ClaimTypes">
+            <summary>
+            Claim types (associated with ClaimValues).
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.GetClaimsResponse.ClaimValues">
+            <summary>
+            Claim values (associated with ClaimTypes).
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.GetClaimsResponse.UserName">
+            <summary>
+            The formatted person's name (according to setting on WSPM).
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.GetClaimsResponse.OperatorId">
+            <summary>
+            The OPER record's key.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.GetClaimsResponse.TokenTimeout">
+            <summary>
+            Token time out, defaulted to 30.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.GetClaimsResponse.SecurityClasses">
+            <summary>
+            OPER record's security classes.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.GetClaimsResponse.PersonID">
+            <summary>
+            User's ssociated PERSON record key.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.GetClaimsResponse.WebUserID">
+            <summary>
+            Registry ID / web user login ID as defined on DRUS.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.GetClaimsResponse.SecurityToken">
+            <summary>
+            Security token for the web session.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.GetClaimsResponse.SenderControlId">
+            <summary>
+            Control ID for the web session.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.GetClaimsResponse.ProxyAccessPermissions">
+            <summary>
+            Proxy access permissions given by the principal user to the current user.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.GetClaimsResponse.Errors">
+            <summary>
+            Gets or sets the errors.
+            </summary>
+            <value>
+            The errors.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.GetClaimsResponse.RoleClaimList">
+            <summary>
+            Gets the list of role claims for this user.
+            </summary>
+            <value>
+            The claim list.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.GetClaimsResponse.ClaimList">
+            <summary>
+            Gets the list of ALL claims for this user.
+            </summary>
+            <value>
+            The claim list.
+            </value>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.StandardLogoutRequest">
+            <summary>
+            This data contract represents the parameters for deleting an environment session. This request has no arguments because
+            the credentials used for logout are located elsewhere.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.StandardLogoutResponse">
+            <summary>
+            This data contract represents the response for deleting an environment session.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardLogoutResponse.LogoutSuccessful">
+            <summary>
+            Gets or sets a value indicating whether logout is successful.
+            </summary>
+            <value>
+              <c>true</c> if logout successful; otherwise, <c>false</c>.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardLogoutResponse.ErrorCategory">
+            <summary>
+            Gets or sets the error category.
+            </summary>
+            <value>
+            The error category.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardLogoutResponse.ErrorCode">
+            <summary>
+            Gets or sets the error code.
+            </summary>
+            <value>
+            The error code.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardLogoutResponse.ErrorMessage">
+            <summary>
+            Gets or sets the error message.
+            </summary>
+            <value>
+            The error message.
+            </value>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.StandardDmiSession">
+            <summary>
+            This class represents a DMI session that contains a connection to a Colleague DMI listener
+            and information specific to a single DMI session.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.StandardDmiSession.#ctor">
+            <summary>
+            Default constructor.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardDmiSession.UserID">
+            <summary>
+            This string represents the current user ID.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardDmiSession.Account">
+            <summary>
+            The account associated with this session.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardDmiSession.SecurityToken">
+            <summary>
+            Security token associated with this session.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardDmiSession.SenderControlId">
+            <summary>
+            The sender control ID associated with this session.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardDmiSession.SenderControlIdCounter">
+            <summary>
+            Sender control ID counter associated with this session.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardDmiSession.DisconnectSession">
+            <summary>
+            Boolean stating whether the session should be disconnected.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardDmiSession.Errors">
+            <summary>
+            This list represents the errors that occur during session creation.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardDmiSession.Claims">
+            <summary>
+            Gets or sets the claims.
+            </summary>
+            <value>
+            The claims.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardDmiSession.UserName">
+            <summary>
+            Gets or sets the name of the user.
+            </summary>
+            <value>
+            The name of the user.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardDmiSession.OperatorId">
+            <summary>
+            Gets or sets the operator ID.
+            </summary>
+            <value>
+            The operator id.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardDmiSession.TokenTimeout">
+            <summary>
+            Gets or sets the token timeout.
+            </summary>
+            <value>
+            The token timeout.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardDmiSession.SecurityClasses">
+            <summary>
+            Gets or sets the security classes.
+            </summary>
+            <value>
+            The security classes.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardDmiSession.PersonID">
+            <summary>
+            Gets or sets the person ID.
+            </summary>
+            <value>
+            The person ID.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.StandardDmiSession.WebUserID">
+            <summary>
+            Gets or sets the web user ID.
+            </summary>
+            <value>
+            The web user ID.
+            </value>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.ColleagueDmiConnectionException">
+            <summary>
+            Exception for issues encountered when using a DmiConnection object.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.ColleagueDmiConnectionException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Client.ColleagueDmiConnectionException"/> class.
+            </summary>
+            <param name="message">The error message from the DmiConnection method.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.ColleagueDmiConnectionException.#ctor(System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Client.ColleagueDmiConnectionException"/> class.
+            </summary>
+            <param name="message">The error message from the DmiConnection method.</param>
+            <param name="innerException">The exception from the DmiConnection method.</param>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.ColleagueDmiConnectionException.Message">
+            <summary>
+            Returns the message describing the exception, including both
+            the base exception, if there is one, and the outer exception.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.DmiConnectionFactory">
+            <summary>
+            This class provides a factory interface for mass-producing DMI-related objects, 
+            such as an Application Server connection and a transaction object.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionFactory.#ctor">
+            <summary>
+            Default/base Constructor. DMI connection parameters are retrieved from the 
+            application's configuration file and stored in this factory instance.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionFactory.#ctor(slf4net.ILogger)">
+            <summary>
+            Constructor that takes in an ILogger object.
+            </summary>
+            <param name="logger">The logger.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionFactory.#ctor(Ellucian.Colleague.Configuration.DmiSettings)">
+            <summary>
+            Constructor that obtains DMI connection parameters from the DmiSettings
+            object, as opposed to using the application configuration file.
+            </summary>
+            <param name="settings">The DmiSettings object.</param>
+            <exception cref="T:System.ArgumentNullException">settings</exception>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionFactory.#ctor(slf4net.ILogger,Ellucian.Colleague.Configuration.DmiSettings)">
+            <summary>
+            Constructor that obtains DMI connection parameters from the DmiSettings
+            object, as opposed to using the application configuration file. It also takes
+            in an ILogger object.
+            </summary>
+            <param name="logger">The logger.</param>
+            <param name="settings">The settings.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionFactory.CreateDasConnectionAsync(System.Boolean)">
+            <summary>
+            This method creates an DAS connection and opens a socket based on the autoConnect argument.
+            Based on the security settings in the web.config, the client may be SSL-enabled.
+            </summary>
+            <param name="autoConnect">if set to <c>true</c> [automatic connect].</param>
+            <returns>
+            DAS connection
+            </returns>
+            <exception cref="T:Ellucian.Dmi.Client.ColleagueDmiConnectionException">
+            </exception>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionFactory.CreateServerConnection">
+            <summary>
+            This method creates an Application Server connection, but does not open a socket immediately.
+            The calling code must manually connect to the Application Server.
+            </summary>
+            <returns>Application Server connection.</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionFactory.CreateServerConnectionAsync">
+            <summary>
+            This method creates an Application Server connection as an asynchronous operation, but does not open a
+            socket immediately. The calling code must manually connect to the Application Server.
+            </summary>
+            <returns>Application Server connection.</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionFactory.CreateServerConnection(System.Boolean)">
+            <summary>
+            This method creates an Application Server connection and opens a socket based on the autoConnect argument.
+            Based on the security settings in the web.config, the client may be SSL-enabled.
+            </summary>
+            <returns>Application Server connection</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionFactory.CreateServerConnectionAsync(System.Boolean)">
+            <summary>
+            This method creates an Application Server connection as an asynchronous operation and opens a socket based on the
+            autoConnect argument. Based on the security settings in the web.config, the client may be SSL-enabled.
+            </summary>
+            <returns>Application Server connection</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionFactory.CreateDmiTransaction(System.String,System.String,System.String)">
+            <summary>
+            Creates a DmiTransaction object with a know transaction type, 
+            session security token, and session control ID.
+            </summary>
+            <param name="type">DMI transaction type.</param>
+            <param name="securityToken">Security token.</param>
+            <param name="controlID">Unique control ID.</param>
+            <returns>Pre-populated DMI transaction object.</returns>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.DmiConnectionPool">
+            <summary>
+            A pool of persistent socket connections to a Colleague environment's application listener.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionPool.SetSizeAsync(Ellucian.WebServices.Core.Config.DmiParameterCustomSection)">
+            <summary>
+            Sets the maximum pool size using settings from the application's configuration file.
+            <param name="serverConfigDefinition">The Colleague Server configuration definition.</param>
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionPool.SetSizeAsync(System.String,System.Int16)">
+            <summary>
+            Sets the maximum pool size of the named pool with the specified size.
+            </summary>
+            <param name="poolName">The name of the connection pool.</param>
+            <param name="poolSize">The size of the connection pool.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionPool.ShrinkPoolAsync(System.String)">
+            <summary>
+            Removes all idle connections from the named pool, disconnecting each of them.
+            This allows the pool to shrink without impacting active connections.
+            </summary>
+            <param name="poolName">The name of the connection pool to shrink.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionPool.CloseAllConnectionsAsync">
+            <summary>
+            Closes all open DMI server connections.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionPool.CreatePoolCollectionsAsync(slf4net.ILogger,System.String)">
+            <summary>
+            Creates the concurrent collection objects for the named connection pool.
+            </summary>
+            <param name="logger">The logger object to use</param>
+            <param name="poolName">The name of the new connection pool to create.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionPool.ConnectionPoolName(Ellucian.WebServices.Core.Config.DmiParameterCustomSection)">
+            <summary>
+            Returns a string identifier consisting of the unique components of a DMI connection
+            that can be used to identify the connection pool for a distinct DMI listener.
+            </summary>
+            <param name="serverConfigDefinition">The server connection configuration.</param>
+            <returns>The name of the connection pool.</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionPool.ConnectionPoolName(System.String,System.Int32,System.Boolean)">
+            <summary>
+            Returns a string identifier consisting of the unique components of a DMI connection
+            that can be used to identify the connection pool for a distinct DMI listener.
+            </summary>
+            <param name="address">IP address or DNS name.</param>
+            <param name="port">DMI port number.</param>
+            <param name="secure">Boolean indicating the use of a secure connection.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionPool.CreateConnectionAsync(slf4net.ILogger,Ellucian.WebServices.Core.Config.DmiParameterCustomSection,System.Boolean)">
+            <summary>
+            Creates a DMI server connection object to the DMI listener as an asynchronous operation using settings from
+            the configuration file.
+            </summary>
+            <param name="logger">The logger object to use.</param>
+            <param name="serverConfigDefinition">The Colleague Server configuration definition.</param>
+            <param name="autoConnect">Indicates whether the connection is part of the connection pool and auto connects it.</param>
+            <returns>Returns a connection object.</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionPool.GetAsync(slf4net.ILogger,Ellucian.WebServices.Core.Config.DmiParameterCustomSection)">
+            <summary>
+            Waits for an available slot in the active connection pool and when the active connections are
+            below the pool size, it will then try to get a connection from the idle connection pool. If there are
+            no available idle connections, this will return a null which indicates that a new server connection
+            may be created.
+            </summary>
+            <param name="logger">The logger object to use.</param>
+            <param name="serverConfigDefinition">The Colleague Server configuration definition.</param>
+            <returns>A connection object.</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionPool.ReturnConnectionToPoolAsync(slf4net.ILogger,Ellucian.Dmi.Client.LegacyDmiClient,System.String)">
+            <summary>
+            Moves a pooled connection object to an idle connection pool.
+            </summary>
+            <param name="logger">The logger object to use</param>
+            <param name="serverConnection">The pooled connection to move.</param>
+            <param name="poolName">The name of the connection pool to move this connection to.</param>
+            <returns>Returns a boolean indicating whether the connection was added to an idle connection pool.</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionPool.PutAsync(slf4net.ILogger,Ellucian.Dmi.Client.LegacyDmiClient,System.String)">
+            <summary>
+            Adds a connection object to an idle connection pool.
+            </summary>
+            <param name="logger">The logger object to use</param>
+            <param name="serverConnection">The Colleague Server configuration definition</param>
+            <param name="poolName">The name of the connection pool to add the connection to</param>
+            <returns>Returns a boolean indicating whether the connection was added to an idle connection pool</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.DmiConnectionPool.ReleaseConnectionPoolLock(slf4net.ILogger,System.String)">
+            <summary>
+            Release one thread from the pool lock.
+            </summary>
+            <param name="logger">The logger object to use</param>
+            <param name="poolName">The name of the connection pool to release the thread from</param>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.LegacyDmiClient">
+            <summary>
+            Represents a socket connection to a Colleague environment's application server.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.LegacyDmiClient.Ip">
+            <summary>
+            IP address of the DMI Listener
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.LegacyDmiClient.Port">
+            <summary>
+            Port of the DMI Listener
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.ConnectionPoolName">
+            <summary>
+            Returns the name of the connection pool.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.LegacyDmiClient.DmiClient">
+            <summary>
+            TcpClient connected to the DMI Listener.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.LegacyDmiClient.DmiClientStream">
+            <summary>
+            Network stream on which request/responses are transmitted.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Client.LegacyDmiClient.endByteArray">
+            <summary>
+            Constant that represents the #END# that trails a DMI transaction
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.LegacyDmiClient.isPoolConnection">
+            <summary>
+            Boolean that flags connections that need to be returned to pool.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.LegacyDmiClient.LastTransactionTime">
+            <summary>
+            Gets or sets the time of the last transaction that occurred against this TcpClient socket.
+            </summary>
+            <value>
+            The last transaction time.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.LegacyDmiClient.IdleDurationExceeded">
+            <summary>
+            Gets a value indicating whether the maximum socket idle duration value has been exceeded.
+            </summary>
+            <value>
+            <c>true</c> if idle duration has been exceeded; otherwise, <c>false</c>.
+            </value>
+        </member>
+        <member name="F:Ellucian.Dmi.Client.LegacyDmiClient.testingIdleConnection">
+            <summary>
+            Boolean indicating if an idle socket connection test is in progress
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.LegacyDmiClient.Response">
+            <summary>
+            Gets or sets the response from the network stream to a submitted request.
+            </summary>
+            <value>
+            The response.
+            </value>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.#ctor(System.String,System.Int32)">
+            <summary>
+            Constructor - creates a LegacyDmiClient object with the given IP address and Port.
+            </summary>
+            <param name="socketIp">IP address of the DMI Listener.</param>
+            <param name="socketPort">Port of the DMI Listener.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.#ctor(slf4net.ILogger,System.String,System.Int32)">
+            <summary>
+            Constructor - creates a LegacyDmiClient object with the given IP address and Port with a logger.
+            </summary>
+            <param name="logger">The logger.</param>
+            <param name="socketIp">The socket ip.</param>
+            <param name="socketPort">The socket port.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.Connect">
+            <summary>
+            Connects to the DMI Listener.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.ConnectAsync">
+            <summary>
+            Connects to the DMI Listener as an asynchronous operation.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.Disconnect">
+            <summary>
+            Disconnects from the DMI Listener and cleans up all appropriate objects.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.DisconnectAsync">
+            <summary>
+            Disconnects from the DMI Listener and cleans up all appropriate objects as an asynchronous operation.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.Dispose">
+            <summary>
+            Disconnects from the DMI Listener and cleans up all appropriate objects.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.DisposeAsync">
+            <summary>
+            Disconnects from the DMI Listener and cleans up all appropriate objects as an asynchronous operation.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.SendBytes(System.Byte[])">
+            <summary>
+            Sends a DMI request and receives the DMI response, storing the response in memory which can be retrieved by the
+            ReceiveResponse method.  This method also performs some connection integrity tests/validation to ensure that
+            the socket connection is still fully open.
+            </summary>
+            <param name="request">Request to send in the format of a Byte array</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.SendBytesAsync(System.Byte[])">
+            <summary>
+            Sends a DMI request and receives the DMI response as asynchronous transactions. The response is stored in memory
+            which can be retrieved by the ReceiveResponseAsync method. This method also performs some connection integrity
+            tests/validation to ensure that the socket connection is still fully open.
+            </summary>
+            <param name="request">Request to send in the format of a Byte array</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.DoSendBytes(System.Byte[])">
+            <summary>
+            Send bytes over the DMI socket connection
+            </summary>
+            <param name="request">The request to send.</param>
+            <exception cref="T:Ellucian.Dmi.Client.ColleagueDmiConnectionException">
+            IOException writing to failover DmiClient in SendBytes
+            or
+            IOException writing to DmiClient in SendBytes
+            </exception>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.DoSendBytesAsync(System.Byte[])">
+            <summary>
+            Wrap request with DMI header and footer, then send it over the DMI socket connection as an asynchronous transaction
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+            <exception cref="T:Ellucian.Dmi.Client.ColleagueDmiConnectionException">
+            IOException writing to failover DmiClient in SendBytesAsync
+            or
+            IOException writing to DmiClient in SendBytesAsync
+            </exception>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.DoSendRawBytesAsync(System.Byte[])">
+            <summary>
+            Send the byte array over the DMI socket connection as an asynchronous transaction
+            </summary>
+            <param name="requestToSend"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.WriteStringToStreamAsync(System.String)">
+            <summary>
+            Send a string to the connection stream.
+            </summary>
+            <param name="message">string to write</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.ReadStringFromStreamAsync(System.Int64)">
+            <summary>
+            Read a string from the connection stream
+            </summary>
+            <param name="bufferSize">How much to read.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.DoReceiveRawBytesAsync(System.Byte[])">
+            <summary>
+            Read bytes from the client stream, up to the size of the provided buffer
+            </summary>
+            <param name="buffer">Byte array with the size of buffer to be filled.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.ProcessNetworkStreamResponse">
+            <summary>
+            Processes the response to the request from the network stream.
+            </summary>
+            <returns></returns>
+            <exception cref="T:Ellucian.Dmi.Client.ColleagueDmiConnectionException">
+            IOException reading from Stream in ProcessNetworkStreamResponse
+            or
+            Improperly formatted incoming DMI Transaction - Doesn't begin #nnn#
+            or
+            Improperly formatted incoming DMI Transaction - Bytes Received doesn't equal Bytes expected
+            </exception>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.ProcessNetworkStreamResponseAsync">
+            <summary>
+            Processes the response to the request from the network stream as an asynchronous transaction
+            </summary>
+            <returns></returns>
+            <exception cref="T:Ellucian.Dmi.Client.ColleagueDmiConnectionException">
+            IOException reading from Stream in ProcessNetworkStreamResponseAsync
+            or
+            Improperly formatted incoming DMI Transaction - Doesn't begin #nnn#
+            or
+            Improperly formatted incoming DMI Transaction - Bytes Received doesn't equal Bytes expected
+            </exception>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.TestIdleConnection">
+            <summary>
+            Tests the idle socket connection to ensure it's still valid.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.TestIdleConnectionAsync">
+            <summary>
+            Tests the idle socket connection as an asynchronous operation to ensure it's still valid.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.ResetConnection">
+            <summary>
+            Resets the current DMI client connection.
+            If the client is pooled, it will remain in the pool.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.ResetConnectionAsync">
+            <summary>
+            Resets the current DMI client connection as an asynchronous operation.
+            If the client is pooled, it will remain in the pool.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.SendRequest(System.IO.Stream)">
+            <summary>
+            Sends a DMI request.
+            </summary>
+            <param name="request">Request to send in the format of a Stream.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.SendRequestAsync(System.IO.Stream)">
+            <summary>
+            Sends a DMI request as an asynchronous operation.
+            </summary>
+            <param name="request">Request to send in the format of a Stream.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.ReceiveStringResponse">
+            <summary>
+            Receives the DMI response as a string.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.ReceiveStringResponseAsync">
+            <summary>
+            Receives the DMI response as a string as an asynchronous operation.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.ReceiveResponse">
+            <summary>
+            Returns the response (previously retrieved from the network stream) as a stream object
+            </summary>
+            <returns>Response in the format of a Byte array converted into a stream.</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.ReceiveResponseAsync">
+            <summary>
+            Returns the response (previously retrieved from the network stream) as a stream object
+            </summary>
+            <returns>Response in the format of a Byte array converted into a stream.</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.AddCountWrapper(System.Byte[])">
+            <summary>
+            Adds wrapper to the DMI request.  This adds a #num# to the front of the request with the length
+            of the request and appends #END# to the end.
+            </summary>
+            <param name="dmiTx">DMI request in which to add the count wrapper</param>
+            <returns>Byte array with the count wrapper added to the request</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.LegacyDmiClient.RemoveHeaderTail(Ellucian.Dmi.Runtime.DynamicArray,System.Int32,System.Int32)">
+            <summary>
+            This method will remove the #nnn# prepending a DMI transaction and the #END# trailing it
+            </summary>
+            <param name="dmiTx">The full DMI tx</param>
+            <param name="bytesReceived">The number of bytes received</param>
+            <param name="endOfTxLengthIndex">The index of the trailing # in #nnn#</param>
+            <returns></returns>
+        </member>
+        <member name="T:Ellucian.Dmi.Client.SecureLegacyDmiClient">
+            <summary>
+            Represents a secured socket connection to the application server.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.SecureLegacyDmiClient.DmiSecureStream">
+            <summary>
+            Secure stream with the DMI Listener.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Client.SecureLegacyDmiClient.CertificateHostnameOverride">
+            <summary>
+            Host name override to use when authenticating the client.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Client.SecureLegacyDmiClient._supportedSslProtocols">
+            <summary>
+            Supported SSL protocols for secure DMI communications
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.SecureLegacyDmiClient.#ctor(slf4net.ILogger,System.String,System.Int32,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Client.SecureLegacyDmiClient"/> class.
+            </summary>
+            <param name="logger">The logger.</param>
+            <param name="socketIp">The socket ip.</param>
+            <param name="socketPort">The socket port.</param>
+            <param name="hostnameOverride">The hostname override.</param>
+            <exception cref="T:Ellucian.Dmi.Client.ColleagueDmiConnectionException">Secure Dmi Client is missing Ip/Port</exception>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.SecureLegacyDmiClient.#ctor(System.String,System.Int32,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Client.SecureLegacyDmiClient"/> class.
+            </summary>
+            <param name="socketIp">The socket ip.</param>
+            <param name="socketPort">The socket port.</param>
+            <param name="hostnameOverride">The hostname override.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.SecureLegacyDmiClient.#ctor(slf4net.ILogger,System.String,System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Client.SecureLegacyDmiClient"/> class.
+            </summary>
+            <param name="logger">The logger.</param>
+            <param name="socketIp">The socket ip.</param>
+            <param name="socketPort">The socket port.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.SecureLegacyDmiClient.#ctor(System.String,System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Client.SecureLegacyDmiClient"/> class.
+            </summary>
+            <param name="socketIp">IP address of the DMI Listener.</param>
+            <param name="socketPort">Port of the DMI Listener.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.SecureLegacyDmiClient.ConnectionPoolName">
+            <summary>
+            Returns the name of the connection pool.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.SecureLegacyDmiClient.Connect">
+            <summary>
+            Connects to the DMI Listener.
+            </summary>
+            <exception cref="T:Ellucian.Dmi.Client.ColleagueDmiConnectionException">
+            IOException when making the SSL handshake
+            or
+            Authentication error in Secure Legacy Dmi Client
+            </exception>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.SecureLegacyDmiClient.ConnectAsync">
+            <summary>
+            Connects to the DMI Listener as an asynchronous operation.
+            </summary>
+            <returns></returns>
+            <exception cref="T:Ellucian.Dmi.Client.ColleagueDmiConnectionException">
+            IOException when making the SSL handshake
+            or
+            Authentication error in Secure Legacy Dmi Client
+            </exception>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.SecureLegacyDmiClient.Disconnect">
+            <summary>
+            Disconnects from the DMI Listener and cleans up all appropriate objects.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.SecureLegacyDmiClient.DisconnectAsync">
+            <summary>
+            Disconnects from the DMI Listener as an asynchronous operation and cleans up all appropriate objects.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.SecureLegacyDmiClient.DoSendBytes(System.Byte[])">
+            <summary>
+            Send bytes over the secure DMI socket connection
+            </summary>
+            <param name="request">The request to send.</param>
+            <exception cref="T:Ellucian.Dmi.Client.ColleagueDmiConnectionException">
+            IOException writing to failover Secure DmiClient in DoSendBytes
+            or
+            IOException writing to Secure DmiClient in DoSendBytes
+            </exception>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.SecureLegacyDmiClient.DoSendBytesAsync(System.Byte[])">
+            <summary>
+            Wrap request string with DMI count header, then send it 
+            over the secure DMI socket connection as an asynchronous transaction
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+            <exception cref="T:Ellucian.Dmi.Client.ColleagueDmiConnectionException">
+            IOException writing to failover Secure DmiClient in DoSendBytesAsync
+            or
+            IOException writing to Secure DmiClient in DoSendBytesAsync
+            </exception>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.SecureLegacyDmiClient.DoSendRawBytesAsync(System.Byte[])">
+            <summary>
+            Send raw bytes over the secure DMI socket connection as an asynchronous transaction
+            </summary>
+            <param name="request">The request.</param>
+            <returns></returns>
+            <exception cref="T:Ellucian.Dmi.Client.ColleagueDmiConnectionException">
+            IOException writing to failover Secure DmiClient in DoSendBytesAsync
+            or
+            IOException writing to Secure DmiClient in DoSendBytesAsync
+            </exception>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.SecureLegacyDmiClient.WriteStringToStreamAsync(System.String)">
+            <summary>
+            Send a string to the connection stream.
+            </summary>
+            <param name="message">string to write</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.SecureLegacyDmiClient.ReadStringFromStreamAsync(System.Int64)">
+            <summary>
+            Read a string from the connection stream
+            </summary>
+            <param name="bufferSize">How much to read.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.SecureLegacyDmiClient.DoReceiveRawBytesAsync(System.Byte[])">
+            <summary>
+            Read raw bytes from the client stream, up to the size of the provided buffer
+            </summary>
+            <param name="buffer">Byte array with the size of buffer to be filled.</param>
+            <returns>Number of bytes received</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.SecureLegacyDmiClient.ProcessNetworkStreamResponse">
+            <summary>
+            Processes the response to the request from the secure network stream.
+            </summary>
+            <returns></returns>
+            <exception cref="T:Ellucian.Dmi.Client.ColleagueDmiConnectionException">
+            IOException reading from Stream in ProcessNetworkStreamResponse
+            or
+            Improperly formatted incoming DMI Transaction - Doesn't begin #nnn#
+            or
+            Improperly formatted incoming DMI Transaction - Bytes Received doesn't equal Bytes expected
+            </exception>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.SecureLegacyDmiClient.ProcessNetworkStreamResponseAsync">
+            <summary>
+            Processes the response to the DMI request from the secure network stream as an asynchronous transaction
+            </summary>
+            <returns></returns>
+            <exception cref="T:Ellucian.Dmi.Client.ColleagueDmiConnectionException">
+            IOException reading from Stream in ProcessNetworkStreamResponseAsync
+            or
+            Improperly formatted incoming DMI Transaction - Doesn't begin #nnn#
+            or
+            Improperly formatted incoming DMI Transaction - Bytes Received doesn't equal Bytes expected
+            </exception>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.SecureLegacyDmiClient.ResetConnection">
+            <summary>
+            Resets the current secure DMI client connection.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Client.SecureLegacyDmiClient.ResetConnectionAsync">
+            <summary>
+            Resets the current secure DMI client connection as an asynchronous operation.
+            </summary>
+        </member>
+    </members>
+</doc>

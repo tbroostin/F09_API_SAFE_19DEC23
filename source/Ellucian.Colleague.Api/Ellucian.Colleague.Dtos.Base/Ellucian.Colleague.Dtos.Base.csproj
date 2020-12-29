@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Ellucian.Colleague.Dtos.Base</RootNamespace>
     <AssemblyName>Ellucian.Colleague.Dtos.Base</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <EnableCodeInspectionOnBuild>true</EnableCodeInspectionOnBuild>
     <TargetFrameworkProfile />
@@ -57,11 +57,38 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AgreementPeriod.cs" />
+    <Compile Include="Attachment.cs" />
+    <Compile Include="AttachmentCollectionEffectivePermissions.cs" />
+    <Compile Include="AttachmentEncryption.cs" />
+    <Compile Include="AttachmentOwnerAction.cs" />
+    <Compile Include="AttachmentCollection.cs" />
+    <Compile Include="AttachmentAction.cs" />
+    <Compile Include="AttachmentCollectionStatus.cs" />
+    <Compile Include="AttachmentCollectionIdentityType.cs" />
+    <Compile Include="AttachmentSearchCriteria.cs" />
+    <Compile Include="AttachmentStatus.cs" />
+    <Compile Include="AuthenticationScheme.cs" />
     <Compile Include="BackupConfigurationQueryCriteria.cs" />
     <Compile Include="BackupConfiguration.cs" />
+    <Compile Include="CorrespondenceAttachmentNotification.cs" />
+    <Compile Include="EthnicityType.cs" />
+    <Compile Include="HealthCheck.cs" />
+    <Compile Include="HealthCheckDetailedResponse.cs" />
+    <Compile Include="HealthCheckResponse.cs" />
+    <Compile Include="HealthCheckResponseBase.cs" />
+    <Compile Include="HealthCheckStatusType.cs" />
+    <Compile Include="OfficeCodeAttachmentCollection.cs" />
+    <Compile Include="PhotoConfiguration.cs" />
+    <Compile Include="RequiredDocumentCollectionMapping.cs" />
+    <Compile Include="TaxFormBoxCodes.cs" />
     <Compile Include="CampusCalendar.cs" />
+    <Compile Include="AttachmentCollectionIdentity.cs" />
+    <Compile Include="ContentKeyRequest.cs" />
+    <Compile Include="ContentKey.cs" />
     <Compile Include="CorrespondenceRequest.cs" />
     <Compile Include="CorrespondenceRequestStatus.cs" />
+    <Compile Include="County.cs" />
     <Compile Include="EmployeeNameQueryCriteria.cs" />
     <Compile Include="ExecutionState.cs" />
     <Compile Include="FacultyContract.cs" />
@@ -109,6 +136,9 @@
     <Compile Include="OrganizationalRelationshipConfiguration.cs" />
     <Compile Include="OrganizationalRelationshipType.cs" />
     <Compile Include="PayrollDepositDirective.cs" />
+    <Compile Include="PersonAgreement.cs" />
+    <Compile Include="PersonAgreementQueryCriteria.cs" />
+    <Compile Include="PersonAgreementStatus.cs" />
     <Compile Include="PersonalPronounType.cs" />
     <Compile Include="PersonHierarchyName.cs" />
     <Compile Include="PayableDepositDirective.cs" />
@@ -190,6 +220,8 @@
     <Compile Include="Relationship.cs" />
     <Compile Include="RelationshipType.cs" />
     <Compile Include="RequiredDocumentConfiguration.cs" />
+    <Compile Include="PasswordResetTokenRequest.cs" />
+    <Compile Include="ResetPassword.cs" />
     <Compile Include="ResourceBusinessEventMapping.cs" />
     <Compile Include="RestrictionConfiguration.cs" />
     <Compile Include="Role.cs" />
@@ -197,6 +229,7 @@
     <Compile Include="School.cs" />
     <Compile Include="SelfServiceConfiguration.cs" />
     <Compile Include="SelfservicePreference.cs" />
+    <Compile Include="SessionConfiguration.cs" />
     <Compile Include="SeverityStyleMapping.cs" />
     <Compile Include="SpecialDay.cs" />
     <Compile Include="SpecialNeed.cs" />
@@ -204,16 +237,21 @@
     <Compile Include="Staff.cs" />
     <Compile Include="State.cs" />
     <Compile Include="Suffix.cs" />
+    <Compile Include="TaxFormConfiguration2.cs" />
+    <Compile Include="TaxFormConsent2.cs" />
     <Compile Include="TaxFormConsent.cs" />
     <Compile Include="TaxFormNotations.cs" />
     <Compile Include="TaxForms.cs" />
     <Compile Include="TaxFormConfiguration.cs" />
+    <Compile Include="TaxFormStatement3.cs" />
     <Compile Include="TaxFormStatement2.cs" />
+    <Compile Include="TaxFormTypes.cs" />
     <Compile Include="TextDocument.cs" />
     <Compile Include="Timestamp.cs" />
     <Compile Include="UrlFilter.cs" />
     <Compile Include="User.cs" />
     <Compile Include="Profile.cs" />
+    <Compile Include="UserIdRecoveryRequest.cs" />
     <Compile Include="UserProfileConfiguration.cs" />
     <Compile Include="GraduateMilitaryStatus.cs" />
     <Compile Include="UserProfileConfiguration2.cs" />

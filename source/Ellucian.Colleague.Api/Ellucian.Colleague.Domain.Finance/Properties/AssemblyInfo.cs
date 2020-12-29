@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Ellucian")]
 [assembly: AssemblyProduct("Ellucian.Colleague.Domain.Finance")]
-[assembly: AssemblyCopyright("Copyright 2012-2019 Ellucian Company L.P. and its affiliates")]
+[assembly: AssemblyCopyright("Copyright 2012-2020 Ellucian Company L.P. and its affiliates")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -32,5 +32,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("1.22.2.0")]
-[assembly: AssemblyFileVersion("1.22.2.58")]
+[assembly: AssemblyVersion("1.29.1.0")]
+[assembly: AssemblyFileVersion("1.29.1.9")]

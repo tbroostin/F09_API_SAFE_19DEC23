@@ -11,6 +11,10 @@ using Ellucian.Web.Http.Controllers;
 using slf4net;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Web.License;
+using Ellucian.Web.Http.Configuration;
+using Ellucian.Colleague.Api.Models;
+using System.Web.UI.WebControls;
+using Newtonsoft.Json;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -23,17 +27,42 @@ namespace Ellucian.Colleague.Api.Controllers.Base
     public class PhotosController : BaseCompressedApiController
     {
         private readonly IPhotoRepository photoRepository;
+        private readonly ApiSettings apiSettings;
         private readonly ILogger logger;
 
         /// <summary>
         /// injection constructor
         /// </summary>
         /// <param name="photoRepository">IPhotoRepository instance.</param>
+        /// <param name="apiSettings">ISettingsRepository instance.</param>
         /// <param name="logger">ILogger instance.</param>
-        public PhotosController(IPhotoRepository photoRepository, ILogger logger)
+        public PhotosController(IPhotoRepository photoRepository, ApiSettings apiSettings, ILogger logger)
         {
             this.photoRepository = photoRepository;
+            this.apiSettings = apiSettings;
             this.logger = logger;
+        }
+
+        /// <summary>
+        /// Retrieves the photo configuration.
+        /// </summary>
+        /// <returns>Bool based on presence of PhotoURL and PhotoType</returns>
+        public HttpResponseMessage GetUserPhotoConfiguration()
+        {
+            try
+            {
+                var settingsResult = apiSettings.PhotoConfiguration;
+                HttpResponseMessage result = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                {
+                    Content = new StringContent(JsonConvert.SerializeObject(settingsResult))
+                };
+                return result;
+            }
+            catch (Exception e)
+            {
+                logger.Debug(e, e.Message);
+                throw CreateHttpResponseException(e.Message);
+            }
         }
 
         /// <summary>

@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Dtos.ColleagueFinance;
 using Ellucian.Web.Adapters;
@@ -31,6 +31,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
         {
             var glConfigurationDto = new GeneralLedgerConfiguration();
             glConfigurationDto.MajorComponents = new List<Dtos.ColleagueFinance.GeneralLedgerComponent>();
+            glConfigurationDto.SubComponents = new List<Dtos.ColleagueFinance.GeneralLedgerComponent>();
 
             var glComponentAdapter = adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.GeneralLedgerComponent, Dtos.ColleagueFinance.GeneralLedgerComponent>();
 
@@ -38,6 +39,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
             {
                 var majorComponentDto = glComponentAdapter.MapToType(component);
                 glConfigurationDto.MajorComponents.Add(majorComponentDto);
+            }
+            foreach (var component in Source.Subcomponents)
+            {
+                var subComponentDto = glComponentAdapter.MapToType(component);
+                glConfigurationDto.SubComponents.Add(subComponentDto);
             }
 
             return glConfigurationDto;

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -118,6 +118,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                         // Add the privacy codes to the staff record
                         staff.PrivacyCodes = staffDataContact.StaffPrivacyCodesAccess;
+                        // Add the staff initials to the staff record
+                        staff.StaffInitials = staffDataContact.StaffInitials; 
+                        // Add the staff loginid/operator to the staff record
+                        staff.StaffLoginId = staffDataContact.StaffLoginId;
 
                         staffEntities.Add(staff);
                     }
@@ -202,7 +206,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var staffRecord = await DataReader.ReadRecordAsync<DataContracts.Staff>("STAFF", personId);
             if (staffRecord == null)
             {
-                LogDataError("The user", personId, "does not have a STAFF record.");
+                logger.Error("The user", personId, "does not have a STAFF record.");
                 throw new ApplicationException("The user " + personId + " does not have a STAFF record.");
             }
 
@@ -233,7 +237,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 if (staffType == null || staffType.ValActionCode1AssocMember != "S")
                 {
                     var errorMessage = "Requested staff " + id + " does not have a valid Staff type.";
-                    logger.Info(errorMessage);
+                    logger.Error(errorMessage);
                     throw new Exception(errorMessage);
                 }
 
@@ -257,7 +261,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             else
             {
                 var errorMessage = ("Colleague STAFF record not found for Person " + id);
-                logger.Info(errorMessage);
+                logger.Error(errorMessage);
                 throw new Exception(errorMessage);
             }
         }
@@ -283,7 +287,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 // log the issue and move on. Not likely to happen...
                 var errorMessage = "Unable to retrieve STAFF.STATUSES validation table from Colleague.";
-                logger.Info(errorMessage);
+                logger.Error(errorMessage);
             }
             return staffStatusesValidationTable;
         }
@@ -304,7 +308,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         ApplValcodes staffTypesValTable = DataReader.ReadRecord<ApplValcodes>("CORE.VALCODES", "STAFF.TYPES");
                         if (staffTypesValTable == null)
                         {
-                            logger.Info("STAFF.TYPES validation table data is null.");
+                            logger.Error("STAFF.TYPES validation table data is null.");
                             throw new Exception();
                         }
                         return staffTypesValTable;
@@ -313,7 +317,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             catch (Exception)
             {
                 var errorMessage = "Unable to retrieve STAFF.TYPES validation table from Colleague.";
-                logger.Info(errorMessage);
+                logger.Error(errorMessage);
                 throw new Exception(errorMessage);
             }
             return staffTypesValidationTable;

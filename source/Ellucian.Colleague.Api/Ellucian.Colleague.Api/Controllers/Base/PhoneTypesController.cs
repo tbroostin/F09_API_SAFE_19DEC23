@@ -54,7 +54,9 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves all phone types.
         /// </summary>
         /// <returns>All <see cref="Dtos.PhoneType2">PhoneType</see> objects.</returns>
-        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        /// 
+        [HttpGet]
+        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true), EedmResponseFilter]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.PhoneType2>> GetPhoneTypesAsync()
         {
             bool bypassCache = false;
@@ -68,7 +70,15 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
-                return await _phoneTypeService.GetPhoneTypesAsync(bypassCache);
+                var phoneTypes = await _phoneTypeService.GetPhoneTypesAsync(bypassCache);
+
+                if (phoneTypes != null && phoneTypes.Any())
+                {
+                    AddEthosContextProperties(await _phoneTypeService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _phoneTypeService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              phoneTypes.Select(a => a.Id).ToList()));
+                }
+                return phoneTypes;
             }
             catch (Exception ex)
             {
@@ -87,6 +97,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         {
             try
             {
+                AddEthosContextProperties(
+                   await _phoneTypeService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                   await _phoneTypeService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { id }));
                 return await _phoneTypeService.GetPhoneTypeByGuidAsync(id);
             }
             catch (Exception ex)

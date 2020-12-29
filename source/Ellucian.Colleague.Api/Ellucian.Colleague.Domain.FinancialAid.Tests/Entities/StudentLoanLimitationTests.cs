@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿//Copyright 2013-2019 Ellucian Company L.P. and its affiliates.
+using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Ellucian.Colleague.Domain.FinancialAid.Entities;
 
@@ -19,6 +17,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Entities
             private int subsidizedMaximumAmount;
             private int unsubsidizedMaximumAmount;
             private int gradPlusMaximumAmount;
+            private bool suppressMaxAmounts;
 
             private StudentLoanLimitation studentLoanLimitation;
 
@@ -30,8 +29,9 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Entities
                 subsidizedMaximumAmount = 2000;
                 unsubsidizedMaximumAmount = 7500;
                 gradPlusMaximumAmount = 3500;
+                suppressMaxAmounts = true;
 
-                studentLoanLimitation = new StudentLoanLimitation(awardYear, studentId);
+                studentLoanLimitation = new StudentLoanLimitation(awardYear, studentId, suppressMaxAmounts);
                 studentLoanLimitation.SubsidizedMaximumAmount = subsidizedMaximumAmount;
                 studentLoanLimitation.UnsubsidizedMaximumAmount = unsubsidizedMaximumAmount;
                 studentLoanLimitation.GradPlusMaximumAmount = gradPlusMaximumAmount;
@@ -47,7 +47,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Entities
             [ExpectedException(typeof(ArgumentNullException))]
             public void AwardYearNullExceptionTest()
             {
-                new StudentLoanLimitation(null, studentId);
+                new StudentLoanLimitation(null, studentId, true);
             }
 
             [TestMethod]
@@ -60,7 +60,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Entities
             [ExpectedException(typeof(ArgumentNullException))]
             public void StudentIdNullExceptionTest()
             {
-                new StudentLoanLimitation(awardYear, null);
+                new StudentLoanLimitation(awardYear, null, true);
             }
 
             [TestMethod]
@@ -79,6 +79,12 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Entities
             public void GradPlusMaxAmountEqualTest()
             {
                 Assert.AreEqual(gradPlusMaximumAmount, studentLoanLimitation.GradPlusMaximumAmount);
+            }
+
+            [TestMethod]
+            public void SuppressStudentMaximumAmounts_IntializedTest()
+            {
+                Assert.AreEqual(suppressMaxAmounts, studentLoanLimitation.SuppressStudentMaximumAmounts);
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -115,6 +115,15 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// </summary>
         public string CommodityCode { get; set; }
 
+        /// <summary>
+        /// List of Line Item Tax codes
+        /// </summary>
+        public List<LineItemReqTax> LineItemReqTaxCodes = new List<LineItemReqTax>();
+        /// <summary>
+        /// Line Item Tax code
+        /// </summary>
+        public List<LineItemReqTax> ReqLineItemTaxCodes { get; set; }
+
 
         /// <summary>
         ///Line Item Trade Discount Amount
@@ -125,16 +134,21 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// Line Item Trade Discount Percentage
         /// </summary>
         public Decimal? TradeDiscountPercentage { get; set; }
-
+        
         /// <summary>
-		/// Status
-		/// </summary>
-		public PurchaseOrderStatus? Status { get; set; }
+        /// Fixed asset flag
+        /// </summary>
+        public string FixedAssetsFlag { get; set; }
 
         /// <summary>
         /// Status Date
         /// </summary>
         public DateTime? StatusDate { get; set; }
+
+        /// <summary>
+		/// LineItemStatus
+		/// </summary>
+		public LineItemStatus? LineItemStatus { get; set; }
 
         /// <summary>
         /// Requisition ID for supporting documents.
@@ -156,6 +170,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// This is the private list of tax information associated with the line item.
         /// </summary>
         private readonly List<LineItemTax> lineItemTaxes = new List<LineItemTax>();
+
+        /// <summary>
+        /// This is the private list of tax code information associated with the line item.
+        /// </summary>
+        private readonly List<LineItemReqTax> lineItemReqTaxes = new List<LineItemReqTax>();
 
         /// <summary>
         /// This is the public getter for the private list of tax information.
@@ -188,6 +207,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
             this.quantity = quantity;
             this.price = price;
             this.extendedPrice = extendedPrice;
+            this.ReqLineItemTaxCodes = lineItemReqTaxes;
             GlDistributions = glDistributions.AsReadOnly();
             LineItemTaxes = lineItemTaxes.AsReadOnly();
         }
@@ -223,6 +243,36 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         }
 
         /// <summary>
+        /// This method adds a line item GL distribution to the list
+        /// of GL distributions that belong to the line item during save from SS.
+        /// </summary>
+        /// <param name="LineItemGlDistribution">This is the line item GL distribution.</param>
+        public void AddGlDistributionForSave(LineItemGlDistribution lineItemGlDistribution)
+        {
+            if (lineItemGlDistribution == null)
+            {
+                throw new ArgumentNullException("lineItemGlDistribution", "GL distribution cannot be null");
+            }
+
+            bool isInList = false;
+            if (glDistributions != null)
+            {
+                foreach (var glDistr in glDistributions)
+                {
+                    if ((glDistr.GlAccountNumber == lineItemGlDistribution.GlAccountNumber) && (glDistr.ProjectNumber == lineItemGlDistribution.ProjectNumber))
+                    {
+                        isInList = true;
+                    }
+                }
+            }
+            if (!isInList)
+            {
+                glDistributions.Add(lineItemGlDistribution);
+            }
+        }
+
+
+        /// <summary>
         /// This method adds tax information to the list of
         /// taxes for a line item.
         /// </summary>
@@ -252,6 +302,38 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
                 lineItemTaxes.Add(lineItemTax);
             }
         }
+
+        /// <summary>
+        /// This method adds tax code information to the list of
+        /// taxes for a line item.
+        /// </summary>
+        /// <param name="LineItemReqTax">This is the line item tax code information.</param>
+        public void AddReqTax(LineItemReqTax lineItemTax)
+        {
+            if (lineItemTax == null)
+            {
+                throw new ArgumentNullException("tax", "Line item tax cannot be null");
+            }
+
+            bool isInList = false;
+            if (lineItemReqTaxes != null)
+            {
+                foreach (var tax in lineItemReqTaxes)
+                {
+                    if (tax.TaxReqTaxCode == lineItemTax.TaxReqTaxCode)
+                    {
+                       
+                        isInList = true;
+                    }
+                }
+            }
+
+            if (!isInList)
+            {
+                lineItemReqTaxes.Add(lineItemTax);
+            }
+        }
+
 
         /// <summary>
         /// This method adds tax information to the list by TaxCode and by GL Number

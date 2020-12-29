@@ -1,4 +1,4 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using System;
@@ -68,6 +68,24 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 startDate = new DateTime(1805,1,2),
                 endDate = null
             },
+             new PersonEmploymentStatusRecord()
+            {
+                id = "006",
+                personId = "0003916",
+                primaryPositionId = "PRINT SHOP ASSISTANT",
+                personPositionId = "420",
+                startDate = new DateTime(2000,1,2),
+                endDate = null
+            },
+             new PersonEmploymentStatusRecord()
+            {
+                id = "007",
+                personId = "0003914",
+                primaryPositionId = "PRINT SHOP ASSISTANT",
+                personPositionId = "425",
+                startDate = new DateTime(2000,1,2),
+                endDate = null
+            },
         };
 
 
@@ -91,7 +109,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             return entities;
         }
 
-        public async Task<IEnumerable<PersonEmploymentStatus>> GetPersonEmploymentStatusesAsync(IEnumerable<string> personIds)
+        public async Task<IEnumerable<PersonEmploymentStatus>> GetPersonEmploymentStatusesAsync(IEnumerable<string> personIds, DateTime? startDate = null)
         {
             return await Task.FromResult(GetPersonEmploymentStatuses(personIds));
         }
@@ -116,5 +134,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             }
             return new PersonEmploymentStatus(record.id, record.personId, record.primaryPositionId, record.personPositionId, record.startDate, record.endDate);
         }
+
+       
     }
 }

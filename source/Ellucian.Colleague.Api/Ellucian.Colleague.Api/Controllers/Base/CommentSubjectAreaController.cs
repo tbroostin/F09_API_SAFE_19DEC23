@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -7,7 +7,6 @@ using System.ComponentModel;
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Web.License;
-using Ellucian.Web.Adapters;
 using slf4net;
 using System;
 using System.Threading.Tasks;
@@ -18,6 +17,7 @@ using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Exceptions;
 using System.Net;
 using Ellucian.Web.Http.Filters;
+using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -43,12 +43,13 @@ namespace Ellucian.Colleague.Api.Controllers
             _logger = logger;
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Retrieves all comment subject areas.
         /// If the request header "Cache-Control" attribute is set to "no-cache" the data returned will be pulled fresh from the database, otherwise cached data is returned.
         /// </summary>
         /// <returns>All CommentSubjectArea objects.</returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.CommentSubjectArea>> GetCommentSubjectAreaAsync()
         {
@@ -62,7 +63,15 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
-                return await _commentSubjectAreaService.GetCommentSubjectAreaAsync(bypassCache);
+                var commentSubjectArea = await _commentSubjectAreaService.GetCommentSubjectAreaAsync(bypassCache);
+
+                if (commentSubjectArea != null && commentSubjectArea.Any())
+                {
+                    AddEthosContextProperties(await _commentSubjectAreaService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _commentSubjectAreaService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              commentSubjectArea.Select(a => a.Id).ToList()));
+                }
+                return commentSubjectArea;
             }
             catch (PermissionsException e)
             {
@@ -91,16 +100,21 @@ namespace Ellucian.Colleague.Api.Controllers
             }
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Retrieves a comment subject area by ID.
         /// </summary>
         /// <param name="id">Id of Comment Subject Area to retrieve</param>
-        /// <returns>A <see cref="Ellucian.Colleague.Dtos.CommentSubjectArea2">CommentSubjectArea.</see></returns>
+        /// <returns>A CommentSubjectArea.</returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.CommentSubjectArea> GetCommentSubjectAreaByIdAsync(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                   await _commentSubjectAreaService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                   await _commentSubjectAreaService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { id }));
                 return await _commentSubjectAreaService.GetCommentSubjectAreaByIdAsync(id);
             }
             catch (PermissionsException e)
@@ -135,7 +149,7 @@ namespace Ellucian.Colleague.Api.Controllers
             }
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Creates a CommentSubjectArea.
         /// </summary>
@@ -148,7 +162,7 @@ namespace Ellucian.Colleague.Api.Controllers
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Updates a Comment Subject Area.
         /// </summary>
@@ -162,7 +176,7 @@ namespace Ellucian.Colleague.Api.Controllers
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Delete (DELETE) an existing Comment Subject Area
         /// </summary>
@@ -170,7 +184,7 @@ namespace Ellucian.Colleague.Api.Controllers
         [HttpDelete]
         public async Task DeleteCommentSubjectAreaAsync([FromUri] string id)
         {
-            //Delete is not supported for Colleague but HeDM requires full crud support.
+            //Delete is not supported for Colleague but EEDM requires full crud support.
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
         }
     }

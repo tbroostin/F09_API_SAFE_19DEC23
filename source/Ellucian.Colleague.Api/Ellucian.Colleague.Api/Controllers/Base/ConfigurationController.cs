@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.ComponentModel;
 using System.Net;
@@ -67,18 +67,6 @@ namespace Ellucian.Colleague.Api.Controllers
                 logger.Error(ex.ToString());
                 throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
             }
-        }
-
-        /// <summary>
-        /// This method gets Tax Form Configuration for the tax form passed in.
-        /// </summary>
-        /// <param name="taxFormId">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
-        /// <returns>Tax Form Configuration for the type of tax form.</returns>
-        public async Task<TaxFormConfiguration> GetTaxFormConfigurationAsync(TaxForms taxFormId)
-        {
-            var taxFormConfiguration = await this.configurationService.GetTaxFormConsentConfigurationAsync(taxFormId);
-
-            return taxFormConfiguration;
         }
 
         /// <summary>
@@ -220,7 +208,7 @@ namespace Ellucian.Colleague.Api.Controllers
         }
 
         #region backup configuration
-        
+
         /// <summary>
         /// Writes a new configuration data record to Colleague 
         /// </summary>
@@ -440,5 +428,62 @@ namespace Ellucian.Colleague.Api.Controllers
                 throw CreateHttpResponseException("Could not retrieve Required Document Configuration", HttpStatusCode.BadRequest);
             }
         }
+
+        /// <summary>
+        /// Gets the Session Configuration
+        /// </summary>
+        /// <accessComments>Session Configuration is available anonymously</accessComments>
+        /// <returns><see cref="SessionConfiguration">Session Configuration</see></returns>
+        [AllowAnonymous]
+        public async Task<SessionConfiguration> GetSessionConfigurationAsync()
+        {
+            try
+            {
+                return await configurationService.GetSessionConfigurationAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Error occurred while retrieving Session Configuration.");
+                throw CreateHttpResponseException("Could not retrieve Session Configuration", HttpStatusCode.BadRequest);
+            }
+        }
+
+
+        ///////////////////////////////////////////////////////////////////////////////////
+        ///                                                                             ///
+        ///                               CF Team                                       ///                                                                             
+        ///                         TAX INFORMATION VIEWS                               ///
+        ///           TAX FORMS CONFIGURATION, CONSENTs, STATEMENTs, PDFs               ///
+        ///                                                                             ///
+        ///////////////////////////////////////////////////////////////////////////////////
+
+        /// <summary>
+        /// This method gets Tax Form Configuration for the tax form passed in.
+        /// </summary>
+        /// <param name="taxFormId">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
+        /// <returns>Tax Form Configuration for the type of tax form.</returns>
+        public async Task<TaxFormConfiguration2> GetTaxFormConfiguration2Async(string taxFormId)
+        {
+            var taxFormConfiguration = await this.configurationService.GetTaxFormConsentConfiguration2Async(taxFormId);
+
+            return taxFormConfiguration;
+        }
+
+        #region OBSOLETE METHODS
+
+        /// <summary>
+        /// This method gets Tax Form Configuration for the tax form passed in.
+        /// </summary>
+        /// <param name="taxFormId">The tax form (W-2, 1095-C, 1098-T, etc.)</param>
+        /// <returns>Tax Form Configuration for the type of tax form.</returns>
+        [Obsolete("Obsolete as of API 1.29.1. Use GetTaxFormConfiguration2Async instead.")]
+        public async Task<TaxFormConfiguration> GetTaxFormConfigurationAsync(TaxForms taxFormId)
+        {
+            var taxFormConfiguration = await this.configurationService.GetTaxFormConsentConfigurationAsync(taxFormId);
+
+            return taxFormConfiguration;
+        }
+
+        #endregion
     }
 }

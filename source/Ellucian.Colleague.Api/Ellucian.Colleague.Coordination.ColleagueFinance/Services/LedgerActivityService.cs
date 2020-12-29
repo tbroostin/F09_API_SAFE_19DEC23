@@ -1,10 +1,11 @@
-//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.DtoProperties;
@@ -16,6 +17,7 @@ using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -28,7 +30,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private readonly ILedgerActivityRepository _ledgerActivityRepository;
         private readonly IGeneralLedgerConfigurationRepository _generalLedgerConfigurationRepository;
         private readonly IColleagueFinanceReferenceDataRepository _referenceDataRepository;
-        private string fiscalPeriodGuid = string.Empty;
 
         /// <summary>
         /// ...ctor
@@ -63,117 +64,194 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <summary>
         /// Gets all ledger-activities
         /// </summary>
-        /// <returns>Collection of LedgerActivities DTO objects</returns>
+        /// <returns>Collection of LedgerActivity DTO objects</returns>
         public async Task<Tuple<IEnumerable<LedgerActivity>, int>> GetLedgerActivitiesAsync(int offset, int limit, string fiscalYear, string fiscalPeriod, string reportingSegment,
             string transactionDate, bool bypassCache = false)
         {
             if (!await CheckViewLedgerActivitiesPermission())
             {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view ledger activities.");
+                IntegrationApiExceptionAddError("User " + CurrentUser.UserId + " does not have permission to view ledger activities.",
+                    "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
+                throw IntegrationApiException;
             }
 
             string newFiscalYear = string.Empty;
             string newFiscalPeriod = string.Empty;
             string fiscalPeriodYear = string.Empty;
             string newTransactionDate = null;
+             string fiscalPeriodGuid = string.Empty;
 
-            if (string.IsNullOrEmpty(string.Concat(fiscalYear, fiscalPeriod, transactionDate)))
-            {              
-                var fiscalYearLookup = await GetFiscalYear(DateTime.Now.Date, bypassCache);
-                if (fiscalYearLookup != null)
-                {
-                    newFiscalYear = fiscalYearLookup.Id;
-                }
-            }
-            else
+            try
             {
-                if (!string.IsNullOrEmpty(fiscalYear))
+                if (string.IsNullOrEmpty(string.Concat(fiscalYear, fiscalPeriod, transactionDate)))
                 {
-                    var fiscalYearLookup = (await FiscalYearsAsync(bypassCache)).FirstOrDefault(x => x.Guid.Equals(fiscalYear, StringComparison.OrdinalIgnoreCase));
-                    if (fiscalYearLookup == null)
+                    FiscalYear fiscalYearLookup = null;
+                    try
+                    {
+                        fiscalYearLookup = await GetFiscalYearAsync(DateTime.Now.Date, bypassCache);
+                    }
+                    catch (Exception)
                     {
                         return new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
                     }
-                    newFiscalYear = fiscalYearLookup.Id;
+                    if (fiscalYearLookup != null)
+                    {
+                        newFiscalYear = fiscalYearLookup.Id;
+                    }
                 }
-
-                if (!string.IsNullOrEmpty(fiscalPeriod))
+                else
                 {
-                    var fiscalPeriodLookup = (await FiscalPeriodsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(fiscalPeriod, StringComparison.OrdinalIgnoreCase));
-                    if (fiscalPeriodLookup == null)
-                    {
-                        return new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
-                    }
-                    if (!string.IsNullOrEmpty(newFiscalYear) && !newFiscalYear.Equals(fiscalPeriodLookup.FiscalYear.ToString(), StringComparison.OrdinalIgnoreCase))
-                    {
-                       return new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
-                    }
-                    if (string.IsNullOrEmpty(newFiscalYear) && !string.IsNullOrEmpty(fiscalPeriodLookup.FiscalYear.ToString()))
-                    {
-                        newFiscalYear = fiscalPeriodLookup.FiscalYear.ToString();
-                    }
-                    fiscalPeriodYear = fiscalPeriodLookup.Year.ToString();
-                    newFiscalPeriod = fiscalPeriodLookup.Month.HasValue ? fiscalPeriodLookup.Month.Value.ToString() : null;
-                    fiscalPeriodGuid = fiscalPeriod;
-                }
 
-                if (!string.IsNullOrEmpty(transactionDate))
-                {
-                    DateTime outDate;
-                    if (DateTime.TryParse(transactionDate, out outDate))
+                    if (!string.IsNullOrEmpty(fiscalYear))
                     {
-                        if (string.IsNullOrEmpty(newFiscalYear))
+                        IEnumerable<FiscalYear> fiscalYears = null;
+                        try
                         {
-                            FiscalYear fiscalYearLookup = await GetFiscalYear(outDate, bypassCache);
-                            if (fiscalYearLookup == null)
-                            {
-                                return new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
-                            }
-                            newFiscalYear = fiscalYearLookup.Id;
+                            fiscalYears = await FiscalYearsAsync(bypassCache);
                         }
-
-                        if (!string.IsNullOrEmpty(newFiscalPeriod) && !string.IsNullOrEmpty(newFiscalYear))
+                        catch (Exception)
                         {
-                            var daysInMonth = DateTime.DaysInMonth(Convert.ToInt32(newFiscalYear), Convert.ToInt32(newFiscalPeriod));
-
-                            var startOn = new DateTime(Convert.ToInt32(fiscalPeriodYear), Convert.ToInt32(newFiscalPeriod), 1);
-                            var endOn = new DateTime(Convert.ToInt32(fiscalPeriodYear), Convert.ToInt32(newFiscalPeriod), daysInMonth);
-
-                            if (!(outDate >= startOn && outDate <= endOn))
-                            {
-                                return new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
-                            }
+                            return new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
                         }
-
-                        newTransactionDate = await _ledgerActivityRepository.GetUnidataFormattedDate(outDate.Date.ToString());
+                        if (fiscalYears == null)
+                        {
+                            return new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
+                        }
+                        var fiscalYearLookup = fiscalYears.FirstOrDefault(x => x.Guid.Equals(fiscalYear, StringComparison.OrdinalIgnoreCase));
+                        if (fiscalYearLookup == null)
+                        {
+                            return new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
+                        }
+                        newFiscalYear = fiscalYearLookup.Id;
                     }
-                    else
+
+                    if (!string.IsNullOrEmpty(fiscalPeriod))
                     {
-                        return new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
+                        var fiscalPeriods = await FiscalPeriodsAsync(bypassCache);
+                        if (fiscalPeriods == null)
+                        {
+                            return new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
+                        }
+                        var fiscalPeriodLookup = fiscalPeriods.FirstOrDefault(i => i.Guid.Equals(fiscalPeriod, StringComparison.OrdinalIgnoreCase));
+                        if (fiscalPeriodLookup == null)
+                        {
+                            return new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
+                        }
+                        if (!string.IsNullOrEmpty(newFiscalYear) && !newFiscalYear.Equals(fiscalPeriodLookup.FiscalYear.ToString(), StringComparison.OrdinalIgnoreCase))
+                        {
+                            return new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
+                        }
+                        if (string.IsNullOrEmpty(newFiscalYear) && !string.IsNullOrEmpty(fiscalPeriodLookup.FiscalYear.ToString()))
+                        {
+                            newFiscalYear = fiscalPeriodLookup.FiscalYear.ToString();
+                        }
+                        fiscalPeriodYear = fiscalPeriodLookup.Year.ToString();
+                        newFiscalPeriod = fiscalPeriodLookup.Month.HasValue ? fiscalPeriodLookup.Month.Value.ToString() : null;
+                        fiscalPeriodGuid = fiscalPeriod;
+                    }
+
+                    if (!string.IsNullOrEmpty(transactionDate))
+                    {
+                        DateTime outDate;
+                        if (DateTime.TryParse(transactionDate, out outDate))
+                        {
+                            if (string.IsNullOrEmpty(newFiscalYear))
+                            {
+                                FiscalYear fiscalYearLookup = null;
+                                try
+                                {
+                                    fiscalYearLookup = await GetFiscalYearAsync(outDate, bypassCache);
+                                }
+                                catch (Exception)
+                                {
+                                    return new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
+                                }
+                                if (fiscalYearLookup == null)
+                                {
+                                    return new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
+                                }
+                                newFiscalYear = fiscalYearLookup.Id;
+                            }
+
+                            if (!string.IsNullOrEmpty(newFiscalPeriod) && !string.IsNullOrEmpty(newFiscalYear))
+                            {
+                                var daysInMonth = DateTime.DaysInMonth(Convert.ToInt32(newFiscalYear), Convert.ToInt32(newFiscalPeriod));
+
+                                var startOn = new DateTime(Convert.ToInt32(fiscalPeriodYear), Convert.ToInt32(newFiscalPeriod), 1);
+                                var endOn = new DateTime(Convert.ToInt32(fiscalPeriodYear), Convert.ToInt32(newFiscalPeriod), daysInMonth);
+
+                                if (!(outDate >= startOn && outDate <= endOn))
+                                {
+                                    return new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
+                                }
+                            }
+
+                            newTransactionDate = await _ledgerActivityRepository.GetUnidataFormattedDate(outDate.Date.ToString());
+                        }
+                        else
+                        {
+                            return new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
+                        }
                     }
                 }
             }
-            var glConfiguration = await _generalLedgerConfigurationRepository.GetAccountStructureAsync();
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Bad.Data");
+                throw IntegrationApiException;
+            }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
 
             var ledgerActivitiesCollection = new List<Ellucian.Colleague.Dtos.LedgerActivity>();
 
             Tuple<IEnumerable<GeneralLedgerActivity>, int> ledgerActivitiesEntities = null;
+            GeneralLedgerAccountStructure glConfiguration = null;
+            GeneralLedgerClassConfiguration glClassConfiguration = null;
             try
             {
                 ledgerActivitiesEntities = await _ledgerActivityRepository.GetGlaFyrAsync(offset, limit, newFiscalYear, newFiscalPeriod, fiscalPeriodYear, reportingSegment, newTransactionDate);
+                glConfiguration = await _generalLedgerConfigurationRepository.GetAccountStructureAsync();
+                
+                glClassConfiguration = await _generalLedgerConfigurationRepository.GetClassConfigurationAsync();
             }
-            catch (KeyNotFoundException)
+            catch (RepositoryException ex)
             {
-                return new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Bad.Data");
+                throw IntegrationApiException;
             }
 
-            if (ledgerActivitiesEntities != null && ledgerActivitiesEntities.Item1.Any())
+            if (ledgerActivitiesEntities == null ||  !ledgerActivitiesEntities.Item1.Any())
             {
-                foreach (var ledgerActivityEntity in ledgerActivitiesEntities.Item1)
+                return new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
+            }         
+
+            foreach (var ledgerActivityEntity in ledgerActivitiesEntities.Item1)
+            {
+                try
                 {
-                    ledgerActivitiesCollection.Add(await ConvertLedgerActivitiesEntityToDto(ledgerActivityEntity, glConfiguration, bypassCache));
+                    ledgerActivitiesCollection.Add(await ConvertLedgerActivitiesEntityToDto(ledgerActivityEntity, glConfiguration, glClassConfiguration, 
+                        fiscalPeriodGuid, bypassCache));
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "Bad.Data", ledgerActivityEntity.RecordGuid, ledgerActivityEntity.RecordKey);
                 }
             }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+
             return ledgerActivitiesCollection.Any()? new Tuple<IEnumerable<LedgerActivity>, int>(ledgerActivitiesCollection, ledgerActivitiesEntities.Item2) :
                 new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
         }
@@ -182,34 +260,71 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <summary>
         /// Get a general ledger activity record.
         /// </summary>
-        /// <returns>LedgerActivities DTO object</returns>
+        /// <returns>LedgerActivity DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.LedgerActivity> GetLedgerActivityByGuidAsync(string guid, bool bypassCache = false)
         {
+            if (string.IsNullOrEmpty(guid))
+            {
+                IntegrationApiExceptionAddError("Must provide a ledger-activity GUID for retrieval.", "Missing.GUID",
+                   "", "", System.Net.HttpStatusCode.NotFound);
+                throw IntegrationApiException;
+            }
+
+            if (!await CheckViewLedgerActivitiesPermission())
+            {
+                IntegrationApiExceptionAddError("User " + CurrentUser.UserId + " does not have permission to view ledger activities.",
+                        "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
+                throw IntegrationApiException;
+            }
+            GeneralLedgerAccountStructure glConfiguration = null;
+            GeneralLedgerActivity entity = null;
+            GeneralLedgerClassConfiguration glClassConfiguration = null;
             try
             {
-                if (!await CheckViewLedgerActivitiesPermission())
-                {
-                    throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view ledger activities.");
-                }
-                var glConfiguration = await _generalLedgerConfigurationRepository.GetAccountStructureAsync();
-                var entity = await _ledgerActivityRepository.GetGlaFyrByIdAsync(guid);
+                glConfiguration = await _generalLedgerConfigurationRepository.GetAccountStructureAsync();
+                entity = await _ledgerActivityRepository.GetGlaFyrByIdAsync(guid);
 
-                return await ConvertLedgerActivitiesEntityToDto(entity, glConfiguration, bypassCache);
+                glClassConfiguration = await _generalLedgerConfigurationRepository.GetClassConfigurationAsync();
+
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
             }
             catch (KeyNotFoundException ex)
             {
-                throw new KeyNotFoundException("No ledger activity was found for guid: " + guid, ex);
+                 IntegrationApiExceptionAddError("No ledger activity was found for guid: " + guid, "GUID.Not.Found", guid, null, HttpStatusCode.NotFound);
+                throw IntegrationApiException;
             }
-            catch (InvalidOperationException ex)
+            catch (Exception ex)
             {
-                throw new InvalidOperationException("No ledger activity was found for guid: " + guid, ex);
+                IntegrationApiExceptionAddError(ex.Message, "Bad.Data");
+                throw IntegrationApiException;
             }
+
+            LedgerActivity ledgerActivity = null;
+            try
+            {
+                ledgerActivity = await ConvertLedgerActivitiesEntityToDto(entity, glConfiguration, glClassConfiguration, string.Empty, bypassCache);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Bad.Data", entity.RecordGuid, entity.RecordKey);
+            }
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+            return ledgerActivity;
         }
 
         /// <summary>
-        /// Helper method to determine if the user has permission to delete Student Aptitude Assessments.
+        /// Helper method to determine if the user has permission to view Ledger Activities
         /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
+        /// <returns>boolean</returns>
         private async Task<bool> CheckViewLedgerActivitiesPermission()
         {
             IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
@@ -227,59 +342,162 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// Converts a GlaFyr domain entity to its corresponding LedgerActivities DTO
         /// </summary>
         /// <param name="source">GlaFyr domain entity</param>
-        /// <returns>LedgerActivities DTO</returns>
-        private async Task<Ellucian.Colleague.Dtos.LedgerActivity> ConvertLedgerActivitiesEntityToDto(GeneralLedgerActivity source, GeneralLedgerAccountStructure GlConfig, bool bypassCache)
+        /// <returns>LedgerActivities DTO.  Errors are added to IntegrationApiException collection.</returns>
+        private async Task<Ellucian.Colleague.Dtos.LedgerActivity> ConvertLedgerActivitiesEntityToDto(GeneralLedgerActivity source,
+            GeneralLedgerAccountStructure GlConfig, GeneralLedgerClassConfiguration glClassConfiguration, string fiscalPeriodGuid = "", bool bypassCache = false)
         {
-            var ledgerActivity = new Ellucian.Colleague.Dtos.LedgerActivity();
+            var ledgerActivity = new Ellucian.Colleague.Dtos.LedgerActivity()
+            {
+                Id = source.RecordGuid,
+                Title = source.Description,
+                ReportingSegment = source.ReportingSegment,
+                TransactionDate = source.TransactionDate.Value,
+                EnteredOn = source.EnteredOn.Value,
+                Status = LedgerActivityStatus.Posted
+            };
 
-            ledgerActivity.Id = source.RecordGuid;
-            ledgerActivity.Title = source.Description;
-            ledgerActivity.ReportingSegment = source.ReportingSegment;
+            if (source == null)
+            {
+                IntegrationApiExceptionAddError("GeneralLedgerActivity domain entity is required.  An unexpected error occurred retrieving data.", "Bad.Data");
+                return ledgerActivity;
+            }
+
+            var recordGuidRecordKeyTuple = new Tuple<string, string>(source.RecordGuid, source.RecordKey);
+
             ledgerActivity.LedgerCategory = ConvertEntityToLedgerActivitiesLedgerCategoryDtoEnumAsync(source);
-            ledgerActivity.DocumentType = await ConvertEntityToDocumentTypeDtoAsync(source.GlaSource, bypassCache);
+
+            ledgerActivity.DocumentType = await ConvertEntityToDocumentTypeDtoAsync(source.GlaSource, recordGuidRecordKeyTuple, bypassCache);
+
             ledgerActivity.AdjustmentType = ConvertEntityToAdjustmentTypeDto(source.GlaSource);
-            ledgerActivity.Period = await ConvertEntityToPeriodDtoAsync(source.TransactionDate, bypassCache);
-            ledgerActivity.TransactionDate = source.TransactionDate.Value;
-            ledgerActivity.EnteredOn = source.EnteredOn.Value;
-            ledgerActivity.AccountingString = ConvertEntityToDtoAccountingString(source.AccountingString, source.ProjectRefNo, GlConfig);
+
+            ledgerActivity.Period = await ConvertEntityToPeriodDtoAsync(source.TransactionDate, recordGuidRecordKeyTuple,
+                    fiscalPeriodGuid, bypassCache);
+
+            ledgerActivity.AccountingString = ConvertEntityToDtoAccountingString(source.AccountingString, source.ProjectRefNo, GlConfig,
+                recordGuidRecordKeyTuple);
+
+            ledgerActivity.LedgerType = GetLedgerActivityLedgerType(source, glClassConfiguration, recordGuidRecordKeyTuple);
+
             ledgerActivity.AccountingStringComponentValues = ConvertEntityToAccountingStringComponentValues(source.AccountingStringGuid, source.ProjectGuid);
-            if (!string.IsNullOrEmpty(source.GlaRefNumber)) ledgerActivity.ReferenceDocumentNumber = source.GlaRefNumber;
+
+            if (!string.IsNullOrEmpty(source.GlaRefNumber))
+                ledgerActivity.ReferenceDocumentNumber = source.GlaRefNumber;
+
             ledgerActivity.Reference = ConvertEntityToReferenceDtoAsync(source.GlaAccountId, source.GlaCorpFlag, source.GlaInstFlag);
-            ledgerActivity.Type = ConvertEntityToCreditDebitTypeDto(source.Credit, source.Debit);
+
+            ledgerActivity.Type = ConvertEntityToCreditDebitTypeDto(source.Credit, source.Debit, recordGuidRecordKeyTuple);
+
             ledgerActivity.Amount = ConvertEntityToAmountDto(source.Credit, source.Debit, source.HostCountry);
-            ledgerActivity.Status = LedgerActivityStatus.Posted;
+
             ledgerActivity.Grant = ConvertEntityToGrantDto(source.GrantsGuid);
-     
+
             return ledgerActivity;
         }
 
-        private string ConvertEntityToDtoAccountingString(string source, string refIdSource, GeneralLedgerAccountStructure GlConfig)
+        private LedgerActivityLedgerType? GetLedgerActivityLedgerType(GeneralLedgerActivity source, GeneralLedgerClassConfiguration glClassConfiguration,
+             Tuple<string, string> recordGuidRecordKeyTuple)
         {
-            string accountNumber = string.Empty;
-            if (source.Contains("*"))
-            {
-                accountNumber = source.Split('*')[0];
-            }
-            else
-            {
-                accountNumber = source;
-            }
-            var glAccount = new GlAccount(accountNumber);
-            string acctNumber = glAccount.GetFormattedGlAccount(GlConfig.MajorComponentStartPositions);
-            acctNumber = GetFormattedGlAccount(acctNumber, GlConfig);
 
-            if (!string.IsNullOrEmpty(refIdSource))
+            var retval = LedgerActivityLedgerType.NotSet;
+
+            if (source == null || glClassConfiguration == null)
             {
-                return string.Concat(acctNumber, "*", refIdSource);
+                return retval;
             }
-            return acctNumber;
+
+            //The GL Class Definition (GLCD)form shows where to get the "GL Class" component of
+            // a general ledger number.This is stored in record GL.CLASS.DEF in file 
+            // ACCOUNT.PARAMETERS.Field 1(GL.CLASS.LOCATION) value 1 is the starting character 
+            // of the GL class and field 1 value 2 is its length.Extract the GL class from the 
+            // GL account being examined
+            var glClassLength = glClassConfiguration.GlClassLength;
+            var glStartPosition = glClassConfiguration.GlClassStartPosition;
+            var glClass = string.Empty;
+
+            if (!string.IsNullOrEmpty(source.AccountingString))
+            {
+                try
+                {
+                    // In Colleague, if the GL number is greater than 15 characters, then it gets stored with an underscore ("_")
+                    // in place of the delimiter and therefore needs to have the delimiter included before we extract the GL class.
+                    // If the length of the GL number is less than or equal to 15, then we strip out the delimiter completly before
+                    // we extract the GL class.  This is because the GL structure setup has the starting position for the class
+                    // based on delimiters when the number is 16 or greater in length.
+                    var glNumberWithProject = source.AccountingString.Split('*');
+                    var glNumber = glNumberWithProject.Count() > 0 ? glNumberWithProject[0] : source.AccountingString;
+                    var unFormattedGlAccount = Regex.Replace(glNumber, "[^0-9a-zA-Z]", "");
+                    glClass = (unFormattedGlAccount.Length < 16) ?
+                            unFormattedGlAccount.Substring(glStartPosition, glClassLength) :
+                            source.AccountingString.Substring(glStartPosition, glClassLength);
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(string.Format("Ledger-Activities.  An exception occurred extracting GL.CLASS. {0} . GUID: '{1}'. Id: '{2}'",
+                        ex.Message,
+                        recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item1: "",
+                        recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item2: ""));
+                }
+
+                if (!string.IsNullOrEmpty(glClass))
+                {
+                    if (glClassConfiguration.AssetClassValues.Contains(glClass) || glClassConfiguration.LiabilityClassValues.Contains(glClass) ||
+                        glClassConfiguration.FundBalanceClassValues.Contains(glClass))
+                    {
+                        retval = LedgerActivityLedgerType.General;
+                    }
+                    if (glClassConfiguration.ExpenseClassValues.Contains(glClass) || glClassConfiguration.RevenueClassValues.Contains(glClass))
+                    {
+                        retval = LedgerActivityLedgerType.Operating;
+                    }
+                    else
+                    {
+                        logger.Error(string.Format("Ledger-Activities. Unable to extact map glClass to LedgerType: '{0}. GUID: '{1}'. Id: '{2}' ", 
+                            glClass,
+                            recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item1 : "",
+                            recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item2 : ""));
+
+                    }
+                }
+            }
+
+            return retval;
         }
 
-        private string GetFormattedGlAccount(string accountNumber, GeneralLedgerAccountStructure GlConfig)
+        private string ConvertEntityToDtoAccountingString(string source, string refIdSource, GeneralLedgerAccountStructure GlConfig, 
+                Tuple<string, string> recordGuidRecordKeyTuple)
         {
-            string formattedGlAccount = string.Empty;
-            string tempGlNo = string.Empty;
-            formattedGlAccount = Regex.Replace(accountNumber, "[^0-9a-zA-Z]", "");
+            if (source == null || GlConfig == null)
+            {
+                return string.Empty;
+            }
+
+            var acctNumber = string.Empty;
+            try
+            {
+                var accountNumber = source.Contains("*") ? source.Split('*')[0] : source;
+
+                var glAccount = new GlAccount(accountNumber);
+                if (glAccount != null)
+                {
+                    acctNumber = glAccount.GetFormattedGlAccount(GlConfig.MajorComponentStartPositions);
+                    acctNumber = GetFormattedGlAccount(acctNumber, GlConfig, recordGuidRecordKeyTuple);
+                }
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(string.Format("An unexpected error occurred extracting accounting string: {0}", ex.Message),
+                        "Bad.Data",
+                         recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item1 : null,
+                         recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item2 : null);
+            }
+            return !string.IsNullOrEmpty(refIdSource) ? string.Concat(acctNumber, "*", refIdSource) : acctNumber;
+        }
+
+        private string GetFormattedGlAccount(string accountNumber, GeneralLedgerAccountStructure GlConfig, Tuple<string, string> recordGuidRecordKeyTuple)
+        {
+           
+            var tempGlNo = string.Empty;
+            var formattedGlAccount = Regex.Replace(accountNumber, "[^0-9a-zA-Z]", "");
 
             int startLoc = 0;
             int x = 0, glCount = GlConfig.MajorComponents.Count;
@@ -295,7 +513,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
                 catch (ArgumentOutOfRangeException)
                 {
-                    throw new InvalidOperationException(string.Format("Invalid GL account number: {0}", accountNumber));
+                    IntegrationApiExceptionAddError(string.Format("Invalid GL account number: {0}", accountNumber), "Bad.Data",
+                      recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item1 : null,
+                         recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item2 : null);
+                    return null;
                 }
             }
             formattedGlAccount = tempGlNo;
@@ -373,31 +594,65 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="source"></param>
         /// <param name="bypassCache"></param>
         /// <returns></returns>
-        private async Task<GuidObject2> ConvertEntityToPeriodDtoAsync(DateTime? source, bool bypassCache)
+        private async Task<GuidObject2> ConvertEntityToPeriodDtoAsync(DateTime? source, Tuple<string,string> recordGuidRecordKeyTuple, 
+            string fiscalPeriodGuid, bool bypassCache)
         {
-            if(!source.HasValue)
+            if (!source.HasValue)
             {
-                throw new ArgumentNullException("Gl transaction date is required.");
+                //throw new ArgumentNullException("Gl transaction date is required.");
+                IntegrationApiExceptionAddError("Gl transaction date is required.", "Bad.Data",
+                   recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item1 : null,
+                         recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item2 : null);
+                return null;
             }
-
-            if(!string.IsNullOrEmpty(fiscalPeriodGuid))
+            
+            //Fiscal period guid will be set if a filter is provided,
+            if (!string.IsNullOrEmpty(fiscalPeriodGuid))
             {
-                //var periodIntg = (await FiscalPeriodsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(fiscalPeriodGuid, StringComparison.OrdinalIgnoreCase));
-                //if (periodIntg == null)
-                //{
-                //    throw new KeyNotFoundException(string.Format("Fiscal period not found for guid {0}.", fiscalPeriodGuid));
-                //}
                 return new GuidObject2(fiscalPeriodGuid);
             }
-
+            
             var month = source.Value.Month;
             var year = source.Value.Year;
 
-            var period = (await FiscalPeriodsAsync(bypassCache)).FirstOrDefault(i => year == i.Year && month == i.Month);
+            IEnumerable<FiscalPeriodsIntg> fiscalPeriods = null;
+            try
+            {
+                fiscalPeriods = await FiscalPeriodsAsync(bypassCache);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(string.Format("Unable to retrieve Fiscal periods. " + ex.Message, source.ToString()), "Bad.Data",
+                 recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item1 : null,
+                         recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item2 : null);
+                return null;
+            }
+            if (fiscalPeriods == null)
+            {
+                IntegrationApiExceptionAddError(string.Format("Fiscal period not found for '{0}'.", source.ToString()), "Bad.Data",
+                   recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item1 : null,
+                         recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item2 : null);
+                return null;
+            }
+
+            var period = fiscalPeriods.FirstOrDefault(i => year == i.Year && month == i.Month);
             if(period == null)
             {
-                throw new KeyNotFoundException(string.Format("Fiscal period not found for {0}.", source.ToString()));
+                IntegrationApiExceptionAddError(string.Format("Fiscal period not found for '{0}'.", source.ToString()) , "Bad.Data",
+                   recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item1 : null,
+                         recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item2 : null);
+                return null;
+
             }
+            if (string.IsNullOrEmpty(period.Guid))
+            {
+                IntegrationApiExceptionAddError(string.Format("Fiscal period GUID not found for '{0}'.", source.ToString()), "Bad.Data",
+                   recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item1 : null,
+                         recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item2 : null);
+                return null;
+
+            }
+
             return new GuidObject2(period.Guid);
         }
 
@@ -407,47 +662,68 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="credit"></param>
         /// <param name="debit"></param>
         /// <returns></returns>
-        private LedgerActivityType ConvertEntityToCreditDebitTypeDto(decimal? credit, decimal? debit)
+        private LedgerActivityType ConvertEntityToCreditDebitTypeDto(decimal? credit, decimal? debit,
+            Tuple<string, string> recordGuidRecordKeyTuple)
         {
-            if(credit.HasValue && !debit.HasValue)
+            if (credit.HasValue && credit.Value == 0) credit = null;
+            if (debit.HasValue && debit.Value == 0) debit = null;
+            if (credit.HasValue && !debit.HasValue)
             {
                 return LedgerActivityType.Credit;
             }
 
-            if(!credit.HasValue && debit.HasValue)
+            else if (!credit.HasValue && debit.HasValue)
             {
                 return LedgerActivityType.Debit;
             }
-
+            else if (!credit.HasValue && !debit.HasValue)
+            {
+                IntegrationApiExceptionAddError("Missing a credit or debit.", "Bad.Data",
+                      recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item1 : null,
+                           recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item2 : null);
+            }
+            else if (credit.HasValue && debit.HasValue)
+            {
+                IntegrationApiExceptionAddError("Record has both a credit and a debit.", "Bad.Data",
+                      recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item1 : null,
+                           recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item2 : null);
+            }
             return LedgerActivityType.NotSet;
-        }        
-       
+        }
+
         /// <summary>
         /// Converts entity to document type.
         /// </summary>
         /// <param name="source"></param>
         /// <param name="bypassCache"></param>
         /// <returns>Guid Object for GL source code.</returns>
-        private async Task<GuidObject2> ConvertEntityToDocumentTypeDtoAsync(string source, bool bypassCache)
+        private async Task<GuidObject2> ConvertEntityToDocumentTypeDtoAsync(string source, Tuple<string, string> recordGuidRecordKeyTuple, bool bypassCache)
         {
-            if(string.IsNullOrEmpty(source)) return null;
-
-            var adjType = source.Split('*')[0];
-            if (adjType != null)
-            {
-                var docType = (await GetGlaSourceCodesAsync(bypassCache)).FirstOrDefault(i => i.Code.Equals(adjType, StringComparison.OrdinalIgnoreCase));
-                if (docType == null)
-                {
-                    throw new KeyNotFoundException(string.Format("GL source not found for code: {0}.", source));
-                }
-                return new GuidObject2(docType.Guid);
-            }
-            else
+            if (string.IsNullOrEmpty(source))
             {
                 return null;
             }
+            var adjType = source.Split('*')[0];
+            if (adjType == null)
+            {
+                return null;
+            }
+            var docType2 = await GetGlaSourceCodesAsync(bypassCache);
+            if (docType2 == null)
+            {
+                return null;
+            }
+            var docType = docType2.FirstOrDefault(i => i.Code.Equals(adjType, StringComparison.OrdinalIgnoreCase));
+            if (docType == null)
+            {
+                //throw new KeyNotFoundException(string.Format("GL source not found for code: {0}.", source));
+                IntegrationApiExceptionAddError(string.Format("GL source not found for code: {0}.", source), "Bad.Data",
+                    recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item1 : null,
+                         recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item2 : null);
+                return null;
+            }
+            return new GuidObject2(docType.Guid);
 
-                
         }
 
         /// <summary>
@@ -456,16 +732,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="credit">Credit Amount</param>
         /// <param name="debit">Debit Amount</param>
         /// <param name="hostCountry">Host Country from the INTL form.</param>
-        /// <returns>LegerACtivityAmount DTO with amount and currency code.</returns>
+        /// <returns>LegerActivityAmount DTO with amount and currency code.</returns>
         private LedgerActivityAmount ConvertEntityToAmountDto(decimal? credit, decimal? debit, string hostCountry)
         {
+            if (credit.HasValue && credit.Value == 0) credit = null;
+            if (debit.HasValue && debit.Value == 0) debit = null;
             LedgerActivityAmount laa = null;
-            if (credit.HasValue && credit != 0)
+            if (credit.HasValue)
             {
                 laa = new LedgerActivityAmount() { Value = credit, Currency = ConvertEntityToHostCountryEnum(hostCountry) };
             }
 
-            if(debit.HasValue && debit != 0)
+            if(debit.HasValue)
             {
                 laa = new LedgerActivityAmount() { Value = debit, Currency = ConvertEntityToHostCountryEnum(hostCountry) };
             }
@@ -556,7 +834,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 case "4":
                     return LedgerActivityLedgerCategory.Reservation;
                 default:
-                    throw new ArgumentNullException(string.Format("GL source code is required for guid '{0}'.", source.RecordGuid));
+                    //throw new ArgumentNullException(string.Format("GL source code is required for guid '{0}'.", source.RecordGuid));
+                    IntegrationApiExceptionAddError("GL source code is required", "Bad.Data", source.RecordGuid, source.RecordKey);
+                    return LedgerActivityLedgerCategory.NotSet;
             }
         }
 
@@ -584,22 +864,37 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="bypassCache"></param>
         /// <param name="outDate"></param>
         /// <returns></returns>
-        private async Task<FiscalYear> GetFiscalYear(DateTime outDate, bool bypassCache)
+        private async Task<FiscalYear> GetFiscalYearAsync(DateTime outDate, bool bypassCache)
         {
             FiscalYear fiscalYearLookup = null;
 
-            var fiscalYears = await FiscalYearsAsync(bypassCache);
+            IEnumerable<FiscalYear> fiscalYears = null;
+            try
+            {
+                fiscalYears = await FiscalYearsAsync(bypassCache);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError("Unable to extract fiscal years." + ex.Message, "Bad.Data");
 
+            }
             foreach (var year in fiscalYears)
             {
                 if (!year.FiscalStartMonth.HasValue)
                 {
-                    throw new InvalidOperationException("Fiscal year lookup is missing fiscal start month.");
+                    //throw new InvalidOperationException("Fiscal year lookup is missing fiscal start month.  Fiscal year id '" + year.Id + "'.");
+                    IntegrationApiExceptionAddError("Fiscal year lookup is missing fiscal start month.  Fiscal year id '" + year.Id + "'.", "Bad.Data");
                 }
                 var startMonth = year.FiscalStartMonth.Value;
                 if (!year.CurrentFiscalYear.HasValue)
                 {
-                    throw new InvalidOperationException("Fiscal year lookup is missing fiscal year.");
+                    //throw new InvalidOperationException("Fiscal year lookup is missing fiscal year. Fiscal year id '" + year.Id + "'.");
+                    IntegrationApiExceptionAddError("Fiscal year lookup is missing fiscal year. Fiscal year id '" + year.Id + "'.", "Bad.Data");
+                }
+
+                if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+                {
+                    throw IntegrationApiException;
                 }
                 var fiscalYear = year.CurrentFiscalYear.Value;
 
@@ -628,7 +923,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             return _fiscalYears ?? (_fiscalYears = await _referenceDataRepository.GetFiscalYearsAsync(bypassCache));
         }
 
-        IEnumerable<FiscalPeriodsIntg> _fiscalperriods = null;
+        IEnumerable<FiscalPeriodsIntg> _fiscalperiods = null;
         /// <summary>
         /// Gets fiscal periods
         /// </summary>
@@ -636,7 +931,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns></returns>
         private async Task<IEnumerable<FiscalPeriodsIntg>> FiscalPeriodsAsync(bool bypassCache)
         {
-            return _fiscalperriods ?? (_fiscalperriods = await _referenceDataRepository.GetFiscalPeriodsIntgAsync(bypassCache));
+            return _fiscalperiods ?? (_fiscalperiods = await _referenceDataRepository.GetFiscalPeriodsIntgAsync(bypassCache));
         }
 
         IEnumerable<GlSourceCodes> _glaSourceCodes = null;

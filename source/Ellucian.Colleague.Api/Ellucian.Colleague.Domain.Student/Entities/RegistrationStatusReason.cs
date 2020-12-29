@@ -18,10 +18,9 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// </summary>
         Registered,
         /// <summary>
-        /// A person's registration was removed before the activity had begun.  Colleague automatically sets this
-        /// status to either "Dropped" or "Deleted" based on registration dates.
+        /// A person's registration was removed after the activity had begun (drop date).
         /// </summary>
-        Dropped, 
+        Dropped,
         /// <summary>
         /// A person's registration was removed after the activity had begun.  Colleague automatically sets this
         /// status to either "Dropped" or "Deleted" based on registration dates.  A status of "Withdrawn" can only

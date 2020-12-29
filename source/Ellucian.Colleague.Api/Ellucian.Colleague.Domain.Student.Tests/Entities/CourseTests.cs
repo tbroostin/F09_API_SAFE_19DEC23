@@ -138,6 +138,13 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 // null subject causes exception
                 course = new Course("2", title, longTitle, deptCodes, null, number, acadLevelCode, courseLevelCodes, credits, ceus, approvals);
             }
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public void Course_Constructor_SubjectCode__empty_string_NullException()
+            {
+                // null subject causes exception
+                course = new Course("2", title, longTitle, deptCodes, "", number, acadLevelCode, courseLevelCodes, credits, ceus, approvals);
+            }
 
             [TestMethod]
             public void Course_Constructor_Number()

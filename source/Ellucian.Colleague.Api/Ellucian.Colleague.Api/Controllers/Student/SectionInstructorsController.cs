@@ -1,4 +1,4 @@
-//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -55,6 +55,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <param name="criteria">Filter Criteria including section, instructor, and instructionalEvent.</param>
         /// <returns>List of SectionInstructors <see cref="Dtos.SectionInstructors"/> objects representing matching sectionInstructors</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.SectionInstructors))]
@@ -79,7 +80,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             var criteriaValues = GetFilterObject<Dtos.SectionInstructors>(_logger, "criteria");
 
             if (CheckForEmptyFilterParameters())
-                return new PagedHttpActionResult<IEnumerable<Dtos.SectionInstructors>>(new List<Dtos.SectionInstructors>(), page, this.Request);
+                return new PagedHttpActionResult<IEnumerable<Dtos.SectionInstructors>>(new List<Dtos.SectionInstructors>(), page, 0, this.Request);
 
             if (criteriaValues != null)
             {
@@ -109,7 +110,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -138,26 +139,27 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired sectionInstructors</param>
         /// <returns>A sectionInstructors object <see cref="Dtos.SectionInstructors"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         public async Task<Dtos.SectionInstructors> GetSectionInstructorsByGuidAsync(string guid)
         {
-            if (string.IsNullOrEmpty(guid))
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("Null id argument",
-                    IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
-            }
-
-            var bypassCache = false;
-            if (Request.Headers.CacheControl != null)
-            {
-                if (Request.Headers.CacheControl.NoCache)
-                {
-                    bypassCache = true;
-                }
-            }
-
             try
             {
+                if (string.IsNullOrEmpty(guid))
+                {
+                    throw new ArgumentNullException("Id is a required property.");
+                }
+
+                var bypassCache = false;
+                if (Request.Headers.CacheControl != null)
+                {
+                    if (Request.Headers.CacheControl.NoCache)
+                    {
+                        bypassCache = true;
+                    }
+                }
+
+
                 var sectionInstructor = await _sectionInstructorsService.GetSectionInstructorsByGuidAsync(guid);
 
                 if (sectionInstructor != null)
@@ -167,7 +169,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                               await _sectionInstructorsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                               new List<string>() { sectionInstructor.Id }));
                 }
-                
+
                 return sectionInstructor;
             }
             catch (KeyNotFoundException e)
@@ -178,7 +180,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (ArgumentException e)
             {
@@ -207,27 +214,30 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="sectionInstructors">DTO of the new sectionInstructors</param>
         /// <returns>A sectionInstructors object <see cref="Dtos.SectionInstructors"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPost, EedmResponseFilter]
         public async Task<Dtos.SectionInstructors> PostSectionInstructorsAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.SectionInstructors sectionInstructors)
         {
-            if (sectionInstructors == null)
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("Null sectionInstructors argument",
-                    IntegrationApiUtility.GetDefaultApiError("The request body is required.")));
-            }
-
-            if (string.IsNullOrEmpty(sectionInstructors.Id))
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("Null sectionInstructors id",
-                    IntegrationApiUtility.GetDefaultApiError("Id is a required property.")));
-            }
-
             try
             {
+                if (sectionInstructors == null)
+                {
+                    throw new ArgumentNullException("The request body is required.");
+                }
+
+                if (string.IsNullOrEmpty(sectionInstructors.Id))
+                {
+                    throw new ArgumentNullException("Id is a required property.");
+                }
+                if (sectionInstructors.Id != Guid.Empty.ToString())
+                {
+                    throw new ArgumentNullException("sectionInstructorsDto", "On a post you can not define a GUID");
+                }
+
                 //call import extend method that needs the extracted extension data and the config
                 await _sectionInstructorsService.ImportExtendedEthosData(await ExtractExtendedData(await _sectionInstructorsService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
-                //create the payroll deduction
+                //create the section instructor
                 var sectionInstructor = await _sectionInstructorsService.CreateSectionInstructorsAsync(sectionInstructors);
 
                 //store dataprivacy list and get the extended data to store 
@@ -240,6 +250,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 _logger.Error(e, "Permissions exception");
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e, "Argument exception");
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (ArgumentException e)
             {
@@ -269,37 +284,36 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID of the sectionInstructors to update</param>
         /// <param name="sectionInstructors">DTO of the updated sectionInstructors</param>
         /// <returns>A sectionInstructors object <see cref="Dtos.SectionInstructors"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPut, EedmResponseFilter]
         public async Task<Dtos.SectionInstructors> PutSectionInstructorsAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.SectionInstructors sectionInstructors)
         {
-            if (string.IsNullOrEmpty(guid))
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("Null id argument",
-                    IntegrationApiUtility.GetDefaultApiError("The ID must be specified in the request URL.")));
-            }
-
-            if (sectionInstructors == null)
-            {
-                throw new ArgumentNullException("Null sectionInstructors argument", "The request body is required.");
-            }
-
-            if (string.IsNullOrEmpty(sectionInstructors.Id))
-            {
-                sectionInstructors.Id = guid;
-            }
-            else if (guid != sectionInstructors.Id)
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("ID mismatch",
-                    IntegrationApiUtility.GetDefaultApiError("ID not the same as in request body.")));
-            }
-
-            if (guid.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException("Nil GUID cannot be used in PUT operation.");
-            }
-
             try
             {
+                if (string.IsNullOrEmpty(guid))
+                {
+                    throw new ArgumentNullException("The GUID must be specified in the request URL.");
+                }
+
+                if (sectionInstructors == null)
+                {
+                    throw new ArgumentNullException("The request body is required.");
+                }
+
+                if (string.IsNullOrEmpty(sectionInstructors.Id))
+                {
+                    sectionInstructors.Id = guid;
+                }
+                else if (guid != sectionInstructors.Id)
+                {
+                    throw new ArgumentNullException("GUID not the same as in request body.");
+                }
+
+                if (guid.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new ArgumentException("Nil GUID cannot be used in PUT operation.");
+                }
+                
                 //get Data Privacy List
                 var dpList = await _sectionInstructorsService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
@@ -315,13 +329,18 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 AddEthosContextProperties(dpList,
                     await _sectionInstructorsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { guid }));
 
-                return sectionInstructorReturn; 
+                return sectionInstructorReturn;
 
             }
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (ArgumentException e)
             {

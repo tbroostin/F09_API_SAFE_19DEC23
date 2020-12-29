@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,7 +15,7 @@ namespace Ellucian.Web.Http.Configuration
         private int _Id;
         public int Id
         {
-            get { return _Id;}
+            get { return _Id; }
             set
             {
                 if (_Id == 0)
@@ -62,6 +62,23 @@ namespace Ellucian.Web.Http.Configuration
         public string PhotoType { get; set; }
 
         public Dictionary<string, string> PhotoHeaders { get; set; }
+
+        public bool PhotoConfiguration
+        {
+            get
+            {
+                {
+                    if (string.IsNullOrEmpty(PhotoURL) || string.IsNullOrEmpty(PhotoType))
+                    {
+                        return false;
+                    }
+                    else
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
 
         /// <summary>
         /// The path to the report logo image file
@@ -142,6 +159,16 @@ namespace Ellucian.Web.Http.Configuration
         public bool EnableConfigBackup { get; set; }
 
         /// <summary>
+        /// Max size, in bytes, a file attachment HTTP request can be.
+        /// </summary>
+        public long AttachRequestMaxSize { get; set; }
+
+        /// <summary>
+        /// True if the detailed health check API is enabled
+        /// </summary>
+        public bool DetailedHealthCheckApiEnabled { get; set; }
+
+        /// <summary>
         /// Default constructor for deserialization
         /// </summary>
         public ApiSettings()
@@ -162,6 +189,8 @@ namespace Ellucian.Web.Http.Configuration
             IncludeLinkSelfHeaders = false;
             ColleagueTimeZone = TimeZoneInfo.Local.Id; // default to API server's time zone.
             EnableConfigBackup = false;
+            AttachRequestMaxSize = 26214400;  // 25 MB
+            DetailedHealthCheckApiEnabled = false;
         }
 
         public ApiSettings(int id, string name, int version) : this(name)

@@ -5,8 +5,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
+using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
@@ -24,6 +26,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
     {
 
         private Ellucian.Data.Colleague.DataContracts.IntlParams _internationalParameters;
+        protected const string AllPaymentTransactionsFilterCache = "AllPaymentTransactionsFilter";
+        protected const int AllPaymentTransactionsCacheTimeout = 20; // Clear from cache every 20 minutes
+        RepositoryException exception = null;
 
         /// <summary>
         /// This constructor allows us to instantiate a PaymentTransactions repository object.
@@ -34,6 +39,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         public PaymentTransactionsRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
         {
+            exception = new RepositoryException();
         }
 
         /// <summary>
@@ -45,56 +51,243 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <param name="documentTypeValue">invoice or refund</param>
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<PaymentTransaction>, int>> GetPaymentTransactionsAsync(
-            int offset, int limit, string documentId, InvoiceOrRefund invoiceOrRefund)
+            int offset, int limit, string documentId, InvoiceOrRefund invoiceOrRefund, string docNumber, List<string> refPoDoc, List<string> refBpoDoc, List<string> refRecDoc)
         {
-            var checkCriteria = "";
-            var voucherCriteria = "WITH VOU.PMT.TXN.INTG.IDX NE ''";
-            var checkIds = new List<string>();
-            var voucherIds = new List<string>();
-
-            if ((!string.IsNullOrEmpty(documentId)) && (invoiceOrRefund != InvoiceOrRefund.NotSet))
+            try
             {
-                if (invoiceOrRefund == InvoiceOrRefund.Invoice)
+                int totalCount = 0;
+                string[] subList = null;
+                string paymentCacheKey = CacheSupport.BuildCacheKey(AllPaymentTransactionsFilterCache, documentId, invoiceOrRefund.ToString(), docNumber, refPoDoc, refBpoDoc, refRecDoc);
+                var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+                       this,
+                       ContainsKey,
+                       GetOrAddToCacheAsync,
+                       AddOrUpdateCacheAsync,
+                       transactionInvoker,
+                       paymentCacheKey,
+                       string.Empty,
+                       offset,
+                       limit,
+                       AllPaymentTransactionsCacheTimeout,
+                       async () =>
+                       {
+                           var checkCriteria = "";
+                           var voucherCriteria = "WITH VOU.PMT.TXN.INTG.IDX NE ''";
+                           var checkIds = new List<string>();
+                           var voucherIds = new List<string>();
+                           var checksLimitingKeys = new List<string>();
+                           var voucherLimitingKeys = new List<string>();
+                           var checkId = string.Empty;
+                           //documentId and type filter
+                           if ((!string.IsNullOrEmpty(documentId)) && (invoiceOrRefund != InvoiceOrRefund.NotSet))
+                           {
+                               if (invoiceOrRefund == InvoiceOrRefund.Invoice)
+                               {
+                                   checkCriteria = string.Format("WITH CHK.VOUCHERS.IDS = '{0}'", documentId);
+
+                               }
+                               else if (invoiceOrRefund == InvoiceOrRefund.Refund)
+                               {
+                                   voucherCriteria = string.Format("{0} AND WITH VOUCHERS.ID = '{1}'", voucherCriteria, documentId);
+
+                               }
+                           }
+                           //document Number Filter
+                           if (!string.IsNullOrEmpty(docNumber))
+                           {
+                               checkId = docNumber;
+                               checksLimitingKeys.Add(docNumber);
+                               voucherLimitingKeys.Add(docNumber);
+                           }
+                           // PO Id filter
+                           if ((refPoDoc != null && refPoDoc.Any()))
+                           {
+                               //voucher criteria is commented out as there is no referenceDocument filter for refund.
+                               //var vouPoCriteria = string.Empty;
+                               //foreach (var value in refPoDoc)
+                               //{
+                               //    if (string.IsNullOrEmpty(vouPoCriteria))
+                               //    {
+                               //        vouPoCriteria = String.Format("WITH VOU.PO.NO EQ '{0}'", value);
+                               //    }
+                               //    else
+                               //    {
+                               //        vouPoCriteria = string.Format("{0} AND WITH VOU.PO.NO EQ '{1}'", vouPoCriteria, value);
+                               //    }
+                               //}
+                               //voucherCriteria = string.Format("{0} AND {1}", voucherCriteria, vouPoCriteria);
+                               voucherLimitingKeys = new List<string>() { "x" };
+                               //check criteria
+                               var posCri = string.Format("WITH VOU.PO.NO EQ {0}", string.Join(" ", refPoDoc.Select(a => string.Format("'{0}'", a))));
+                               //var posCri = string.Concat("WITH VOU.PO.NO EQ ", ConvertArrayToString(refPoDoc));
+                               var poVouchers = (await DataReader.SelectAsync("VOUCHERS", posCri));
+                               var poCheckIds = new List<string>();
+                               if (!string.IsNullOrEmpty(checkId))
+                                   poCheckIds = (await DataReader.SelectAsync("CHECKS", string.Concat("WITH CHECKS.ID EQ '", checkId, "' AND WITH CHK.VOUCHERS.IDS EQ '?'"), poVouchers)).ToList();
+                               else
+                                   poCheckIds = (await DataReader.SelectAsync("CHECKS", "WITH CHK.VOUCHERS.IDS EQ '?'", poVouchers)).ToList();
+                               if (poCheckIds != null && poCheckIds.Any())
+                               {
+                                   checksLimitingKeys.AddRange(poCheckIds);
+                               }
+                               else
+                               {
+                                   //we need make the limit keys invalid. we cannot clear it as it will select all. 
+                                   checksLimitingKeys = new List<string>() { "x" };                 
+                               }
+                           }
+
+                           // BPO Id filter
+                           if ((refBpoDoc != null && refBpoDoc.Any()))
+                           {
+                               //voucher criteria is commented out as there is no referenceDocument filter for refund.
+                               //var vouBpoCriteria = string.Empty;
+                               //foreach (var value in refBpoDoc)
+                               //{
+                               //    if (string.IsNullOrEmpty(vouBpoCriteria))
+                               //    {
+                               //        vouBpoCriteria = String.Format("WITH VOU.BPO.ID EQ '{0}'", value);
+                               //    }
+                               //    else
+                               //    {
+                               //        vouBpoCriteria = string.Format("{0} AND WITH VOU.BPO.ID EQ '{1}'", vouBpoCriteria, value);
+                               //    }
+                               //}
+                               //voucherCriteria = string.Format("{0} AND {1}", voucherCriteria, vouBpoCriteria);
+                               voucherLimitingKeys = new List<string>() { "x" };
+                               //check criteria
+                               var bposCri = string.Format("WITH VOU.BPO.ID EQ {0}", string.Join(" ", refBpoDoc.Select(a => string.Format("'{0}'", a))));
+                               //var bposCri = string.Concat("WITH VOU.BPO.ID EQ ", ConvertArrayToString(refBpoDoc));
+                               var bpoVouchers = (await DataReader.SelectAsync("VOUCHERS", bposCri));
+
+                               var bpoCheckIds = new List<string>();
+                               if (!string.IsNullOrEmpty(checkId))
+                                   bpoCheckIds = (await DataReader.SelectAsync("CHECKS", string.Concat("WITH CHECKS.ID EQ '", checkId, "' AND WITH CHK.VOUCHERS.IDS EQ '?'"), bpoVouchers)).ToList();
+                               else
+                                   bpoCheckIds = (await DataReader.SelectAsync("CHECKS", "WITH CHK.VOUCHERS.IDS EQ '?'", bpoVouchers)).ToList();                            
+                               if (bpoCheckIds != null && bpoCheckIds.Any())
+                               {
+                                   checksLimitingKeys.AddRange(bpoCheckIds);
+                               }
+                               else
+                               {
+                                   //we need make the limit keys invalid. we cannot clear it as it will select all. 
+                                   checksLimitingKeys = new List<string>() { "x" };
+                               }
+                           }
+
+                           // recurring voucher filter
+                           if ((refRecDoc != null && refRecDoc.Any()))
+                           {
+                               //voucher criteria is commented out as there is no referenceDocument filter for refund.
+                               //var vouRecCriteria = string.Empty;
+                               //foreach (var value in refRecDoc)
+                               //{
+                               //    if (string.IsNullOrEmpty(vouRecCriteria))
+                               //    {
+                               //        vouRecCriteria = String.Format("WITH VOU.RCVS.ID EQ '{0}'", value);
+                               //    }
+                               //    else
+                               //    {
+                               //        vouRecCriteria = string.Format("{0} AND WITH VOU.RCVS.ID EQ '{1}'", vouRecCriteria, value);
+                               //    }
+                               //}
+                               //voucherCriteria = string.Format("{0} AND {1}", voucherCriteria, vouRecCriteria);
+                               voucherLimitingKeys = new List<string>() { "x" };
+                               //check criteria
+                               var recVouCri = string.Format("WITH VOU.RCVS.ID EQ {0}", string.Join(" ", refRecDoc.Select(a => string.Format("'{0}'", a))));
+                               //var recVouCri = string.Concat("WITH VOU.RCVS.ID EQ ", ConvertArrayToString(refRecDoc));
+                               var recVouVouchers = (await DataReader.SelectAsync("VOUCHERS", recVouCri));
+                               var recVouCheckIds = new List<string>();
+                               if (!string.IsNullOrEmpty(checkId))
+                                   recVouCheckIds = (await DataReader.SelectAsync("CHECKS", string.Concat("WITH CHECKS.ID EQ '", checkId, "' AND WITH CHK.VOUCHERS.IDS EQ '?'"), recVouVouchers)).ToList();
+                               else
+                                   recVouCheckIds = (await DataReader.SelectAsync("CHECKS", "WITH CHK.VOUCHERS.IDS EQ '?'", recVouVouchers)).ToList();
+                               if (recVouCheckIds != null && recVouCheckIds.Any())
+                               {
+                                   checksLimitingKeys.AddRange(recVouCheckIds);
+                               }
+                               else
+                               {
+                                   //we need make the limit keys invalid. we cannot clear it as it will select all. 
+                                   checksLimitingKeys = new List<string>() { "x" };
+                               }
+                           }
+                           checkIds = (await DataReader.SelectAsync("CHECKS", checksLimitingKeys.ToArray(), checkCriteria)).ToList();
+                           voucherIds = (await DataReader.SelectAsync("VOUCHERS", voucherLimitingKeys.ToArray(), voucherCriteria)).ToList();
+
+                           var mergedChecksVouchers = checkIds.Union(voucherIds).ToArray();
+                           CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
+                           {
+                               limitingKeys = mergedChecksVouchers.ToList()
+                           };
+                           return requirements;
+
+                       }
+                   );
+
+                if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
                 {
-                    checkCriteria = string.Format("WITH CHK.VOUCHERS.IDS = '{0}'", documentId);
-                    checkIds = (await DataReader.SelectAsync("CHECKS", checkCriteria)).ToList();
+                    return new Tuple<IEnumerable<PaymentTransaction>, int>(new List<PaymentTransaction>(), 0);
                 }
-                else if (invoiceOrRefund == InvoiceOrRefund.Refund)
+
+                subList = keyCache.Sublist.ToArray();
+                totalCount = keyCache.TotalCount.Value;
+                var voucherData = await DataReader.BulkReadRecordAsync<DataContracts.Vouchers>("VOUCHERS", subList);
+                var checkData = await DataReader.BulkReadRecordAsync<DataContracts.Checks>("CHECKS", subList);
+                if (voucherData == null && checkData == null)
                 {
-                   voucherCriteria = string.Format("{0} AND WITH VOUCHERS.ID = '{1}'", voucherCriteria, documentId);
-                    voucherIds = (await DataReader.SelectAsync("VOUCHERS", voucherCriteria)).ToList();
+                    return new Tuple<IEnumerable<PaymentTransaction>, int>(new List<PaymentTransaction>(), 0);
                 }
+                else
+                {
+
+                    var voucherPersonSubList = new List<string>();
+                    var checkPersonSubList = new List<string>();
+
+                    if (voucherData != null && voucherData.Any())
+                    {
+                        voucherPersonSubList = (voucherData.Where(v => !string.IsNullOrEmpty(v.VouVendor)).Select(v => v.VouVendor)).ToList();
+                    }
+                    if (checkData != null && checkData.Any())
+                    {
+                        checkPersonSubList = (checkData.Where(c => !string.IsNullOrEmpty(c.ChkVendor)).Select(c => c.ChkVendor)).ToList();
+                    }
+                    var personSubList = voucherPersonSubList.Union(checkPersonSubList).ToArray();
+                    var personsData = await DataReader.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", personSubList);
+                    var chkVouchersSubList = checkData.Where(cv => cv.ChkVouchersIds != null && cv.ChkVouchersIds.Any())
+                        .SelectMany(cv => cv.ChkVouchersIds).Distinct();
+                    var chkVouchers = (await DataReader.BulkReadRecordAsync<Vouchers>(chkVouchersSubList.ToArray())).ToList();
+                    //read all the items records in bulk rather than reading one at a time
+                    var itemsCheckSubList = chkVouchers.Where(cv => cv.VouItemsId != null && cv.VouItemsId.Any())
+                        .SelectMany(cv => cv.VouItemsId).Distinct();
+                    var itemsVouSubList = voucherData.Where(cv => cv.VouItemsId != null && cv.VouItemsId.Any())
+                        .SelectMany(cv => cv.VouItemsId).Distinct();
+                    var itemsSubList = itemsCheckSubList.Union(itemsVouSubList);
+                    var vouItems = (await DataReader.BulkReadRecordAsync<Items>(itemsSubList.ToArray())).ToList();
+                    var paymentTransactions = await BuildPaymentTransactions(checkData, voucherData, personsData, chkVouchers, vouItems);
+                    return new Tuple<IEnumerable<PaymentTransaction>, int>(paymentTransactions, totalCount);
+                }
+
             }
-            else
+            catch (RepositoryException e)
             {
-                checkIds = (await DataReader.SelectAsync("CHECKS", checkCriteria)).ToList();
-                voucherIds = (await DataReader.SelectAsync("VOUCHERS", voucherCriteria)).ToList();
+                throw e;
             }
-            var totalCount = voucherIds.Count() + checkIds.Count();
-
-            var mergedChecksVouchers = checkIds.Union(voucherIds).ToArray();
-
-            Array.Sort(mergedChecksVouchers);
-            var subList = mergedChecksVouchers.Skip(offset).Take(limit).ToArray();
-
-            var voucherData = await DataReader.BulkReadRecordAsync<DataContracts.Vouchers>("VOUCHERS", subList);
-            var checkData = await DataReader.BulkReadRecordAsync<DataContracts.Checks>("CHECKS", subList);
-
-
-            var voucherPersonSubList = voucherData.Where(v => !string.IsNullOrEmpty(v.VouVendor)).Select(v => v.VouVendor);
-            var checkPersonSubList = checkData.Where(c => !string.IsNullOrEmpty(c.ChkVendor)).Select(c => c.ChkVendor);
-            var personSubList = voucherPersonSubList.Union(checkPersonSubList).ToArray();
-            var personsData = await DataReader.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", personSubList);
-
-            var chkVouchersSubList = checkData.Where(cv => cv.ChkVouchersIds != null && cv.ChkVouchersIds.Any())
-                .SelectMany(cv => cv.ChkVouchersIds).Distinct();
-         
-            var chkVouchers = (await DataReader.BulkReadRecordAsync<Vouchers>(chkVouchersSubList.ToArray())).ToList();
-
-            var paymentTransactions = await BuildPaymentTransactions(checkData, voucherData, personsData, chkVouchers);
-
-            return new Tuple<IEnumerable<PaymentTransaction>, int>(paymentTransactions, totalCount);
         }
+
+        //private string ConvertArrayToString(List<string> values)
+        //{
+        //    string value = string.Empty;
+        //    if (values!= null && values.Any())
+        //    {
+        //        foreach(var val in values)
+        //        {
+        //            value = string.Concat(value, "'", val, "'");
+        //        }
+        //    }
+        //    return value;
+        //}
 
         /// <summary>
         /// Get a single voucher using a GUID
@@ -105,24 +298,25 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         {
             try
             {
-                Tuple<string, string> voucherID = await GetVoucherIdFromGuidAsync(guid);
-                if (voucherID != null && string.IsNullOrEmpty(voucherID.Item1))
+                Tuple<string, string> voucherID = await GetVoucherIdFromGuidAsync(guid);                
+                var response = await GetPaymentTransactionsAsync(voucherID.Item1, voucherID.Item2);
+                if (exception != null && exception.Errors != null && exception.Errors.Any())
                 {
-                    throw new KeyNotFoundException(string.Concat("Id not found for voucher guid:", guid));
+                    throw exception;
                 }
-                return await GetPaymentTransactionsAsync(voucherID.Item1, voucherID.Item2);
+                return response;
             }
-            catch (ArgumentException e)
+            catch (RepositoryException ex)
             {
-                throw new ArgumentException(e.Message);
+                throw ex;
             }
-            catch (ApplicationException ae)
+            catch (KeyNotFoundException ex)
             {
-                throw new ApplicationException(ae.Message);
+                throw ex;
             }
             catch (Exception e)
             {
-                throw new KeyNotFoundException("Voucher GUID " + guid + " lookup failed.");
+                throw new KeyNotFoundException(string.Concat("No payment transactions was found for guid ", guid));
             }
         }
 
@@ -141,31 +335,37 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// </summary>
         /// <param name="guid">The GUID</param>
         /// <returns>Primary key</returns>
-        private async Task<Tuple<string,string>> GetVoucherIdFromGuidAsync(string guid)
+        private async Task<Tuple<string, string>> GetVoucherIdFromGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
             {
-                throw new ArgumentNullException("guid");
+                throw new RepositoryException("guid is required.");
             }
 
             var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
             if (idDict == null || idDict.Count == 0)
             {
-                throw new KeyNotFoundException("Vouchers GUID " + guid + " not found.");
+                throw new KeyNotFoundException(string.Concat("No payment transactions was found for guid ", guid));
             }
 
             var foundEntry = idDict.FirstOrDefault();
             if (foundEntry.Value == null)
             {
-                throw new KeyNotFoundException("Vouchers GUID " + guid + " lookup failed.");
-            }
+                throw new KeyNotFoundException(string.Concat("No payment transactions was found for guid ", guid));
 
-            if ((foundEntry.Value.Entity != "CHECKS") &&
-                (foundEntry.Value.Entity == "VOUCHERS") && (string.IsNullOrEmpty(foundEntry.Value.SecondaryKey)))
+            }
+            if (foundEntry.Value.Entity != "VOUCHERS" && foundEntry.Value.Entity != "CHECKS")
             {
-                throw new RepositoryException("GUID " + guid + " has different entity, " + foundEntry.Value.Entity + ", than expected, VENDORS");
+                throw new RepositoryException(string.Concat("The GUID specified: ", guid, " is used by a different resource: ", foundEntry.Value.Entity, " than expected: VOUCHERS or CHECKS"));
             }
-
+            if (string.IsNullOrEmpty(foundEntry.Value.PrimaryKey))
+            {
+                throw new RepositoryException(string.Concat("The GUID specified: ", guid, " is not valid for payment-transactions."));
+            }
+            if ((foundEntry.Value.Entity == "VOUCHERS") && (string.IsNullOrEmpty(foundEntry.Value.SecondaryKey)))
+            {
+                throw new RepositoryException(string.Concat("The GUID specified: ", guid, " for record key ", foundEntry.Value.PrimaryKey, " from file: VOUCHERS is not valid for payment-transactions. "));
+            }
             return new Tuple<string, string>(foundEntry.Value.PrimaryKey, foundEntry.Value.Entity);
         }
 
@@ -180,10 +380,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             Ellucian.Colleague.Data.Base.DataContracts.Person person = null;
             //System.Collections.ObjectModel.Collection<Vouchers> vouchers = null;
             List<Vouchers> vouchers = null;
+            IEnumerable<Items> itemsData = null;
 
             if (string.IsNullOrEmpty(id))
             {
-                throw new ArgumentNullException("id", "ID is required to get a voucher.");
+                throw new RepositoryException("ID is required to get a voucher.");
             }
 
             if (entity == "VOUCHERS")
@@ -197,13 +398,21 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                 if (!string.IsNullOrEmpty(voucher.VouVendor))
                 {
-                    person = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", voucher.VouVendor);
-                    if (person == null)
-                    {
-                        throw new ArgumentOutOfRangeException("Person Id " + voucher.VouVendor + " is not returning any data. Person may be corrupted.");
-                    }
+                    person = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", voucher.VouVendor);                   
                 }
-                paymentTransaction = await BuildPaymentTransactionFromVoucher(voucher, person);
+                Dictionary<string, string> voucherGuidCollection = null;
+                try
+                {
+                    voucherGuidCollection = await GetPaymentTransactionsGuidsCollectionAsync(new List<string> { voucher.Recordkey }, "VOUCHERS");
+                }
+                catch // the error will be thrown when the guid cannot be found.
+                { }
+                //get the items record
+                if (voucher.VouItemsId != null && voucher.VouItemsId.Any())
+                {
+                    itemsData = await DataReader.BulkReadRecordAsync<Items>(voucher.VouItemsId.ToArray());
+                }
+                paymentTransaction = await BuildPaymentTransactionFromVoucher(voucher, person, voucherGuidCollection, itemsData);
             }
             else if (entity == "CHECKS")
             {
@@ -216,23 +425,25 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                 if (!string.IsNullOrEmpty(check.ChkVendor))
                 {
-                    person = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", check.ChkVendor);
-                    if (person == null)
-                    {
-                        throw new ArgumentOutOfRangeException("Person Id " + check.ChkVendor + " is not returning any data. Person may be corrupted.");
-                    }
+                    person = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", check.ChkVendor);                  
                 }
 
                 if (check.ChkVouchersIds != null && check.ChkVouchersIds.Any())
                 {
-                     vouchers = (await DataReader.BulkReadRecordAsync<Vouchers>(check.ChkVouchersIds.ToArray())).ToList();
-                    if (vouchers == null)
+                    vouchers = (await DataReader.BulkReadRecordAsync<Vouchers>(check.ChkVouchersIds.ToArray())).ToList();
+                    if (vouchers != null && vouchers.Any())
                     {
-                        throw new KeyNotFoundException(string.Concat("Records not found for voucher with id(s) :",  string.Join(", ", check.ChkVouchersIds)));
+                        var itemsVouSubList = vouchers.Where(cv => cv.VouItemsId != null && cv.VouItemsId.Any())
+                       .SelectMany(cv => cv.VouItemsId).Distinct();
+                        itemsData = await DataReader.BulkReadRecordAsync<Items>(itemsVouSubList.ToArray());
                     }
                 }
 
-                paymentTransaction = await BuildPaymentTransactionFromCheck(check, person, vouchers);
+                paymentTransaction = await BuildPaymentTransactionFromCheck(check, person, vouchers, itemsData);
+            }
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
             }
 
             return paymentTransaction;
@@ -248,49 +459,91 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         private async Task<IEnumerable<PaymentTransaction>> BuildPaymentTransactions(
             IEnumerable<Checks> checks,
             IEnumerable<Vouchers> vouchers,
-            IEnumerable<Base.DataContracts.Person> persons, IEnumerable<Vouchers> checkVouchers
+            IEnumerable<Base.DataContracts.Person> persons, IEnumerable<Vouchers> checkVouchers, IEnumerable<Items> vouItems
             )
         {
             var paymentTransactionsCollection = new List<PaymentTransaction>();
 
-            foreach (var voucher in vouchers)
+            //process vouchers
+            if (vouchers != null && vouchers.Any())
             {
-                Base.DataContracts.Person person = null;
-                if (!(string.IsNullOrWhiteSpace(voucher.VouVendor)))
+                var vouIds = vouchers.Select(x => x.Recordkey);
+                Dictionary<string, string> voucherGuidCollection = null;
+                IEnumerable<Items> itemsData = null;
+                try
                 {
-                    if (persons == null)
-                    {
-                        throw new ArgumentNullException("Expected person record for: " + voucher.Recordkey);
-                    }
-                    person = persons.FirstOrDefault(p => p.Recordkey == voucher.VouVendor);
+                    voucherGuidCollection = await GetPaymentTransactionsGuidsCollectionAsync(vouIds, "VOUCHERS");
                 }
+                catch // the error will be thrown when the guid cannot be found.
+                {  }
+                foreach (var voucher in vouchers)
+                {
+                    Base.DataContracts.Person person = null;
+                    List<Items> items = null;
+                    if (!string.IsNullOrWhiteSpace(voucher.VouVendor))
+                    {
+                        if (persons != null && persons.Any())
+                        {
+                            person = persons.FirstOrDefault(p => p.Recordkey == voucher.VouVendor);
+                        }
+                    }
+                    else
+                    {
+                        exception.AddError(
+                    new RepositoryError("Bad.Data", "Missing person record for Id '" + voucher.VouVendor + "'.")
+                    {
+                         SourceId = voucher.Recordkey
+                    });
+                    }
+                    if (voucher.VouItemsId != null && voucher.VouItemsId.Any())
+                    {
+                        itemsData = vouItems.Where(itm => voucher.VouItemsId.Contains(itm.Recordkey));
 
-                paymentTransactionsCollection.Add(await BuildPaymentTransactionFromVoucher(voucher, person));
+                    }
+                    paymentTransactionsCollection.Add(await BuildPaymentTransactionFromVoucher(voucher, person, voucherGuidCollection, itemsData));
+                }
             }
-
-            foreach (var check in checks)
+            //process checks
+            if (checks != null && checks.Any())
             {
-                Base.DataContracts.Person person = null;
-                if (!(string.IsNullOrWhiteSpace(check.ChkVendor)))
+                foreach (var check in checks)
                 {
-                    if (persons == null)
+                    Base.DataContracts.Person person = null;
+                    List<Vouchers> chkVouchers = null;
+                    List<Items> itemsData = null;
+                    if (!string.IsNullOrWhiteSpace(check.ChkVendor))
                     {
-                        throw new ArgumentNullException("Expected person record for: " + check.Recordkey);
+                        if (persons != null && persons.Any())
+                        {
+                            person = persons.FirstOrDefault(p => p.Recordkey == check.ChkVendor);
+                        }
+                        else
+                        {
+                            exception.AddError(
+                     new RepositoryError("Bad.Data", "Missing person record for Id '" + check.ChkVendor + "'.")
+                     {
+                         Id = check.RecordGuid,
+                         SourceId = check.Recordkey
+                     });
+                        }
                     }
-                    person = persons.FirstOrDefault(p => p.Recordkey == check.ChkVendor);
-                }
-
-                List<Vouchers> chkVouchers = null;
-                if (check.ChkVouchersIds != null && check.ChkVouchersIds.Any())
-                {
-                    chkVouchers = checkVouchers.Where(r => check.ChkVouchersIds.Contains(r.Recordkey)).ToList();
-
-                    if (chkVouchers == null)
+                    if (check.ChkVouchersIds != null && check.ChkVouchersIds.Any())
                     {
-                        throw new KeyNotFoundException(string.Concat("Records not found for voucher with id(s) :", string.Join(", ", check.ChkVouchersIds)));
+                        if (checkVouchers != null && checkVouchers.Any())
+                        {
+                            chkVouchers = checkVouchers.Where(r => check.ChkVouchersIds.Contains(r.Recordkey)).ToList();
+                            var itemsVouSubList = chkVouchers.Where(cv => cv.VouItemsId != null && cv.VouItemsId.Any())
+                       .SelectMany(cv => cv.VouItemsId).Distinct();
+                            itemsData = vouItems.Where(itm => itemsVouSubList.Contains(itm.Recordkey)).ToList();
+                        }
                     }
+                    paymentTransactionsCollection.Add(await BuildPaymentTransactionFromCheck(check, person, chkVouchers, itemsData));
+
                 }
-                paymentTransactionsCollection.Add(await BuildPaymentTransactionFromCheck(check, person, chkVouchers));
+            }
+            if (exception.Errors.Any())
+            {
+                throw exception;
             }
             return paymentTransactionsCollection.AsEnumerable();
         }
@@ -302,20 +555,32 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <param name="person">Person data contract</param>
         /// <returns>PaymentTransactions domain entity</returns>
         private async Task<PaymentTransaction> BuildPaymentTransactionFromVoucher(Vouchers voucher,
-            Ellucian.Colleague.Data.Base.DataContracts.Person person)
+            Ellucian.Colleague.Data.Base.DataContracts.Person person,
+            Dictionary<string, string> voucherGuidCollection,
+            IEnumerable<Items> itemsData)
         {
-            if (voucher == null)
+            PaymentTransaction paymentTransactionEntity = null;
+            var guid = string.Empty;
+            if (voucherGuidCollection == null)
             {
-                throw new KeyNotFoundException(string.Format("Voucher record does not exist."));
+                exception.AddError(
+                     new RepositoryError("GUID.Not.Found", "Could not find a GUID for payment transactions in VOUCHERS entity.")
+                     {
+                         SourceId = voucher.Recordkey
+                     });
             }
-
-            var guid = await GetGuidFromIdAsync("VOUCHERS", voucher.Recordkey, "VOU.PMT.TXN.INTG.IDX", voucher.Recordkey);
-
-            if (string.IsNullOrEmpty(guid))
+            else
             {
-                throw new KeyNotFoundException(string.Concat(@"Guid not found. Entity: 'VOUCHERS', Secondary Field: 'VOU.PMT.TXN.INTG.IDX' Record ID: '", voucher.Recordkey, "'"));
+                voucherGuidCollection.TryGetValue(voucher.Recordkey, out guid);
+                if (string.IsNullOrEmpty(guid))
+                {
+                    exception.AddError(
+                          new RepositoryError("GUID.Not.Found", "Could not find a GUID for payment transactions in VOUCHERS entity.")
+                          {
+                              SourceId = voucher.Recordkey
+                          });
+                }
             }
-
             // Translate the status code into a VoucherStatus enumeration value
             DateTime? voucherStatusDate = default(DateTime);
             DateTime? voidDate = default(DateTime);
@@ -327,120 +592,181 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 // Get the first status in the list of voucher statuses, and check that it has a value
                 if (voucherStatusEntity == null)
                 {
-                    throw new ApplicationException(string.Concat(@"Missing status,  Entity: 'VOUCHERS',  Record ID: '", voucher.Recordkey, "'"));
+                    exception.AddError(
+                     new RepositoryError("Bad.Data", "Missing status.")
+                     {
+                         Id = guid,
+                         SourceId = voucher.Recordkey
+                     });
                 }
+                else
+                {
+                    var voidPaymentTransaction = voucher.VoucherStatusEntityAssociation.FirstOrDefault(x => x.VouStatusAssocMember.ToUpper() == "V");
+                    var paidPaymentTransaction = voucher.VoucherStatusEntityAssociation.FirstOrDefault(x => x.VouStatusAssocMember.ToUpper() == "P");
 
-                var voidPaymentTransaction = voucher.VoucherStatusEntityAssociation.FirstOrDefault(x => x.VouStatusAssocMember.ToUpper() == "V");
-                var paidPaymentTransaction = voucher.VoucherStatusEntityAssociation.FirstOrDefault(x => x.VouStatusAssocMember.ToUpper() == "P");
-
-                if(paidPaymentTransaction != null && paidPaymentTransaction.VouStatusDateAssocMember.HasValue)
-                {
-                    voucherStatusDate = paidPaymentTransaction.VouStatusDateAssocMember;
-                }
-                if (voidPaymentTransaction != null)
-                {
-                    voidDate = voidPaymentTransaction.VouStatusDateAssocMember;
-                }
-
-                var vouStatus = voucherStatusEntity.VouStatusAssocMember;
-                if (vouStatus != null)
-                {
-                    voucherStatus = GetVoucherStatusVoucher(vouStatus, voucher.Recordkey);
-                }
-            }
-            var paymentTransactionEntity = new PaymentTransaction(voucher.Recordkey, guid, voucherStatusDate.Value);
-            paymentTransactionEntity.Check = false;
-            paymentTransactionEntity.VoucherStatus = voucherStatus;
-            paymentTransactionEntity.VoidDate = voidDate;
-          
-            var paymentMethod = PaymentMethod.NotSet;
-            if ((string.IsNullOrEmpty(voucher.VouArPayment)) && (voucher.VouArDepositItems == null))
-            {
-                paymentMethod = PaymentMethod.Creditcard;
-            }
-            else if (!string.IsNullOrEmpty(voucher.VouArPayment))
-            {
-                var arPayments = await DataReader.ReadRecordAsync<ArPayments>(voucher.VouArPayment);
-                if (!string.IsNullOrEmpty(arPayments.ArpOrigPayMethod))
-                {
-                    var paymentMethods = await DataReader.ReadRecordAsync<Base.DataContracts.PaymentMethods>(arPayments.ArpOrigPayMethod);
-                    paymentMethod =
-                        ((paymentMethods != null) && (paymentMethods.PmthCategory == "CC"))
-                            ? PaymentMethod.Creditcard : PaymentMethod.Debitcard;
-                }
-            }
-            else if ((voucher.VouArDepositItems != null) && (voucher.VouArDepositItems.Any()))
-            {
-                var depositItem = voucher.VouArDepositItems.Where(x => !string.IsNullOrEmpty(x)).FirstOrDefault();
-                if (!string.IsNullOrEmpty(depositItem))
-                {
-                    var arDepositItem = await DataReader.ReadRecordAsync<ArDepositItems>(depositItem);
-                    if (!string.IsNullOrEmpty(arDepositItem.ArdiOrigPayMethod))
+                    if (paidPaymentTransaction != null)
                     {
-                        var paymentMethods = await DataReader.ReadRecordAsync<Base.DataContracts.PaymentMethods>(arDepositItem.ArdiOrigPayMethod);
+                        if (paidPaymentTransaction.VouStatusDateAssocMember.HasValue)
+                        {
+                            voucherStatusDate = paidPaymentTransaction.VouStatusDateAssocMember;
+                        }
+                        else
+                        {
+                            //this is a required data field so throwing an exception here
+                            exception.AddError(
+                         new RepositoryError("Bad.Data", "Missing status date.")
+                         {
+                             Id = guid,
+                             SourceId = voucher.Recordkey
+                         });
+
+                        }
+                    }
+                    if (voidPaymentTransaction != null)
+                    {
+                        voidDate = voidPaymentTransaction.VouStatusDateAssocMember;
+                    }
+
+                    var vouStatus = voucherStatusEntity.VouStatusAssocMember;
+                    if (vouStatus != null)
+                    {
+                        voucherStatus = GetVoucherStatusVoucher(vouStatus);
+                    }
+                }
+            }
+            else
+            {
+                exception.AddError(
+                     new RepositoryError("Bad.Data", "Missing status.")
+                     {
+                         Id = guid,
+                         SourceId = voucher.Recordkey
+                     });
+            }
+            try
+            {
+                paymentTransactionEntity = new PaymentTransaction(voucher.Recordkey, guid, voucherStatusDate.Value);
+
+                paymentTransactionEntity.Check = false;
+                paymentTransactionEntity.VoucherStatus = voucherStatus;
+                paymentTransactionEntity.VoidDate = voidDate;
+                //add data from Items
+                var voucherInfo =await GetPaymentTransactionVouchers( voucher, itemsData);
+                if (voucherInfo != null)
+                {
+                    paymentTransactionEntity.AddVoucher(voucherInfo);                       
+                }
+                var paymentMethod = PaymentMethod.NotSet;
+                if ((string.IsNullOrEmpty(voucher.VouArPayment)) && (voucher.VouArDepositItems == null))
+                {
+                    paymentMethod = PaymentMethod.Creditcard;
+                }
+                else if (!string.IsNullOrEmpty(voucher.VouArPayment))
+                {
+                    var arPayments = await DataReader.ReadRecordAsync<ArPayments>(voucher.VouArPayment);
+                    if (arPayments != null && !string.IsNullOrEmpty(arPayments.ArpOrigPayMethod))
+                    {
+                        var paymentMethods = await DataReader.ReadRecordAsync<Base.DataContracts.PaymentMethods>(arPayments.ArpOrigPayMethod);
                         paymentMethod =
                             ((paymentMethods != null) && (paymentMethods.PmthCategory == "CC"))
                                 ? PaymentMethod.Creditcard : PaymentMethod.Debitcard;
                     }
                 }
-            }
-            paymentTransactionEntity.PaymentMethod = (paymentMethod == PaymentMethod.NotSet)
-                ? PaymentMethod.Creditcard : paymentMethod;
-
-            string[] eCommerceStrings = new string[] { voucher.VouEcommerceSession, voucher.VouEcommerceTransNo };
-            paymentTransactionEntity.ReferenceNumber = string.Join("-", eCommerceStrings
-                .Where(str => !string.IsNullOrEmpty(str)));
-
-            paymentTransactionEntity.HostCountry = await GetHostCountryAsync();
-
-            paymentTransactionEntity.Vendor = voucher.VouVendor;
-            if (person != null)
-            {
-                paymentTransactionEntity.IsOrganization = (person.PersonCorpIndicator == "Y");
-            }
-
-            paymentTransactionEntity.CurrencyCode = voucher.VouCurrencyCode;
-            paymentTransactionEntity.PaymentAmount = voucher.VouTotalAmt;
-
-            var miscName = new List<string>();
-            
-            if ((voucher.VouAltFlag == "Y") || (string.IsNullOrEmpty(voucher.VouVendor)))
-            {
-                miscName.AddRange(voucher.VouMiscName);
-                paymentTransactionEntity.Address = voucher.VouMiscAddress;
-                paymentTransactionEntity.State = voucher.VouMiscState;
-                paymentTransactionEntity.City = voucher.VouMiscCity;
-                paymentTransactionEntity.Zip = voucher.VouMiscZip;
-                paymentTransactionEntity.Country = voucher.VouMiscCountry;
-            }
-            else if (person != null)
-            {
-                if (person.PersonCorpIndicator == "Y")
+                else if ((voucher.VouArDepositItems != null) && (voucher.VouArDepositItems.Any()))
                 {
-                    miscName.Add(person.PreferredName);
-                }
-                else
-                    miscName.Add(string.Concat(person.FirstName, " ", person.LastName));
-
-                if (!(string.IsNullOrEmpty(person.PreferredAddress)))
-                {
-                    var prefAddress = await DataReader.ReadRecordAsync<Base.DataContracts.Address>(person.PreferredAddress);
-                    if (prefAddress != null)
+                    var depositItem = voucher.VouArDepositItems.Where(x => !string.IsNullOrEmpty(x)).FirstOrDefault();
+                    if (!string.IsNullOrEmpty(depositItem))
                     {
-                        paymentTransactionEntity.Address = prefAddress.AddressLines;
-                        paymentTransactionEntity.State = prefAddress.State;
-                        paymentTransactionEntity.City = prefAddress.City;
-                        paymentTransactionEntity.Zip = prefAddress.Zip;
-
+                        var arDepositItem = await DataReader.ReadRecordAsync<ArDepositItems>(depositItem);
+                        if (arDepositItem != null && !string.IsNullOrEmpty(arDepositItem.ArdiOrigPayMethod))
+                        {
+                            var paymentMethods = await DataReader.ReadRecordAsync<Base.DataContracts.PaymentMethods>(arDepositItem.ArdiOrigPayMethod);
+                            paymentMethod =
+                                ((paymentMethods != null) && (paymentMethods.PmthCategory == "CC"))
+                                    ? PaymentMethod.Creditcard : PaymentMethod.Debitcard;
+                        }
                     }
                 }
-            }
-            paymentTransactionEntity.MiscName = miscName;
-          
-            return paymentTransactionEntity;
-        }
+                paymentTransactionEntity.PaymentMethod = (paymentMethod == PaymentMethod.NotSet)
+                    ? PaymentMethod.Creditcard : paymentMethod;
 
-        private VoucherStatus? GetVoucherStatusCheck(string vouStatus, string recordKey)
+                string[] eCommerceStrings = new string[] { voucher.VouEcommerceSession, voucher.VouEcommerceTransNo };
+                paymentTransactionEntity.ReferenceNumber = string.Join("-", eCommerceStrings
+                    .Where(str => !string.IsNullOrEmpty(str)));
+
+                paymentTransactionEntity.HostCountry = await GetHostCountryAsync();
+
+                paymentTransactionEntity.Vendor = voucher.VouVendor;
+                if (person != null)
+                {
+                    paymentTransactionEntity.IsOrganization = (person.PersonCorpIndicator == "Y");
+                }
+
+                paymentTransactionEntity.CurrencyCode = voucher.VouCurrencyCode;
+                paymentTransactionEntity.PaymentAmount = voucher.VouTotalAmt;
+
+                var miscName = new List<string>();
+
+                if ((voucher.VouAltFlag == "Y") || (string.IsNullOrEmpty(voucher.VouVendor)))
+                {
+                    miscName.AddRange(voucher.VouMiscName);
+                    paymentTransactionEntity.Address = voucher.VouMiscAddress;
+                    paymentTransactionEntity.State = voucher.VouMiscState;
+                    paymentTransactionEntity.City = voucher.VouMiscCity;
+                    paymentTransactionEntity.Zip = voucher.VouMiscZip;
+                    paymentTransactionEntity.Country = voucher.VouMiscCountry;
+                }
+                else if (!string.IsNullOrEmpty(voucher.VouVendor))
+                    {
+                    if (person != null)
+                    {
+                        if (person.PersonCorpIndicator == "Y")
+                        {
+                            miscName.Add(person.PreferredName);
+                        }
+                        else
+                            miscName.Add(string.Concat(person.FirstName, " ", person.LastName));
+
+                        if (!(string.IsNullOrEmpty(person.PreferredAddress)))
+                        {
+                            var prefAddress = await DataReader.ReadRecordAsync<Base.DataContracts.Address>(person.PreferredAddress);
+                            if (prefAddress != null)
+                            {
+                                paymentTransactionEntity.Address = prefAddress.AddressLines;
+                                paymentTransactionEntity.State = prefAddress.State;
+                                paymentTransactionEntity.City = prefAddress.City;
+                                paymentTransactionEntity.Zip = prefAddress.Zip;
+
+                            }
+                        }
+                    }
+                    else
+                    {
+                        exception.AddError(
+                     new RepositoryError("Bad.Data", "Missing person record for Id '" + voucher.VouVendor + "'.")
+                     {
+                         Id = guid,
+                         SourceId = voucher.Recordkey
+                     });
+                    }
+                }
+                paymentTransactionEntity.MiscName = miscName;
+
+               
+            }
+            catch (Exception ex)
+            {
+                exception.AddError(
+                     new RepositoryError("Bad.Data", ex.Message)
+                     {
+                         Id = guid,
+                         SourceId = voucher.Recordkey
+                     });
+            }
+            return paymentTransactionEntity;
+        }   
+
+        private VoucherStatus? GetVoucherStatusCheck(string vouStatus)
         {
             VoucherStatus? voucherStatus;
             switch (vouStatus.ToUpper())
@@ -468,13 +794,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     break;
                 default:
                     // if we get here, we have corrupt data.
-                   throw new ApplicationException(string.Concat(@"Invalid status value 
-                        , Status: '" , vouStatus, "' Record ID: '", recordKey, "'"));
+                    voucherStatus = null;
+                    break;
             }
             return voucherStatus;
         }
 
-        private VoucherStatus? GetVoucherStatusVoucher(string vouStatus, string recordKey)
+        private VoucherStatus? GetVoucherStatusVoucher(string vouStatus)
         {
             VoucherStatus? voucherStatus;
             switch (vouStatus.ToUpper())
@@ -497,102 +823,160 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         }
 
         private async Task<PaymentTransaction> BuildPaymentTransactionFromCheck(Checks check,
-            Ellucian.Colleague.Data.Base.DataContracts.Person person, List<Vouchers> vouchers)
+            Ellucian.Colleague.Data.Base.DataContracts.Person person, List<Vouchers> vouchers, IEnumerable<Items> itemsData)
         {
-            if (check == null)
-            {
-                throw new KeyNotFoundException(string.Format("Check record does not exist."));
-            }
-
+            PaymentTransaction paymentTransactionEntity = null;
             // Translate the status code into a VoucherStatus enumeration value
             VoucherStatus? voucherStatus = null;
             DateTime? voucherStatusDate = default(DateTime);
             DateTime? voidDate = default(DateTime);
-            var voucherStatusEntity = check.ChkStatEntityAssociation.FirstOrDefault();
-
-            // Get the first status in the list of voucher statuses, and check that it has a value
-            if (voucherStatusEntity != null)
+            //status is required so this is a bad data situation
+            if (check.ChkStatEntityAssociation != null && check.ChkStatEntityAssociation.Any())
             {
-                var vouStatus = voucherStatusEntity.ChkStatusAssocMember;
-                if (vouStatus != null)
+                var voucherStatusEntity = check.ChkStatEntityAssociation.FirstOrDefault();
+
+                // Get the first status in the list of voucher statuses, and check that it has a value
+                if (voucherStatusEntity != null)
                 {
-                    voucherStatus = GetVoucherStatusCheck(vouStatus, check.Recordkey);
-                }              
-            }
-
-            var voidPaymentTransaction = check.ChkStatEntityAssociation.FirstOrDefault(x => x.ChkStatusAssocMember.ToUpper() == "V");
-            var paidPaymentTransaction = check.ChkStatEntityAssociation.FirstOrDefault(x => x.ChkStatusAssocMember.ToUpper() == "O");
-
-            if(paidPaymentTransaction != null && paidPaymentTransaction.ChkStatusDateAssocMember.HasValue)
-            {
-                voucherStatusDate = paidPaymentTransaction.ChkStatusDateAssocMember;
-            }
-
-            if (voidPaymentTransaction != null)
-            {
-                voidDate = voidPaymentTransaction.ChkStatusDateAssocMember;
-            }
-
-            var paymentTransactionEntity = new PaymentTransaction(check.Recordkey, check.RecordGuid, 
-                voucherStatusDate.HasValue ? Convert.ToDateTime(voucherStatusDate) : default(DateTime));
-
-            paymentTransactionEntity.VoucherStatus = voucherStatus;
-            paymentTransactionEntity.VoidDate = voidDate;
-            paymentTransactionEntity.HostCountry = await GetHostCountryAsync();
-            paymentTransactionEntity.Check = true;
-            paymentTransactionEntity.PaymentMethod = check.ChkEcheckFlag == "Y" 
-                ? PaymentMethod.Directdeposit : PaymentMethod.Check;  
-            paymentTransactionEntity.PaymentAmount = check.ChkAmount;
-            paymentTransactionEntity.Vendor = check.ChkVendor;
-        
-            if (check.ChkVouchersIds != null && check.ChkVouchersIds.Any())
-            {
-                if (vouchers == null)
-                {
-                    throw new ApplicationException(string.Concat(@"Unable to extract voucher records for ChkVouchersId, 
-                        Entity: 'CHECKS', Record ID: '", check.Recordkey, "'"));
-                }
-                var voucherAmountAndCurrency = new Dictionary<string, AmountAndCurrency>();
-                if (vouchers != null && vouchers.Any())
-                {
-                    foreach (var voucher in vouchers)
+                    var vouStatus = voucherStatusEntity.ChkStatusAssocMember;
+                    if (vouStatus != null)
                     {
-                        if (voucher.VouTotalAmt == 0)
-                            continue;
-                        CurrencyCodes currencyCode = CurrencyCodes.USD;
-                        switch (voucher.VouCurrencyCode)
-                        {
-                            case "CAD":
-                                currencyCode = CurrencyCodes.CAD; break;
-                            case "EUR":
-                                currencyCode = CurrencyCodes.EUR; break;
-                           default:
-                                currencyCode =  CurrencyCodes.USD; break;
-                        }
-
-                        var amountAndCurrency = new AmountAndCurrency(voucher.VouTotalAmt, currencyCode);
-
-                        voucherAmountAndCurrency.Add(voucher.Recordkey, amountAndCurrency);
+                        voucherStatus = GetVoucherStatusCheck(vouStatus);
+                    }
+                    if (voucherStatus == null)                    
+                    {
+                        exception.AddError(
+                    new RepositoryError("Bad.Data", "Invalid voucher status '" + vouStatus + "'")
+                    {
+                        Id = check.RecordGuid,
+                        SourceId = check.Recordkey
+                    });
                     }
                 }
-                paymentTransactionEntity.VoucherAmountAndCurrency = voucherAmountAndCurrency;
 
+                var voidPaymentTransaction = check.ChkStatEntityAssociation.FirstOrDefault(x => x.ChkStatusAssocMember.ToUpper() == "V");
+                var paidPaymentTransaction = check.ChkStatEntityAssociation.FirstOrDefault(x => x.ChkStatusAssocMember.ToUpper() == "O");
+
+                if (paidPaymentTransaction != null && paidPaymentTransaction.ChkStatusDateAssocMember.HasValue)
+                {
+                    voucherStatusDate = paidPaymentTransaction.ChkStatusDateAssocMember;
+                }
+
+                if (voidPaymentTransaction != null)
+                {
+                    voidDate = voidPaymentTransaction.ChkStatusDateAssocMember;
+                }
             }
-
-            if (person != null)
+            else
             {
-                paymentTransactionEntity.IsOrganization = (person.PersonCorpIndicator == "Y");
+                exception.AddError(
+                    new RepositoryError("Bad.Data", "Missing status.")
+                    {
+                        Id = check.RecordGuid,
+                        SourceId = check.Recordkey
+                    });
+            }
+            try
+            {
+                //chkDate is required by the model and it is required in Colleague so if it missing then it is a bad data issue. 
+                ///we can contiue creating the entity because it is not required by the entity.
+                
+                if (!check.ChkDate.HasValue)
+                {
+                    exception.AddError(
+                    new RepositoryError("Bad.Data", "Missing check Date.")
+                    {
+                        Id = check.RecordGuid,
+                        SourceId = check.Recordkey
+                    });
+                }
+
+                paymentTransactionEntity = new PaymentTransaction(check.Recordkey, check.RecordGuid,
+                   check.ChkDate.HasValue ? Convert.ToDateTime(check.ChkDate) : default(DateTime));
+                paymentTransactionEntity.VoucherStatus = voucherStatus;
+                paymentTransactionEntity.VoidDate = voidDate;
+                paymentTransactionEntity.HostCountry = await GetHostCountryAsync();
+                paymentTransactionEntity.Check = true;
+                paymentTransactionEntity.PaymentMethod = check.ChkEcheckFlag == "Y"
+                    ? PaymentMethod.Directdeposit : PaymentMethod.Check;
+                paymentTransactionEntity.PaymentAmount = check.ChkAmount;
+                paymentTransactionEntity.Vendor = check.ChkVendor;
+
+                if (check.ChkVouchersIds != null && check.ChkVouchersIds.Any())
+                {
+                    var voucherAmountAndCurrency = new Dictionary<string, AmountAndCurrency>();
+                    if (vouchers != null && vouchers.Any())
+                    {
+                        foreach (var voucher in vouchers)
+                        {                            
+                            try
+                            {
+                                var voucherInfo = await GetPaymentTransactionVouchers(voucher, itemsData);
+                                if (voucherInfo != null)
+                                {
+                                    paymentTransactionEntity.AddVoucher(voucherInfo);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                exception.AddError(
+                            new RepositoryError("Bad.Data", ex.Message + " for voucher with Id '" + voucher.Recordkey + "'.")
+                            {
+                                Id = check.RecordGuid,
+                                SourceId = check.Recordkey
+                            });
+                            }
+
+                        }
+                    }
+                    else
+                    {
+                        exception.AddError(
+                            new RepositoryError("Bad.Data", "Unable to extract voucher records '" + check.ChkVouchersIds.FirstOrDefault() + "' for check vouchers.")
+                            {
+                                Id = check.RecordGuid,
+                                SourceId = check.Recordkey
+                            });
+                    }
+                }
+
+                if (person != null)
+                {
+                    paymentTransactionEntity.IsOrganization = (person.PersonCorpIndicator == "Y");
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(check.ChkVendor))
+                    {
+                        exception.AddError(
+                            new RepositoryError("Bad.Data", "Person Id " + check.ChkVendor + " is not returning any data. Person may be corrupted.")
+                            {
+                                Id = check.RecordGuid,
+                                SourceId = check.Recordkey
+                            });
+                    }
+                }
+
+                paymentTransactionEntity.CurrencyCode = check.ChkCurrencyCode;
+
+                paymentTransactionEntity.MiscName = check.ChkMiscName;
+                paymentTransactionEntity.Address = check.ChkAddress;
+                paymentTransactionEntity.City = check.ChkCity;
+                paymentTransactionEntity.State = check.ChkState;
+                paymentTransactionEntity.Zip = check.ChkZip;
+                paymentTransactionEntity.Country = check.ChkCountry;
+            }
+            catch (Exception ex)
+            {
+                exception.AddError(
+                     new RepositoryError("Bad.Data", ex.Message)
+                     {
+                         Id = check.RecordGuid,
+                         SourceId = check.Recordkey
+                     });
             }
 
-            paymentTransactionEntity.CurrencyCode = check.ChkCurrencyCode;
 
-            paymentTransactionEntity.MiscName = check.ChkMiscName;
-            paymentTransactionEntity.Address = check.ChkAddress;
-            paymentTransactionEntity.City = check.ChkCity;
-            paymentTransactionEntity.State = check.ChkState;
-            paymentTransactionEntity.Zip = check.ChkZip;
-            paymentTransactionEntity.Country = check.ChkCountry;
-            
             return paymentTransactionEntity;
         }
 
@@ -607,21 +991,220 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return _internationalParameters.HostCountry;
         }
 
-        /// <summary>
-        /// Return a GUID for an Entity and Record Key
-        /// </summary>
-        /// <param name="entity">Entity Name</param>
-        /// <param name="id">Record Key</param>
-        /// <returns>GUID associated to the entity and key</returns>
-        public async Task<string> GetGuidFromIdAsync(string entity, string id, string secondaryField = "", string secondaryKey = "")
+        private async Task<PaymentTransactionVoucher> GetPaymentTransactionVouchers(Vouchers voucher, IEnumerable<Items> lineItemRecords)
         {
-            var criteria = string.Format("WITH LDM.GUID.ENTITY = '{0}' AND WITH LDM.GUID.PRIMARY.KEY = '{1}' AND WITH LDM.GUID.SECONDARY.FLD = '{2}' AND WITH LDM.GUID.SECONDARY.KEY = '{3}'", entity, id, secondaryField, secondaryKey);
-            var ldmGuid = await DataReader.SelectAsync("LDM.GUID", criteria);
-            if (ldmGuid != null && ldmGuid.Any())
+            var voucherEntity = new PaymentTransactionVoucher(voucher.RecordGuid, voucher.Recordkey);
+
+            if (voucher != null)
             {
-                return ldmGuid.ElementAt(0).ToString();
+                CurrencyCodes currencyCode = CurrencyCodes.USD;
+                switch (voucher.VouCurrencyCode)
+                {
+                    case "CAD":
+                        currencyCode = CurrencyCodes.CAD; break;
+                    case "EUR":
+                        currencyCode = CurrencyCodes.EUR; break;
+                    default:
+                        currencyCode = CurrencyCodes.USD; break;
+                }
+                if (voucher.VouTotalAmt != 0)
+                { 
+                    var amountAndCurrency = new AmountAndCurrency(voucher.VouTotalAmt, currencyCode);
+                    voucherEntity.VoucherInvoiceAmt = amountAndCurrency;                    
+                }
+                
+                //save PO Id
+                if (!string.IsNullOrEmpty(voucher.VouPoNo))
+                {
+                    voucherEntity.PurchaseOrderId = voucher.VouPoNo;
+                }
+                //save recurring voucher Id
+                if (!string.IsNullOrEmpty(voucher.VouRcvsId))
+                {
+                    voucherEntity.RecurringVoucherId = voucher.VouRcvsId;
+                }
+                //save BPO Id
+                if (!string.IsNullOrEmpty(voucher.VouBpoId))
+                {
+                    voucherEntity.BlanketPurchaseOrderId = voucher.VouBpoId;
+                }
+                if (voucher.VouItemsId != null && voucher.VouItemsId.Any())
+                {
+                    foreach( var item in voucher.VouItemsId)
+                    {
+                        var itemData = lineItemRecords.FirstOrDefault(line => line.Recordkey == item);
+                        if( itemData != null)
+                        {
+                            var itemEntity = GetLineItem(itemData);
+                            if (itemEntity != null)
+                            {
+                                voucherEntity.AddAccountsPayableInvoicesLineItem(itemEntity);
+
+                            }
+                        }
+                        else
+                        {
+                            throw new RepositoryException(string.Format("Error occured while getting items record for id '{0}'", item)); ;
+                        }
+                    }
+                }                
             }
-            return string.Empty;
+
+            return voucherEntity;
+
+        }
+
+        /// <summary>
+        /// Get AccountsPayableInvoicesLineItem
+        /// </summary>
+        /// <param name="lineItem">Items data contract</param>
+        /// <param name="currencyCode">line amount subtotal including tax</param>
+        /// <returns>Tuple containing an AccountsPayableInvoicesLineItem and amout subtotal</returns>
+        private AccountsPayableInvoicesLineItem GetLineItem(Items lineItem)
+        {
+            // The item description is a list of strings                     
+            string itemDescription = string.Empty;
+            foreach (var desc in lineItem.ItmDesc)
+            {
+                if (lineItem.ItmDesc.Count() > 1)
+                {
+                    // If it is not a blank line, added it to the string.
+                    // We are going to display all description as it if were one paragraph
+                    // even if the user entered it in different paragraphs.
+                    if (desc.Length > 0)
+                    {
+                        itemDescription += desc + ' ';
+                    }
+                }
+                else
+                {
+                    // If the line item description is just one line, don't add a space at the end of it.
+                    itemDescription = desc;
+                }
+            }
+            if (string.IsNullOrEmpty(itemDescription))
+            {
+                itemDescription = "Unknown";
+            }
+
+            decimal itemQuantity = lineItem.ItmVouQty ?? 0;
+            decimal itemPrice = lineItem.ItmVouPrice ?? 0;
+            decimal itemExtendedPrice = lineItem.ItmVouExtPrice ?? 0;
+            var lineItemDomainEntity = new AccountsPayableInvoicesLineItem(lineItem.Recordkey, itemDescription, itemQuantity, itemPrice, itemExtendedPrice);     
+            return lineItemDomainEntity;
+        }
+
+        /// <summary>
+        /// Using a collection of voucher ids, get a dictionary collection of associated secondary guids on VOU.PMT.TXN.INTG.IDX
+        /// </summary>
+        /// <param name="ids">collection of  ids</param>
+        /// <returns>Dictionary consisting of a ids (key) and guids (value)</returns>
+        public async Task<Dictionary<string, string>> GetPaymentTransactionsGuidsCollectionAsync(IEnumerable<string> ids, string filename)
+        {
+            if ((ids == null) || (ids != null && !ids.Any()))
+            {
+                return new Dictionary<string, string>();
+            }
+            var guidCollection = new Dictionary<string, string>();
+
+            try
+            {
+                var guidLookup = ids
+                   .Where(s => !string.IsNullOrWhiteSpace(s))
+                   .Distinct().ToList()
+                   .ConvertAll(p => new RecordKeyLookup(filename, p, "VOU.PMT.TXN.INTG.IDX", p, false)).ToArray();
+
+                var recordKeyLookupResults = await DataReader.SelectAsync(guidLookup);
+
+                if ((recordKeyLookupResults != null) && (recordKeyLookupResults.Any()))
+                {
+                    foreach (var recordKeyLookupResult in recordKeyLookupResults)
+                    {
+                        if (recordKeyLookupResult.Value != null)
+                        {
+                            var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                            if (!guidCollection.ContainsKey(splitKeys[1]))
+                            {
+                                guidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format("Error occured while getting guids for {0}.", filename), ex); ;
+            }
+
+            return guidCollection;
+        }
+
+        /// <summary>
+        /// Using a collection of purchase-order guids, 
+        /// </summary>
+        /// <param name="ids">collection of  ids</param>
+        /// <returns>Dictionary consisting of a ids (key) and guids (value)</returns>
+        public async Task<Dictionary<string, string>> GetGuidsCollectionAsync(IEnumerable<string> ids, string filename)
+        {
+            if ((ids == null) || (ids != null && !ids.Any()))
+            {
+                return new Dictionary<string, string>();
+            }
+            var guidCollection = new Dictionary<string, string>();
+
+            try
+            {
+                var guidLookup = ids
+                   .Where(s => !string.IsNullOrWhiteSpace(s))
+                   .Distinct().ToList()
+                   .ConvertAll(p => new RecordKeyLookup(filename, p,false)).ToArray();
+
+                var recordKeyLookupResults = await DataReader.SelectAsync(guidLookup);
+
+                if ((recordKeyLookupResults != null) && (recordKeyLookupResults.Any()))
+                {
+                    foreach (var recordKeyLookupResult in recordKeyLookupResults)
+                    {
+                        if (recordKeyLookupResult.Value != null)
+                        {
+                            var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                            if (!guidCollection.ContainsKey(splitKeys[1]))
+                            {
+                                guidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format("Error occured while getting guids for {0}.", filename), ex); ;
+            }
+
+            return guidCollection;
+        }
+
+
+        /// <summary>
+        /// Get id from Guid
+        /// </summary>
+        /// <param name="guid">guid</param>
+        /// <returns>id</returns>
+        public async Task<string> GetIdFromGuidAsync(string guid, string entity)
+        {
+            string id = string.Empty;
+            try
+            {
+                var guidRec = await GetRecordInfoFromGuidAsync(guid);
+                if (guidRec != null && guidRec.Entity == entity && string.IsNullOrEmpty(guidRec.SecondaryKey))
+                {
+                    id = guidRec.PrimaryKey;
+                }
+            }
+            catch
+            { }
+            return id;
+            
         }
     }
 }

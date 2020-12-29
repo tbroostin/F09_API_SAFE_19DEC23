@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using Ellucian.Colleague.Dtos;
@@ -142,7 +142,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="person">The <see cref="Dtos.Base.PersonMatchCriteria">criteria</see> to query by.</param>
         /// <returns>List of matching <see cref="Dtos.Base.PersonMatchResult">results</see></returns>
         Task<IEnumerable<Dtos.Base.PersonMatchResult>> QueryPersonMatchResultsByPostAsync(Dtos.Base.PersonMatchCriteria criteria);
-                
+
         /// <summary>
         /// Get HEDM V6 person data associated to the specified filters
         /// </summary>
@@ -365,6 +365,13 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="status"></param>
         /// <param name="country"></param>
         Task<string> CheckCitizenshipfields(Dtos.DtoProperties.PersonCitizenshipDtoProperty newStatus, string newCountry, Dtos.DtoProperties.PersonCitizenshipDtoProperty oldStatus, string oldCountry);
+
+        /// <summary>
+        /// A method to check the citizenship fields in an incoming DTO
+        /// </summary>
+        /// <param name="status"></param>
+        /// <param name="country"></param>
+        Task CheckCitizenshipfields2(Dtos.DtoProperties.PersonCitizenshipDtoProperty newStatus, string newCountry, Dtos.DtoProperties.PersonCitizenshipDtoProperty oldStatus, string oldCountry, string personGuid = "");
 
         /// <summary>
         /// A method that returns first name, last name and an email address based on the current hierarchy

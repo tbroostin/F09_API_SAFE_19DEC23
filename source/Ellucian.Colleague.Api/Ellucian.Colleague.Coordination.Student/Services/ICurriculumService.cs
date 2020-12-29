@@ -1,10 +1,8 @@
-﻿// Copyright 2014-2017 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Linq;
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
-using Ellucian.Colleague.Dtos.Student;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Web.Http.EthosExtend;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {

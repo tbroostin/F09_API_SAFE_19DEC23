@@ -1,43 +1,37 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates
-
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Net;
-using System.Runtime.Serialization;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Web.Http;
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Colleague.Dtos;
+using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Dtos.Student;
-using Ellucian.Web.Adapters;
+using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Filters;
+using Ellucian.Web.Http.ModelBinding;
+using Ellucian.Web.Http.Models;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
-using slf4net;
-using Ellucian.Web.Http;
-using Ellucian.Web.Http.Models;
 using Newtonsoft.Json;
+using slf4net;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Web.Http;
+using System.Web.Http.ModelBinding;
 using Section = Ellucian.Colleague.Dtos.Student.Section;
 using Section2 = Ellucian.Colleague.Dtos.Student.Section2;
 using Section3 = Ellucian.Colleague.Dtos.Student.Section3;
-using Ellucian.Web.Http.ModelBinding;
-using System.Web.Http.ModelBinding;
-using System.Net.Http;
-using Newtonsoft.Json.Linq;
-using Ellucian.Colleague.Dtos.Converters;
-using Ellucian.Colleague.Dtos;
-using Ellucian.Colleague.Dtos.Base;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -52,6 +46,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         private readonly ISectionCoordinationService _sectionCoordinationService;
         private readonly ISectionRegistrationService _sectionRegistrationService;
         private readonly IRegistrationGroupService _registrationGroupService;
+        private readonly ICourseService _courseService;
         private readonly ILogger _logger;
 
         /// <summary>
@@ -60,15 +55,18 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="sectionCoordinationService">Service of type <see cref="ISectionCoordinationService">ISectionCoordinationService</see></param>
         /// <param name="sectionRegistrationService">Service of type <see cref="ISectionRegistrationService">ISectionRegistrationService</see></param>
         /// <param name="registrationGroupService">Service of type <see cref="IRegistrationGroupService">IRegistrationGroupService</see></param>
+        /// <param name="courseService">Service of type <see cref="ICourseService">courseService</see></param>
         /// <param name="logger">Logger of type <see cref="ILogger">ILogger</see></param>
         public SectionsController(ISectionCoordinationService sectionCoordinationService,
             ISectionRegistrationService sectionRegistrationService,
             IRegistrationGroupService registrationGroupService,
+            ICourseService courseService,
             ILogger logger)
         {
             _sectionCoordinationService = sectionCoordinationService;
             _sectionRegistrationService = sectionRegistrationService;
             _registrationGroupService = registrationGroupService;
+            _courseService = courseService;
             _logger = logger;
         }
 
@@ -205,6 +203,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 var privacyWrapper = await _sectionCoordinationService.GetSection3Async(sectionId, useCache);
                 var sectionDto = privacyWrapper.Dto as Ellucian.Colleague.Dtos.Student.Section3;
+
                 if (privacyWrapper.HasPrivacyRestrictions)
                 {
                     System.Web.HttpContext.Current.Response.AppendHeader("X-Content-Restricted", "partial");
@@ -229,10 +228,83 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         }
 
         /// <summary>
+        /// Retrieves information about faculty member indications that grading is complete for the section.
+        /// </summary>
+        /// <param name="sectionId">Id of the section</param>
+        /// <returns>The requested <see cref="Dtos.Student.SectionMidtermGradingComplete">section grading completion indication information</see></returns>
+        ///  <accessComments>
+        /// Only an a faculty member assigned to the section may retrieve midterm grading completion information for a section.
+        /// </accessComments>
+        public async Task<SectionMidtermGradingComplete> GetSectionMidtermGradingCompleteAsync([FromUri] string sectionId)
+        {
+            try
+            {
+                var sectionCompleteDto = await _sectionCoordinationService.GetSectionMidtermGradingCompleteAsync(sectionId);
+                return sectionCompleteDto;
+            }
+            catch (PermissionsException pex)
+            {
+                _logger.Error(pex, pex.Message);
+                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException exception)
+            {
+                _logger.Error(exception, exception.Message);
+                throw CreateHttpResponseException(exception.Message, HttpStatusCode.BadRequest);
+            }
+            catch (Exception exception)
+            {
+                _logger.Error(exception, exception.Message);
+                throw CreateHttpResponseException(exception.Message, HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Adds an indication that midterm grading is complete for one section and midterm grade number.
+        /// </summary>
+        /// <param name="sectionId">Section ID</param>
+        /// <param name="postInfo">Attributes of the midterm grading complete indication to be posted</param>
+        /// <returns>The requested <see cref="Dtos.Student.SectionMidtermGradingComplete">section grading completion indication information</see></returns>
+        /// <accessComments>
+        /// A user with UPDATE.GRADES permission or a faculty member assigned to the section can indicate that midterm grading is complete.
+        /// </accessComments>
+        public async Task<SectionMidtermGradingComplete> PostSectionMidtermGradingCompleteAsync([FromUri] string sectionId, [FromBody] SectionMidtermGradingCompleteForPost postInfo)
+        {
+            try
+            {
+                var sectionCompleteDto = await _sectionCoordinationService.PostSectionMidtermGradingCompleteAsync(sectionId, postInfo);
+                return sectionCompleteDto;
+            }
+            catch (PermissionsException pex)
+            {
+                _logger.Error(pex, pex.Message);
+                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException exception)
+            {
+                _logger.Error(exception, exception.Message);
+                throw CreateHttpResponseException(exception.Message, HttpStatusCode.BadRequest);
+            }
+            catch (ArgumentException exception)
+            {
+                _logger.Error(exception, exception.Message);
+                throw CreateHttpResponseException(exception.Message, HttpStatusCode.BadRequest);
+            }
+            catch (Exception exception)
+            {
+                _logger.Error(exception, exception.Message);
+                throw CreateHttpResponseException(exception.Message, HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
         /// Retrieves roster information for a course section.
         /// </summary>
         /// <param name="sectionId">ID of the course section for which roster students will be retrieved</param>
         /// <returns>All <see cref="RosterStudent">students</see> in the course section</returns>
+        /// <accessComments>
+        /// Requestor must be registered student or assigned faculty member for section.
+        /// </accessComments>
         [ParameterSubstitutionFilter]
         [Obsolete("Obsolete as of Api version 1.19, use version 2 of this API")]
         public async Task<IEnumerable<RosterStudent>> GetSectionRosterAsync(string sectionId)
@@ -260,6 +332,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="sectionId">Course section ID</param>
         /// <returns>A course roster</returns>
+        /// <accessComments>
+        /// Requestor must be registered student or assigned faculty member for section.
+        /// </accessComments>
         [ParameterSubstitutionFilter]
         public async Task<SectionRoster> GetSectionRoster2Async(string sectionId)
         {
@@ -278,6 +353,177 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (Exception e)
             {
                 throw CreateHttpResponseException(e.Message);
+            }
+        }
+
+
+        /// <summary>
+        /// Retrieves the waitlists for a given course sections ID. 
+        /// </summary>
+        /// <param name="sectionId">Course section ID</param>
+        /// <returns>Section waitlist</returns>
+        /// <accessComments>
+        /// You must be an assigned faculty for the course section to retrieve section waitlist information. 
+        /// </accessComments>
+        [ParameterSubstitutionFilter]
+        public async Task<SectionWaitlist> GetSectionWaitlistAsync(string sectionId)
+        {
+            try
+            {
+                return await _sectionCoordinationService.GetSectionWaitlistAsync(sectionId);
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.Message);
+                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+            }
+            catch (PermissionsException pex)
+            {
+                _logger.Error(pex.Message);
+                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.Message);
+                throw CreateHttpResponseException("Error retrieving section waitlists.", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the waitlist section setting for a given course sections ID. 
+        /// </summary>
+        /// <param name="sectionId">Course section ID</param>
+        /// <returns>Section waitlist config</returns>
+        /// <accessComments>
+        /// You must be an assigned faculty for the course section to retrieve section waitlist information. 
+        /// </accessComments>
+        [ParameterSubstitutionFilter]
+        public async Task<SectionWaitlistConfig> GetSectionWaitlistConfigAsync(string sectionId)
+        {
+            try
+            {
+                return await _sectionCoordinationService.GetSectionWaitlistConfigAsync(sectionId);
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.Message);
+                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+            }
+            catch (PermissionsException pex)
+            {
+                _logger.Error(pex.Message);
+                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.Message);
+                throw CreateHttpResponseException("Error retrieving section waitlist Settings.", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the waitlist details and student id for a given course sections ID. 
+        /// </summary>
+        /// <param name="sectionId">Course section ID</param>
+        /// <returns>List of Section waitlist student</returns>
+        /// <accessComments>
+        /// You must be an assigned faculty for the course section to retrieve section waitlist information. 
+        /// </accessComments>
+        [ParameterSubstitutionFilter]
+        public async Task<IEnumerable<SectionWaitlistStudent>> GetSectionWaitlist2Async(string sectionId)
+        {
+            try
+            {
+                return await _sectionCoordinationService.GetSectionWaitlist2Async(sectionId);
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.Message);
+                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+            }
+            catch (PermissionsException pex)
+            {
+                _logger.Error(pex.Message);
+                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.Message);
+                throw CreateHttpResponseException("Error retrieving section waitlists.", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the various waitlist statuses 
+        /// </summary>    
+        /// <returns>List of StudentWaitlistStatus</returns>
+        [ParameterSubstitutionFilter]
+        public async Task<IEnumerable<StudentWaitlistStatus>> GetStudentWaitlistStatusesAsync()
+        {
+            try
+            {
+                return await _sectionCoordinationService.GetStudentWaitlistStatusesAsync();
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.Message);
+                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+            }
+            catch (PermissionsException pex)
+            {
+                _logger.Error(pex.Message);
+                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.Message);
+                throw CreateHttpResponseException("Error retrieving waitlist statuses.", HttpStatusCode.BadRequest);
+            }
+        }
+
+        
+
+        /// <summary>
+        /// Retrieves the waitlist details for a given course Section Id and Student Id. 
+        /// </summary>
+        /// <param name="sectionId">Course section ID</param>
+        /// <param name="studentId">student ID</param>
+        /// <returns><see cref="StudentSectionWaitlistInfo"> StudentSectionWaitlistInfo </see> object</returns> 
+        /// <accessComments>
+        /// Section waitlist information can only be retrieved by the student.
+        /// 1. A Student is accessing their own data,
+        /// 3. An Advisor with any of the following permissions is accessing any student
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 4. An Advisor with any of the following permissions is accessing one of his or her assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// </accessComments>
+        [ParameterSubstitutionFilter]
+        public async Task<StudentSectionWaitlistInfo> GetStudentSectionWaitlistsByStudentAndSectionIdAsync(string sectionId, string studentId)
+        {
+            try
+            {
+                return await _sectionCoordinationService.GetStudentSectionWaitlistsByStudentAndSectionIdAsync(sectionId, studentId);
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.Message);
+                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+            }
+            catch (PermissionsException pex)
+            {
+                _logger.Error(pex.Message);
+                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.Message);
+                throw CreateHttpResponseException("Error retrieving student section waitlist details.", HttpStatusCode.BadRequest);
             }
         }
 
@@ -1676,6 +1922,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// "status" - Section Status matches closed, open, pending, or cancelled
         /// "owningInstitutionUnits" - Section Department equal to (guid) [renamed from owningOrganizations in v8]
         /// <returns>List of Section6 <see cref="Dtos.Section6"/> objects representing matching sections</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, FilteringFilter(IgnoreFiltering = true)]
         [ValidateQueryStringFilter()]
         [QueryStringFilterFilter("criteria", typeof(Dtos.Section6))]
@@ -1765,7 +2012,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 }
 
                 if (CheckForEmptyFilterParameters())
-                    return new PagedHttpActionResult<IEnumerable<Dtos.Section5>>(new List<Dtos.Section5>(), page, 0, this.Request);
+                    return new PagedHttpActionResult<IEnumerable<Dtos.Section6>>(new List<Dtos.Section6>(), page, 0, this.Request);
 
                 var pageOfItems = await _sectionCoordinationService.GetSections6Async(page.Offset, page.Limit,
                     title, startOn, endOn, code, number, instructionalPlatform, academicPeriod, reportingAcademicPeriod, academicLevels,
@@ -1829,6 +2076,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired section</param>
         /// <returns>A section object <see cref="Dtos.Section6"/> in HeDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         public async Task<Dtos.Section6> GetHedmSectionByGuid6Async(string guid)
         {
@@ -1891,6 +2139,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="section">DTO of the new section</param>
         /// <returns>A section object <see cref="Dtos.Section6"/> in HeDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPost, EedmResponseFilter]
         public async Task<Dtos.Section6> PostHedmSection6Async([ModelBinder(typeof(EedmModelBinder))] Dtos.Section6 section)
         {
@@ -1933,10 +2182,15 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
                 return sectionReturn;
             }
+            catch (ApplicationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.BadRequest);
+            }
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -1971,6 +2225,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID of the section to update</param>
         /// <param name="section">DTO of the updated section</param>
         /// <returns>A section object <see cref="Dtos.Section6"/> in HeDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPut, EedmResponseFilter]
         public async Task<Dtos.Section6> PutHedmSection6Async([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.Section6 section)
         {
@@ -2070,10 +2325,15 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
                 return sectionReturn;
             }
+            catch (ApplicationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.BadRequest);
+            }
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -2158,12 +2418,15 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
         }
 
-       
+
 
         /// <summary>
         /// Puts a collection of student section grades.
         /// </summary>
-        /// <returns><see cref="Dtos.Student.Grade">StudentSectionGradeResponse</see></returns>
+        /// <returns><see cref="SectionGradeResponse">StudentSectionGradeResponse</see></returns>
+        /// <accessComments>
+        /// A user with UPDATE.GRADES permission can update student grades for the given section.
+        /// </accessComments>
         [Obsolete("Obsolete , use version 2 of this API")]
         public async Task<IEnumerable<SectionGradeResponse>> PutCollectionOfStudentGradesAsync([FromUri] string sectionId, [FromBody] SectionGrades sectionGrades)
         {
@@ -2218,7 +2481,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <summary>
         /// Puts a collection of student section grades.
         /// </summary>
-        /// <returns><see cref="Dtos.Student.Grade">StudentSectionGradeResponse</see></returns>
+        /// <returns><see cref="SectionGradeResponse">StudentSectionGradeResponse</see></returns>
+        /// <accessComments>
+        /// A user with UPDATE.GRADES permission can update student grades for the given section.
+        /// </accessComments>
         [Obsolete("Obsolete as of Api version 1.12, use version 3 of this API")]
         public async Task<IEnumerable<SectionGradeResponse>> PutCollectionOfStudentGrades2Async([FromUri] string sectionId, [FromBody] SectionGrades2 sectionGrades)
         {
@@ -2275,6 +2541,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="sectionId">Section ID</param>
         /// <param name="sectionGrades">DTO of section grade information</param>
         /// <returns><see cref="Dtos.Student.Grade">StudentSectionGradeResponse</see></returns>
+        /// <accessComments>
+        /// A user with UPDATE.GRADES permission or assigned faculty on a section can update students grades for the given section.
+        /// </accessComments>
         [Obsolete("Obsolete as of Api version 1.13, use version 4 for non-ILP callers, or version 1 of the json ILP header for ILP callers")]
         public async Task<IEnumerable<SectionGradeResponse>> PutCollectionOfStudentGrades3Async([FromUri] string sectionId, [FromBody] SectionGrades3 sectionGrades)
         {
@@ -2331,6 +2600,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="sectionId">Section ID</param>
         /// <param name="sectionGrades">DTO of section grade information</param>
         /// <returns><see cref="Dtos.Student.Grade">StudentSectionGradeResponse</see></returns>
+        /// <accessComments>
+        /// A user with UPDATE.GRADES permission or assigned faculty on a section can update students grades for the given section.
+        /// </accessComments>
         public async Task<IEnumerable<SectionGradeResponse>> PutCollectionOfStudentGrades4Async([FromUri] string sectionId, [FromBody] SectionGrades3 sectionGrades)
         {
             try
@@ -2438,12 +2710,31 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <summary>
         /// Query by post method used to get the section registration date overrides for any of the specified section Ids based on the registration group of the person making the request. 
         /// </summary>
-        /// <param name="criteria">DTO Object that contains the list of Section ids for which registration dates are requested.</param>
-        /// <returns><see cref="SectionRegistrationDate">SectionRegistrationDate</see> DTOs.</returns>
+        /// <param name="criteria">DTO Object that contains the list of Section ids for which registration dates are requested and the considerUsersgroup boolean variable to decide if the persons registration group should be considered or not</param>
+        /// <returns><see cref="SectionRegistrationDate">SectionRegistrationDate</see> DTOs.</returns> 
+        /// <accessComments>
+        /// 1.Requestor must be assigned faculty member for section.   
+        /// 2. A Student is accessing their own data,
+        /// 3. An Advisor with any of the following permissions is accessing any student
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 4. An Advisor with any of the following permissions is accessing one of his or her assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// </accessComments>
         [HttpPost]
         public async Task<IEnumerable<SectionRegistrationDate>> QuerySectionRegistrationDatesAsync([FromBody] SectionDateQueryCriteria criteria)
         {
+            if(criteria == null)
+            {
+                throw new ArgumentException("SectionDateQueryCriteria", "Section Date Query Criteria cannot be null");
+            }
             IEnumerable<string> sectionIds = criteria.SectionIds;
+            bool considerUsersGroup = criteria.ConsiderUsersGroup;
 
             if (sectionIds == null || sectionIds.Count() == 0)
             {
@@ -2453,7 +2744,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
-                return await _registrationGroupService.GetSectionRegistrationDatesAsync(sectionIds);
+                return await _registrationGroupService.GetSectionRegistrationDatesAsync(sectionIds, considerUsersGroup);
 
             }
             catch (Exception e)
@@ -2513,6 +2804,31 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
             }
         }
-       
+
+        /// <summary>
+        /// Performs a search of sections in Colleague that are available for registration. 
+        /// The criteria supplies a keyword, course Ids, section Id and various filters which may be used to search and narrow a list of sections.
+        ///     If keyword is null or empty and there are no course Ids or section Ids, then no sections will be returned.
+        /// </summary> 
+        /// <param name="criteria"><see cref="SectionSearchCriteria">Section search criteria</see></param>
+        /// <param name="pageSize">integer page size</param>
+        /// <param name="pageIndex">integer page index</param>
+        /// <returns>A <see cref="SectionPage">page</see> of sections matching criteria with totals and filter information.</returns>
+        /// <accessComments>Section search can be accessed by any authenticated user or guest user.</accessComments>
+        public async Task<SectionPage> PostSectionSearchAsync([FromBody]SectionSearchCriteria criteria, int pageSize, int pageIndex)
+        {
+            criteria.Keyword = criteria.Keyword != null ? criteria.Keyword.Replace("_~", "/") : null;
+
+            try
+            {
+                SectionPage sectionPage = await _courseService.SectionSearchAsync(criteria, pageSize, pageIndex);
+                return sectionPage;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString() + ex.StackTrace);
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+            }
+        }
     }
 }

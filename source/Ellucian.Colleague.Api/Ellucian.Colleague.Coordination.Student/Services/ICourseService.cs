@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Dtos.Student;
@@ -52,6 +52,23 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         Task<CoursePage2> Search2Async(CourseSearchCriteria criteria, int pageSize, int pageIndex);
         Task<IEnumerable<Dtos.Student.Course>> GetCoursesByIdAsync(IEnumerable<string> courseIds);
+        /// <summary>
+        /// Instant Enrollment Course Search
+        /// </summary>
+        /// <param name="criteria"></param>
+        /// <param name="pageSize"></param>
+        /// <param name="pageIndex"></param>
+        /// <returns></returns>
+        Task<SectionPage> InstantEnrollmentSearchAsync(InstantEnrollmentCourseSearchCriteria criteria, int pageSize, int pageIndex);
+
+        /// <summary>
+        /// Section Search
+        /// </summary>
+        /// <param name="criteria">A Section Search Criteria</param>
+        /// <param name="pageSize">Page Size</param>
+        /// <param name="pageIndex">Page index</param>
+        /// <returns></returns>
+        Task<SectionPage> SectionSearchAsync(SectionSearchCriteria criteria, int pageSize, int pageIndex);
 
         //V6 Changes
         Task<Dtos.Course3> GetCourseByGuid3Async(string id);
@@ -70,5 +87,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         Task<Dtos.Course5> UpdateCourse5Async(Dtos.Course5 course, bool bypassCache);
         Task<Dtos.Course5> CreateCourse5Async(Dtos.Course5 course, bool bypassCache);
         Task<Tuple<IEnumerable<Dtos.Course5>, int>> GetCourses5Async(int offset, int limit, bool bypassCache, string subject, string number, List<string> academicLevel, List<string> owningInstitutionUnits, List<string> titles, List<string> instructionalMethods, string schedulingStartOn, string schedulingEndOn, string topic, List<string> categories, string activeOn);
+        
     }
 }

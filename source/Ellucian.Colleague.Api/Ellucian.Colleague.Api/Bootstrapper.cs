@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Converters;
 using Ellucian.Colleague.Configuration;
 using Ellucian.Colleague.Data.Base;
@@ -90,6 +90,10 @@ namespace Ellucian.Colleague.Api
             json.SupportedMediaTypes.Add(new MediaTypeHeaderValue(string.Format(HedtechIntegrationStudentUnverifiedGradesSubmissionsFormat, "1.0.0")));
             json.SupportedMediaTypes.Add(new MediaTypeHeaderValue(string.Format(HedtechIntegrationStudentTranscriptGradesAdjustmentsFormat, "1.0.0")));
 
+            json.SupportedMediaTypes.Add(new MediaTypeHeaderValue("application/vnd.hedtech.integration.bulk-requests.v1.0.0+json"));
+            json.SupportedMediaTypes.Add(new MediaTypeHeaderValue("application/vnd.hedtech.integration.bulk-requests.v1+json"));
+
+
         }
 
         private static IUnityContainer BuildUnityContainer()
@@ -131,6 +135,10 @@ namespace Ellucian.Colleague.Api
 
             // [4] setup api settings (depends on settings, logging, and common components)
             container.RegisterType<IApiSettingsRepository, ApiSettingsRepository>();
+
+            // [5] required repository for extendedRouteContraint used for extensibility
+            container.RegisterType<IExtendRepository, ExtendRepository>();
+
             var apiSettings = new ApiSettings("null");
             try
             {
@@ -147,23 +155,6 @@ namespace Ellucian.Colleague.Api
                     }
                 }
                 logger.Error(e, "Unable to read API Settings from colleague. Profile Name: {0}", settings.ProfileName);
-            }
-            int bulkReadSize = 5000;
-            if (int.TryParse(WebConfigurationManager.AppSettings["BulkReadSize"], out bulkReadSize))
-            {
-                apiSettings.BulkReadSize = bulkReadSize;
-            }
-
-            bool includeLinkSelfHeaders = false;
-            if (bool.TryParse(WebConfigurationManager.AppSettings["IncludeLinkSelfHeaders"], out includeLinkSelfHeaders))
-            {
-                apiSettings.IncludeLinkSelfHeaders = includeLinkSelfHeaders;
-            }
-
-            bool enableBackupConfig = false;
-            if (bool.TryParse(WebConfigurationManager.AppSettings["EnableConfigBackup"], out enableBackupConfig))
-            {
-                apiSettings.EnableConfigBackup = enableBackupConfig;
             }
 
             container.RegisterInstance<ApiSettings>(apiSettings);

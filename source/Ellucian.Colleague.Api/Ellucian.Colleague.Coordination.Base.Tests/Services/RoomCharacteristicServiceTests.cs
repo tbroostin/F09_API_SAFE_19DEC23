@@ -1,10 +1,9 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Colleague.Domain.Base.Tests;
 using Ellucian.Web.Adapters;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -12,8 +11,6 @@ using slf4net;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Base;
-using Ellucian.Colleague.Dtos;
-using Ellucian.Colleague.Domain.Base.Entities;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.Base.Tests.Services
@@ -29,6 +26,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             private ICurrentUserFactory currentUserFactory;
             private Mock<IRoleRepository> roleRepoMock;
             public Mock<ILogger> loggerMock;
+            private IConfigurationRepository _configurationRepository;
+            private Mock<IConfigurationRepository> _configurationRepositoryMock;
 
             private IEnumerable<Domain.Base.Entities.RoomCharacteristic> roomCharacteristicEntities;
             private IEnumerable<Dtos.RoomCharacteristic> roomCharacteristicDtos;
@@ -46,6 +45,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 roleRepoMock = new Mock<IRoleRepository>();
                 loggerMock = new Mock<ILogger>();
+                _configurationRepositoryMock = new Mock<IConfigurationRepository>();
+                _configurationRepository = _configurationRepositoryMock.Object;
 
                 BuildData();
 
@@ -59,7 +60,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                roomCharacteristicService = new RoomCharacteristicService(adapterRegistryMock.Object, referenceDataRepositoryMock.Object, currentUserFactory, roleRepoMock.Object, loggerMock.Object);
+                roomCharacteristicService = new RoomCharacteristicService( adapterRegistryMock.Object, referenceDataRepositoryMock.Object, currentUserFactory, _configurationRepository, roleRepoMock.Object, loggerMock.Object);
             }
 
             private void BuildData()
@@ -89,6 +90,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 roleRepoMock = null;
                 loggerMock = null;
                 roomCharacteristicService = null;
+                _configurationRepositoryMock = null;
             }
 
             [TestMethod]

@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -31,7 +31,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         private const int ThirtyMinuteCacheTimeout = 30;
 
         /// <summary>
-        /// This constructor allows us to instantiate a GL cost center repository object.
+        /// This constructor allows us to instantiate a GL object code repository object.
         /// </summary>
         /// <param name="cacheProvider">Pass in an ICacheProvider object.</param>
         /// <param name="transactionFactory">Pass in an IColleagueTransactionFactory object.</param>
@@ -52,7 +52,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <param name="generalLedgerUser">General Ledger User domain entity.</param>
         /// <param name="glAccountStructure">List of objects with information about the GL account structure.</param>
         /// <param name="glClassConfiguration">General Ledger Class configuration information.</param>
-        /// <param name="criteria">Cost center filter criteria.</param>
+        /// <param name="criteria">GL object code filter criteria.</param>
         /// <param name="personId">ID of the user.</param>
         /// <returns>Returns the list of GL object codes assigned to the user for the selected criteria.</returns>
         public async Task<IEnumerable<GlObjectCode>> GetGlObjectCodesAsync(GeneralLedgerUser generalLedgerUser, GeneralLedgerAccountStructure glAccountStructure,
@@ -419,7 +419,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                             throw new ApplicationException("RecordKey is a required field for GlAccts record.");
                                         }
 
-                                        // Create the cost center GL account DE for the umbrella.
+                                        // Create the GL object code GL account for the umbrella.
                                         var newUmbrellaGlAccount = new GlObjectCodeGlAccount(umbrellaGlAccount, GlBudgetPoolType.Umbrella);
 
                                         var umbrellaGlAccountAmounts = umbrellaAccount.MemosEntityAssociation.Where(x => x.AvailFundsControllerAssocMember == fiscalYear).FirstOrDefault();
@@ -572,14 +572,16 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
                 #endregion
 
-                #region Assign all pools to a cost center and subtotal
+                #region Assign all pools to a GL object code
+
                 foreach (var budgetPool in glBudgetPoolDomainEntities)
                 {
                     AddBudgetPoolToGlObjectCodeList(budgetPool, glClassConfiguration);
                 }
                 #endregion
 
-                #region Assign all non-pooled GL accounts to a cost center and subtotal
+                #region Assign all non-pooled GL accounts to a GL object code
+
                 foreach (var nonPooledAccount in nonPooledGlAccountDomainEntities)
                 {
                     AddNonPooledAccountToGlObjectCodeList(nonPooledAccount, glClassConfiguration);
@@ -590,6 +592,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             else
             {
                 #region Get closed year amounts from GLS.FYR
+
                 // If the fiscal year is closed, obtain the information from GLS.FYR and ENC.FYR.
                 // Bulk read the GLS.FYR records.
                 var glsFyrId = "GLS." + fiscalYear;
@@ -734,13 +737,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                         throw new ApplicationException("RecordKey for GLS.FYR data contract is missing.");
                                     }
 
-                                    // Create the cost center GL account DE for the umbrella.
+                                    // Create the GL object code GL account for the umbrella.
                                     var newUmbrellaGlAccount = new GlObjectCodeGlAccount(umbrellaAccount.Recordkey, GlBudgetPoolType.Umbrella);
                                     newUmbrellaGlAccount.BudgetAmount = CalculateBudgetForGlAccountInClosedYear(umbrellaAccount);
                                     newUmbrellaGlAccount.ActualAmount = CalculateActualsForUmbrellaInClosedYear(umbrellaAccount);
                                     newUmbrellaGlAccount.EncumbranceAmount = CalculateEncumbrancesForUmbrellaInClosedYear(umbrellaAccount);
 
                                     // Create a new budget pool and add the poolee to it.
+                                    // The umbrella is not visible by default.
                                     var newBudgetPool = new GlObjectCodeBudgetPool(newUmbrellaGlAccount);
                                     newBudgetPool.AddPoolee(pooleeGlAccount);
 
@@ -796,14 +800,16 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
                 #endregion
 
-                #region Assign all pools to a cost center and subtotal
+                #region Assign all pools to a GL object code
+
                 foreach (var budgetPool in glBudgetPoolDomainEntities)
                 {
                     AddBudgetPoolToGlObjectCodeList(budgetPool, glClassConfiguration);
                 }
                 #endregion
 
-                #region Assign all non-pooled GL accounts to a cost center and subtotal
+                #region Assign all non-pooled GL accounts to a GL object code
+
                 foreach (var nonPooledAccount in nonPooledGlAccountDomainEntities)
                 {
                     AddNonPooledAccountToGlObjectCodeList(nonPooledAccount, glClassConfiguration);
@@ -812,12 +818,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                 #endregion
 
-                #region Get closed year amounts from ENC.FYR
+                #region Get closed year requisition amounts from ENC.FYR
+
                 // Now obtain the requisition amounts from ENC.FYR because they are not stored in GLS.FYR.
 
                 // Bulk read the ENC.FYR records using the list of GL accounts that the user has access to,
                 // either all accounts that they have access to or those that they have access to for a 
-                // specified cost center.
+                // specified GL object code.
                 var encFyrId = "ENC." + fiscalYear;
                 Collection<EncFyr> encRecords = new Collection<EncFyr>();
                 if (FilterUtility.IsFilterWideOpen(costCenterCriteria))
@@ -832,7 +839,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     encRecords = await DataReader.BulkReadRecordAsync<EncFyr>(encFyrId, userGlAccounts);
                 }
 
-                // If we do not have any ENC.FYR records, return the list of cost centers that has been obtained already.
+                // If we do not have any ENC.FYR records, return the list of GL object codes that has been obtained already.
                 if (encRecords != null && encRecords.Any())
                 {
                     Collection<GlpFyr> glpFyrDataContracts = new Collection<GlpFyr>();
@@ -842,7 +849,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     if (glpFyrIds.Any())
                         glpFyrDataContracts = await DataReader.BulkReadRecordAsync<GlpFyr>(glpFyrFilename, glpFyrIds);
 
-                    // Create a list of Cost Center GL Account domain entities for each ENC.FYR record that has a requisition amount.
+                    // Create a list of GL object code GL Account domain entities for each ENC.FYR record that has a requisition amount.
                     var requisitionGlAccountsList = new List<GlObjectCodeGlAccount>();
                     foreach (var reqGlAccount in encRecords)
                     {
@@ -911,17 +918,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         }
                     }
 
-                    // requisitionGlAccountsList contains a list of cost center GL account domain entities, each containing a requisition amount.
-                    // We need to add those requisition amounts to the appropriate cost center subtotals and cost centers domain entities such that:
-                    // - if the GL account belongs to an existing cost center and one of its cost center subtotals:
-                    //      = if the GL account is already in the list of GL accounts for the one cost center subtotal, add the requisition amount to its encumbrances.
-                    //      = if the GL account is not already in the list of GL accounts for the one cost center subtotal, add the domain entity to the subtotal cost center.
-                    // - if the GL account belongs to an existing cost center, but it belongs to a new cost center subtotal for the cost center:
-                    //      = create the new cost center subtotal domain entity and add the gl account to it; add the new subtotal to the cost center.
-                    // - if the GL account does not belong to any of the existing cost centers:
-                    //      = create a new cost center
-                    //      = create a new cost center subtotal and add the GL account entity to it
-                    //      = add the new cost center subtotal to the new cost center.
+                    // requisitionGlAccountsList contains a list of GL object code GL account domain entities, each containing a requisition amount.
+                    // We need to add those requisition amounts to the appropriate GL object code domain entities such that:
+                    // - if the GL account belongs to an existing GL object code:
+                    //      = if the GL account is already in the list of GL accounts for the one GL object code, add the requisition amount to its encumbrances.
+                    //      = if the GL account is not already in the list of GL accounts for the one GL object code, add the domain entity to the GL object code.
+                    // - if the GL account does not belong to any of the existing GL object codes:
+                    //      = create a new GL object code and add the GL account entity to it
+                    //      = add the new GL object code to the list of GL object codes.
 
                     if (requisitionGlAccountsList != null && requisitionGlAccountsList.Any())
                     {
@@ -930,22 +934,20 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         {
                             bool glAccountFound = false;
 
-                            // Find all the GL numbers for the cost centers
-                            //var allUmbrellaAccounts = glObjectCodes.SelectMany(x => x.CostCenterSubtotals.SelectMany(y => y.Pools.Select(z => z.Umbrella))).ToList();
+                            // Find all the GL numbers for the GL object code
                             var allUmbrellaAccounts = glObjectCodes.SelectMany(x => x.Pools.Select(z => z.Umbrella)).ToList();
                             var allPooleeAccounts = glObjectCodes.SelectMany(x => x.Pools.SelectMany(z => z.Poolees)).ToList();
                             var allNonPooledAccounts = glObjectCodes.SelectMany(x => x.GlAccounts).ToList();
 
-                            // Loop through each cost center subtotal in the cost center.
-                            //var allSubtotals = glObjectCodes.SelectMany(x => x.CostCenterSubtotals).ToList();
+                            // Loop through each GL object code.
                             foreach (var objectCode in glObjectCodes)
                             {
                                 if (reqGlAcct.PoolType == GlBudgetPoolType.None)
                                 {
-                                    // Loop through each GL account in the list that belong to this cost center subtotal.
+                                    // Loop through each GL account in the list that belongs to this GL object code.
                                     foreach (var acct in objectCode.GlAccounts)
                                     {
-                                        // If the requisition GL account is already included in the cost center subtotal list of
+                                        // If the requisition GL account is already included in the GL object code list of
                                         // GL accounts, add the requisition amount to its encumbrances.
                                         if (reqGlAcct.GlAccountNumber == acct.GlAccountNumber)
                                         {
@@ -989,6 +991,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                             if (selectedPoolee != null)
                                             {
                                                 selectedPoolee.EncumbranceAmount += reqGlAcct.EncumbranceAmount;
+                                                // Also add the poolee requisition amount to the umbrella requisition amount.
+                                                pool.Umbrella.EncumbranceAmount += reqGlAcct.EncumbranceAmount;
                                                 glAccountFound = true;
                                             }
                                         }
@@ -996,8 +1000,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                 }
                             }
 
-                            // If the GL account is not included in any cost center, find the cost center subtotal and cost center for it, 
+                            // If the GL account is not included in any GL object code, find the GL object code for it, 
                             // whether they already exist, or we have to create new ones.
+                            // This can be a case where a poolee only has an ENC record and no posted activity in any GLS record,
+                            // for instance, the poolee only has requisition amounts.
                             if (!glAccountFound)
                             {
                                 if (reqGlAcct.PoolType == GlBudgetPoolType.None)
@@ -1009,17 +1015,80 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                     if (reqGlAcct.PoolType == GlBudgetPoolType.Umbrella)
                                     {
                                         var budgetPool = new GlObjectCodeBudgetPool(reqGlAcct);
+                                        if (userGlAccounts.Contains(reqGlAcct.GlAccountNumber))
+                                        {
+                                            // If the user has access to the umbrella, make it visible.
+                                            budgetPool.IsUmbrellaVisible = true;
+                                        }
                                         AddBudgetPoolToGlObjectCodeList(budgetPool, glClassConfiguration);
                                     }
                                     else
                                     {
-                                        // Find the umbrella from GLP.FYR
-                                        var selectedPool = glpFyrDataContracts.FirstOrDefault(x => x.GlpPooleeAcctsList.Contains(reqGlAcct.GlAccountNumber));
-                                        if (selectedPool != null)
+                                        // Find the umbrella for this poolee from GLP.FYR.
+                                        bool poolFound = true;
+                                        var umbrellaForThisPooleeGlpFyrRecord = glpFyrDataContracts.FirstOrDefault(x => x.GlpPooleeAcctsList.Contains(reqGlAcct.GlAccountNumber));
+                                        if (umbrellaForThisPooleeGlpFyrRecord != null)
                                         {
-                                            var umbrellaAccount = selectedPool.Recordkey;
-                                            var budgetPool = new GlObjectCodeBudgetPool(new GlObjectCodeGlAccount(selectedPool.Recordkey, GlBudgetPoolType.Umbrella));
+                                            var umbrellaForThisPoolee = umbrellaForThisPooleeGlpFyrRecord.Recordkey;
+                                            // Find if the umbrella for this poolee already has a pool created in any GL object code,
+                                            // or we have to create a new budget pool for it.
+                                            var umbrellaObjectCode = umbrellaForThisPoolee.Substring(objectMajorComponent.StartPosition, objectMajorComponent.ComponentLength);
+                                            var glObjectCodeForThisUmbrella = glObjectCodes.FirstOrDefault(x => x.Id == umbrellaObjectCode);
+                                            if (glObjectCodeForThisUmbrella != null)
+                                            {
+                                                // There is already a GL object code for this umbrella.
+                                                // Get it and add the poolee to it.
+
+                                                if (glObjectCodeForThisUmbrella.Pools.Any())
+                                                {
+                                                    // The GL object code has budget pools. Check to see if any of them contain this umbrella.
+                                                    var pooleePool = glObjectCodeForThisUmbrella.Pools.FirstOrDefault(x => x.Umbrella.GlAccountNumber == umbrellaForThisPoolee);
+                                                    if (pooleePool != null)
+                                                    {
+                                                        // There is a pool for this poolee.
+                                                        // Add the poolee to it.
+                                                        pooleePool.Umbrella.EncumbranceAmount += reqGlAcct.EncumbranceAmount;
+                                                        pooleePool.AddPoolee(reqGlAcct);
+                                                    }
+                                                    else
+                                                    {
+                                                        // There is no pool for this poolee.
+                                                        //Create a budget pool for this poolee and umbrella and add it to the GL object code.
+                                                        poolFound = false;
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    // the GL object code does not have any budget pools.
+                                                    // Create a budget pool for this poolee and umbrella and add it to the GL object code.
+                                                    poolFound = false;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                // There is no GL object code for this umbrella.
+                                                // Create a budget pool for this poolee and umbrella and create its GL object code.
+                                                poolFound = false;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            // There is data problem. This is a poolee but it was not found in GLP.FYR
+                                            // Log it and ignore this record.
+                                            LogDataError("This GL account " + reqGlAcct.GlAccountNumber + " is a poolee but was not found in any GLP." + fiscalYear + " pools.", "", reqGlAcct);
+                                        }
+
+                                        if (!poolFound)
+                                        {
+                                            // If the GL Object does not exist create it, then add the budget pool to it.
+                                            var budgetPool = new GlObjectCodeBudgetPool(new GlObjectCodeGlAccount(umbrellaForThisPooleeGlpFyrRecord.Recordkey, GlBudgetPoolType.Umbrella));
+                                            if (userGlAccounts.Contains(umbrellaForThisPooleeGlpFyrRecord.Recordkey))
+                                            {
+                                                budgetPool.IsUmbrellaVisible = true;
+                                            }
                                             budgetPool.AddPoolee(reqGlAcct);
+                                            // Also add the poolee requisition amount to the umbrella requisition amount.
+                                            budgetPool.Umbrella.EncumbranceAmount += reqGlAcct.EncumbranceAmount;
                                             AddBudgetPoolToGlObjectCodeList(budgetPool, glClassConfiguration);
                                         }
                                     }
@@ -1047,12 +1116,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             #region Remove inactive accounts with no activity
 
-            // Get the non pooled account GL account number strings from the CostCenterGlAccounts from all of the cost centers
+            // Get the non pooled account GL account number strings from the GlObjectCodeGlAccounts from all of the GL object codes
             // where all of the amounts are zero.
             var possibleCostCenterGlAccountsToRemove = glObjectCodes.SelectMany(x => x.GlAccounts).Where
                 (a => a.ActualAmount == 0 && a.BudgetAmount == 0 && a.EncumbranceAmount == 0).ToList();
 
-            // Get the poolee account GL account number strings from the CostCenterGlAccounts from all of the cost centers
+            // Get the poolee account GL account number strings from the GlObjectcodeGlAccounts from all of the GL object codes
             // where all of the amounts are zero.
             var possibleCostCenterGlAccountPooleesToRemove = glObjectCodes.SelectMany(x => x.Pools.SelectMany(y => y.Poolees).Where
                 (a => a.ActualAmount == 0 && a.BudgetAmount == 0 && a.EncumbranceAmount == 0)).ToList();
@@ -1063,7 +1132,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 possibleCostCenterGlAccountsToRemove.AddRange(possibleCostCenterGlAccountPooleesToRemove);
             }
 
-            // If there are any CostCenterGlAccounts with all zero amounts, find out if there is any activity for 
+            // If there are any GlObjectGlAccounts with all zero amounts, find out if there is any activity for 
             // any of these GL accounts by selecting GLS and ENC records. Also, find out if any of these GL accounts
             // are active by selecting GL.ACCTS that are not currently inactive. Remove these GL account record IDs
             // from the list of possible record IDs to remove.
@@ -1126,7 +1195,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
 
                 // If there are GL account IDs where the account is inactive and has no activity, remove them from the 
-                // list of non pooled accounts and from the list of poolee on each cost center subtotal on each cost center.
+                // list of non pooled accounts and from the list of poolee on each GL object code.
                 if (glAccountsToRemove.Any())
                 {
                     var costCenterGlToBeDeleted = glObjectCodes.SelectMany(x => x.GlAccounts).Where(z => inactiveGlAccountsWithNoActivity.Contains(z.GlAccountNumber)).ToList();

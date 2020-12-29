@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Student.Entities;
 using System;
@@ -17,7 +17,7 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <param name="limit"></param>
         /// <param name="bypassCache"></param>
         /// <returns></returns>
-        Task<Tuple<IEnumerable<HousingAssignment>, int>> GetHousingAssignmentsAsync(int offset, int limit, bool bypassCache);
+        Task<Tuple<IEnumerable<HousingAssignment>, int>> GetHousingAssignmentsAsync(int offset, int limit, string person = "", string term = "", string status = "", string startDate = "", string endDate = "", bool bypassCache = false);
 
         /// <summary>
         /// Gets housing request by guid

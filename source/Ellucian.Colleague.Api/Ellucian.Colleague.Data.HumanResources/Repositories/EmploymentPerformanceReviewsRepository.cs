@@ -222,7 +222,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 var errorMessage = string.Format("Error(s) occurred creating employmentPerformanceReviewsEntity '{0}':", employmentPerformanceReviewsEntity.Guid);
                 var exception = new RepositoryException(errorMessage);
-                createResponse.CreateReviewErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)));
+                createResponse.CreateReviewErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
                 logger.Error(errorMessage);
                 throw exception;
             }
@@ -269,7 +269,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 {
                     var errorMessage = string.Format("Error(s) occurred updating employmentPerformanceReviewsEntity '{0}':", employmentPerformanceReviewsEntity.Guid);
                     var exception = new RepositoryException(errorMessage);
-                    updateResponse.CreateReviewErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)));
+                    updateResponse.CreateReviewErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
                     logger.Error(errorMessage);
                     throw exception;
                 }
@@ -302,7 +302,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             if (response.DeleteReviewErrors.Any())
             {
                 var exception = new RepositoryException("Errors encountered while deleting employment performance review: " + guid);
-                response.DeleteReviewErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)));
+                response.DeleteReviewErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
                 throw exception;
             }
         }
@@ -420,34 +420,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
         }
 
-        /// <summary>
-        /// Get the GUID for a entity using its ID
-        /// </summary>
-        /// <param name="id">entity ID</param>
-        /// <param name="entity">entity</param>
-        /// <returns>entity GUID</returns>
-        public async Task<string> GetJobGuidFromIdAsync(string id, string entity)
-        {
-            try
-            {
-                var guid = await GetGuidFromRecordInfoAsync(entity, id);
-                var criteria = string.Format("WITH LDM.GUID.PRIMARY.KEY EQ '{0}' AND LDM.GUID.SECONDARY.KEY EQ '' AND LDM.GUID.ENTITY EQ 'PERPOS' AND LDM.GUID.REPLACED.BY EQ ''", id);
-                var guidRecords = await DataReader.SelectAsync("LDM.GUID", criteria);
-
-                if (guid != guidRecords[0])
-                    guid = guidRecords[0];
-                return guid;
-            }
-            catch (ArgumentNullException)
-            {
-                throw;
-            }
-            catch (RepositoryException ex)
-            {
-                ex.AddError(new RepositoryError("perpos.guid.NotFound", "GUID not found for employment performance review " + id));
-                throw ex;
-            }
-        }
 
         /// <summary>
         /// Gets id from guid input

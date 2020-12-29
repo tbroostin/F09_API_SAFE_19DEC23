@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,5 +22,7 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<IEnumerable<EvaluationNotice>> GetStudentProgramEvaluationNoticesAsync(string studentId, string programCode);
         Task<IEnumerable<StudentProgram>> GetStudentProgramsByIdsAsync(IEnumerable<string> studentIds, bool includeInactivePrograms = false, Term term = null, bool includeHistory = false);
         Task<List<StudentProgram>> GetStudentAcademicPeriodProfileStudentProgramInfoAsync(List<string> stuProgIds);
+        Task<StudentProgram> AddStudentProgram(StudentAcademicProgram studentAcademicProgram, List<string> activePrograms, List<string> endDates);
+        Task<StudentProgram> UpdateStudentProgram(StudentAcademicProgram studentAcademicProgram, List<string> activePrograms, List<string> endDates);
     }
 }

@@ -43,6 +43,15 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public IList<EthosExtensibleDataRow> ExtendedDataList { get; private set; }
 
         /// <summary>
+        /// List of the filter criteria for this resource and version 
+        /// </summary>
+        public IList<EthosExtensibleDataFilter> ExtendedDataFilterList { get; private set; }
+        public DateTime? DeprecationDate { get; set; }
+        public string DeprecationNotice { get; set; }
+        public DateTime? SunsetDate { get; set; }
+        public List<string> HttpMethodsSupported { get; set; }
+
+        /// <summary>
         /// Constructor for Ethos Extended Data
         /// </summary>
         /// <param name="resourceName"></param>
@@ -57,6 +66,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
             ApiVersionNumber = resourceVersion;
             ExtendedSchemaType = extSchemaType;
             ResourceId = resourceId;
+            ExtendedDataFilterList = new List<EthosExtensibleDataFilter>();
 
             if (dataList != null && dataList.Any())
             {
@@ -84,6 +94,13 @@ namespace Ellucian.Colleague.Domain.Base.Entities
                 
             }
 
+        }/// <summary>
+         /// Constructor for Ethos Extended Data
+         /// </summary>
+        public EthosExtensibleData()
+        {
+            ExtendedDataList = new List<EthosExtensibleDataRow>();
+            ExtendedDataFilterList = new List<EthosExtensibleDataFilter>();
         }
 
         /// <summary>
@@ -99,7 +116,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         }
 
         /// <summary>
-        /// Adds an item to the Extended Data list long as the object isnt null
+        /// Adds an item to the Extended Data list as long as the object isnt null
         /// </summary>
         /// <param name="extDataRow">non null data row item</param>
         public void AddItemToExtendedData(EthosExtensibleDataRow extDataRow)
@@ -107,6 +124,30 @@ namespace Ellucian.Colleague.Domain.Base.Entities
             if (extDataRow != null)
             {
                 ExtendedDataList.Add(extDataRow);
+            }
+        }
+
+        /// <summary>
+        /// Updates the Extended Data filter list with a full set, only sets if the list coming in is not null and has something in it
+        /// </summary>
+        /// <param name="filterList">non null list with at least one item</param>
+        public void UpdateExtendedDataFilter(IList<EthosExtensibleDataFilter> filterList)
+        {
+            if (filterList != null && filterList.Any())
+            {
+                ExtendedDataFilterList = filterList;
+            }
+        }
+
+        /// <summary>
+        /// Adds an item to the Extended Data Filter list as long as the object isnt null
+        /// </summary>
+        /// <param name="extDataRow">non null data row item</param>
+        public void AddItemToExtendedDataFilter(EthosExtensibleDataFilter extDataFilter)
+        {
+            if (extDataFilter != null)
+            {
+                ExtendedDataFilterList.Add(extDataFilter);
             }
         }
     }

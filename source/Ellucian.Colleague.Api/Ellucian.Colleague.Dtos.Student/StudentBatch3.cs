@@ -85,7 +85,14 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Preferred email address of student
         /// </summary>
         public string PreferredEmailAddress { get; set; }
-        ///
+        /// <summary>
+        /// All email address of student
+        /// </summary>
+        public List<EmailAddress> EmailAddresses { get; set; }
+        /// <summary>
+        /// Phonetypes hierarchy for student profile
+        /// </summary>
+        public List<string> PhoneTypesHierarchy { get; set; }
         /// Added Fields for ESS project (SRM - 11/01/2013)
         /// <summary>
         /// If Parent attended this university, then True else False

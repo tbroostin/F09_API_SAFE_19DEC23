@@ -1,8 +1,8 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Dtos.Converters;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.Runtime.Serialization;
 
 namespace Ellucian.Colleague.Dtos
@@ -19,28 +19,26 @@ namespace Ellucian.Colleague.Dtos
         [DataMember(Name = "discipline")]
         public GuidObject2 Discipline { get; set; }
 
-        ///// <summary>
-        ///// The institutional unit that administers the discipline (major, minor, concentration), typically a department within a school or college.
-        ///// </summary>
-        //[DataMember(Name = "administeringInstitutionUnits", EmitDefaultValue = false)]
-        //public List<GuidObject2> AdministeringInstitutionUnit { get; set; }
+        /// <summary>
+        /// The effective start date of the cohort.
+        /// </summary>
+        [JsonConverter(typeof(DateOnlyConverter))]
+        [JsonProperty("startOn", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public DateTime? StartOn { get; set; }
 
         /// <summary>
-        /// A list of academic disciplines that are subordinate to the discipline.
+        /// The last date of the cohort.
         /// </summary>
-        [DataMember(Name = "subDisciplines", EmitDefaultValue = false)]
-        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)] 
-         public List<GuidObject2> SubDisciplines { get; set; }
-
+        [JsonConverter(typeof(DateOnlyConverter))]
+        [JsonProperty("endOn", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public DateTime? EndOn { get; set; }
+       
         /// <summary>
         /// The academic disciplines offered as part of an academic program.
         /// </summary>
         public AcademicProgramDisciplines()
         {
             Discipline = new GuidObject2();
-            //SubDisciplines = new List<GuidObject2>();
         }
-
     }
-
 }

@@ -1,11 +1,9 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Web.UI.WebControls;
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -439,6 +437,41 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
+        /// Get a partial person entity by guid.
+        /// </summary>
+        /// <param name="guid">Guid of the person in Colleague.</param>
+        /// <returns>The <see cref="Person">person</see> entity</returns>
+        public async Task<Domain.Base.Entities.PersonIntegration> GetPersonNamesAndCredsByGuidAsync(string guid)
+        {
+            if (string.IsNullOrEmpty(guid))
+                throw new ArgumentNullException("guid", "Must provide a guid to get a record.");
+            try
+            {
+                Domain.Base.Entities.PersonIntegration personEntity = null;
+                var guids = new List<string>() { guid };
+                var personEntities = await GetNamesAndCredsByGuidAsync<Domain.Base.Entities.PersonIntegration>(guids,
+                    person =>
+                    {
+                        Domain.Base.Entities.PersonIntegration entity = new Domain.Base.Entities.PersonIntegration(person.Recordkey, person.LastName);
+                        return entity;
+                    });
+                if (personEntities != null && personEntities.Any())
+                {
+                    personEntity = personEntities.FirstOrDefault();
+                }
+                return personEntity;
+            }
+            catch (RepositoryException e)
+            {
+                throw e;
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
+        }
+
+        /// <summary>
         /// Get a person entity by guid, with caching.
         /// </summary>
         /// <param name="guid">Guid of the person in Colleague.</param>
@@ -467,6 +500,37 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 throw e;
             }
 
+        }
+
+        /// <summary>
+        /// Get a person entity by guid, with caching.
+        /// </summary>
+        /// <param name="guid">Guid of the person in Colleague.</param>
+        /// <returns>The <see cref="Person">person</see> entity</returns>
+        public async Task<Domain.Base.Entities.PersonIntegration> GetPersonIntegration3ByGuidAsync(string guid, bool bypassCache)
+        {
+            if (string.IsNullOrEmpty(guid))
+                throw new RepositoryException("Must provide a guid to get a record.");
+
+            try
+            {
+                var personEntity = await GetIntegration3ByGuidAsync(guid,
+                                 person =>
+                                 {
+                                     var entity = new PersonIntegration(person.Recordkey, person.LastName);
+                                     return entity;
+                                 }, bypassCache);
+
+                return personEntity;
+            }
+            catch (RepositoryException e)
+            {
+                throw e;
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
         }
 
         /// <summary>
@@ -510,6 +574,26 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
+        /// Get a list of partial person entities by guid.
+        /// </summary>
+        /// <param name="guids">Guids of the persons in Colleague.</param>
+        /// <returns>List of <see cref="Person">person</see> entities</returns>
+        public async Task<IEnumerable<Domain.Base.Entities.PersonIntegration>> GetPersonNamesAndCredsByGuidAsync(IEnumerable<string> guids)
+        {
+            if (guids == null || guids.Count() == 0)
+                throw new ArgumentNullException("guids", "Must provide guids to get person records.");
+
+            var personEntities = await GetIntegration2ByGuidNonCachedAsync<Domain.Base.Entities.PersonIntegration>(guids,
+                 person =>
+                 {
+                     Domain.Base.Entities.PersonIntegration entity = new Domain.Base.Entities.PersonIntegration(person.Recordkey, person.LastName);
+                     return entity;
+                 });
+
+            return personEntities;
+        }
+
+        /// <summary>
         /// Get a list of person entities by guid, without caching.
         /// </summary>
         /// <param name="guids">Guids of the persons in Colleague.</param>
@@ -523,6 +607,26 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                  person =>
                  {
                      Domain.Base.Entities.PersonIntegration entity = new Domain.Base.Entities.PersonIntegration(person.Recordkey, person.LastName);
+                     return entity;
+                 });
+
+            return personEntities;
+        }
+
+        /// <summary>
+        /// Get a list of person entities by guid, without caching.
+        /// </summary>
+        /// <param name="guids">Guids of the persons in Colleague.</param>
+        /// <returns>List of <see cref="Person">person</see> entities</returns>
+        public async Task<IEnumerable<Domain.Base.Entities.PersonIntegration>> GetPersonIntegration3ByGuidNonCachedAsync(IEnumerable<string> guids)
+        {
+            if (guids == null || guids.Count() == 0)
+                throw new RepositoryException("Must provide guids to get person records.");
+
+            var personEntities = await GetIntegration3ByGuidNonCachedAsync<PersonIntegration>(guids,
+                 person =>
+                 {
+                     var entity = new PersonIntegration(person.Recordkey, person.LastName);
                      return entity;
                  });
 
@@ -678,6 +782,78 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
+        /// Used to get person entities by guid, using cache.
+        /// </summary>
+        /// <typeparam name="TDomain"></typeparam>
+        /// <param name="guid">Guid of the person in Colleague.</param>
+        /// <param name="objectBuilder"></param>
+        /// <returns>The extended person entity, such as student</returns>
+        private async Task<TDomain> GetIntegration3ByGuidAsync<TDomain>(string guid,
+            Func<DataContracts.Person, TDomain> objectBuilder, bool bypassCache)
+            where TDomain : Domain.Base.Entities.PersonIntegration
+        {
+            if (string.IsNullOrEmpty(guid))
+                throw new RepositoryException("Must provide a guid to get a record.");
+
+            var cacheKey = BuildFullCacheKey("PersonIntegration" + guid);
+            if ((!bypassCache) && (ContainsKey(cacheKey)))
+            {
+                return (TDomain)_cacheProvider.Get(cacheKey);
+
+            }
+
+            DataContracts.Person record =
+                await DataReader.ReadRecordAsync<DataContracts.Person>(new GuidLookup(guid));
+            if (record == null)
+                throw new RepositoryException("No person record for guid " + guid);
+
+            var foreignPerson = await DataReader.ReadRecordAsync<DataContracts.ForeignPerson>(record.Recordkey);
+            var integrationPerson = await DataReader.ReadRecordAsync<DataContracts.PersonIntg>(record.Recordkey);
+            var militaryPerson = await DataReader.ReadRecordAsync<DataContracts.PerMilitary>(record.Recordkey);
+            var socialMediaHandles =
+                await
+                    DataReader.BulkReadRecordAsync<DataContracts.SocialMediaHandles>("WITH SMH.PERSON.ID EQ '" +
+                                                                                     record.Recordkey + "'");
+            var addressDataContracts = new List<Data.Base.DataContracts.Address>();
+            if (record.PersonAddresses != null && record.PersonAddresses.Any())
+            {
+                addressDataContracts = (await GetPersonAddressContractsAsync(record.PersonAddresses)).ToList();
+            }
+            // Create the specified domain object
+            TDomain person = null;
+            try
+            {
+                person = objectBuilder.Invoke(record);
+            }
+            catch (Exception ex)
+            {
+                var error = new RepositoryException();
+                error.AddError(new RepositoryError("persons", ex.Message)
+                {
+                    Id = guid,
+                    SourceId = record.Recordkey
+                });
+                throw error;               
+            }
+            var personBasedEntities =
+                await BuildPersons3IntegrationAsync<TDomain>(new List<string>() { record.Recordkey },
+                    new Collection<DataContracts.Person>() { record },
+                    new Collection<DataContracts.ForeignPerson>() { foreignPerson },
+                    new Collection<DataContracts.PersonIntg>() { integrationPerson }, socialMediaHandles,
+                    militaryPerson == null ? null : new Collection<DataContracts.PerMilitary>() { militaryPerson },
+                    new Collection<TDomain>() { person }, addressDataContracts);
+            var personRecord = personBasedEntities.FirstOrDefault();
+            if (personRecord != null)
+            {
+                await
+                    AddOrUpdateCacheAsync<TDomain>(("PersonIntegration" + personRecord.Guid), personRecord,
+                        CacheTimeout);
+            }
+            return personRecord;
+        }
+
+
+        /// <summary>
         /// Used to get person entities by guids, without using the cache.
         /// </summary>
         /// <typeparam name="TDomain"></typeparam>
@@ -800,6 +976,62 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
+        /// Used to get partial person entities by guids.
+        /// </summary>
+        /// <typeparam name="TDomain"></typeparam>
+        /// <param name="guids">Guids of the persons in Colleague.</param>
+        /// <param name="objectBuilder"></param>
+        /// <returns>List of extended person entities, such as student</returns>
+        private async Task<IEnumerable<TDomain>> GetNamesAndCredsByGuidAsync<TDomain>(IEnumerable<string> guids, Func<DataContracts.Person, TDomain> objectBuilder)
+            where TDomain : Domain.Base.Entities.PersonIntegration
+        {
+            if (guids == null || guids.Count() == 0)
+                throw new ArgumentNullException("guids", "Must provide guids to get person records");
+
+            // get all the person records associated with the guids
+            var personsGuidLookup = guids.ToList().ConvertAll(g => new GuidLookup(g)).ToArray();
+            var personRecords = (await DataReader.BulkReadRecordAsync<DataContracts.Person>(personsGuidLookup)).ToList();
+
+            if (personRecords == null)
+                throw new ArgumentOutOfRangeException("guids", "No person records found for guids");
+
+            var foreignPersonRecords = new Collection<DataContracts.ForeignPerson>();
+            var integrationPersonRecords = new Collection<DataContracts.PersonIntg>();
+            var socialMediaHandlesRecords = new Collection<DataContracts.SocialMediaHandles>();
+            var militaryPersonRecords = new Collection<DataContracts.PerMilitary>();
+            var addressDataContracts = new Collection<DataContracts.Address>();
+
+            // create the specified domain objects
+            var personBasedObjects = new Collection<TDomain>();
+            var ex = new RepositoryException("Error retrieving person data");
+
+            foreach (var personRecord in personRecords)
+            {
+                try
+                {
+                    personBasedObjects.Add(objectBuilder.Invoke(personRecord));
+                }
+                catch (Exception e)
+                {
+                    LogDataError("Person", personRecord.Recordkey, personRecord, e);
+                    if (e.GetType() == typeof(ArgumentNullException) && e.Message.Contains("lastName"))
+                    {
+                        var msg = string.Format("Person ID '{0}' has no last name.", personRecord.Recordkey);
+                        ex.AddError(new RepositoryError("lastName.null", msg));
+                    }
+                }
+            }
+            if (ex.Errors.Any())
+            {
+                throw ex;
+            }
+
+            // build the person entities
+            return await BuildPersons2IntegrationAsync<TDomain>(personRecords.Select(p => p.Recordkey).ToList(), personRecords, foreignPersonRecords, integrationPersonRecords, socialMediaHandlesRecords,
+                militaryPersonRecords, personBasedObjects, addressDataContracts);
+        }
+
+        /// <summary>
         /// Used to get person entities by guids, without using the cache.
         /// </summary>
         /// <typeparam name="TDomain"></typeparam>
@@ -870,6 +1102,70 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 militaryPersonRecords, personBasedObjects, addressDataContracts);
         }
 
+        /// <summary>
+        /// Used to get person entities by guids, without using the cache.
+        /// </summary>
+        /// <typeparam name="TDomain"></typeparam>
+        /// <param name="guids">Guids of the persons in Colleague.</param>
+        /// <param name="objectBuilder"></param>
+        /// <returns>List of extended person entities, such as student</returns>
+        private async Task<IEnumerable<TDomain>> GetIntegration3ByGuidNonCachedAsync<TDomain>(IEnumerable<string> guids, Func<DataContracts.Person, TDomain> objectBuilder)
+            where TDomain : Domain.Base.Entities.PersonIntegration
+        {
+            if (guids == null || guids.Count() == 0)
+                throw new RepositoryException("Must provide guids to get person records");
+
+            // get all the person records associated with the guids
+            var personsGuidLookup = guids.ToList().ConvertAll(g => new GuidLookup(g)).ToArray();
+            var personRecords = (await DataReader.BulkReadRecordAsync<DataContracts.Person>(personsGuidLookup)).ToList();
+
+            if (personRecords == null)
+                throw new RepositoryException("No person records found for guids");
+
+            var personIds = personRecords.Select(pr => pr.Recordkey).Distinct().ToArray();
+            var foreignPersonRecords = await DataReader.BulkReadRecordAsync<DataContracts.ForeignPerson>(personIds);
+            var integrationPersonRecords = await DataReader.BulkReadRecordAsync<DataContracts.PersonIntg>(personIds);
+            var militaryPersonRecords = await DataReader.BulkReadRecordAsync<DataContracts.PerMilitary>(personIds);
+
+            var socialMediaHandlesRecords = new Collection<SocialMediaHandles>();
+
+            var socialMediaHandlesIds = DataReader.Select("SOCIAL.MEDIA.HANDLES", "WITH SMH.PERSON.ID EQ '?'", personIds);
+            if (socialMediaHandlesIds != null && socialMediaHandlesIds.Any())
+            {
+                socialMediaHandlesRecords = await DataReader.BulkReadRecordAsync<DataContracts.SocialMediaHandles>(socialMediaHandlesIds.ToArray());
+            }
+
+            //get all associated addresses
+            var addressDataContracts = new List<Data.Base.DataContracts.Address>();
+            var personAddresses = personRecords.SelectMany(pr => pr.PersonAddresses).Distinct().ToArray();
+            if (personAddresses != null && personAddresses.Any())
+            {
+                addressDataContracts = (await GetPersonAddressContractsAsync(personAddresses)).ToList();
+            }
+
+            // create the specified domain objects
+            var personBasedObjects = new Collection<TDomain>();
+            var ex = new RepositoryException("Error retrieving person data");
+
+            foreach (var personRecord in personRecords)
+            {
+                try
+                {
+                    personBasedObjects.Add(objectBuilder.Invoke(personRecord));
+                }
+                catch (Exception e)
+                {
+                    LogDataError("Person", personRecord.Recordkey, personRecord, e);
+                }
+            }
+            
+
+            // build the person entities
+            return await BuildPersons3IntegrationAsync<TDomain>(personRecords.Select(p => p.Recordkey).ToList(), personRecords, foreignPersonRecords, integrationPersonRecords, socialMediaHandlesRecords,
+                militaryPersonRecords, personBasedObjects, addressDataContracts);
+        }
+
+
         #endregion
 
         #region PERSON PIN Get Method
@@ -908,6 +1204,49 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
             }
             return personPinEntities.Any() ? personPinEntities : null;
+        }
+
+        #endregion
+
+        #region Person user name Get Method
+
+        /// <summary>
+        /// Gets person user names
+        /// </summary>
+        /// <param name="personIds"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<Ellucian.Colleague.Domain.Base.Entities.PersonUserName>> GetPersonUserNamesAsync(string[] personIds)
+        {
+            List<Domain.Base.Entities.PersonUserName> personUserNamesEntities = new List<Domain.Base.Entities.PersonUserName>();
+
+            if (personIds != null && personIds.Any())
+            {
+                var orgEntityIds = DataReader.Select("ORG.ENTITY", personIds, null);
+                if (orgEntityIds != null && orgEntityIds.Any())
+                {
+                    var orgEntityRecords = await DataReader.BulkReadRecordAsync<DataContracts.OrgEntity>(orgEntityIds.ToArray());
+                    if (orgEntityRecords != null && orgEntityRecords.Any())
+                    {
+                        var orgEntityEnvIds = orgEntityRecords.Where(oe => (!string.IsNullOrWhiteSpace(oe.OeOrgEntityEnv)))
+                            .Select(oe => oe.OeOrgEntityEnv).Distinct().ToArray();
+                        if (orgEntityEnvIds != null && orgEntityEnvIds.Any())
+                        {
+                            var orgEntityEnvRecords = await DataReader.BulkReadRecordAsync<DataContracts.OrgEntityEnv>(orgEntityEnvIds.ToArray());
+                            if (orgEntityEnvRecords != null && orgEntityEnvRecords.Any())
+                            {
+                                foreach (var orgEntityEnvRecord in orgEntityEnvRecords)
+                                {
+                                    if (orgEntityEnvRecord != null && !string.IsNullOrEmpty(orgEntityEnvRecord.OeeResource) && !string.IsNullOrEmpty(orgEntityEnvRecord.OeeUsername))
+                                    {
+                                        personUserNamesEntities.Add(new Domain.Base.Entities.PersonUserName(orgEntityEnvRecord.OeeResource, orgEntityEnvRecord.OeeUsername));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return personUserNamesEntities;
         }
 
         #endregion
@@ -1016,6 +1355,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         private async Task<IEnumerable<TDomain>> BuildPersonsIntegrationAsync<TDomain>(IEnumerable<string> personIds, IEnumerable<DataContracts.Person> records, IEnumerable<DataContracts.ForeignPerson> foreignPersonRecords, IEnumerable<DataContracts.PersonIntg> integrationPersonRecords, IEnumerable<DataContracts.SocialMediaHandles> socialMediaHandlesRecords, IEnumerable<TDomain> personBasedObjects, IEnumerable<Data.Base.DataContracts.Address> allAddressDataContracts)
             where TDomain : Domain.Base.Entities.PersonIntegration
         {
+            var repositoryException = new RepositoryException();
+
             var personResults = new List<TDomain>();
             List<string> personIdsNotFound = new List<string>();
             string idPerson = string.Empty;
@@ -1099,9 +1440,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 }
                                 catch (ArgumentNullException e)
                                 {
-                                    var ex = new RepositoryException();
-                                    var errMsg = new RepositoryError("lastName.Missing", "The last name is missing when gathering names., Entity: 'PERSON’, Record ID: ‘" + personId + "’");
-                                    ex.AddError(errMsg);
+                                    var ex = new RepositoryException("The last name is missing when gathering person history names.");
                                     throw ex;
                                 }
 
@@ -1187,17 +1526,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 personDocument.Country = document.PerIntgIdDocCountryAssocMember;
                                 personDocument.Region = document.PerIntgIdDocRegionAssocMember;
                                 personBasedObject.IdentityDocuments.Add(personDocument);
-                            }
-                        }
-                        // Languages
-                        if ((integrationPerson != null) && (integrationPerson.PerIntgLanguagesEntityAssociation != null))
-                        {
-                            foreach (var languageAssociation in integrationPerson.PerIntgLanguagesEntityAssociation)
-                            {
-                                var language = languageAssociation.PerIntgLanguageAssocMember;
-                                var preference = !string.IsNullOrEmpty(languageAssociation.PerIntgLanguagePrefAssocMember) ? (Domain.Base.Entities.LanguagePreference)Enum.Parse(typeof(Domain.Base.Entities.LanguagePreference), languageAssociation.PerIntgLanguagePrefAssocMember) : Domain.Base.Entities.LanguagePreference.Secondary;
-
-                                personBasedObject.AddPersonLanguage(new PersonLanguage(personDataContract.Recordkey, language, preference));
                             }
                         }
                         // Phone numbers
@@ -1440,7 +1768,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             if (personDataContract.WhereUsed != null && personDataContract.WhereUsed.Contains("FACULTY"))
                             {
                                 personBasedObject.Roles.Add(new PersonRole(PersonRoleType.Instructor, null, null));
-                                //since we know this is a faculty, we can check for advisor role now.
+                            }
+                        }
+
+                        //check if advisor role is assigned and if not check if FAC is associated and and FAC.ADVISE.FLAG is "Y" and assign advisor role
+                        if (personBasedObject.Roles == null || !personBasedObject.Roles.Any() ||
+                            !personBasedObject.Roles.Where(r => r.RoleType == PersonRoleType.Advisor).Any())
+                        {
+                            if (personDataContract.WhereUsed != null && personDataContract.WhereUsed.Contains("FACULTY"))
+                            {
                                 if (await IsAdvisorAsync(personId))
                                 {
                                     personBasedObject.Roles.Add(new PersonRole(PersonRoleType.Advisor, null, null));
@@ -1487,9 +1823,14 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             catch (RepositoryException e)
             {
-                Exception ex = new Exception(string.Concat(e.Message, " Entity: 'PERSON', Record ID: '", idPerson, "'"));
-                logger.Error(string.Concat(e.Message, " Entity: 'PERSON', Record ID: '", idPerson, "'"));
-                throw ex;
+                if (e.Errors != null || e.Errors.Count() > 0)
+                {
+                    foreach (var error in e.Errors)
+                    {                        ;
+                        repositoryException.AddError(new RepositoryError("persons", error.Message) {SourceId = idPerson });
+                        logger.Error(string.Concat(e.Message, " Entity: 'PERSON', Record ID: '", idPerson, "'"));
+                    }
+                }
             }
             catch (Exception e)
             {
@@ -1502,6 +1843,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 // log any ids that were not found.
                 var errorMessage = "The following person Ids were requested but not found: " + string.Join(",", personIdsNotFound.ToArray());
                 logger.Info(errorMessage);
+            }
+            if (repositoryException.Errors.Any())
+            {
+                throw repositoryException;
             }
             return personResults;
         }
@@ -1608,7 +1953,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                     var nameHist = new PersonName(names.NameHistoryFirstNameAssocMember, names.NameHistoryMiddleNameAssocMember, names.NameHistoryLastNameAssocMember);
                                     personNameHistory.Add(nameHist);
                                 }
-                                catch (ArgumentNullException e)
+                                catch (ArgumentNullException)
                                 {
                                     var ex = new RepositoryException("The last name is missing when gathering person history names.");
                                     throw ex;
@@ -1695,17 +2040,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 personDocument.Country = document.PerIntgIdDocCountryAssocMember;
                                 personDocument.Region = document.PerIntgIdDocRegionAssocMember;
                                 personBasedObject.IdentityDocuments.Add(personDocument);
-                            }
-                        }
-                        // Languages
-                        if ((integrationPerson != null) && (integrationPerson.PerIntgLanguagesEntityAssociation != null))
-                        {
-                            foreach (var languageAssociation in integrationPerson.PerIntgLanguagesEntityAssociation)
-                            {
-                                var language = languageAssociation.PerIntgLanguageAssocMember;
-                                var preference = !string.IsNullOrEmpty(languageAssociation.PerIntgLanguagePrefAssocMember) ? (Domain.Base.Entities.LanguagePreference)Enum.Parse(typeof(Domain.Base.Entities.LanguagePreference), languageAssociation.PerIntgLanguagePrefAssocMember) : Domain.Base.Entities.LanguagePreference.Secondary;
-
-                                personBasedObject.AddPersonLanguage(new PersonLanguage(personDataContract.Recordkey, language, preference));
                             }
                         }
                         // Phone numbers
@@ -1959,7 +2293,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             if (personDataContract.WhereUsed != null && personDataContract.WhereUsed.Contains("FACULTY"))
                             {
                                 personBasedObject.Roles.Add(new PersonRole(PersonRoleType.Instructor, null, null));
-                                //since we know this is a faculty, we can check for advisor role now.
+                            }
+                        }
+
+                        //check if advisor role is assigned and if not check if FAC is associated and and FAC.ADVISE.FLAG is "Y" and assign advisor role
+                        if (personBasedObject.Roles == null || !personBasedObject.Roles.Any() ||
+                            !personBasedObject.Roles.Where(r => r.RoleType == PersonRoleType.Advisor).Any())
+                        {
+                            if (personDataContract.WhereUsed != null && personDataContract.WhereUsed.Contains("FACULTY"))
+                            {
                                 if (await IsAdvisorAsync(personId))
                                 {
                                     personBasedObject.Roles.Add(new PersonRole(PersonRoleType.Advisor, null, null));
@@ -2026,6 +2368,540 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return personResults;
         }
 
+        /// <summary>
+        /// Builds Person Integration objects 
+        /// </summary>
+        /// <typeparam name="TDomain"></typeparam>
+        /// <param name="personIds"></param>
+        /// <param name="records"></param>
+        /// <param name="personBasedObjects"></param>
+        /// <returns></returns>
+        private async Task<IEnumerable<TDomain>> BuildPersons3IntegrationAsync<TDomain>(IEnumerable<string> personIds, IEnumerable<DataContracts.Person> records,
+            IEnumerable<DataContracts.ForeignPerson> foreignPersonRecords, IEnumerable<DataContracts.PersonIntg> integrationPersonRecords,
+            IEnumerable<DataContracts.SocialMediaHandles> socialMediaHandlesRecords, IEnumerable<PerMilitary> militaryPersonRecords, IEnumerable<TDomain> personBasedObjects, IEnumerable<Data.Base.DataContracts.Address> allAddressDataContracts)
+            where TDomain : Domain.Base.Entities.PersonIntegration
+        {
+            var personResults = new List<TDomain>();
+            List<string> personIdsNotFound = new List<string>();
+            var exception = new RepositoryException();
+
+            foreach (string personId in personIds)
+            {
+                var guid = string.Empty;
+                #region create domain entity
+                try
+                {
+                    // Person Contract
+                    DataContracts.Person personDataContract = records.Where(p => p.Recordkey == personId).FirstOrDefault();
+                    if (personDataContract != null)
+                    {
+                        guid = personDataContract.RecordGuid;
+                    }
+                    // Foreign Person Contract
+                    DataContracts.ForeignPerson foreignPerson = null;
+                    try
+                    {
+                        foreignPerson = foreignPersonRecords.Where(fp => fp.Recordkey == personId).FirstOrDefault();
+                    }
+                    catch
+                    {
+                        // If Foreign Person is null, ignore
+                    }
+                    // Integration Person Contract
+                    DataContracts.PersonIntg integrationPerson = null;
+                    try
+                    {
+                        integrationPerson = integrationPersonRecords.Where(ip => ip.Recordkey == personId).FirstOrDefault();
+                    }
+                    catch
+                    {
+                        // If person integration does not exist, ignore
+                    }
+                    // Social Media Handles Contracts
+                    List<DataContracts.SocialMediaHandles> socialMediaHandles = null;
+                    try
+                    {
+                        socialMediaHandles = socialMediaHandlesRecords.Where(smh => smh.SmhPersonId == personId).ToList();
+                    }
+                    catch
+                    {
+                        // If social media handles do not exist, ignore
+                    }
+                    // Addresses Contracts
+                    List<DataContracts.Address> addressDataContracts = null;
+                    try
+                    {
+                        if (personDataContract.PersonAddresses != null && personDataContract.PersonAddresses.Any() && allAddressDataContracts != null && allAddressDataContracts.Any())
+                        {
+                            addressDataContracts = new List<DataContracts.Address>();
+                            foreach (var addr in personDataContract.PersonAddresses)
+                            {
+                                var address = allAddressDataContracts.FirstOrDefault(adr => adr.Recordkey == addr);
+                                if (address != null)
+                                    addressDataContracts.Add(address);
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // If addresses do not exist, ignore
+                    }
+
+                    //military records
+                    List<DataContracts.PerMilitary> militaryRecordsHandles = null;
+                    if (militaryPersonRecords != null && militaryPersonRecords.Any())
+                    {
+                        militaryRecordsHandles = militaryPersonRecords.Where(dc => !string.IsNullOrEmpty(dc.Recordkey) && dc.Recordkey.Equals(personId, StringComparison.OrdinalIgnoreCase))
+                                                                      .ToList();
+                    }
+
+                    TDomain tDomainObject = personBasedObjects.Where(p => p.Id == personId).FirstOrDefault();
+                    if (personDataContract != null && tDomainObject != null)
+                    {
+                        TDomain personBasedObject = await BuildBasePersonAsync<TDomain>(personId, personDataContract, tDomainObject);
+
+                        // Build items not included in base person
+                        // Preferred Address is no longer used in the PersonIntegration calls.
+                        personBasedObject.PreferredAddress = new List<string>();
+                        // Name History is in PersonProxyUser but not in base person.
+                        List<PersonName> personNameHistory = new List<PersonName>();
+                        if (personDataContract.NamehistEntityAssociation != null)
+                        {
+                            foreach (var names in personDataContract.NamehistEntityAssociation)
+                            {
+                                try
+                                {
+                                    if (names.NameHistoryLastNameAssocMember == null)
+                                        names.NameHistoryLastNameAssocMember = "test";
+                                    var nameHist = new PersonName(names.NameHistoryFirstNameAssocMember, names.NameHistoryMiddleNameAssocMember, names.NameHistoryLastNameAssocMember);
+                                    personNameHistory.Add(nameHist);
+                                }
+                                catch (ArgumentNullException e)
+                                {
+                                    exception.AddError(new RepositoryError("persons", "The last name is missing when gathering person history names.") { Id = guid, SourceId = personId });
+                                }
+                            }
+                        }
+                        if (personNameHistory != null)
+                        {
+                            personBasedObject.FormerNames = personNameHistory;
+                        }
+                        // deceased date
+                        if (integrationPerson != null && !personBasedObject.DeceasedDate.HasValue && integrationPerson.PerIntgDeceasedDate.HasValue)
+                        {
+                            personBasedObject.DeceasedDate = integrationPerson.PerIntgDeceasedDate;
+                        }
+                        // religion
+                        personBasedObject.Religion = personDataContract.Denomination;
+                        // Privacy Status
+                        personBasedObject.PrivacyStatus = !string.IsNullOrEmpty(personDataContract.PrivacyFlag) ? PrivacyStatusType.restricted : PrivacyStatusType.unrestricted;
+                        personBasedObject.PrivacyStatusCode = personDataContract.PrivacyFlag;
+                        // Citizenship
+                        personBasedObject.Citizenship = personDataContract.Citizenship;
+                        // Alien Status
+                        personBasedObject.AlienStatus = (foreignPerson != null ? foreignPerson.FperAlienStatus : string.Empty);
+                        // Birth Country
+                        if (foreignPerson != null)
+                        {
+                            personBasedObject.BirthCountry = foreignPerson.FperBirthCountry;
+                        }
+                        else
+                        {
+                            personBasedObject.BirthCountry = (integrationPerson != null ? integrationPerson.PerIntgBirthCountry : string.Empty);
+                        }
+                        // Interests
+                        personBasedObject.Interests = personDataContract.Interests;
+                        // Professional Abreviations
+                        personBasedObject.ProfessionalAbbreviations = personDataContract.ProfessionalSuffixes;
+                        // Drivers License
+                        if (!string.IsNullOrEmpty(personDataContract.DriverLicenseNo))
+                        {
+                            var license = new PersonDriverLicense(personDataContract.Recordkey, personDataContract.DriverLicenseNo) { IssuingState = personDataContract.DriverLicenseState };
+                            personBasedObject.DriverLicense = license;
+                        }
+                        // Visa information
+                        if (!string.IsNullOrEmpty(personDataContract.VisaType))
+                        {
+                            var visa = new PersonVisa(personDataContract.Recordkey, personDataContract.VisaType)
+                            {
+                                EntryDate = personDataContract.PersonCountryEntryDate,
+                                ExpireDate = personDataContract.VisaExpDate,
+                                IssueDate = personDataContract.VisaIssuedDate,
+                                IssuingCountry = (foreignPerson != null ? foreignPerson.FperVisaIssueCountry : string.Empty),
+                                Guid = (foreignPerson != null ? foreignPerson.RecordGuid : string.Empty),
+                                PersonGuid = (foreignPerson != null ? personDataContract.RecordGuid : string.Empty),
+                                RequestDate = (foreignPerson != null ? foreignPerson.FperVisaRequestDate : null),
+                                VisaNumber = (foreignPerson != null ? foreignPerson.FperVisaNo : string.Empty)
+                            };
+                            personBasedObject.Visa = visa;
+                        }
+                        // Passport information
+                        if (foreignPerson != null && !string.IsNullOrEmpty(foreignPerson.FperPassportNo))
+                        {
+                            var passport = new PersonPassport(personDataContract.Recordkey, foreignPerson.FperPassportNo)
+                            {
+                                PersonGuid = personDataContract.RecordGuid,
+                                ExpireDate = foreignPerson.FperPassportExpireDate,
+                                IssuingCountry = foreignPerson.FperPassportCountry
+                            };
+                            personBasedObject.Passport = passport;
+                        }
+                        // Drivers license
+                        if (!string.IsNullOrEmpty(personDataContract.DriverLicenseNo))
+                        {
+                            personBasedObject.DriverLicense = new PersonDriverLicense(personDataContract.Recordkey, personDataContract.DriverLicenseNo, (integrationPerson != null ? integrationPerson.PerIntgDlExpireDate : null)) { IssuingState = personDataContract.DriverLicenseState };
+                        }
+                        // Other Identity Documents
+                        if ((integrationPerson != null) && integrationPerson.PerIntgIdDocNo != null && integrationPerson.PerIntgIdDocNo.Any())
+                        {
+                            personBasedObject.IdentityDocuments = new List<PersonIdentityDocuments>();
+                            foreach (var document in integrationPerson.PerIntgIdentityDocsEntityAssociation)
+                            {
+                                var personDocument = new PersonIdentityDocuments(personDataContract.Recordkey, document.PerIntgIdDocNoAssocMember, document.PerIntgIdDocExpDateAssocMember);
+                                personDocument.PersonGuid = personDataContract.RecordGuid;
+                                personDocument.Country = document.PerIntgIdDocCountryAssocMember;
+                                personDocument.Region = document.PerIntgIdDocRegionAssocMember;
+                                personBasedObject.IdentityDocuments.Add(personDocument);
+                            }
+                        }
+                        // Phone numbers
+                        List<Phone> phones = new List<Phone>();
+                        if (integrationPerson != null && integrationPerson.PerIntgPhonesEntityAssociation != null && integrationPerson.PerIntgPhonesEntityAssociation.Any())
+                        {
+                            // create the phone entities
+                            foreach (var phone in integrationPerson.PerIntgPhonesEntityAssociation)
+                            {
+                                if (!string.IsNullOrEmpty(phone.PerIntgPhoneNumberAssocMember))
+                                {
+                                    // Ignore phones if they are not also in the person record.  They may have been deleted from Colleague
+                                    // but not the INTG table.
+
+                                    bool found = personDataContract.PersonalPhoneNumber.Any(ppn => ppn.Contains(phone.PerIntgPhoneNumberAssocMember));
+
+                                    if (found)
+                                    {
+                                        var phoneEntity = new Phone(phone.PerIntgPhoneNumberAssocMember, phone.PerIntgPhoneTypeAssocMember, phone.PerIntgPhoneExtensionAssocMember)
+                                        {
+                                            CountryCallingCode = phone.PerIntgCtryCallingCodeAssocMember,
+                                            IsPreferred = (!string.IsNullOrEmpty(phone.PerIntgPhonePrefAssocMember) ? phone.PerIntgPhonePrefAssocMember.Equals("Y", StringComparison.OrdinalIgnoreCase) : false)
+                                        };
+                                        personBasedObject.AddPhone(phoneEntity);
+                                    }
+                                }
+                            }
+                        }
+                        // Personal Phones for individuals
+                        if (personDataContract.PersonCorpIndicator == null || !personDataContract.PersonCorpIndicator.Equals("y", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (personDataContract.PersonalPhoneNumber != null && personDataContract.PersonalPhoneNumber.Any())
+                            {
+                                for (int i = 0; i < personDataContract.PersonalPhoneNumber.Count; i++)
+                                {
+                                    try
+                                    {
+                                        var phoneNumber = personDataContract.PersonalPhoneNumber[i];
+                                        var phoneType = personDataContract.PersonalPhoneType.Count > i
+                                            ? personDataContract.PersonalPhoneType[i]
+                                            : null;
+                                        var phoneExtension = personDataContract.PersonalPhoneExtension.Count > i
+                                            ? personDataContract.PersonalPhoneExtension[i]
+                                            : string.Empty;
+
+                                        if (!string.IsNullOrEmpty(phoneNumber))
+                                            personBasedObject.AddPhone(new Phone(phoneNumber, phoneType, phoneExtension));
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        logger.Error(ex, string.Concat("Could not load phone numbers for person id", personDataContract.RecordGuid));
+                                    }
+                                }
+                            }
+                        }
+                        // Addresses
+                        if (addressDataContracts != null && addressDataContracts.Any())
+                        {
+                            // create the address entities
+                            personBasedObject.Addresses = new List<Domain.Base.Entities.Address>();
+                            foreach (var address in addressDataContracts)
+                            {
+                                var addressEntity = new Domain.Base.Entities.Address();
+                                addressEntity.Guid = address.RecordGuid;
+                                addressEntity.City = address.City;
+                                addressEntity.State = address.State;
+                                addressEntity.PostalCode = address.Zip;
+                                addressEntity.Country = address.Country;
+                                addressEntity.County = address.County;
+                                addressEntity.AddressLines = address.AddressLines;
+                                // Find Addrel Association in Person contract
+                                var assocEntity = personDataContract.PseasonEntityAssociation.FirstOrDefault(pa => address.Recordkey == pa.PersonAddressesAssocMember);
+                                if (assocEntity != null)
+                                {
+                                    //addressEntity.TypeCode = assocEntity.AddrTypeAssocMember.Split(_SM).FirstOrDefault();
+                                    addressEntity.TypeCode = assocEntity.AddrTypeAssocMember;
+                                    addressEntity.EffectiveStartDate = assocEntity.AddrEffectiveStartAssocMember;
+                                    addressEntity.EffectiveEndDate = assocEntity.AddrEffectiveEndAssocMember;
+                                    addressEntity.SeasonalDates = new List<AddressSeasonalDates>();
+                                    if (!string.IsNullOrEmpty(assocEntity.AddrSeasonalStartAssocMember) && !string.IsNullOrEmpty(assocEntity.AddrSeasonalEndAssocMember))
+                                    {
+                                        // This could be subvalued so need to split on subvalue mark ASCII 252.
+                                        string[] startDate = assocEntity.AddrSeasonalStartAssocMember.Split(_SM);
+                                        string[] endDate = assocEntity.AddrSeasonalEndAssocMember.Split(_SM);
+                                        for (int i = 0; i < startDate.Length; i++)
+                                        {
+                                            try
+                                            {
+                                                // add in the address override phones into the person's list of phones
+                                                AddressSeasonalDates seasonalDates = new AddressSeasonalDates(startDate[i], endDate[i]);
+                                                addressEntity.SeasonalDates.Add(seasonalDates);
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                var error = "Person address seasonal start/end information is invalid. PersonId: " + personId;
+
+                                                // Log the original exception
+                                                logger.Error(ex.ToString());
+                                                logger.Info(error);
+                                            }
+                                        }
+                                    }
+                                }
+                                addressEntity.IsPreferredAddress = (address.Recordkey == personDataContract.PreferredAddress);
+                                addressEntity.IsPreferredResidence = (address.Recordkey == personDataContract.PreferredResidence);
+                                addressEntity.Status = "Current";
+                                personBasedObject.Addresses.Add(addressEntity);
+                                // Address Phones for Corporations
+                                if (personDataContract.PersonCorpIndicator != null && personDataContract.PersonCorpIndicator.Equals("y", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    if (address.AddressPhones != null && address.AddressPhones.Any())
+                                    {
+                                        for (int i = 0; i < address.AddressPhones.Count; i++)
+                                        {
+                                            try
+                                            {
+                                                var phoneNumber = address.AddressPhones[i];
+                                                var phoneType = address.AddressPhoneType.Count > i
+                                                    ? address.AddressPhoneType[i]
+                                                    : null;
+                                                var phoneExtension = address.AddressPhoneExtension.Count > i
+                                                    ? address.AddressPhoneExtension[i]
+                                                    : string.Empty;
+
+                                                if (!string.IsNullOrEmpty(phoneNumber))
+                                                    personBasedObject.AddPhone(new Phone(phoneNumber, phoneType, phoneExtension));
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                logger.Error(ex, string.Concat("Could not load phone numbers for person id", personDataContract.RecordGuid));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Social Media
+                        if (socialMediaHandles != null)
+                        {
+                            foreach (var socialMedia in socialMediaHandles)
+                            {
+                                if (socialMedia != null && !string.IsNullOrEmpty(socialMedia.SmhHandle) && !string.IsNullOrEmpty(socialMedia.SmhNetwork))
+                                {
+                                    var preferred = false;
+                                    if (!string.IsNullOrEmpty(socialMedia.SmhPreferred))
+                                    {
+                                        preferred = socialMedia.SmhPreferred.Equals("y", StringComparison.OrdinalIgnoreCase);
+                                    }
+                                    personBasedObject.AddSocialMedia(new SocialMedia(socialMedia.SmhNetwork, socialMedia.SmhHandle, preferred));
+                                }
+                            }
+                        }
+                        //military record
+                        if (militaryRecordsHandles != null && militaryRecordsHandles.Any())
+                        {
+                            var militaryRecordHandle = militaryRecordsHandles.SelectMany(dc => dc.PermilStatusesEntityAssociation)
+                                                                             .FirstOrDefault(rec => rec.PermilPrimaryFlagAssocMember.Equals("Y", StringComparison.OrdinalIgnoreCase));
+                            if (militaryRecordHandle != null)
+                            {
+                                personBasedObject.MilitaryStatus = !string.IsNullOrEmpty(militaryRecordHandle.PermilMilStatusAssocMember) ? militaryRecordHandle.PermilMilStatusAssocMember : null;
+                            }
+                        }
+
+                        if (!string.IsNullOrEmpty(personDataContract.PersonWebsiteAddress))
+                        {
+                            personBasedObject.AddSocialMedia(new SocialMedia("website", personDataContract.PersonWebsiteAddress));
+                        }
+                        // Email Addresses
+                        if (personDataContract.PersonEmailAddresses != null && personDataContract.PersonEmailAddresses.Any())
+                        {
+                            for (int i = 0; i < personDataContract.PersonEmailAddresses.Count; i++)
+                            {
+                                try
+                                {
+                                    var emailAddress = personDataContract.PersonEmailAddresses[i];
+                                    var emailAddressType = personDataContract.PersonEmailTypes.Count > i
+                                        ? personDataContract.PersonEmailTypes[i]
+                                        : null;
+                                    var emailAddressPreferred = personDataContract.PersonPreferredEmail.Count > i
+                                        ? personDataContract.PersonPreferredEmail[i]
+                                        : string.Empty;
+
+                                    var emailToAdd = new EmailAddress(emailAddress, emailAddressType)
+                                    {
+                                        IsPreferred = emailAddressPreferred.Equals("y", StringComparison.OrdinalIgnoreCase)
+                                    };
+
+                                    personBasedObject.AddEmailAddress(emailToAdd);
+                                }
+                                catch (Exception ex)
+                                {
+                                    logger.Error(ex, string.Format("Could not load email address for person id {0} with GUID {1}", personDataContract.Recordkey, personDataContract.RecordGuid));
+                                }
+                            }
+                        }
+                        // Roles
+                        if (integrationPerson != null && integrationPerson.PerIntgRolesEntityAssociation != null)
+                        {
+                            foreach (var role in integrationPerson.PerIntgRolesEntityAssociation)
+                            {
+                                var personRole = new PersonRole((PersonRoleType)Enum.Parse(typeof(PersonRoleType), role.PerIntgRoleAssocMember), role.PerIntgRoleStartDateAssocMember, role.PerIntgRoleEndDateAssocMember);
+                                personBasedObject.AddRole(personRole);
+                            }
+                        }
+
+                        //check if vendor role is assigned and if not check if VEN is associated and assign vendor role
+                        if (personBasedObject.Roles == null || !personBasedObject.Roles.Any() ||
+                            !personBasedObject.Roles.Where(r => r.RoleType == PersonRoleType.Vendor).Any())
+                        {
+                            if (personDataContract.WhereUsed != null && personDataContract.WhereUsed.Contains("VENDORS"))
+                            {
+                                personBasedObject.Roles.Add(new PersonRole(PersonRoleType.Vendor, null, null));
+                            }
+                        }
+
+                        //check if employee role is assigned and if not check if EMP is associated and assign employee role
+                        if (personBasedObject.Roles == null || !personBasedObject.Roles.Any() ||
+                            !personBasedObject.Roles.Where(r => r.RoleType == PersonRoleType.Employee).Any())
+                        {
+                            if (personDataContract.WhereUsed != null && (personDataContract.WhereUsed.Contains("EMPLOYES") || personDataContract.WhereUsed.Contains("HRPER")))
+                            {
+                                personBasedObject.Roles.Add(new PersonRole(PersonRoleType.Employee, null, null));
+                            }
+                        }
+
+                        //check if student role is assigned and if not check if STU is associated and assign student role
+                        if (personBasedObject.Roles == null || !personBasedObject.Roles.Any() ||
+                            !personBasedObject.Roles.Where(r => r.RoleType == PersonRoleType.Student).Any())
+                        {
+                            if (personDataContract.WhereUsed != null && personDataContract.WhereUsed.Contains("STUDENTS"))
+                            {
+                                personBasedObject.Roles.Add(new PersonRole(PersonRoleType.Student, null, null));
+                            }
+                        }
+
+                        //check if prospective student role is assigned and if not check if PRO is associated and assign prospective student role
+                        if (personBasedObject.Roles == null || !personBasedObject.Roles.Any() ||
+                            !personBasedObject.Roles.Where(r => r.RoleType == PersonRoleType.ProspectiveStudent).Any())
+                        {
+                            if (personDataContract.WhereUsed != null && personDataContract.WhereUsed.Contains("APPLICANTS"))
+                            {
+                                personBasedObject.Roles.Add(new PersonRole(PersonRoleType.ProspectiveStudent, null, null));
+                            }
+                        }
+
+                        //check if instructor role is assigned and if not check if FAC is associated and assign instructor role
+                        if (personBasedObject.Roles == null || !personBasedObject.Roles.Any() ||
+                            !personBasedObject.Roles.Where(r => r.RoleType == PersonRoleType.Instructor).Any())
+                        {
+                            if (personDataContract.WhereUsed != null && personDataContract.WhereUsed.Contains("FACULTY"))
+                            {
+                                personBasedObject.Roles.Add(new PersonRole(PersonRoleType.Instructor, null, null));
+                            }
+                        }
+
+                        //check if advisor role is assigned and if not check if FAC is associated and and FAC.ADVISE.FLAG is "Y" and assign advisor role
+                        if (personBasedObject.Roles == null || !personBasedObject.Roles.Any() ||
+                            !personBasedObject.Roles.Where(r => r.RoleType == PersonRoleType.Advisor).Any())
+                        {
+                            if (personDataContract.WhereUsed != null && personDataContract.WhereUsed.Contains("FACULTY"))
+                            {
+                                if (await IsAdvisorAsync(personId))
+                                {
+                                    personBasedObject.Roles.Add(new PersonRole(PersonRoleType.Advisor, null, null));
+                                }
+                            }
+                        }
+
+                        // Single Ethnicity update
+                        if (integrationPerson != null && !string.IsNullOrEmpty(integrationPerson.PerIntgEthnic))
+                        {
+                            personBasedObject.EthnicityCode = integrationPerson.PerIntgEthnic;
+                            if (!personBasedObject.EthnicCodes.Contains(integrationPerson.PerIntgEthnic))
+                            {
+                                var allCodes = new List<string>();
+                                allCodes.Add(integrationPerson.PerIntgEthnic);
+                                foreach (var code in personDataContract.PerEthnics)
+                                {
+                                    allCodes.Add(code);
+                                }
+                                personBasedObject.EthnicCodes = allCodes;
+                            }
+                        }
+                        // Person Integration Preferred Name Type
+                        if (integrationPerson != null)
+                        {
+                            if (string.IsNullOrEmpty(integrationPerson.PerIntgPreferredNameType))
+                            {
+                                integrationPerson.PerIntgPreferredNameType = "LEGAL";
+                            }
+                            personBasedObject.PreferredNameType = integrationPerson.PerIntgPreferredNameType;
+                        }
+                        else
+                        {
+                            personBasedObject.PreferredNameType = "LEGAL";
+                        }
+
+                        personResults.Add(personBasedObject);
+                    }
+                    else
+                    {
+                        personIdsNotFound.Add(personId);
+                    }
+                }
+                catch (RepositoryException e)
+                {
+                    if (e.Errors != null || e.Errors.Count() > 0)
+                    {                        
+                        foreach (var error in e.Errors)
+                        {                            
+                            exception.AddError(new RepositoryError("persons", error.Message) { Id = guid, SourceId = personId });
+                            logger.Error(string.Concat(e.Message, " Entity: 'PERSON', Record ID: '", personId, "'"));
+                        }
+                    }       
+                }
+                catch (Exception e)
+                {
+                    exception.AddError(new RepositoryError("persons", e.Message) { Id = guid, SourceId = personId });
+                    logger.Error(string.Concat(e.Message, " Entity: 'PERSON', Record ID: '", personId, "'"));
+                    
+                }
+                #endregion
+            }
+
+
+            if (personIdsNotFound.Any())
+            {
+                // log any ids that were not found.
+                var errorMessage = "The following person Ids were requested but not found: " + string.Join(",", personIdsNotFound.ToArray());
+                logger.Info(errorMessage);
+            }
+
+            if (exception.Errors.Any())
+            {
+                throw exception;
+            }
+            return personResults;
+        }
+
 
         #endregion
 
@@ -2038,7 +2914,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>The person ID</returns>
         public async Task<string> GetPersonIdFromGuidAsync(string guid)
         {
-            //return await GetRecordKeyFromGuidAsync(guid);
             if (string.IsNullOrEmpty(guid))
             {
                 throw new ArgumentNullException("guid");
@@ -2096,15 +2971,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             if (createResponse.PersonIntgErrors.Any())
             {
-                var errorMessage = string.Format("Error(s) occurred updating person '{0}':", person.Guid);
-                var exception = new RepositoryException(errorMessage);
-                createResponse.PersonIntgErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)));
-                logger.Error(errorMessage);
+                var exception = new RepositoryException();
+                createResponse.PersonIntgErrors.ForEach(e => exception.AddError(new RepositoryError("Create.Update.Exception", string.Concat(e.ErrorCodes, " - ", e.ErrorMessages))));
                 throw exception;
             }
 
             // get the newly created person from the database
-            return await GetPersonIntegration2ByGuidAsync(createResponse.PersonGuid, true);
+            return await GetPersonIntegration3ByGuidAsync(createResponse.PersonGuid, true);
         }
 
         /// <summary>
@@ -2137,7 +3010,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 var errorMessage = string.Format("Error(s) occurred updating organization '{0}':", personOrg.Guid);
                 var exception = new RepositoryException(errorMessage);
-                createResponse.OrgIntgErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)));
+                createResponse.OrgIntgErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
                 logger.Error(errorMessage);
                 throw exception;
             }
@@ -2183,15 +3056,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                 if (updateResponse.PersonIntgErrors.Any())
                 {
-                    var errorMessage = string.Format("Error(s) occurred updating person '{0}':", person.Guid);
-                    var exception = new RepositoryException(errorMessage);
-                    updateResponse.PersonIntgErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)));
-                    logger.Error(errorMessage);
+                    var exception = new RepositoryException();
+                    updateResponse.PersonIntgErrors.ForEach(e => exception.AddError(new RepositoryError("Create.Update.Exception", string.Concat(e.ErrorCodes, " - ", e.ErrorMessages))));
                     throw exception;
                 }
 
                 // get the updated person from the database
-                return await GetPersonIntegration2ByGuidAsync(updateResponse.PersonGuid, true);
+                return await GetPersonIntegration3ByGuidAsync(updateResponse.PersonGuid, true);
             }
             else
             {
@@ -2238,7 +3109,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     var errorMessage = string.Format("Error(s) occurred updating organization '{0}':", personOrg.Guid);
                     var exception = new RepositoryException(errorMessage);
-                    updateResponse.OrgIntgErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)));
+                    updateResponse.OrgIntgErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
                     logger.Error(errorMessage);
                     throw exception;
                 }
@@ -2409,6 +3280,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             personIntgNames.Add(personIntgNameLegal);
             personNameType.Add("LEGAL");
 
+            if (person.ProfessionalAbbreviations != null && person.ProfessionalAbbreviations.Any())
+                request.PersonProfAbbrev = person.ProfessionalAbbreviations;
+
             if (!string.IsNullOrEmpty(person.ChosenLastName) || !string.IsNullOrEmpty(person.ChosenFirstName) || !string.IsNullOrEmpty(person.ChosenMiddleName))
             {
                 var personIntgNameChosen = new PersonIntgNames
@@ -2483,7 +3357,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
 
             if (personNameType.Any())
-                request.PersonIntgNames = personIntgNames;
+                request.PersonIntgNames = personIntgNames;                                  
 
             //birth & deceased date
             request.BirthDate = person.BirthDate;
@@ -2518,6 +3392,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             request.RaceCodes = person.RaceCodes;
 
             //language
+            //
+            // Sending the PersonIntgLanguage directly into the request instead of converting from language ISO codes
+            // to Colleague language codes because the CTX was already written to take in ISO codes and do the conversions there.
+            //
             if (person.Languages != null && person.Languages.Any())
             {
                 foreach (var language in person.Languages)
@@ -2533,6 +3411,12 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             //marital status
             request.MaritalStatus = person.MaritalStatus.HasValue ? person.MaritalStatus.Value.ToString() : string.Empty;
+            
+            // person.MaritalStatusCode will only have a value saved off because
+            // we need to pass an unknown marital status code that Ethos treats as
+            // "single", but really has no valid special processing for Ethos
+            // of 1-5.
+            request.UnknownMaritalStateCode = person.MaritalStatusCode;
 
             //citizenshipStatus
             request.CitizenshipStatus = person.AlienStatus;
@@ -2712,7 +3596,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     socialMediaRequest.SocialMediaPref = socialMedia.IsPreferred ? "Y" : null;
                     request.PersonIntgSocialMedia.Add(socialMediaRequest);
                 }
-            }
+            }            
             return request;
         }
 
@@ -2755,6 +3639,79 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
 
             return GetAddressLabel(response);
+        }
+
+        /// <summary>
+        /// returns address Id matching the hierarchy provided. 
+        /// </summary>
+        /// <param name="ids">collection of person ids</param>
+        /// <param name="hierarchy">the addreess hierarchy</param>
+        /// <param name="date">the date for the address calculation</param>
+        /// <returns>Dictionary consisting of a person Id (key) and addressId (value)</returns>
+        public async Task<Dictionary<string,string>> GetHierarchyAddressIdsAsync(List<string> ids, string hierarchy, DateTime? date)
+        {
+            var addressIds = new Dictionary<string, string>();
+            var addrs = new List<GetPersonHierarchyAddressesOutput>();
+            foreach( var id in ids)
+            {
+                var addr = new GetPersonHierarchyAddressesOutput();
+                addr.PersonIds = id;
+                addrs.Add(addr);
+            }
+            GetPersonHierarchyAddressesResponse response = await transactionInvoker.ExecuteAsync<GetPersonHierarchyAddressesRequest, GetPersonHierarchyAddressesResponse>(
+                new GetPersonHierarchyAddressesRequest()
+                {
+                    GetPersonHierarchyAddressesOutput = addrs,
+                    InHierarchy = hierarchy,
+                    InDate = date.GetValueOrDefault(DateTime.Today)
+                });
+            //we only care about those addresses that has address lines. 
+
+            if (response != null && response.GetPersonHierarchyAddressesOutput != null && response.GetPersonHierarchyAddressesOutput.Any())
+            {
+                foreach (var ad in response.GetPersonHierarchyAddressesOutput)
+                {
+                    if (!string.IsNullOrEmpty(ad.OutAddressLines))
+                        addressIds.Add(ad.PersonIds, ad.OutAddressId);
+                }
+            }
+            return addressIds;
+        }
+
+        /// <summary>
+        /// Using a collection of address ids, get a dictionary collection of associated guids
+        /// </summary>
+        /// <param name="addressIds">collection of address ids</param>
+        /// <returns>Dictionary consisting of a addressId (key) and guid (value)</returns>
+        public async Task<Dictionary<string, string>> GetAddressGuidsCollectionAsync(IEnumerable<string> addreessIds)
+        {
+            if ((addreessIds == null) || (addreessIds != null && !addreessIds.Any()))
+            {
+                return new Dictionary<string, string>();
+            }
+            var addressGuidCollection = new Dictionary<string, string>();
+
+            var addresssGuidLookup = addreessIds
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct().ToList()
+                .ConvertAll(p => new RecordKeyLookup("ADDRESS", p, false)).ToArray();
+            var recordKeyLookupResults = await DataReader.SelectAsync(addresssGuidLookup);
+            foreach (var recordKeyLookupResult in recordKeyLookupResults)
+            {
+                try
+                {
+                    var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                    if (!addressGuidCollection.ContainsKey(splitKeys[1]))
+                    {
+                        addressGuidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
+                    }
+                }
+                catch (Exception) // Do not throw error.
+                {
+                }
+            }
+
+            return addressGuidCollection;
         }
 
         /// <summary>
@@ -2802,7 +3759,33 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>The person ID</returns>
         public async Task<string> GetAddressIdFromGuidAsync(string guid)
         {
-            return await GetRecordKeyFromGuidAsync(guid);
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid");
+            }
+
+            var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
+            if (idDict == null || idDict.Count == 0)
+            {
+                throw new KeyNotFoundException("Address GUID " + guid + " not found.");
+            }
+
+            var foundEntry = idDict.FirstOrDefault();
+            if (foundEntry.Value == null)
+            {
+                throw new KeyNotFoundException("Address GUID " + guid + " lookup failed.");
+            }
+
+            if (foundEntry.Value.Entity != "ADDRESS")
+            {
+                var errorMessage = string.Format("GUID {0} has different entity, {1}, than expected, ADDRESS", guid, foundEntry.Value.Entity);
+                logger.Error(errorMessage);
+                var exception = new RepositoryException(errorMessage);
+                exception.AddError(new RepositoryError("invalid.guid", errorMessage));
+                throw exception;
+            }
+
+            return foundEntry.Value.PrimaryKey;
         }
 
         #endregion
@@ -2849,7 +3832,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
         #endregion
 
-
         #region Search for Matching Persons
 
         /// <summary>
@@ -2889,6 +3871,52 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 errorMessage += string.Join(Environment.NewLine, matchResponse.ErrorMessages);
                 logger.Error(errorMessage);
                 throw new InvalidOperationException("Error occurred during person matching");
+            }
+            return matchResponse.PersonMatchingGuids;
+        }
+
+        /// <summary>
+        /// Search for matching person records.
+        /// </summary>
+        /// <param name="person"><see cref="Person">Person</see> to use for matching</param>
+        /// <returns>List of person guids</returns>
+        public async Task<IEnumerable<string>> GetMatchingPersons2Async(Domain.Base.Entities.Person person)
+        {
+            if (person == null || string.IsNullOrEmpty(person.FirstName) || string.IsNullOrEmpty(person.LastName))
+            {
+                throw new ArgumentNullException("qapi/person", "Person first and last name are required for matching.");
+            }
+
+            var matchRequest = new GetPersonMatchRequest();
+            matchRequest.PersonId = person.Id;
+            matchRequest.FirstName = person.FirstName;
+            matchRequest.MiddleName = person.MiddleName;
+            matchRequest.LastName = person.LastName;
+            matchRequest.BirthNameFirst = person.BirthNameFirst;
+            matchRequest.BirthNameMiddle = person.BirthNameMiddle;
+            matchRequest.BirthNameLast = person.BirthNameLast;
+            matchRequest.BirthDate = person.BirthDate;
+            matchRequest.Gender = person.Gender;
+            matchRequest.Ssn = person.GovernmentId;
+            if (person.EmailAddresses != null && person.EmailAddresses.Count() > 0)
+            {
+                var emailAddress = person.EmailAddresses.FirstOrDefault();
+                if (emailAddress != null)
+                {
+                    matchRequest.EmailAddress = emailAddress.Value;
+                }
+            }
+
+            var matchResponse = await transactionInvoker.ExecuteAsync<GetPersonMatchRequest, GetPersonMatchResponse>(matchRequest);
+            if (matchResponse.ErrorMessages.Count() > 0)
+            {
+                var errorMessage = "Error(s) occurred during person matching:";
+                errorMessage += string.Join(Environment.NewLine, matchResponse.ErrorMessages);
+                logger.Error(errorMessage);
+                // throw new InvalidOperationException("Error occurred during person matching");
+                var exception = new RepositoryException("Error occurred during person matching.");
+                matchResponse.ErrorMessages.ForEach(msg => exception.AddError(new RepositoryError("qapi/persons", msg)));
+                throw exception;
             }
             return matchResponse.PersonMatchingGuids;
         }

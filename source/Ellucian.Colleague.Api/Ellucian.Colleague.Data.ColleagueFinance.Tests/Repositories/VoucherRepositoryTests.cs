@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -41,6 +41,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
         private string personId = "1";
         private int versionNumber;
+
+        private TxGetReimbursePersonAddressResponse personAddressResponse;
 
         [TestInitialize]
         public void Initialize()
@@ -442,7 +444,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
             Assert.AreEqual(String.Join(" ", this.voucherDataContract.VouMiscName.ToArray()), voucher.VendorName);
         }
-        
+
         [TestMethod]
         public async Task GetVoucher_VendorIdOnly_NameIsNull()
         {
@@ -1343,7 +1345,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(this.voucherDomainEntity.LineItems.Count(), voucher.LineItems.Count(), "Voucher should have all of it's line items.");
 
             decimal glDistributionTotal = 0.00m;
-            decimal taxDistributionTotal = 0.00m;
+            decimal? taxDistributionTotal = 0.00m;
             foreach (var lineItem in voucher.LineItems)
             {
                 glDistributionTotal += lineItem.GlDistributions.Sum(x => x.Amount);
@@ -1430,9 +1432,1063 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.IsTrue(voucher.LineItems.Count() == 0, "Voucher should have no line items.");
         }
         #endregion
+
+        #region Voucher Create Test
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task CreateVoucherAsync_NullcreateUpdateRequest()
+        {
+            var purchaseOrderCreate = await this.voucherRepository.CreateVoucherAsync(null);
+        }
+
+        [TestMethod]
+        public async Task CreateVoucherAsync_TransactionError()
+        {
+            VoucherCreateUpdateRequest createUpdateRequestEntity = new VoucherCreateUpdateRequest()
+            {
+                PersonId = "966",
+                ConfEmailAddresses = new List<string>() { "abc@ellucian.com" },
+                Voucher = new Voucher("1", new DateTime(2017, 01, 01), VoucherStatus.InProgress, "")
+            };
+            // Mock Execute within the transaction invoker to return a TxCreateWebVouResponse object
+            TxCreateWebVouResponse createVoucherResponse = new TxCreateWebVouResponse();
+            createVoucherResponse.AVoucherId = "1";
+            createVoucherResponse.AInvoiceNo = "123";
+            createVoucherResponse.ARequestDate = new DateTime(2020, 02, 01);
+            createVoucherResponse.AError = "true";
+            createVoucherResponse.AlErrorMessages = new List<string>() { "Voucher locked" };
+
+            transactionInvoker.Setup(tio => tio.ExecuteAsync<TxCreateWebVouRequest, TxCreateWebVouResponse>(It.IsAny<TxCreateWebVouRequest>())).ReturnsAsync(createVoucherResponse);
+
+            var voucherCreateUpdate = await this.voucherRepository.CreateVoucherAsync(createUpdateRequestEntity);
+            Assert.IsNotNull(voucherCreateUpdate);
+            Assert.AreEqual(createVoucherResponse.AVoucherId, createUpdateRequestEntity.Voucher.Id);
+            Assert.IsTrue(voucherCreateUpdate.ErrorOccured);
+        }
+
+        [TestMethod]
+        public async Task CreateVoucherAsync_ValidCreateUpdateRequest()
+        {
+            var ssVoucherId = "31";
+            var expenseAccounts = CalculateGlAccountsForUser(ssVoucherId);
+            //Get the predefined values from Test Voucher repository
+            var voucherData = await testVoucherRepository.GetVoucherAsync(ssVoucherId, "0000001", GlAccessLevel.Full_Access, expenseAccounts, 1);
+
+            VoucherCreateUpdateRequest createUpdateRequestEntity = new VoucherCreateUpdateRequest()
+            {
+                PersonId = "0000001",
+                ConfEmailAddresses = new List<string>() { "abc@ellucian.com" },
+                Voucher = voucherData
+            };
+            // Mock Execute within the transaction invoker to return a TxCreateWebVouResponse object
+            TxCreateWebVouResponse createVoucherResponse = new TxCreateWebVouResponse();
+            createVoucherResponse.AVoucherId = "123";
+            createVoucherResponse.AInvoiceNo = "123";
+            createVoucherResponse.ARequestDate = new DateTime(2020, 02, 01);
+            
+            createVoucherResponse.AlErrorMessages = new List<string>();
+
+            transactionInvoker.Setup(tio => tio.ExecuteAsync<TxCreateWebVouRequest, TxCreateWebVouResponse>(It.IsAny<TxCreateWebVouRequest>())).ReturnsAsync(createVoucherResponse);
+
+            var voucherCreateUpdate = await this.voucherRepository.CreateVoucherAsync(createUpdateRequestEntity);
+            Assert.IsNotNull(voucherCreateUpdate);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
+        public async Task CreateVoucherAsync_Transaction_ThrowsException()
+        {
+            VoucherCreateUpdateRequest createUpdateRequestEntity = new VoucherCreateUpdateRequest()
+            {
+                PersonId = "966",
+                ConfEmailAddresses = new List<string>() { "abc@ellucian.com" },
+                Voucher = new Voucher("1", new DateTime(2017, 01, 01), VoucherStatus.InProgress, "")
+            };
+            // Mock Execute within the transaction invoker to return a TxCreateWebVouResponse object
+            TxCreateWebVouResponse createVoucherResponse = new TxCreateWebVouResponse();
+            createVoucherResponse.AVoucherId = "1";
+            createVoucherResponse.AInvoiceNo = "123";
+            createVoucherResponse.ARequestDate = new DateTime(2020, 02, 01);
+            createVoucherResponse.AError = "true";
+            createVoucherResponse.AlErrorMessages = new List<string>() { "Voucher locked" };
+
+            transactionInvoker.Setup(tio => tio.ExecuteAsync<TxCreateWebVouRequest, TxCreateWebVouResponse>(It.IsAny<TxCreateWebVouRequest>())).Throws(new Exception());
+
+            var voucherCreateUpdate = await this.voucherRepository.CreateVoucherAsync(createUpdateRequestEntity);
+        }
+
+        #endregion
+
+        #region Reimburse Myself
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task VoucherRepository_GetReimbursePersonAddressForVoucherAsync_ArgumentNullException()
+        {
+            var actual = await voucherRepository.GetReimbursePersonAddressForVoucherAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public async Task VoucherRepository_GetReimbursePersonAddressForVoucherAsync_ResponseIsNull()
+        {
+            transactionInvoker.Setup(t => t.ExecuteAsync<TxGetReimbursePersonAddressRequest, TxGetReimbursePersonAddressResponse>(It.IsAny<TxGetReimbursePersonAddressRequest>())).ReturnsAsync(null);
+            await voucherRepository.GetReimbursePersonAddressForVoucherAsync(personId);
+        }
+
+        [Ignore] // not required now
+        [TestMethod]
+        public async Task VoucherRepository_GetReimbursePersonAddressForVoucherAsync_ResponseNoSearchResultforVendors()
+        {
+            personAddressResponse.APersonAddrId = null;
+
+            transactionInvoker.Setup(t => t.ExecuteAsync<TxGetReimbursePersonAddressRequest, TxGetReimbursePersonAddressResponse>(It.IsAny<TxGetReimbursePersonAddressRequest>())).ReturnsAsync(personAddressResponse);
+            var results = await voucherRepository.GetReimbursePersonAddressForVoucherAsync(personId);
+            Assert.IsTrue(results.VendorId == null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public async Task VoucherRepository_GetReimbursePersonAddressForVoucherAsync_ResponseHasErrorMessages()
+        {
+            personAddressResponse.AlErrorMessages = new List<string>() { "ErrorMessage1", "ErrorMessage2" };
+            personAddressResponse.AError = true;
+            transactionInvoker.Setup(t => t.ExecuteAsync<TxGetReimbursePersonAddressRequest, TxGetReimbursePersonAddressResponse>(It.IsAny<TxGetReimbursePersonAddressRequest>())).ReturnsAsync(personAddressResponse);
+            await voucherRepository.GetReimbursePersonAddressForVoucherAsync(personId);
+        }
+
+        [TestMethod]
+        public async Task VoucherRepository_GetReimbursePersonAddressForVoucherAsync_Success()
+        {
+            transactionInvoker.Setup(t => t.ExecuteAsync<TxGetReimbursePersonAddressRequest, TxGetReimbursePersonAddressResponse>(It.IsAny<TxGetReimbursePersonAddressRequest>())).ReturnsAsync(personAddressResponse);
+            var result = await voucherRepository.GetReimbursePersonAddressForVoucherAsync(personId);
+
+            Assert.AreEqual(result.VendorId, personAddressResponse.APersonId);
+            Assert.AreEqual(result.VendorNameLines.FirstOrDefault(), personAddressResponse.APersonName);
+            Assert.AreEqual(result.Country, personAddressResponse.APersonCountry);
+            Assert.AreEqual(result.FormattedAddress, personAddressResponse.APersonFormattedAddress);
+            Assert.AreEqual(result.City, personAddressResponse.APersonCity);
+
+        }
+
+        #endregion
+
+        #region Void Voucher
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task Vouchers_VoidVoucherAsync_ArgumentNullException_Voucher_Null()
+        {
+            await voucherRepository.VoidVoucherAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
+        public async Task Vouchers_VoidVoucherAsync_Transaction_Exception()
+        {
+            // Mock Execute within the transaction invoker to return a TxVoidVoucherResponse object
+
+            TxVoidVoucherResponse voidVoucherResponse = new TxVoidVoucherResponse();
+
+            voidVoucherResponse.AVoucherId = "123";
+            voidVoucherResponse.AErrorOccurred = true;
+            voidVoucherResponse.AlErrorMessages = new List<string>() { "Voucher locked" };
+
+            transactionInvoker.Setup(tio => tio.ExecuteAsync<TxVoidVoucherRequest, TxVoidVoucherResponse>(It.IsAny<TxVoidVoucherRequest>())).ThrowsAsync(new Exception());
+
+            VoucherVoidRequest voidRequest = new VoucherVoidRequest();
+            voidRequest.PersonId = "0001234";
+            voidRequest.VoucherId = "123";
+            await voucherRepository.VoidVoucherAsync(voidRequest);
+        }
+
+        [TestMethod]
+        public async Task Vouchers_VoidVoucherAsync_Transaction_Error()
+        {
+            // Mock Execute within the transaction invoker to return a TxVoidVoucherResponse object
+
+            TxVoidVoucherResponse voidVoucherResponse = new TxVoidVoucherResponse();
+
+            voidVoucherResponse.AVoucherId = "123";
+            voidVoucherResponse.AErrorOccurred = true;
+            voidVoucherResponse.AlErrorMessages = new List<string>() { "Voucher locked" };
+
+            transactionInvoker.Setup(tio => tio.ExecuteAsync<TxVoidVoucherRequest, TxVoidVoucherResponse>(It.IsAny<TxVoidVoucherRequest>())).ReturnsAsync(voidVoucherResponse);
+
+            VoucherVoidRequest voidRequest = new VoucherVoidRequest();
+            voidRequest.PersonId = "0001234";
+            voidRequest.VoucherId = "123";
+            var result = await voucherRepository.VoidVoucherAsync(voidRequest);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(result.VoucherId, voidRequest.VoucherId);
+            Assert.IsTrue(result.ErrorOccured);
+        }
+
+        [TestMethod]
+        public async Task Vouchers_VoidVoucherAsync()
+        {
+            // Mock Execute within the transaction invoker to return a TxVoidVoucherResponse object
+
+            TxVoidVoucherResponse voidVoucherResponse = new TxVoidVoucherResponse();
+
+            voidVoucherResponse.AVoucherId = "123";
+            voidVoucherResponse.AErrorOccurred = false;
+            voidVoucherResponse.AlErrorMessages = null;
+            voidVoucherResponse.AWarningOccurred = true;
+            voidVoucherResponse.AlWarningMessages = new List<string>() { "Warning Occurred" };
+
+            transactionInvoker.Setup(tio => tio.ExecuteAsync<TxVoidVoucherRequest, TxVoidVoucherResponse>(It.IsAny<TxVoidVoucherRequest>())).ReturnsAsync(voidVoucherResponse);
+
+            VoucherVoidRequest voidRequest = new VoucherVoidRequest();
+            voidRequest.PersonId = "0001234";
+            voidRequest.VoucherId = "123";
+            var result = await voucherRepository.VoidVoucherAsync(voidRequest);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(result.VoucherId, voidRequest.VoucherId);
+            Assert.IsFalse(result.ErrorOccured);
+        }
+
+        #endregion
+
+        #region Voucher Update Test
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task UpdateVoucherAsync_NullcreateUpdateRequest()
+        {
+            var ssVoucherId = "31";
+            var expenseAccounts = CalculateGlAccountsForUser(ssVoucherId);
+            //Get the predefined values from Test Voucher repository
+            var voucherData = await testVoucherRepository.GetVoucherAsync(ssVoucherId, "0000001", GlAccessLevel.Full_Access, expenseAccounts, 1);
+
+            var voucher = await this.voucherRepository.UpdateVoucherAsync(null, voucherData);
+        }
+
+        [TestMethod]
+        public async Task UpdateVoucherAsync_TransactionError()
+        {
+            var ssVoucherId = "31";
+            var expenseAccounts = CalculateGlAccountsForUser(ssVoucherId);
+            //Get the predefined values from Test Voucher repository
+            var voucherData = await testVoucherRepository.GetVoucherAsync(ssVoucherId, "0000001", GlAccessLevel.Full_Access, expenseAccounts, 1);
+
+            VoucherCreateUpdateRequest createUpdateRequestEntity = new VoucherCreateUpdateRequest()
+            {
+                PersonId = "966",
+                ConfEmailAddresses = new List<string>() { "abc@ellucian.com" },
+                Voucher = new Voucher(ssVoucherId, new DateTime(2017, 01, 01), VoucherStatus.InProgress, "")
+            };
+            // Mock Execute within the transaction invoker to return a TxUpdateWebVoucherResponse object
+            TxUpdateWebVoucherResponse updateVoucherResponse = new TxUpdateWebVoucherResponse();
+            updateVoucherResponse.AVoucherId = ssVoucherId;
+            updateVoucherResponse.AError = "true";
+            updateVoucherResponse.AlErrorMessages = new List<string>() { "Voucher locked" };
+
+            transactionInvoker.Setup(tio => tio.ExecuteAsync<TxUpdateWebVoucherRequest, TxUpdateWebVoucherResponse>(It.IsAny<TxUpdateWebVoucherRequest>())).ReturnsAsync(updateVoucherResponse);
+
+            var voucherCreateUpdate = await this.voucherRepository.UpdateVoucherAsync(createUpdateRequestEntity, voucherData);
+            Assert.IsNotNull(voucherCreateUpdate);
+            Assert.AreEqual(updateVoucherResponse.AVoucherId, createUpdateRequestEntity.Voucher.Id);
+            Assert.IsTrue(voucherCreateUpdate.ErrorOccured);
+        }
+
+        [TestMethod]
+        public async Task UpdateVoucherAsync_ValidUpdateRequest()
+        {
+            var ssVoucherId = "31";
+            var expenseAccounts = CalculateGlAccountsForUser(ssVoucherId);
+            //Get the predefined values from Test Voucher repository
+            var voucherData = await testVoucherRepository.GetVoucherAsync(ssVoucherId, "0000001", GlAccessLevel.Full_Access, expenseAccounts, 1);
+
+            VoucherCreateUpdateRequest createUpdateRequestEntity = new VoucherCreateUpdateRequest()
+            {
+                PersonId = "0000001",
+                ConfEmailAddresses = new List<string>() { "abc@ellucian.com" },
+                Voucher = voucherData
+            };
+            // Mock Execute within the transaction invoker to return a TxUpdateWebVoucherResponse object
+            TxUpdateWebVoucherResponse updateVoucherResponse = new TxUpdateWebVoucherResponse();
+            updateVoucherResponse.AVoucherId = ssVoucherId;
+            //updateVoucherResponse.AError = "false";
+            updateVoucherResponse.AlErrorMessages = new List<string>();
+
+            transactionInvoker.Setup(tio => tio.ExecuteAsync<TxUpdateWebVoucherRequest, TxUpdateWebVoucherResponse>(It.IsAny<TxUpdateWebVoucherRequest>())).ReturnsAsync(updateVoucherResponse);
+
+            var voucherCreateUpdate = await this.voucherRepository.UpdateVoucherAsync(createUpdateRequestEntity, voucherData);
+            Assert.IsNotNull(voucherCreateUpdate);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
+        public async Task UpdateVoucherAsync_TransactionError_ThrowsException()
+        {
+            var ssVoucherId = "31";
+            var expenseAccounts = CalculateGlAccountsForUser(ssVoucherId);
+            //Get the predefined values from Test Voucher repository
+            var voucherData = await testVoucherRepository.GetVoucherAsync(ssVoucherId, "0000001", GlAccessLevel.Full_Access, expenseAccounts, 1);
+
+            VoucherCreateUpdateRequest createUpdateRequestEntity = new VoucherCreateUpdateRequest()
+            {
+                PersonId = "0000001",
+                ConfEmailAddresses = new List<string>() { "abc@ellucian.com" },
+                Voucher = voucherData
+            };
+            // Mock Execute within the transaction invoker to return a TxUpdateWebVoucherResponse object
+            TxUpdateWebVoucherResponse updateVoucherResponse = new TxUpdateWebVoucherResponse();
+            updateVoucherResponse.AVoucherId = ssVoucherId;
+            updateVoucherResponse.AlErrorMessages = new List<string>();
+
+            transactionInvoker.Setup(tio => tio.ExecuteAsync<TxUpdateWebVoucherRequest, TxUpdateWebVoucherResponse>(It.IsAny<TxUpdateWebVoucherRequest>())).Throws(new Exception());
+
+            var voucherCreateUpdate = await this.voucherRepository.UpdateVoucherAsync(createUpdateRequestEntity, voucherData);
+        }
+
+        [TestMethod]
+        public async Task UpdateVoucherAsync_AddNewLineItem_GlAccountMaskedRequest()
+        {
+            //Get the predefined values from Test Voucher repository
+            string ssVoucherId = "22";
+            this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(ssVoucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
+            var expenseAccounts = CalculateGlAccountsForUser(ssVoucherId);
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+            var voucherData = await voucherRepository.GetVoucherAsync(ssVoucherId, personId, GlAccessLevel.Possible_Access, expenseAccounts, versionNumber);
+            Assert.AreEqual(this.voucherDomainEntity.LineItems.Count(), voucherData.LineItems.Count(), "Vouchers should have the same number of line items.");
+
+            var voucherRequest = voucherData;
+            var lineItems = voucherData.LineItems.ToList();
+            var lineItem = voucherData.LineItems.FirstOrDefault();
+            Assert.IsNotNull(lineItem);
+            var newLinetItem = new LineItem("NEW", lineItem.Description, lineItem.Quantity, lineItem.Price, lineItem.ExtendedPrice);
+            voucherRequest.AddLineItem(newLinetItem);
+
+
+            VoucherCreateUpdateRequest createUpdateRequestEntity = new VoucherCreateUpdateRequest()
+            {
+                PersonId = "0000001",
+                ConfEmailAddresses = new List<string>() { "abc@ellucian.com" },
+                Voucher = voucherRequest
+            };
+            // Mock Execute within the transaction invoker to return a TxUpdateWebVoucherResponse object
+            TxUpdateWebVoucherResponse updateVoucherResponse = new TxUpdateWebVoucherResponse();
+            updateVoucherResponse.AVoucherId = ssVoucherId;
+            updateVoucherResponse.AError = "false";
+            updateVoucherResponse.AlErrorMessages = new List<string>();
+
+            transactionInvoker.Setup(tio => tio.ExecuteAsync<TxUpdateWebVoucherRequest, TxUpdateWebVoucherResponse>(It.IsAny<TxUpdateWebVoucherRequest>())).ReturnsAsync(updateVoucherResponse);
+
+            PrivateObject obj = new PrivateObject(this.voucherRepository);
+            var result = obj.Invoke("BuildVoucherUpdateRequest", new object[] { createUpdateRequestEntity, voucherData });
+            Assert.IsNotNull(result);
+            Assert.IsInstanceOfType(result, typeof(TxUpdateWebVoucherRequest));
+            TxUpdateWebVoucherRequest requestObject = (TxUpdateWebVoucherRequest)result;
+            Assert.IsNotNull(requestObject);
+            Assert.AreNotEqual(requestObject.AlUpdatedVouLineItems.Count(), voucherData.LineItems.Count());
+        }
+
+        [TestMethod]
+        public async Task UpdateVoucherAsync_AddLineItem_Test()
+        {
+            //Get the predefined values from Test Voucher repository
+            string ssVoucherId = "1";
+            this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(ssVoucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
+            var expenseAccounts = CalculateGlAccountsForUser(ssVoucherId);
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+            var voucherData = await voucherRepository.GetVoucherAsync(ssVoucherId, personId, GlAccessLevel.Full_Access, expenseAccounts, versionNumber);
+            Assert.AreEqual(this.voucherDomainEntity.LineItems.Count(), voucherData.LineItems.Count(), "Vouchers should have the same number of line items.");
+
+            Voucher voucherRequest = new Voucher(voucherData.Id, voucherData.Date, voucherData.Status, voucherData.VendorName);
+            foreach (var item in voucherData.LineItems)
+            {
+                var li = new LineItem(item.Id, item.Description, item.Quantity, item.Price, item.ExtendedPrice);
+
+                foreach (var glDist in item.GlDistributions)
+                {
+                    var glDistribution = new LineItemGlDistribution(glDist.GlAccountNumber, glDist.Quantity, glDist.Amount);
+                    glDistribution.GlAccountDescription = glDist.GlAccountDescription;
+                    glDistribution.Masked = glDist.Masked;
+                    li.AddGlDistribution(glDistribution);
+                }
+                voucherRequest.AddLineItem(li);
+            }
+            var lineItem = voucherData.LineItems.FirstOrDefault(x => x.Id == "1");
+            var newLinetItem = new LineItem("NEW", lineItem.Description, lineItem.Quantity, lineItem.Price, lineItem.ExtendedPrice);
+            foreach (var glDist in lineItem.GlDistributions)
+            {
+                var glDistribution = new LineItemGlDistribution(glDist.GlAccountNumber, glDist.Quantity, glDist.Amount);
+                glDistribution.GlAccountDescription = glDist.GlAccountDescription;
+                glDistribution.Masked = glDist.Masked;
+                newLinetItem.AddGlDistribution(glDistribution);
+            }
+            voucherRequest.AddLineItem(newLinetItem);
+
+            foreach (var approver in voucherData.Approvers)
+            {
+                voucherRequest.AddApprover(new Approver(approver.ApproverId));
+            }
+
+            VoucherCreateUpdateRequest createUpdateRequestEntity = new VoucherCreateUpdateRequest()
+            {
+                PersonId = "0000001",
+                ConfEmailAddresses = new List<string>() { "abc@ellucian.com" },
+                Voucher = voucherRequest
+            };
+
+            PrivateObject obj = new PrivateObject(this.voucherRepository);
+            var result = obj.Invoke("BuildVoucherUpdateRequest", new object[] { createUpdateRequestEntity, voucherData });
+            Assert.IsNotNull(result);
+            Assert.IsInstanceOfType(result, typeof(TxUpdateWebVoucherRequest));
+            TxUpdateWebVoucherRequest requestObject = (TxUpdateWebVoucherRequest)result;
+            Assert.IsNotNull(requestObject);
+            Assert.AreEqual(requestObject.AlUpdatedVouLineItems.Count(), voucherData.LineItems.Count() + 1);
+        }
+
+        [TestMethod]
+        public async Task UpdateVoucherAsync_DeleteLineItem_Test()
+        {
+            //Get the predefined values from Test Voucher repository
+            string ssVoucherId = "1";
+            this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(ssVoucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
+            var expenseAccounts = CalculateGlAccountsForUser(ssVoucherId);
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+            var voucherData = await voucherRepository.GetVoucherAsync(ssVoucherId, personId, GlAccessLevel.Full_Access, expenseAccounts, versionNumber);
+            Assert.AreEqual(this.voucherDomainEntity.LineItems.Count(), voucherData.LineItems.Count(), "Vouchers should have the same number of line items.");
+
+            Voucher voucherRequest = new Voucher(voucherData.Id, voucherData.Date, voucherData.Status, voucherData.VendorName);
+            var items = voucherData.LineItems.Skip(1);
+            foreach (var item in items)
+            {
+                var li = new LineItem(item.Id, item.Description, item.Quantity, item.Price, item.ExtendedPrice);
+
+                foreach (var glDist in item.GlDistributions)
+                {
+                    var glDistribution = new LineItemGlDistribution(glDist.GlAccountNumber, glDist.Quantity, glDist.Amount);
+                    glDistribution.GlAccountDescription = glDist.GlAccountDescription;
+                    glDistribution.Masked = glDist.Masked;
+                    li.AddGlDistribution(glDistribution);
+                }
+                voucherRequest.AddLineItem(li);
+            }
+
+            foreach (var approver in voucherData.Approvers)
+            {
+                voucherRequest.AddApprover(new Approver(approver.ApproverId));
+            }
+
+            VoucherCreateUpdateRequest createUpdateRequestEntity = new VoucherCreateUpdateRequest()
+            {
+                PersonId = "0000001",
+                ConfEmailAddresses = new List<string>() { "abc@ellucian.com" },
+                Voucher = voucherRequest
+            };
+
+            PrivateObject obj = new PrivateObject(this.voucherRepository);
+            var result = obj.Invoke("BuildVoucherUpdateRequest", new object[] { createUpdateRequestEntity, voucherData });
+            Assert.IsNotNull(result);
+            Assert.IsInstanceOfType(result, typeof(TxUpdateWebVoucherRequest));
+            TxUpdateWebVoucherRequest requestObject = (TxUpdateWebVoucherRequest)result;
+            Assert.IsNotNull(requestObject);
+            Assert.AreEqual(requestObject.AlUpdatedVouLineItems.Count(), voucherData.LineItems.Count());
+            foreach (var actual in requestObject.AlUpdatedVouLineItems)
+            {
+                var expected = voucherData.LineItems.FirstOrDefault(x => x.Id == actual.AlLineItemIds);
+                if (expected.Id == "1")
+                {
+                    Assert.AreEqual(expected.Id, actual.AlLineItemIds);
+                    Assert.IsTrue(string.IsNullOrEmpty(actual.AlLineItemDescs));
+                    Assert.IsTrue(string.IsNullOrEmpty(actual.AlLineItemQtys));
+                    Assert.IsTrue(string.IsNullOrEmpty(actual.AlItemPrices));
+                    Assert.IsTrue(string.IsNullOrEmpty(actual.AlItemUnitIssues));
+                    Assert.IsTrue(string.IsNullOrEmpty(actual.AlItemVendorParts));
+                    Assert.IsTrue(string.IsNullOrEmpty(actual.AlItemGlAccts));
+                    Assert.IsTrue(string.IsNullOrEmpty(actual.AlItemGlAcctAmts));
+                    Assert.IsTrue(string.IsNullOrEmpty(actual.AlItemProjectNos));
+                }
+                else
+                {
+                    Assert.AreEqual(expected.Description, actual.AlLineItemDescs);
+                    Assert.AreEqual(expected.Quantity.ToString(), actual.AlLineItemQtys);
+                    Assert.AreEqual(expected.Price.ToString(), actual.AlItemPrices);
+                    Assert.AreEqual("11_10_00_01_20601_51000|11_10_00_01_20601_51001", actual.AlItemGlAccts);
+                    Assert.AreEqual("175.00|125.00", actual.AlItemGlAcctAmts);
+                    Assert.AreEqual("|", actual.AlItemProjectNos);
+                }
+            }
+        }
+
+        #endregion
+
+        #region Voucher Summary Test
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task VoucherRepository_GetVoucherSummariesByPersonIdAsync_PersonIdNull()
+        {
+            var actual = await voucherRepository.GetVoucherSummariesByPersonIdAsync(null);
+        }
+
+        [TestMethod]
+        public async Task VoucherRepository_GetVoucherSummariesByPersonIdAsync_Vouchers_null()
+        {
+            // Mock ReadRecord to return a pre-defined, null purchase orders data contract
+            string[] emptyArray = new string[0];
+            //mock SelectAsync to return empty array of string
+            dataReader.Setup(acc => acc.SelectAsync("VOUCHERS", It.IsAny<string>())).Returns(() =>
+            {
+                return Task.FromResult(emptyArray);
+            });
+            
+            var result = await voucherRepository.GetVoucherSummariesByPersonIdAsync(personId);
+            Assert.IsNull(result);
+        }
+
+        [TestMethod]
+        public async Task VoucherRepository_GetVoucherSummariesByPersonIdAsync_Vouchers_Base()
+        {
+            string voucherId = "1";
+            InitDataForVoucherSummary();
+            this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null,2);
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+
+            Collection<DataContracts.Vouchers> voucherDataContractList = new Collection<DataContracts.Vouchers>();
+            voucherDataContractList.Add(this.voucherDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string[]>(),true)).ReturnsAsync(voucherDataContractList);
+            
+            var expectedVoucherSummaryList = await testVoucherRepository.GetVoucherSummariesByPersonIdAsync(personId);
+            var actual = await voucherRepository.GetVoucherSummariesByPersonIdAsync(personId);
+            Assert.IsNotNull(actual);
+            Assert.IsTrue(actual.ToList().Count == 1);
+
+            var expectedVoucherSummary = expectedVoucherSummaryList.Where(x => x.Id == voucherId).FirstOrDefault();
+            var actualVoucherSummary = actual.FirstOrDefault();
+
+            //assert on entity properties
+            Assert.AreEqual(expectedVoucherSummary.Id, actualVoucherSummary.Id);
+            Assert.AreEqual(expectedVoucherSummary.Date, actualVoucherSummary.Date);
+            Assert.AreEqual(expectedVoucherSummary.Status, actualVoucherSummary.Status);
+            Assert.AreEqual(expectedVoucherSummary.VendorId, actualVoucherSummary.VendorId);
+            Assert.AreEqual(expectedVoucherSummary.VendorName, actualVoucherSummary.VendorName);
+            Assert.AreEqual(expectedVoucherSummary.Amount, actualVoucherSummary.Amount);
+            Assert.AreEqual(expectedVoucherSummary.Approvers.Count, actualVoucherSummary.Approvers.Count);
+            Assert.AreEqual(expectedVoucherSummary.Approvers.Where(a => a.ApprovalDate == null).ToList().Count, actualVoucherSummary.Approvers.Where(a => a.ApprovalDate == null).ToList().Count);
+            Assert.AreEqual(expectedVoucherSummary.Approvers.Where(a => a.ApprovalDate != null).ToList().Count, actualVoucherSummary.Approvers.Where(a => a.ApprovalDate != null).ToList().Count);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task VoucherRepository_GetVoucherSummariesByPersonIdAsync_Vouchers_HeirarchyName()
+        {
+            string voucherId = "26";
+            InitDataForVoucherSummary();
+            Collection<DataContracts.Vouchers> voucherDataContractList = new Collection<DataContracts.Vouchers>();
+            Collection<DataContracts.PurchaseOrders> poDataContractList = new Collection<DataContracts.PurchaseOrders>();
+            Collection<DataContracts.Bpo> bpoDataContractList = new Collection<DataContracts.Bpo>();
+            this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, 2);
+            var voucherDataContract = new Vouchers()
+            {
+                Recordkey = "26",
+                VouStatus = null,
+                VouRequestor = "0000001",
+                VouVendor = "ABC Company",
+                VouMiscName = new List<string>() { },
+                VouPoNo = "P000001",
+                VouBpoId = "BPO0001",
+                VouAuthorizations = new List<string> { "0000001", "0000002" },
+                VouNextApprovalIds = new List<string> { "0000003" }
+            };
+            var purchaseOrderDataContract = new PurchaseOrders()
+            {
+                Recordkey = "10",
+                PoStatus = new List<string>() { "O" },
+                PoReqIds = new List<string> { "1" },
+                PoDefaultInitiator = "ABC",
+                PoRequestor = "MlOwks",
+                PoVendor = "ABC Company",
+                PoMiscName = new List<string> { "ABC" }
+            };
+
+            var bpoDataContract = new Bpo()
+            {
+                Recordkey = "10",
+                BpoStatus = new List<string>() { "O" },
+                BpoVendor = "ABC Company"
+            };
+            poDataContractList.Add(purchaseOrderDataContract);
+            bpoDataContractList.Add(bpoDataContract);
+            voucherDataContractList.Add(voucherDataContract);
+            
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>("PURCHASE.ORDERS", It.IsAny<string[]>(), true)).ReturnsAsync(poDataContractList);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Bpo>("BPO", It.IsAny<string[]>(), true)).ReturnsAsync(bpoDataContractList);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string[]>(), true)).ReturnsAsync(voucherDataContractList);
+            var voucher = await voucherRepository.GetVoucherSummariesByPersonIdAsync(personId);
+        }
+        
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task VoucherRepository_GetVoucherSummariesByPersonIdAsync_Vouchers_NullStatus()
+        {
+            InitDataForVoucherSummary();
+
+            Collection<DataContracts.Vouchers> voucherDataContractList = new Collection<DataContracts.Vouchers>();
+
+            var voucherDataContract = new Vouchers()
+            {
+                Recordkey = "10",
+                VouStatus = null,
+                VouRequestor = "0000001",
+                VouVendor = "ABC Company",
+                VouMiscName = new List<string> { "ABC" },
+                VouAuthorizations = new List<string> { "0000001", "0000002" },
+                VouNextApprovalIds = new List<string> { "0000003" }
+            };
+
+            voucherDataContractList.Add(voucherDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string[]>(), true)).ReturnsAsync(voucherDataContractList);
+            var voucher = await voucherRepository.GetVoucherSummariesByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task VoucherRepository_GetVoucherSummariesByPersonIdAsync_Vouchers_StatusHasBlankValue()
+        {
+            string voucherId = "26";
+            InitDataForVoucherSummary();
+
+            Collection<DataContracts.Vouchers> voucherDataContractList = new Collection<DataContracts.Vouchers>();
+
+            var voucherDataContract = new Vouchers()
+            {
+                Recordkey = "10",
+                VouStatus = new List<string>() { "" },
+                VouRequestor = "0000001",
+                VouVendor = "ABC Company",
+                VouMiscName = new List<string> { "ABC" },
+                VouAuthorizations = new List<string> { "0000001", "0000002" },
+                VouNextApprovalIds = new List<string> { "0000003" }
+
+            };
+
+            voucherDataContractList.Add(voucherDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string[]>(), true)).ReturnsAsync(voucherDataContractList);
+            var voucher = await voucherRepository.GetVoucherSummariesByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task VoucherRepository_GetVoucherSummariesByPersonIdAsync_Vouchers_StatusDateHasNullValue()
+        {
+            InitDataForVoucherSummary();
+
+            Collection<DataContracts.Vouchers> voucherDataContractList = new Collection<DataContracts.Vouchers>();
+
+            var voucherDataContract = new Vouchers()
+            {
+                Recordkey = "10",
+                VouStatus = new List<string>() { "O" },
+                VouRequestor = "0000001",
+                VouVendor = "ABC Company",
+                VouMiscName = new List<string> { "ABC" },
+                VouStatusDate = new List<DateTime?>() { null },
+                VouAuthorizations = new List<string> { "0000001", "0000002" },
+                VouNextApprovalIds = new List<string> { "0000003" }
+            };
+
+            voucherDataContractList.Add(voucherDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string[]>(), true)).ReturnsAsync(voucherDataContractList);
+            var voucher = await voucherRepository.GetVoucherSummariesByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task VoucherRepository_GetVoucherSummariesByPersonIdAsync_Vouchers_InvalidStatus()
+        {
+            InitDataForVoucherSummary();
+
+            Collection<DataContracts.Vouchers> voucherDataContractList = new Collection<DataContracts.Vouchers>();
+
+            var voucherDataContract = new Vouchers()
+            {
+                Recordkey = "10",
+                VouStatus = new List<string>() { "Z" },
+                VouRequestor = "0000001",
+                VouVendor = "ABC Company",
+                VouMiscName = new List<string> { "ABC" },
+                VouAuthorizations = new List<string> { "0000001", "0000002" },
+                VouNextApprovalIds = new List<string> { "0000003" }
+
+            };
+
+            voucherDataContractList.Add(voucherDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string[]>(), true)).ReturnsAsync(voucherDataContractList);
+            var voucher = await voucherRepository.GetVoucherSummariesByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task VoucherRepository_GetVoucherSummariesByPersonIdAsync_Vouchers_NullStatusDate()
+        {
+            InitDataForVoucherSummary();
+
+            Collection<DataContracts.Vouchers> voucherDataContractList = new Collection<DataContracts.Vouchers>();
+
+            var voucherDataContract = new Vouchers()
+            {
+                Recordkey = "10",
+                VouStatus = new List<string>() { "O" },
+                VouRequestor = "0000001",
+                VouVendor = "ABC Company",
+                VouMiscName = new List<string> { "ABC" },
+                VouStatusDate = null,
+                VouAuthorizations = new List<string> { "0000001", "0000002" },
+                VouNextApprovalIds = new List<string> { "0000003" }
+
+            };
+
+            voucherDataContractList.Add(voucherDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string[]>(), true)).ReturnsAsync(voucherDataContractList);
+            var voucher = await voucherRepository.GetVoucherSummariesByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task VoucherRepository_GetVoucherSummariesByPersonIdAsync_Vouchers_NullVoucherDate()
+        {
+            InitDataForVoucherSummary();
+
+            Collection<DataContracts.Vouchers> voucherDataContractList = new Collection<DataContracts.Vouchers>();
+
+            var voucherDataContract = new Vouchers()
+            {
+                Recordkey = "10",
+                VouStatus = new List<string>() { "O" },
+                VouRequestor = "0000001",
+                VouVendor = "ABC Company",
+                VouMiscName = new List<string> { "ABC" },
+                VouStatusDate = new List<DateTime?>() { new DateTime(2015, 1, 1) },
+                VouDate = null,
+                VouAuthorizations = new List<string> { "0000001", "0000002" },
+                VouNextApprovalIds = new List<string> { "0000003" }
+            };
+
+            voucherDataContractList.Add(voucherDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string[]>(), true)).ReturnsAsync(voucherDataContractList);
+            var voucher = await voucherRepository.GetVoucherSummariesByPersonIdAsync(personId);
+        }
+
+        #endregion
+
+        #region query voucher tests
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task VoucherRepository_GetVouchersByVendorAndInvoiceNoAsync_CriteriaNull()
+        {
+            var actual = await voucherRepository.GetVouchersByVendorAndInvoiceNoAsync(null, null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task VoucherRepository_GetVouchersByVendorAndInvoiceNoAsync_VendorIDNull()
+        {
+            var actual = await voucherRepository.GetVouchersByVendorAndInvoiceNoAsync(null, "1234");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task VoucherRepository_GetVouchersByVendorAndInvoiceNoAsync_InvoiceNoNull()
+        {
+            var actual = await voucherRepository.GetVouchersByVendorAndInvoiceNoAsync("0000111", null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task VoucherRepository_GetVouchersByVendorAndInvoiceNoAsync_CriteriaEmpty()
+        {
+            var actual = await voucherRepository.GetVouchersByVendorAndInvoiceNoAsync(string.Empty, string.Empty);
+        }
+
+        [TestMethod]
+        public async Task VoucherRepository_GetVouchersByVendorAndInvoiceNoAsync_Vouchers_null()
+        {
+            var invoiceNumber = "1234567";
+            var vendorId = "0000111";
+            
+            // Mock ReadRecord to return a pre-defined, null purchase orders data contract
+            string[] emptyArray = new string[0];
+            //mock SelectAsync to return empty array of string
+            dataReader.Setup(acc => acc.SelectAsync("VOUCHERS", It.IsAny<string>())).Returns(() =>
+            {
+                return Task.FromResult(emptyArray);
+            });
+
+            var result = await voucherRepository.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNumber);
+            Assert.IsNotNull(result);
+            Assert.IsTrue(result.ToList().Count==0);
+        }
+
+        [TestMethod]
+        public async Task VoucherRepository_GetVouchersByVendorAndInvoiceNoAsync_Vouchers_Base()
+        {
+            string voucherId = "1";
+            InitDataForVoucherSummary();
+            this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, 2);
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+
+            Collection<DataContracts.Vouchers> voucherDataContractList = new Collection<DataContracts.Vouchers>();
+            voucherDataContractList.Add(this.voucherDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string[]>(), true)).ReturnsAsync(voucherDataContractList);
+
+            
+            var invoiceNumber = "IN12345";
+            var vendorId = "0001234";
+
+
+            var expectedVoucherSummaryList = await testVoucherRepository.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNumber);
+            var actual = await voucherRepository.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNumber);
+            Assert.IsNotNull(actual);
+            Assert.IsTrue(actual.ToList().Count == 1);
+
+            var expectedVoucherSummary = expectedVoucherSummaryList.Where(x => x.Id == voucherId).FirstOrDefault();
+            var actualVoucherSummary = actual.FirstOrDefault();
+
+            //assert on entity properties
+            Assert.AreEqual(expectedVoucherSummary.Id, actualVoucherSummary.Id);
+            Assert.AreEqual(expectedVoucherSummary.Date, actualVoucherSummary.Date);
+            Assert.AreEqual(expectedVoucherSummary.Status, actualVoucherSummary.Status);
+            Assert.AreEqual(expectedVoucherSummary.VendorName, actualVoucherSummary.VendorName);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task VoucherRepository_GetVouchersByVendorAndInvoiceNoAsync_Vouchers_HeirarchyName()
+        {
+            string voucherId = "26";
+            InitDataForVoucherSummary();
+            
+            var invoiceNumber = "IN12345";
+            var vendorId = "0001234";
+
+            Collection<DataContracts.Vouchers> voucherDataContractList = new Collection<DataContracts.Vouchers>();
+            this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, 2);
+            var voucherDataContract = new Vouchers()
+            {
+                Recordkey = "26",
+                VouStatus = null,
+                VouRequestor = "0000001",
+                VouVendor = "ABC Company",
+                VouMiscName = new List<string>() { },
+                VouPoNo = "P000001",
+                VouBpoId = "BPO0001",
+                VouAuthorizations = new List<string> { "0000001", "0000002" },
+                VouNextApprovalIds = new List<string> { "0000003" }
+            };
+            
+            voucherDataContractList.Add(voucherDataContract);
+
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string[]>(), true)).ReturnsAsync(voucherDataContractList);
+            var voucher = await voucherRepository.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNumber);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task VoucherRepository_GetVouchersByVendorAndInvoiceNoAsync_Vouchers_NullStatus()
+        {
+            InitDataForVoucherSummary();
+            
+            var invoiceNumber = "IN12345";
+            var vendorId = "0001234";
+
+            Collection<DataContracts.Vouchers> voucherDataContractList = new Collection<DataContracts.Vouchers>();
+
+            var voucherDataContract = new Vouchers()
+            {
+                Recordkey = "10",
+                VouStatus = null,
+                VouRequestor = "0000001",
+                VouVendor = "ABC Company",
+                VouMiscName = new List<string> { "ABC" },
+                VouAuthorizations = new List<string> { "0000001", "0000002" },
+                VouNextApprovalIds = new List<string> { "0000003" }
+            };
+
+            voucherDataContractList.Add(voucherDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string[]>(), true)).ReturnsAsync(voucherDataContractList);
+            var voucher = await voucherRepository.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNumber);
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task VoucherRepository_GetVouchersByVendorAndInvoiceNoAsync_Vouchers_StatusHasBlankValue()
+        {
+            string voucherId = "26";
+            InitDataForVoucherSummary();
+            
+            var invoiceNumber = "IN12345";
+            var vendorId = "0001234";
+
+            Collection<DataContracts.Vouchers> voucherDataContractList = new Collection<DataContracts.Vouchers>();
+
+            var voucherDataContract = new Vouchers()
+            {
+                Recordkey = "10",
+                VouStatus = new List<string>() { "" },
+                VouRequestor = "0000001",
+                VouVendor = "ABC Company",
+                VouMiscName = new List<string> { "ABC" },
+                VouAuthorizations = new List<string> { "0000001", "0000002" },
+                VouNextApprovalIds = new List<string> { "0000003" }
+
+            };
+
+            voucherDataContractList.Add(voucherDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string[]>(), true)).ReturnsAsync(voucherDataContractList);
+            var voucher = await voucherRepository.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNumber);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task VoucherRepository_GetVouchersByVendorAndInvoiceNoAsync_Vouchers_StatusDateHasNullValue()
+        {
+            InitDataForVoucherSummary();
+            
+            var invoiceNumber = "IN12345";
+            var vendorId = "0001234";
+
+            Collection<DataContracts.Vouchers> voucherDataContractList = new Collection<DataContracts.Vouchers>();
+
+            var voucherDataContract = new Vouchers()
+            {
+                Recordkey = "10",
+                VouStatus = new List<string>() { "O" },
+                VouRequestor = "0000001",
+                VouVendor = "ABC Company",
+                VouMiscName = new List<string> { "ABC" },
+                VouStatusDate = new List<DateTime?>() { null },
+                VouAuthorizations = new List<string> { "0000001", "0000002" },
+                VouNextApprovalIds = new List<string> { "0000003" }
+            };
+
+            voucherDataContractList.Add(voucherDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string[]>(), true)).ReturnsAsync(voucherDataContractList);
+            var voucher = await voucherRepository.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNumber);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task VoucherRepository_GetVouchersByVendorAndInvoiceNoAsync_Vouchers_InvalidStatus()
+        {
+            InitDataForVoucherSummary();
+            
+            var invoiceNumber = "IN12345";
+            var vendorId = "0001234";
+
+            Collection<DataContracts.Vouchers> voucherDataContractList = new Collection<DataContracts.Vouchers>();
+
+            var voucherDataContract = new Vouchers()
+            {
+                Recordkey = "10",
+                VouStatus = new List<string>() { "Z" },
+                VouRequestor = "0000001",
+                VouVendor = "ABC Company",
+                VouMiscName = new List<string> { "ABC" },
+                VouAuthorizations = new List<string> { "0000001", "0000002" },
+                VouNextApprovalIds = new List<string> { "0000003" }
+
+            };
+
+            voucherDataContractList.Add(voucherDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string[]>(), true)).ReturnsAsync(voucherDataContractList);
+            var voucher = await voucherRepository.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNumber);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task VoucherRepository_GetVouchersByVendorAndInvoiceNoAsync_Vouchers_NullStatusDate()
+        {
+            InitDataForVoucherSummary();
+            
+            var invoiceNumber = "IN12345";
+            var vendorId = "0001234";
+
+            Collection<DataContracts.Vouchers> voucherDataContractList = new Collection<DataContracts.Vouchers>();
+
+            var voucherDataContract = new Vouchers()
+            {
+                Recordkey = "10",
+                VouStatus = new List<string>() { "O" },
+                VouRequestor = "0000001",
+                VouVendor = "ABC Company",
+                VouMiscName = new List<string> { "ABC" },
+                VouStatusDate = null,
+                VouAuthorizations = new List<string> { "0000001", "0000002" },
+                VouNextApprovalIds = new List<string> { "0000003" }
+
+            };
+
+            voucherDataContractList.Add(voucherDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string[]>(), true)).ReturnsAsync(voucherDataContractList);
+            var voucher = await voucherRepository.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNumber);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task VoucherRepository_GetVouchersByVendorAndInvoiceNoAsync_Vouchers_NullVoucherDate()
+        {
+            InitDataForVoucherSummary();
+            
+            var invoiceNumber = "IN12345";
+            var vendorId = "0001234";
+
+            Collection<DataContracts.Vouchers> voucherDataContractList = new Collection<DataContracts.Vouchers>();
+
+            var voucherDataContract = new Vouchers()
+            {
+                Recordkey = "10",
+                VouStatus = new List<string>() { "O" },
+                VouRequestor = "0000001",
+                VouVendor = "ABC Company",
+                VouMiscName = new List<string> { "ABC" },
+                VouStatusDate = new List<DateTime?>() { new DateTime(2015, 1, 1) },
+                VouDate = null,
+                VouAuthorizations = new List<string> { "0000001", "0000002" },
+                VouNextApprovalIds = new List<string> { "0000003" }
+            };
+
+            voucherDataContractList.Add(voucherDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string[]>(), true)).ReturnsAsync(voucherDataContractList);
+            var voucher = await voucherRepository.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNumber);
+        }
+
+        #endregion
+
         #endregion
 
         #region Private methods
+
+        private async void InitDataForVoucherSummary()
+        {
+            string voucherId = "1";
+            var voucherFilename = "VOUCHERS";
+            var voucherIds = new List<string>()
+            {
+                voucherId
+            };
+            dataReader.Setup(dr => dr.SelectAsync(voucherFilename, It.IsAny<string[]>(), It.IsAny<string>())).Returns(() =>
+            {
+                return Task.FromResult(voucherIds.ToArray());
+            });
+            dataReader.Setup(dr => dr.SelectAsync(voucherFilename, It.IsAny<string>())).Returns(() =>
+            {
+                return Task.FromResult(voucherIds.ToArray());
+            });
+
+        }
+
         private VoucherRepository BuildVoucherRepository()
         {
             // Instantiate all objects necessary to mock data reader and CTX calls.
@@ -1440,6 +2496,22 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var transactionFactory = new Mock<IColleagueTransactionFactory>();
             var transactionFactoryObject = transactionFactory.Object;
             var loggerObject = new Mock<ILogger>().Object;
+
+            personAddressResponse = new TxGetReimbursePersonAddressResponse()
+            {
+
+                AError = false,
+                AlErrorMessages = new List<string>(),
+                APersonId = "124",
+                APersonName = "Blue Cross Office Shield",
+                APersonAddress = "PO Box 69845",
+                APersonCity = "Minneapolis",
+                APersonState = "MN",
+                APersonZip = "55430",
+                APersonCountry = "USA",
+                APersonFormattedAddress = "PO Box 69845 Minneapolis MN 55430 USA",
+                APersonAddrId = "143"
+            };
 
             // The transaction factory has a method to get its data reader
             // Make sure that method returns our mock data reader
@@ -1522,6 +2594,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 case "24":
                     // Do nothing; we want to return an emply list.
                     break;
+                case "31":
+                    glNumbersToReturn = new List<string>() { "11_10_00_01_20601_51000", "11_10_00_01_20601_51001" };
+                    break;
                 default:
                     if (this.voucherDomainEntity.LineItems != null)
                     {
@@ -1587,6 +2662,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             this.voucherDataContract.VouBpoId = this.voucherDomainEntity.BlanketPurchaseOrderId;
             this.voucherDataContract.VouRcvsId = this.voucherDomainEntity.RecurringVoucherId;
             this.voucherDataContract.VouCurrencyCode = this.voucherDomainEntity.CurrencyCode;
+            this.voucherDataContract.VouTotalAmt = this.voucherDomainEntity.Amount;
+            
 
             this.voucherDataContract.VouStatus = new List<string>();
             switch (this.voucherDomainEntity.Status)
@@ -1615,6 +2692,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 default:
                     throw new Exception("Invalid status specified in VoucherRepositoryTests");
             }
+
+            this.voucherDataContract.VouStatusDate = new List<DateTime?>();
+            this.voucherDataContract.VouStatusDate.Add(DateTime.Today);
 
             this.recurringVoucherDataContract = new RcVouSchedules()
             {
@@ -1819,11 +2899,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     }
 
                     itemsDataContract.VouGlTaxesEntityAssociation.Add(new ItemsVouGlTaxes()
-                        {
-                            ItmVouGlTaxCodeAssocMember = taxDistr.TaxCode,
-                            ItmVouGlTaxAmtAssocMember = localTaxAmount,
-                            ItmVouGlForeignTaxAmtAssocMember = foreignTaxAmount
-                        });
+                    {
+                        ItmVouGlTaxCodeAssocMember = taxDistr.TaxCode,
+                        ItmVouGlTaxAmtAssocMember = localTaxAmount,
+                        ItmVouGlForeignTaxAmtAssocMember = foreignTaxAmount
+                    });
                 }
 
                 this.itemsDataContracts.Add(itemsDataContract);

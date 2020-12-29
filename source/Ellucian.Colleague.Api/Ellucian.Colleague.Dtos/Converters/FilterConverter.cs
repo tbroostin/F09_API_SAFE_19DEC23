@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -18,6 +18,7 @@ namespace Ellucian.Colleague.Dtos.Converters
     public class FilterConverter : JsonConverter
     {
         private readonly List<Tuple<string, JProperty, InvalidFilterType, string>> _invalidFilterProperties;
+        private readonly List<Tuple<string, FilterMemberInfo>> _filterProperties;
         private List<string> _filterGroups;
 
         /// <summary>
@@ -26,6 +27,14 @@ namespace Ellucian.Colleague.Dtos.Converters
         public IEnumerable<string> GetFilterGroups
         {
             get { return _filterGroups; }
+        }
+
+        /// <summary>
+        /// GetFilterProperties
+        /// </summary>
+        public IEnumerable<Tuple<string, FilterMemberInfo>> GetFilterProperties
+        {
+            get { return _filterProperties; }
         }
 
         /// <summary>
@@ -47,6 +56,7 @@ namespace Ellucian.Colleague.Dtos.Converters
         public FilterConverter()
         {
             _invalidFilterProperties = new List<Tuple<string, JProperty, InvalidFilterType, string>>();
+            _filterProperties = new List<Tuple<string, FilterMemberInfo>>();
             _filterGroups = new List<string>();
         }
 
@@ -56,6 +66,7 @@ namespace Ellucian.Colleague.Dtos.Converters
         public FilterConverter(string filterName)
         {
             _invalidFilterProperties = new List<Tuple<string, JProperty, InvalidFilterType, string>>();
+            _filterProperties = new List<Tuple<string, FilterMemberInfo>>();
             _filterGroups = new List<string>();
             _filterGroups.Add(filterName);
         }
@@ -66,6 +77,7 @@ namespace Ellucian.Colleague.Dtos.Converters
         public FilterConverter(List<string> filterNames)
         {
             _invalidFilterProperties = new List<Tuple<string, JProperty, InvalidFilterType, string>>();
+            _filterProperties = new List<Tuple<string, FilterMemberInfo>>();
             _filterGroups = filterNames;
         }
 
@@ -77,6 +89,20 @@ namespace Ellucian.Colleague.Dtos.Converters
         {
             bool retval = false;
             if ((_invalidFilterProperties != null) && (_invalidFilterProperties.Any()))
+            {
+                retval = true;
+            }
+            return retval;
+        }
+
+        /// <summary>
+        /// ContainsFilterProperties
+        /// </summary>
+        /// <returns>returns true if any invalid filter parameters were found.</returns>
+        public bool ContainsFilterProperties()
+        {
+            bool retval = false;
+            if ((_filterProperties != null) && (_filterProperties.Any()))
             {
                 retval = true;
             }
@@ -152,6 +178,10 @@ namespace Ellucian.Colleague.Dtos.Converters
         /// <returns></returns>
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
+            // TODO: Once JSON.NET is updated to v12.0.1, add support for preventing duplicate property names 
+            //serializer.DuplicatePropertyNameHandling = DuplicatePropertyNameHandling.Error;
+                       
+
             serializer.StringEscapeHandling = StringEscapeHandling.EscapeHtml;
 
             //create an instance of the DTO which will be returned 
@@ -165,7 +195,7 @@ namespace Ellucian.Colleague.Dtos.Converters
             if (_filterGroups == null || !_filterGroups.Any())
                 return existingValue;
 
-            // read in the query string into a JObject 
+            // read in the query string into a JObject           
             JObject jObject = JObject.Load(reader);
             if (jObject == null)
                 return existingValue;
@@ -186,13 +216,37 @@ namespace Ellucian.Colleague.Dtos.Converters
                         AddInvalidFilterProperty(jProperty, InvalidFilterType.Property); continue;
                     }
                    
-                    // If the property is set to ignore, then move to next record
-                    //if (IsPropertyIgnored(propertyInfo)) continue;
 
                     var jToken = jObject[jProperty.Name];
                     if (jToken != null)
                     {
                         object value = null;
+                        // See if we have any qualifiers for the query
+                        if (jToken.Children().Any())
+                        {
+                            var childToken = jToken.Last;
+                            var path = childToken.Path.ToString();
+                            var oper = "";
+                            if (path.Contains('.'))
+                            {
+                                var pathSplit = path.Split('.');
+                                oper = pathSplit.LastOrDefault();
+                            }
+                            else
+                            {
+                                oper = path;
+                            }
+                            if (!string.IsNullOrEmpty(oper) && oper.Substring(0, 1) == "$")
+                            {
+                                jToken = childToken.Last;
+                                ValidateFilterOperator(jProperty, propertyInfo, oper);
+                                if (_invalidFilterProperties.Any())
+                                    continue;
+
+                                propertyInfo.FilterCriteria = oper;
+                            }
+                        }
+
                         if (propertyInfo.JsonConverter != null)
                         {
                             try
@@ -216,17 +270,6 @@ namespace Ellucian.Colleague.Dtos.Converters
                             ContainsEmptyFilterProperties = true; continue;
                         }
 
-                        //object value = null;
-                        // if (propertyInfo.JsonConverter != null)
-                        //{
-                        //     var jTokenSerializer = AddConvertersType(propertyInfo.JsonConverter);
-                        //    value = jToken.ToObject(propertyInfo.Type, jTokenSerializer);
-                        // }
-                        //else
-                        // {
-                        // * Convert the token to the DTO Object.  This also traps for invalid enumerations                            
-                        //if (propertyInfo.JsonConverter == null)
-                        //{
                         
                         var type = IsNullableType(propertyInfo.Type)
                             ? getGenericArgumentType(propertyInfo, jToken, value)
@@ -269,10 +312,10 @@ namespace Ellucian.Colleague.Dtos.Converters
                                         {
                                             AddInvalidFilterProperty(jProperty, InvalidFilterType.Property);
                                         }
-                                        if (!JObject.DeepEquals(obj1, obj2))
-                                        {
-                                            AddInvalidFilterProperty(jProperty, InvalidFilterType.DataType);
-                                        }
+                                        //if (!JObject.DeepEquals(obj1, obj2))
+                                        //{
+                                        //    AddInvalidFilterProperty(jProperty, InvalidFilterType.DataType);
+                                        //}
                                     }
                                 }
                             }
@@ -286,6 +329,7 @@ namespace Ellucian.Colleague.Dtos.Converters
                         else
                         {
                             dtoProperty.SetValue(existingValue, value, null);
+                            AddFilterProperty(propertyInfo);
                         }
                     }
                 }
@@ -295,6 +339,43 @@ namespace Ellucian.Colleague.Dtos.Converters
                 }
             }
             return existingValue;
+        }
+
+        private void ValidateFilterOperator(JProperty jProperty, FilterMemberInfo propertyInfo, string oper)
+        {
+
+            if ((string.IsNullOrEmpty(oper)) || (jProperty == null) || (propertyInfo == null))
+                    return;
+
+            // if supplying an filter operator, and no supported operators are associated with the property, then trow a not supported message
+            if ((propertyInfo.SupportedOperators == null) || (!propertyInfo.SupportedOperators.Keys.Any()))
+            {
+                AddInvalidFilterProperty(jProperty, InvalidFilterType.UnsupportedFilterOperator, oper);
+                return;
+            }
+
+            foreach (var keys in propertyInfo.SupportedOperators.Keys)
+            {
+                foreach (var key in keys)
+                {
+                    var supportedOperatorValues = propertyInfo.SupportedOperators.FirstOrDefault(y => _filterGroups.Any(z => z == key));
+
+                    if (!supportedOperatorValues.Value.Any())
+                        continue;
+
+                    var uppercaseSupportedOperators = supportedOperatorValues.Value.ConvertAll(d => d.ToUpper());
+
+                    if (uppercaseSupportedOperators != null && uppercaseSupportedOperators.Contains(oper))
+                    {
+                        AddInvalidFilterProperty(jProperty, InvalidFilterType.InvalidFilterOperator, oper);
+
+                    }
+                    else if (!supportedOperatorValues.Value.Contains(oper))
+                    {
+                        AddInvalidFilterProperty(jProperty, InvalidFilterType.UnsupportedFilterOperator, oper);
+                    }
+                }
+            }
         }
 
         private Type getGenericArgumentType(FilterMemberInfo propertyInfo, JToken jToken, object value)
@@ -361,13 +442,28 @@ namespace Ellucian.Colleague.Dtos.Converters
             }
             return retval;
         }
-      
-        private void AddInvalidFilterProperty(JProperty jProperty, InvalidFilterType invalidFilterType = InvalidFilterType.NotSet, string enumValue = "")
+
+        /// <summary>
+        /// AddInvalidFilterProperty
+        /// </summary>
+        /// <param name="jProperty"></param>
+        /// <param name="invalidFilterType"></param>
+        /// <param name="value"></param>
+        public void AddInvalidFilterProperty(JProperty jProperty, InvalidFilterType invalidFilterType = InvalidFilterType.NotSet, string value = "")
         {
             if (_invalidFilterProperties == null)
                 return;
             if (!_invalidFilterProperties.Any(m => m.Item1 == jProperty.Name))
-            _invalidFilterProperties.Add(new Tuple<string, JProperty, InvalidFilterType, string>(jProperty.Name, jProperty, invalidFilterType, enumValue));
+            _invalidFilterProperties.Add(new Tuple<string, JProperty, InvalidFilterType, string>(jProperty.Name, jProperty, invalidFilterType, value));
+
+        }
+
+        private void AddFilterProperty(FilterMemberInfo jProperty)
+        {
+            if (_filterProperties == null)
+                return;
+            if (!_filterProperties.Any(m => m.Item1 == jProperty.PropertyName))
+                _filterProperties.Add(new Tuple<string, FilterMemberInfo>(jProperty.PropertyName, jProperty));
 
         }
 
@@ -410,6 +506,14 @@ namespace Ellucian.Colleague.Dtos.Converters
                         case InvalidFilterType.Enumeration:
                             name = invalidFilterProperties.Item4;
                             retval = string.Concat(retval, "'", name, "' is an invalid enumeration value. ");
+                            break;
+                        case InvalidFilterType.InvalidFilterOperator:
+                            name = invalidFilterProperties.Item4;
+                            retval = "Invalid filter operator."; // string.Concat(retval, "'", name, "' is an invalid filter operator. ");
+                            break;
+                        case InvalidFilterType.UnsupportedFilterOperator:
+                            name = invalidFilterProperties.Item4;
+                            retval = "Unsupported filter operator."; // string.Concat(retval, "'", name, "' is an unsupported filter operator. ");
                             break;
                         case InvalidFilterType.DataType:
                             retval = string.Concat(retval, "'", name, "' is an invalid data type. ");
@@ -568,7 +672,7 @@ namespace Ellucian.Colleague.Dtos.Converters
                         return true;
                     }
                     var enumMemberAttribute = ((EnumMemberAttribute[])fieldInfo.GetCustomAttributes(typeof(EnumMemberAttribute), true)).FirstOrDefault();
-                    if (enumMemberAttribute != null && enumMemberAttribute.Value == value)
+                    if (enumMemberAttribute != null && enumMemberAttribute.Value.ToLower() == value.ToLower())
                     {
                         return true;
                     }
@@ -594,6 +698,7 @@ namespace Ellucian.Colleague.Dtos.Converters
 
             if (jToken.Type == JTokenType.Array)
             {
+              
                 foreach (var prop in jToken.Children())
                 {
                     if (IsInvalidDataType(prop, type))
@@ -632,8 +737,39 @@ namespace Ellucian.Colleague.Dtos.Converters
                         && (type != typeof(DateTimeOffset)))
                         retval = true;
                     break;
-                default:
-                    return retval;
+                default:                    
+                    break;
+            }
+
+            if (jToken.Type != JTokenType.Object)
+            {
+                try
+                {
+                    if (jToken.Type == JTokenType.String)
+                    {
+                        //If its a list -then we need to get the type
+                        if ((type.GetTypeInfo().IsGenericType) && ((type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+                         || type.GetGenericTypeDefinition() == typeof(List<>)))
+                        {
+                            type = type.GetGenericArguments()[0];
+                            if (type != null && IsNullableType(type))
+                                type = Nullable.GetUnderlyingType(type);
+                        }
+                    }
+                    if ((type != null) && (type.BaseType != typeof(System.Enum)))
+                    {
+                        var obj = jToken.ToObject(type);
+                        if (obj == null)
+                        {
+                            retval = true;
+                        }
+                    }
+                }
+
+                catch (Exception ex)
+                {
+                    retval = true;
+                }
             }
             return retval;
         }
@@ -700,6 +836,7 @@ namespace Ellucian.Colleague.Dtos.Converters
             return found;
         }
 
+     
         /// <summary>
         /// Determine if a property is on a dto object by looking at datamember and jsonproperty attributes.
         /// If found, determine which filters the property is associated with
@@ -713,6 +850,8 @@ namespace Ellucian.Colleague.Dtos.Converters
             FilterMemberInfo filterMemberInfo = null;
             var filterAttributes = new List<string>();
             var filterAttributesDict = new Dictionary<List<string>, bool>();
+            var supportedFilterDict = new Dictionary<List<string>, List<string>>();
+
             bool isPrimative = false;
             try
             {
@@ -724,7 +863,7 @@ namespace Ellucian.Colleague.Dtos.Converters
                 }
 
                 //if (IsNullableType(modelType))
-                 //   modelType = Nullable.GetUnderlyingType(modelType);
+                //   modelType = Nullable.GetUnderlyingType(modelType);
 
                 var properties = modelType.GetProperties();
 
@@ -756,12 +895,21 @@ namespace Ellucian.Colleague.Dtos.Converters
                         {
                             filterAttributes = (matchingFilterAttribute.Name).ToList();
                             filterAttributesDict.Add(filterAttributes, matchingFilterAttribute.Ignore);
+
+                            if ((matchingFilterAttribute.SupportedOperators != null))
+                            {
+                                supportedFilterDict.Add((matchingFilterAttribute.Name).ToList(), (matchingFilterAttribute.SupportedOperators).ToList());
+                            }
                         }
                     }
 
                     var type = isChild ? matchingProperty.DeclaringType : matchingProperty.PropertyType;
 
-                    if (matchingProperty.PropertyType.IsPrimitive || matchingProperty.PropertyType == typeof(string))
+                    var propertyType = matchingProperty.PropertyType;
+                    if (IsNullableType(propertyType))
+                       propertyType = Nullable.GetUnderlyingType(matchingProperty.PropertyType);
+                    if (propertyType.IsPrimitive || propertyType == typeof(string) 
+                        || propertyType == typeof(DateTime) || propertyType == typeof(DateTimeOffset))
                     {
                         isPrimative = true;
                     }
@@ -772,16 +920,11 @@ namespace Ellucian.Colleague.Dtos.Converters
                     if (converter != null)
                     {
                         var converterType = (JsonConverter)Activator.CreateInstance(converter.ConverterType, converter.ConverterParameters);
-                        return new FilterMemberInfo(filterAttributesDict, type, matchingProperty.Name, isPrimative, converterType);
+                        return new FilterMemberInfo(filterAttributesDict, type, matchingProperty.Name, isPrimative, converterType, supportedOperators: supportedFilterDict);
                     }
+                    filterMemberInfo = new FilterMemberInfo(filterAttributesDict, type, matchingProperty.Name, isPrimative, supportedOperators: supportedFilterDict);
 
-                    filterMemberInfo = new FilterMemberInfo(filterAttributesDict, type, matchingProperty.Name, isPrimative);
                 }
-
-              //  if (filterMemberInfo == null)
-               // {
-               //     throw new Exception("Invalid Request. Please check the query parameters");
-               // }
             }
             catch (Exception e)
             {
@@ -801,6 +944,16 @@ namespace Ellucian.Colleague.Dtos.Converters
             /// indicating if the filter should be ignored in the resources output
             /// </summary>
             public Dictionary<List<string>, bool> FilterCollection { get; set; }
+
+            /// <summary>
+            /// Property name selection qualifier.
+            /// </summary>
+            public string FilterCriteria { get; set; }
+
+            /// <summary>
+            /// Supported advanced filter operators
+            /// </summary>
+            public Dictionary<List<string>, List<string>> SupportedOperators { get; set; }
 
             /// <summary>
             /// Property Type
@@ -829,16 +982,18 @@ namespace Ellucian.Colleague.Dtos.Converters
             /// <param name="type"></param>
             /// <param name="propertyName"></param>   
             /// <param name="jsonConverter"></param>
+            /// <param name="supportedOperators"></param>
             /// <param name="isPrimitive"></param>
             public FilterMemberInfo(Dictionary<List<string>, bool> filterCollection,
                 Type type, string propertyName, bool isPrimitive = false,
-                JsonConverter jsonConverter = null)
+                JsonConverter jsonConverter = null, Dictionary<List<string>, List<string>> supportedOperators = null)
             {
                 FilterCollection = filterCollection;
                 Type = type;
                 PropertyName = propertyName;
                 JsonConverter = jsonConverter;
                 IsPrimitive = isPrimitive;
+                SupportedOperators = supportedOperators;
             }
         }
 
@@ -850,23 +1005,31 @@ namespace Ellucian.Colleague.Dtos.Converters
             /// <summary>
             /// Default
             /// </summary>
-           NotSet,
-           /// <summary>
-           /// Invalid Data Type
-           /// </summary>
-           DataType,
-           /// <summary>
-           /// Invalid Property
-           /// </summary>
-           Property,
-           /// <summary>
-           /// Invalid Enumeration
-           /// </summary>
-           Enumeration,
-           /// <summary>
-           /// Invalid Query Parameter
-           /// </summary>
-            QueryParameter
+            NotSet,
+            /// <summary>
+            /// Invalid Data Type
+            /// </summary>
+            DataType,
+            /// <summary>
+            /// Invalid Property
+            /// </summary>
+            Property,
+            /// <summary>
+            /// Invalid Enumeration
+            /// </summary>
+            Enumeration,
+            /// <summary>
+            /// Invalid Query Parameter
+            /// </summary>
+            QueryParameter,
+            /// <summary>
+            ///Invalid Filter Operator
+            /// </summary>
+            InvalidFilterOperator,
+            /// <summary>
+            /// Unsupported Filter Operator
+            /// </summary>
+            UnsupportedFilterOperator
         }
     }
 }

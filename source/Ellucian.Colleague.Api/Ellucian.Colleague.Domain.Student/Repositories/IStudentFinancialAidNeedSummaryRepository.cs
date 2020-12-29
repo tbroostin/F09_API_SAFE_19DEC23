@@ -17,5 +17,14 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<Tuple<IEnumerable<StudentNeedSummary>, int>> GetAsync(int offset, int limit, bool bypassCache, List<string> faSuiteYears);
 
         Task<string> GetIsirCalcResultsGuidFromIdAsync(string id);
+
+
+        /// <summary>
+        /// Using a collection of  ids, get a dictionary collection of associated guids
+        /// </summary>
+        /// <param name="ids">collection of ids</param>
+        /// <returns>Dictionary consisting of an id (key) and guid (value)</returns>
+        Task<Dictionary<string, string>> GetIsirCalcResultsGuidsCollectionAsync(IEnumerable<string> ids);
+
     }
 }

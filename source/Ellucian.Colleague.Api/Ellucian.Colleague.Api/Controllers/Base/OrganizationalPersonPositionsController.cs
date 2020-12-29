@@ -1,15 +1,17 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
+using Ellucian.Web.Security;
 using slf4net;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
@@ -42,12 +44,19 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves the position for the given ID and the direct relationships to others for the position.
         /// </summary>
         /// <returns>OrganizationalPersonPosition for the given ID</returns>
+        /// <accessComments>
+        /// User must have the VIEW.ORGANIZATIONAL.RELATIONSHIPS or UPDATE.ORGANIZATIONAL.RELATIONSHIPS permission.
+        /// </accessComments>
         [HttpGet]
         public async Task<Ellucian.Colleague.Dtos.Base.OrganizationalPersonPosition> GetOrganizationalPersonPositionAsync(string id)
         {
             try
             {
                 return await _organizationalPersonPositionService.GetOrganizationalPersonPositionByIdAsync(id);
+            }
+            catch (PermissionsException pe)
+            {
+                throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
             }
             catch (Exception ex)
             {
@@ -60,12 +69,19 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves the positions for the indicated persons and the direct relationships to others for each position.
         /// </summary>
         /// <returns>A list of OrganizationalPersonPosition objects</returns>
+        /// <accessComments>
+        /// User must have the VIEW.ORGANIZATIONAL.RELATIONSHIPS or UPDATE.ORGANIZATIONAL.RELATIONSHIPS permission.
+        /// </accessComments>
         [HttpPost]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Base.OrganizationalPersonPosition>> QueryOrganizationalPersonPositionAsync(OrganizationalPersonPositionQueryCriteria criteria)
         {
             try
             {
                 return await _organizationalPersonPositionService.QueryOrganizationalPersonPositionAsync(criteria);
+            }
+            catch (PermissionsException pe)
+            {
+                throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
             }
             catch (Exception ex)
             {

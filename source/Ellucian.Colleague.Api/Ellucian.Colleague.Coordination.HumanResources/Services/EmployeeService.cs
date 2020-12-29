@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2019 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.HumanResources;
@@ -161,7 +161,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             int employeeCount = 0;
             var employeePersonIds = new List<string>();
 
-            if (!HasPermission(HumanResourcesPermissionCodes.ViewEmployeeData))
+            if (!HasPermission(HumanResourcesPermissionCodes.ViewEmployeeData) &&  !HasPermission(HumanResourcesPermissionCodes.UpdateEmployee))
             {
                 throw new PermissionsException("User does not have permission to view Employees.");
             }
@@ -244,7 +244,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             int employeeCount = 0;
             var employeePersonIds = new List<string>();
 
-            if (!HasPermission(HumanResourcesPermissionCodes.ViewEmployeeData))
+            if (!HasPermission(HumanResourcesPermissionCodes.ViewEmployeeData) &&  !HasPermission(HumanResourcesPermissionCodes.UpdateEmployee))
             {
                 throw new PermissionsException("User does not have permission to view Employees.");
             }
@@ -384,7 +384,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             int employeeCount = 0;
             var employeePersonIds = new List<string>();
 
-            if (!HasPermission(HumanResourcesPermissionCodes.ViewEmployeeData))
+            if (!HasPermission(HumanResourcesPermissionCodes.ViewEmployeeData) && !HasPermission(HumanResourcesPermissionCodes.UpdateEmployee))
             {
                 throw new PermissionsException("User does not have permission to view Employees.");
             }
@@ -555,7 +555,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         public async Task<Dtos.Employee> GetEmployeeByGuidAsync(string guid)
         {
             Dtos.Employee employeeDto = new Dtos.Employee();
-            if (HasPermission(HumanResourcesPermissionCodes.ViewEmployeeData))
+            if (HasPermission(HumanResourcesPermissionCodes.ViewEmployeeData) || HasPermission(HumanResourcesPermissionCodes.UpdateEmployee))
             {
                 try
                 {
@@ -588,7 +588,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         public async Task<Dtos.Employee2> GetEmployee2ByIdAsync(string id)
         {
             Dtos.Employee2 employeeDto = new Dtos.Employee2();
-            if (HasPermission(HumanResourcesPermissionCodes.ViewEmployeeData))
+            if (HasPermission(HumanResourcesPermissionCodes.ViewEmployeeData) || HasPermission(HumanResourcesPermissionCodes.UpdateEmployee))
             {
                 try
                 {
@@ -625,7 +625,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 throw new ArgumentNullException("id can't be null or empty.");
             }
             Dtos.Employee2 employeeDto = new Dtos.Employee2();
-            if (HasPermission(HumanResourcesPermissionCodes.ViewEmployeeData))
+            if (HasPermission(HumanResourcesPermissionCodes.ViewEmployeeData) || HasPermission(HumanResourcesPermissionCodes.UpdateEmployee))
             {
                 try
                 {
@@ -809,7 +809,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             // Termination Reason
             if (!string.IsNullOrEmpty(employeeEntity.StatusEndReasonCode) && employeeEntity.EmploymentStatus == EmployeeStatus.Terminated)
             {
-                var termReasonId = (await GetEmploymentStatusEndingReasonsAsync(bypassCache)).FirstOrDefault(sr => sr.Code == employeeEntity.StatusEndReasonCode).Guid;
+                var termReasonId = await hrReferenceDataRepository.GetEmploymentStatusEndingReasonsGuidAsync(employeeEntity.StatusEndReasonCode);
                 if (!string.IsNullOrEmpty(termReasonId))
                 {
                     employeeDto.TerminationReason = new GuidObject2(termReasonId);
@@ -998,7 +998,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             // Termination Reason
             if (!string.IsNullOrEmpty(employeeEntity.StatusEndReasonCode) && employeeEntity.EmploymentStatus == EmployeeStatus.Terminated)
             {
-                var termReasonId = (await GetEmploymentStatusEndingReasonsAsync(bypassCache)).FirstOrDefault(sr => sr.Code == employeeEntity.StatusEndReasonCode).Guid;
+                var termReasonId = await hrReferenceDataRepository.GetEmploymentStatusEndingReasonsGuidAsync(employeeEntity.StatusEndReasonCode);
                 if (!string.IsNullOrEmpty(termReasonId))
                 {
                     employeeDto.TerminationReason = new GuidObject2(termReasonId);
@@ -1217,7 +1217,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             // Termination Reason
             if (!string.IsNullOrEmpty(employeeEntity.StatusEndReasonCode) && employeeEntity.EmploymentStatus == EmployeeStatus.Terminated)
             {
-                var termReasonId = (await GetEmploymentStatusEndingReasonsAsync(bypassCache)).FirstOrDefault(sr => sr.Code == employeeEntity.StatusEndReasonCode).Guid;
+                var termReasonId = await hrReferenceDataRepository.GetEmploymentStatusEndingReasonsGuidAsync(employeeEntity.StatusEndReasonCode);
                 if (!string.IsNullOrEmpty(termReasonId))
                 {
                     employeeDto.TerminationReason = new GuidObject2(termReasonId);
@@ -1253,6 +1253,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns><see cref="Dtos.Employee2">Employee</see></returns>
         public async Task<Dtos.Employee2> PutEmployee2Async(string guid, Dtos.Employee2 employeeDto, Dtos.Employee2 origEmployeeDto)
         {
+            // verify the user has the permission to update a Employee
+            CheckUpdateEmployeePermission();
             if (employeeDto == null)
                 throw new ArgumentNullException("Employee", "Must provide a Employee for update");
             if (string.IsNullOrEmpty(employeeDto.Id))
@@ -1272,10 +1274,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 try
                 {
-
-                    // verify the user has the permission to update a Employee
-                    CheckUpdateEmployeePermission();
-
                     employeeRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
                     CompareEmployeesDto(employeeDto, origEmployeeDto);
@@ -1451,15 +1449,15 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns><see cref="Dtos.Employee2">Employee</see></returns>
         public async Task<Dtos.Employee2> PostEmployee2Async(Dtos.Employee2 employeeDto)
         {
+            // verify the user has the permission to create a Employee
+            CheckUpdateEmployeePermission();
+
             if (employeeDto == null)
                 throw new ArgumentNullException("Employee", "Must provide a Employee for update");
             if (string.IsNullOrEmpty(employeeDto.Id))
                 throw new ArgumentNullException("Employee", "Must provide a guid for Employee update");
 
-            await ValidateEmployee(employeeDto);
-
-            // verify the user has the permission to create a Employee
-            CheckUpdateEmployeePermission();
+            await ValidateEmployee(employeeDto);            
 
             employeeRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -1764,7 +1762,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             if (!hasPermission)
             {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to update Employees.");
+                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to create/update employees.");
             }
         }
 
@@ -1786,7 +1784,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 !HasPermission(HumanResourcesPermissionCodes.ViewEmployeeData) &&
                 !HasPermission(HumanResourcesPermissionCodes.ViewSuperviseeData) &&
                 !HasPermission(HumanResourcesPermissionCodes.ViewEmployeeW2) &&
-                !HasPermission(HumanResourcesPermissionCodes.ViewEmployee1095C))
+                !HasPermission(HumanResourcesPermissionCodes.ViewEmployee1095C) &&
+                !HasPermission(HumanResourcesPermissionCodes.ViewAllTimeHistory) &&
+                !HasPermission(HumanResourcesPermissionCodes.ViewAllTotalCompensation))
             {
                 throw new PermissionsException("Current user is not authorized to view employee data");
             }

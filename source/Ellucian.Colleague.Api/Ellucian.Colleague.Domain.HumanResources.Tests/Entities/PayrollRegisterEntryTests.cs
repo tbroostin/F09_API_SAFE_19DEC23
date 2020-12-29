@@ -16,11 +16,12 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         public int sequenceNumber;
         public string paycheckReferenceId;
         public string payStatementReferenceId;
+        public bool useNewW4Flag;
         public PayrollRegisterEntry pre
         {
             get
             {
-                return new PayrollRegisterEntry(id, employeeId, payPeriodStartDate, payPeriodEndDate, payCycleId, sequenceNumber, paycheckReferenceId, payStatementReferenceId);
+                return new PayrollRegisterEntry(id, employeeId, payPeriodStartDate, payPeriodEndDate, payCycleId, sequenceNumber, paycheckReferenceId, payStatementReferenceId, useNewW4Flag);
             }
         }
 
@@ -35,6 +36,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             sequenceNumber = 4;
             paycheckReferenceId = "91023";
             payStatementReferenceId = "32019";
+            useNewW4Flag = true;
         }
         [TestMethod]
         public void PropertiesAreSet()
@@ -53,6 +55,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             Assert.IsNotNull(pre.LeaveEntries);
             Assert.IsNotNull(pre.BenefitDeductionEntries);
             Assert.IsNotNull(pre.TaxableBenefitEntries);
+            Assert.IsTrue(pre.Apply2020W4Rules);
         }
         [TestMethod, ExpectedException(typeof(ArgumentNullException))]
         public void NullIdIsHandled()
@@ -65,7 +68,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         {
             paycheckReferenceId = null;
             payStatementReferenceId = null;
-            var error = pre; 
+            var error = pre;
         }
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]

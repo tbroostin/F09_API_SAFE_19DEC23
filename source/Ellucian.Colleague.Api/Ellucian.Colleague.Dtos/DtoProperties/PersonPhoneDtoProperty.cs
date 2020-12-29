@@ -15,7 +15,7 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         /// <summary>
         /// The <see cref="PhoneType">type</see> of phone number
         /// </summary>
-        [JsonProperty("type")]
+        [JsonProperty("type", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public PersonPhoneTypeDtoProperty Type { get; set; }
 
         /// <summary>

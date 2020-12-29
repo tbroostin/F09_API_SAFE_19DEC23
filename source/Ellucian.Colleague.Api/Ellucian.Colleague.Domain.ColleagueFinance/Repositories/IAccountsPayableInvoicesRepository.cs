@@ -11,16 +11,16 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
 {
     public interface IAccountsPayableInvoicesRepository : IEthosExtended
     {
-        Task<Tuple<IEnumerable<AccountsPayableInvoices>, int>> GetAccountsPayableInvoices2Async(int offset, int limit);
+        Task<Tuple<IEnumerable<AccountsPayableInvoices>, int>> GetAccountsPayableInvoices2Async(int offset, int limit, string invoiceNumber);
         Task<AccountsPayableInvoices> GetAccountsPayableInvoicesByGuidAsync(string guid, bool allowVoid);
         Task<AccountsPayableInvoices> UpdateAccountsPayableInvoicesAsync(AccountsPayableInvoices accountsPayableInvoicesEntity);
         Task<AccountsPayableInvoices> CreateAccountsPayableInvoicesAsync(AccountsPayableInvoices accountsPayableInvoicesEntity);
         Task<string> GetAccountsPayableInvoicesIdFromGuidAsync(string guid);
-        Task<string> GetAccountsPayableInvoicesGuidFromIdAsync(string id);
-        Task<string> GetGuidFromID(string key, string entity);
+        Task<string> GetAccountsPayableInvoicesGuidFromIdAsync(string id);        
         Task<GuidLookupResult> GetIdFromGuidAsync(string guid);
         Task<IDictionary<string, string>> GetProjectReferenceIds(string[] projectIds);
         Task<IDictionary<string, string>> GetProjectIdsFromReferenceNo(string[] projectRefNo);
+        Task<Dictionary<string, string>> GetGuidsCollectionAsync(IEnumerable<string> ids, string filename);
 
     }
 }

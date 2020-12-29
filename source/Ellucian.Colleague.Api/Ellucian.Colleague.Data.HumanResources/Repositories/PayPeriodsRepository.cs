@@ -323,12 +323,23 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <returns>GUID associated to the entity and key</returns>
         private async Task<string> GetGuidFromIdAsync(string entity, string id, string secondaryField = "", string secondaryKey = "")
         {
-            var criteria = string.Format("WITH LDM.GUID.ENTITY = '{0}' AND WITH LDM.GUID.PRIMARY.KEY = '{1}' AND WITH LDM.GUID.SECONDARY.FLD = '{2}' AND WITH LDM.GUID.SECONDARY.KEY = '{3}'", entity, id, secondaryField, secondaryKey);
-            var ldmGuid = await DataReader.SelectAsync("LDM.GUID", criteria);
-            if (ldmGuid != null && ldmGuid.Any())
+            if (!string.IsNullOrEmpty(entity) && !string.IsNullOrEmpty(id))
             {
-                return ldmGuid.ElementAt(0).ToString();
+                var lookup = new RecordKeyLookup(entity, id, secondaryField, secondaryKey, false);
+                var result = await DataReader.SelectAsync(new RecordKeyLookup[] { lookup });
+                if (result != null && result.Count > 0)
+                {
+                    RecordKeyLookupResult lookupResult = null;
+                    if (result.TryGetValue(lookup.ResultKey, out lookupResult))
+                    {
+                        if (lookupResult != null)
+                        {
+                            return lookupResult.Guid;
+                        }
+                    }
+                }
             }
+
             return string.Empty;
         }
     }

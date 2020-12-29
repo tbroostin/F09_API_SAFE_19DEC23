@@ -4,6 +4,7 @@ using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
 using Ellucian.Colleague.Data.Student.Transactions;
+using Ellucian.Colleague.Domain.Base.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Tests;
@@ -168,7 +169,35 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             var ldmGuid = new LdmGuid() { LdmGuidEntity = "STUDENT.COURSE.SEC", LdmGuidPrimaryKey = StudentUnverifiedGradesGuid };
             dataReaderMock.Setup(acc => acc.ReadRecordAsync<LdmGuid>("LDM.GUID", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(ldmGuid);
-
+            
+            GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+            {
+                Offset = 0,
+                Limit = 1,
+                CacheName = "AllSectionRegistrationsKeys:",
+                Entity = "STUDENT.COURSE.SEC",
+                Sublist = new List<string>() { "1", "2", "3" },
+                TotalCount = 3,
+                KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 5905,
+                            KeyCacheMin = 1,
+                            KeyCachePart = "000",
+                            KeyCacheSize = 5905
+                        },
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 7625,
+                            KeyCacheMin = 5906,
+                            KeyCachePart = "001",
+                            KeyCacheSize = 1720
+                        }
+                    }
+            };
+            transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                .ReturnsAsync(resp);
 
             // Construct repository
             studentUnverifiedGradesRepo = new StudentUnverifiedGradesRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
@@ -393,7 +422,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 var result = await studentUnverifiedGradesRepo.UpdateStudentUnverifiedGradesSubmissionsAsync(studentUnverifiedGrade);
             }
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(RepositoryException))]
             public async Task StudentUnverifiedGradeRepository_UpdateStudentUnverifiedGradesSubmissionsAsync_CTXError()
             {
                 var studentUnverifiedGrade = allStudentUnverifiedGrades.FirstOrDefault(x => x.Guid == StudentUnverifiedGradesGuid);
@@ -408,15 +437,15 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 var updateResponse = new ImportGrades2Response()
                 {
                     Guid = StudentUnverifiedGradesGuid,
-                    GradeMessages =
-                    new List<GradeMessages>() { new GradeMessages() { ErrorMessge = "ERROR", StatusCode = "FAILURE" } }
+                    GradeMessages2 =
+                    new List<GradeMessages2>() { new GradeMessages2() { ErrorMessge = "ERROR", StatusCode = "FAILURE" } }
                 };
                 transManagerMock.Setup(i => i.ExecuteAsync<ImportGrades2Request, ImportGrades2Response>(It.IsAny<ImportGrades2Request>())).ReturnsAsync(updateResponse);
                 await studentUnverifiedGradesRepo.UpdateStudentUnverifiedGradesSubmissionsAsync(studentUnverifiedGrade);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(RepositoryException))]
             public async Task StudentUnverifiedGradeRepository_UpdateStudentUnverifiedGradesSubmissionsAsync_Update_StudentAcadCredEmpty()
             {
                 var studentUnverifiedGrade = allStudentUnverifiedGrades.FirstOrDefault(x => x.Guid == StudentUnverifiedGradesGuid);
@@ -432,8 +461,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 var updateResponse = new ImportGrades2Response()
                 {
                     Guid = StudentUnverifiedGradesGuid,
-                    GradeMessages =
-                    new List<GradeMessages>() { new GradeMessages() { ErrorMessge = "ERROR", StatusCode = "FAILURE" } }
+                    GradeMessages2 =
+                    new List<GradeMessages2>() { new GradeMessages2() { ErrorMessge = "ERROR", StatusCode = "FAILURE" } }
                 };
                 transManagerMock.Setup(i => i.ExecuteAsync<ImportGrades2Request, ImportGrades2Response>(It.IsAny<ImportGrades2Request>())).ReturnsAsync(updateResponse);
                 await studentUnverifiedGradesRepo.UpdateStudentUnverifiedGradesSubmissionsAsync(studentUnverifiedGrade);

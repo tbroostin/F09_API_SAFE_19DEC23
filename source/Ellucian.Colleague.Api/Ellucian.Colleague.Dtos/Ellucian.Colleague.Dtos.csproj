@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Ellucian.Colleague.Dtos</RootNamespace>
     <AssemblyName>Ellucian.Colleague.Dtos</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -54,6 +54,156 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CipCode.cs" />
+    <Compile Include="AptitudeAssessmentSources.cs" />
+    <Compile Include="CareerGoals.cs" />
+    <Compile Include="AdmissionApplicationInfluences.cs" />
+    <Compile Include="AdmissionApplicationSources.cs" />
+    <Compile Include="BulkLoadGet.cs" />
+    <Compile Include="CourseAdditionalClassifications.cs" />
+    <Compile Include="DtoProperties\FinancialAidEducationLevelDtoProperty.cs" />
+    <Compile Include="DtoProperties\MaritalStatusDtoProperty.cs" />
+    <Compile Include="EnumProperties\RequisitionTypes.cs" />
+    <Compile Include="Filters\PersonByInstitutionTypeFilter.cs" />
+    <Compile Include="DtoProperties\PersonPhone2DtoProperty.cs" />
+    <Compile Include="Filters\FinancialAidFundsFilter.cs" />
+    <Compile Include="Filters\CodeItemFilter.cs" />
+    <Compile Include="CompoundConfigurationSettingsOptions.cs" />
+    <Compile Include="CompoundConfigurationSettings.cs" />
+    <Compile Include="CollectionConfigurationSettings.cs" />
+    <Compile Include="DefaultSettingsAdvancedSearchOptions.cs" />
+    <Compile Include="DtoProperties\DefaultAdvancedSearchProperty.cs" />
+    <Compile Include="DefaultSettingsEthos.cs" />
+    <Compile Include="CollectionConfigurationSettingsOptions.cs" />
+    <Compile Include="DefaultSettingsOptions.cs" />
+    <Compile Include="DefaultSettingsSource.cs" />
+    <Compile Include="DefaultSettingsSourceOptions.cs" />
+    <Compile Include="DefaultSettings.cs" />
+    <Compile Include="BulkLoadRequest.cs" />
+    <Compile Include="DtoProperties\PaymentTransactionsLineItemDtoPropety.cs" />
+    <Compile Include="DtoProperties\CompoundConfigurationSettingsAssociatedSettings.cs" />
+    <Compile Include="DtoProperties\CompoundConfigurationSettingsEthos.cs" />
+    <Compile Include="DtoProperties\CompoundConfigurationSettingsOptionsSecondaryValue.cs" />
+    <Compile Include="DtoProperties\CompoundConfigurationSettingsOptionsTertiaryValue.cs" />
+    <Compile Include="DtoProperties\CompoundConfigurationSettingsOptionsPrimaryValue.cs" />
+    <Compile Include="DtoProperties\CompoundConfigurationSettingsPairedSettings.cs" />
+    <Compile Include="DtoProperties\CompoundConfigurationSettingsOptionsSource.cs" />
+    <Compile Include="DtoProperties\CompoundConfigurationSettingsSourceOptions.cs" />
+    <Compile Include="DtoProperties\CompoundConfigurationSettingsSource.cs" />
+    <Compile Include="DtoProperties\LineItemTaxCodeRateDtoProperty.cs" />
+    <Compile Include="DtoProperties\EmailProperty.cs" />
+    <Compile Include="DtoProperties\PersonAddressType2DtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonMatchRequestAddressDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonMatchRequestCredentialDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonMatchRequestAlternativeCredentials.cs" />
+    <Compile Include="DtoProperties\PersonMatchingRequestEmailDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonMatchingRequestNamesNameDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonMatchingRequestsOutcomesDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonMatchingRequestNamesDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonMatchingRequestPhoneDtoProperty.cs" />
+    <Compile Include="DtoProperties\StudentPaymentsReportingDtoProperty.cs" />
+    <Compile Include="DtoProperties\VendorContact.cs" />
+    <Compile Include="DtoProperties\VendorPersonContact.cs" />
+    <Compile Include="DtoProperties\VendorContactsPerson.cs" />
+    <Compile Include="DtoProperties\VendorsAddressesDtoProperty.cs" />
+    <Compile Include="DtoProperties\VendorsMaximumAddresses .cs" />
+    <Compile Include="DtoProperties\VendorsMaximumContacts.cs" />
+    <Compile Include="EducationalGoals.cs" />
+    <Compile Include="EnumProperties\AcademicLoad2.cs" />
+    <Compile Include="EnumProperties\AccountsPayableInvoicesType.cs" />
+    <Compile Include="EnumProperties\AdvanceSearchType.cs" />
+    <Compile Include="EnumProperties\BulkLoadRequestStatus.cs" />
+    <Compile Include="EnumProperties\LedgerActivityLedgerType.cs" />
+    <Compile Include="EnumProperties\LineItemStatus.cs" />
+    <Compile Include="EnumProperties\RecruitmentProgramType.cs" />
+    <Compile Include="EnumProperties\PersonMatchRequestCredentialType.cs" />
+    <Compile Include="EnumProperties\PersonMatchingRequestsType.cs" />
+    <Compile Include="EnumProperties\PersonMatchingRequestsStatus.cs" />
+    <Compile Include="EnumProperties\StudentPaymentTypes2.cs" />
+    <Compile Include="EnumProperties\StudentPaymentUsageTypes.cs" />
+    <Compile Include="Filters\DefaultSettingsFilter.cs" />
+    <Compile Include="Filters\PersonGuidFilter.cs" />
+    <Compile Include="Filters\RecruitmentProgramFilter.cs" />
+    <Compile Include="Filters\RegistrationStatusesByAcademicPeriodFilter.cs" />
+    <Compile Include="Filters\VendorDetail.cs" />
+    <Compile Include="FixedAssetDesignation.cs" />
+    <Compile Include="MappingSettingEthosResources.cs" />
+    <Compile Include="MappingSettingsOptionsEthos.cs" />
+    <Compile Include="MappingSettingsOptions.cs" />
+    <Compile Include="MappingSettings.cs" />
+    <Compile Include="MappingSettingsEthos.cs" />
+    <Compile Include="MappingSettingsSource.cs" />
+    <Compile Include="VendorContactInitiationProcess.cs" />
+    <Compile Include="PersonalRelationshipInitiationProcess.cs" />
+    <Compile Include="PersonalRelationshipInitiationProcessRelated.cs" />
+    <Compile Include="PersonMatchingRequestsInitiationsProspects.cs" />
+    <Compile Include="PersonMatchingRequests.cs" />
+    <Compile Include="ConfigurationSettingsOptions.cs" />
+    <Compile Include="ConfigurationSettingsSourceOptions.cs" />
+    <Compile Include="ConfigurationSettingsSource.cs" />
+    <Compile Include="DtoProperties\AdmissionApplicationsWithdrawal3.cs" />
+    <Compile Include="DtoProperties\StudentChargesReportingDtoProperty.cs" />
+    <Compile Include="EnumProperties\StudentChargeUsageTypes.cs" />
+    <Compile Include="Filters\PersonalRelationships2Filter.cs" />
+    <Compile Include="HousingAssignment2.cs" />
+    <Compile Include="PersonExternalEducation.cs" />
+    <Compile Include="AdmissionApplication3.cs" />
+    <Compile Include="AdmissionApplicationSubmission.cs" />
+    <Compile Include="CommerceTaxCodeRates.cs" />
+    <Compile Include="DtoProperties\AdmissionApplicationSubmissionDiscipline.cs" />
+    <Compile Include="DtoProperties\ApplicationAcademicProgram.cs" />
+    <Compile Include="DtoProperties\RecruitAcademicProgramDiscipline.cs" />
+    <Compile Include="DtoProperties\RecruitAcademicProgram.cs" />
+    <Compile Include="DtoProperties\StudentAcademicCredentialsCredentials.cs" />
+    <Compile Include="EmergencyContactPhoneAvailabilities.cs" />
+    <Compile Include="EmergencyContactTypes.cs" />
+    <Compile Include="DtoProperties\PersonEmergencyContactsRelationship.cs" />
+    <Compile Include="PersonEmergencyContacts.cs" />
+    <Compile Include="DtoProperties\PersonEmergencyContactsContact.cs" />
+    <Compile Include="DtoProperties\PersonEmergencyContactsPhones.cs" />
+    <Compile Include="Filters\AcademicProgramsFilter.cs" />
+    <Compile Include="PersonExternalEducationCredentials.cs" />
+    <Compile Include="DtoProperties\PersonExternalEducationCredentialsAttendancePeriodsDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonExternalEducationCredentialsSupplementalCredentialsDtoProperty.cs" />
+    <Compile Include="PersonMatchingRequestsInitiationsMatchingCriteria.cs" />
+    <Compile Include="PersonSources.cs" />
+    <Compile Include="ProspectOpportunitiesSubmissions.cs" />
+    <Compile Include="ProspectOpportunitySources.cs" />
+    <Compile Include="Regions.cs" />
+    <Compile Include="CurrencyIsoCodes.cs" />
+    <Compile Include="CountryIsoCodes.cs" />
+    <Compile Include="Currencies.cs" />
+    <Compile Include="Countries.cs" />
+    <Compile Include="DtoProperties\BlanketPurchaseOrdersAllocationDtoProperty.cs" />
+    <Compile Include="DtoProperties\BlanketPurchaseOrdersAllocatedDtoProperty.cs" />
+    <Compile Include="EnumProperties\ProgramConstraint.cs" />
+    <Compile Include="LanguageIsoCodes.cs" />
+    <Compile Include="Languages.cs" />
+    <Compile Include="DtoProperties\StudentAcademicPeriodsAcademicLoads.cs" />
+    <Compile Include="DtoProperties\StudentAcademicPeriodsAcademicStatuses.cs" />
+    <Compile Include="DtoProperties\StudentAcademicPeriodsAcademicLevels.cs" />
+    <Compile Include="EnumProperties\CohortType.cs" />
+    <Compile Include="EnumProperties\StudentAcademicPeriodsBasis.cs" />
+    <Compile Include="EnumProperties\Priority.cs" />
+    <Compile Include="EnumProperties\StudentAcademicPeriodsPriority.cs" />
+    <Compile Include="ProspectOpportunities.cs" />
+    <Compile Include="RegionIsoCodes.cs" />
+    <Compile Include="StudentAcademicCredentials.cs" />
+    <Compile Include="StudentAcademicPeriods.cs" />
+    <Compile Include="BlanketPurchaseOrders.cs" />
+    <Compile Include="BlanketPurchaseOrdersComments.cs" />
+    <Compile Include="BlanketPurchaseOrdersOrderDetails.cs" />
+    <Compile Include="DtoProperties\BlanketPurchaseOrdersReferenceDtoProperty.cs" />
+    <Compile Include="DtoProperties\BlanketPurchaseOrdersAccountDetailDtoProperty.cs" />
+    <Compile Include="EnumProperties\AccountFundsAvailable_TransactionsType2.cs" />
+    <Compile Include="EnumProperties\BlanketPurchaseOrdersStatus.cs" />
+    <Compile Include="BlanketPurchaseOrdersVendor.cs" />
+    <Compile Include="EnumProperties\AccountBudgetCheck.cs" />
+    <Compile Include="FilterCodeItem.cs" />
+    <Compile Include="StudentAcademicPeriodStatuses.cs" />
+    <Compile Include="EnumProperties\EmploymentDepartmentStatuses.cs" />
+    <Compile Include="EthosApiBuilder.cs" />
+    <Compile Include="FilterCodeItem2.cs" />
     <Compile Include="DtoProperties\AcademicLevel2DtoProperty.cs" />
     <Compile Include="DtoProperties\AdmissionClassificationDtoProperty.cs" />
     <Compile Include="DtoProperties\StudentGradeSchemeDtoProperty.cs" />
@@ -72,9 +222,21 @@
     <Compile Include="EnumProperties\SectionRegistrationsGradeOptionsSectionGradability.cs" />
     <Compile Include="EnumProperties\StudentAcademicProgramsCurriculumObjective2.cs" />
     <Compile Include="EnumProperties\RequiredNotRequired.cs" />
+    <Compile Include="Filters\PersonFilterFilter2.cs" />
     <Compile Include="SectionRegistrationsGradeOptions.cs" />
     <Compile Include="StudentAcademicProgramDisciplines2.cs" />
+    <Compile Include="StudentAcademicProgramReplacements.cs" />
+    <Compile Include="StudentAcademicPrograms4.cs" />
+    <Compile Include="StudentAcademicProgramsReplacementsNewProgram.cs" />
+    <Compile Include="StudentAcademicProgramsSubmissions.cs" />
     <Compile Include="StudentAcademicPrograms3.cs" />
+    <Compile Include="StudentAcademicProgramsAcademicPeriods2.cs" />
+    <Compile Include="StudentCharge2.cs" />
+    <Compile Include="StudentAptitudeAssessments2.cs" />
+    <Compile Include="StudentCohortAssignments.cs" />
+    <Compile Include="StudentMealPlans2.cs" />
+    <Compile Include="StudentPayment3.cs" />
+    <Compile Include="StudentTagAssignments.cs" />
     <Compile Include="StudentUnverifiedGradesSubmissions.cs" />
     <Compile Include="DtoProperties\Credit4DtoProperty.cs" />
     <Compile Include="DtoProperties\SectionRegistrationsOverrideDtoProperty.cs" />
@@ -180,7 +342,6 @@
     <Compile Include="Filters\AccountFundsAvailableFilter.cs" />
     <Compile Include="Filters\InstructionalEventFilter3.cs" />
     <Compile Include="Filters\InstructionalEventFilter2.cs" />
-    <Compile Include="Filters\BudgetPhaseFilter.cs" />
     <Compile Include="Filters\InstructorFilter2.cs" />
     <Compile Include="Filters\PersonFilterFilter.cs" />
     <Compile Include="Filters\PersonFilter.cs" />
@@ -195,7 +356,6 @@
     <Compile Include="Filters\StudentAdvisorRelationshipFilter.cs" />
     <Compile Include="Filters\FiscalYearFilter.cs" />
     <Compile Include="Filters\DepartmentFilter.cs" />
-    <Compile Include="Filters\StudentAptitudeAssessmentsFilter.cs" />
     <Compile Include="Filters\StudentCharges1Filter.cs" />
     <Compile Include="Filters\RecurrenceFilter.cs" />
     <Compile Include="Filters\PayrollDeductionArrangementsFilter.cs" />
@@ -429,8 +589,8 @@
     <Compile Include="LedgerActivity.cs" />
     <Compile Include="PayClassifications2.cs" />
     <Compile Include="PersonEmploymentProficiencies.cs" />
-    <Compile Include="PersonRelationships.cs" />
-    <Compile Include="PersonRelationshipsRelatedPerson.cs" />
+    <Compile Include="PersonalRelationships2.cs" />
+    <Compile Include="PersonalRelationshipsRelatedPerson.cs" />
     <Compile Include="PositionClassification.cs" />
     <Compile Include="PurchaseOrders2.cs" />
     <Compile Include="Requisitions.cs" />
@@ -513,7 +673,16 @@
     <Compile Include="StudentPayment.cs" />
     <Compile Include="StudentRegistrationEligibilities.cs" />
     <Compile Include="StudentSectionWaitlist.cs" />
+    <Compile Include="SubregionIsoCodes.cs" />
+    <Compile Include="Subregions.cs" />
+    <Compile Include="TaxFormComponents.cs" />
+    <Compile Include="TaxForms.cs" />
+    <Compile Include="VendorAddressUsages.cs" />
+    <Compile Include="DtoProperties\VendorContactsContact.cs" />
+    <Compile Include="VendorContacts.cs" />
+    <Compile Include="DtoProperties\VendorContactsPhones.cs" />
     <Compile Include="Vendors2.cs" />
+    <Compile Include="VendorsMaximum.cs" />
     <Compile Include="VeteranStatuses.cs" />
     <Compile Include="DtoProperties\Amount2DtoProperty.cs" />
     <Compile Include="DtoProperties\FinancialAidApplicationApplicant.cs" />
@@ -1274,6 +1443,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CourseTransferStatuses.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ConfigurationSettings.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ConfigurationSettingsEthos.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- begin ellucian project settings -->

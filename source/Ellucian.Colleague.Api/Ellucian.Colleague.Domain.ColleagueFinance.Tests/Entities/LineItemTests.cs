@@ -112,6 +112,47 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests.Entities
         }
         #endregion
 
+        #region AddGlDistributionForSave
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task AddGlDistributionForSave_NullDistribution()
+        {
+            var voucher = await voucherRepository.GetVoucherAsync("31", personId, GlAccessLevel.Full_Access, null, versionNumber);
+            var lineItem = voucher.LineItems.FirstOrDefault();
+            lineItem.AddGlDistributionForSave(null);
+        }
+
+        [TestMethod]
+        public async Task AddGlDistributionForSave_DuplicateDistribution()
+        {
+            var voucher = await voucherRepository.GetVoucherAsync("31", personId, GlAccessLevel.Full_Access, null, versionNumber);
+            var lineItem = voucher.LineItems.FirstOrDefault();
+            var glDistribution = lineItem.GlDistributions.FirstOrDefault();
+            var glDistributionCount = lineItem.GlDistributions.Count();
+            lineItem.AddGlDistributionForSave(glDistribution);
+            Assert.AreEqual(glDistributionCount, lineItem.GlDistributions.Count());
+        }
+
+        [TestMethod]
+        public async Task AddGlDistributionForSave_Success()
+        {
+            var voucher = await voucherRepository.GetVoucherAsync("31", personId, GlAccessLevel.Full_Access, null, versionNumber);
+            var lineItem = voucher.LineItems.FirstOrDefault();
+            var glDistributionCount = lineItem.GlDistributions.Count();
+            string glAccount = "99_88_01_02_33445_75999";
+            decimal quantity = 15m,
+                amount = 550.02m;
+
+            lineItem.AddGlDistributionForSave(new LineItemGlDistribution(glAccount, quantity, amount));
+            var glDistribution = lineItem.GlDistributions.Where(x => x.GlAccountNumber == glAccount).FirstOrDefault();
+
+            Assert.AreEqual(glDistributionCount + 1, lineItem.GlDistributions.Count());
+            Assert.AreEqual(glAccount, glDistribution.GlAccountNumber);
+            Assert.AreEqual(quantity, glDistribution.Quantity);
+            Assert.AreEqual(amount, glDistribution.Amount);
+        }
+        #endregion
+
         #region AddTax tests
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]

@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -295,7 +295,16 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         else
                         {
                             payerIds.Add(payerId);
-                            hierarchies.Add(parmT4aContract.Pt4aNameAddrHierarchy);
+
+                            //check if there is a Name/Address Heirarchy from TASU else pass VENDOR heirarchy name into CTX to get the payer name
+                            if (!string.IsNullOrEmpty(parmT4aContract.Pt4aNameAddrHierarchy))
+                            {
+                                hierarchies.Add(parmT4aContract.Pt4aNameAddrHierarchy);
+                            }
+                            else
+                            {
+                                hierarchies.Add("VENDOR");
+                            }
 
                             GetHierarchyNamesForIdsRequest request = new GetHierarchyNamesForIdsRequest()
                             {
@@ -785,7 +794,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
 
                 string transmitterId = null, transmitterName = null, transmitterName2 = null, transmitterAddress1 = null, transmitterCity = null, transmitterState = null, transmitterZip = null,
-                    transmitterAddress2 = null, transmitterAddress3 = null, transmitterPhone = null;
+                    transmitterAddress2 = null, transmitterAddress3 = null, transmitterPhone = null, transmitterPhoneExtension = null;
                 // Read the TAX.FORM.1099MI.REPOS record for the demographic information
                 var miReposContract = await DataReader.ReadRecordAsync<TaxForm1099miRepos>(currentMiDetailRecord.TmidtlrReposId);
                 if (miReposContract == null)
@@ -800,9 +809,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     transmitterId = corpData.Select(x => x.Recordkey).FirstOrDefault();
                 };
 
-                if(transmitterId == null)
-                {
-                    var transmitterEntity = parm1099MIContract.TransmitterDmEntityAssociation.FirstOrDefault(x => x.P1099miTTransmitterTinAssocMember == miReposContract.TfmirEin);
+                var transmitterEntity = parm1099MIContract.TransmitterDmEntityAssociation.FirstOrDefault(x => x.P1099miTTransmitterTinAssocMember == miReposContract.TfmirEin);
+                if (transmitterId == null)
+                {                    
                     if(transmitterEntity!=null)
                     {
                         transmitterId = transmitterEntity.P1099miTTransmitterIdAssocMember;
@@ -819,7 +828,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
 
                 // Get the employer's contact phone number and extension.
-                transmitterPhone = parm1099MIContract.P1099miPhoneNumber;
+                if (transmitterEntity != null)
+                {
+                    transmitterPhone = transmitterEntity.P1099miTContactPhoneAssocMember;
+                    transmitterPhoneExtension = transmitterEntity.P1099miTContactExtensionAssocMember;                   
+                } else
+                {
+                    transmitterPhone = parm1099MIContract.P1099miPhoneNumber;
+                    transmitterPhoneExtension = parm1099MIContract.P1099miPhoneExtension;
+                }
                 if (!transmitterPhone.Contains("-") && transmitterPhone.Length == 10)
                 {
                     transmitterPhone = String.Format("{0}-{1}-{2}",
@@ -828,7 +845,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         transmitterPhone.Substring(6, 4));
                 }
                 //appending extension                    
-                transmitterPhone = transmitterPhone + " " + parm1099MIContract.P1099miPhoneExtension;
+                transmitterPhone = transmitterPhone + " " + transmitterPhoneExtension;
                 // Set the Payer Name and Address details
                 if (parm1099MIContract.P1099miTTransmitterId.Any(x => x == transmitterId))
                 {
@@ -1025,6 +1042,295 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return domainEntity1099Mi;
         }
 
+        /// <summary>
+        /// Get the pdf data for tax form 1099-NEC.
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the 1099-NEC.</param>
+        /// <param name="recordId">ID of the record containing the pdf data for a 1099-NEC tax form</param>
+        /// <returns>The pdf data for tax form 1099-NEC</returns>
+        public async Task<Form1099NecPdfData> GetForm1099NecPdfDataAsync(string personId, string recordId)
+        {
+
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "Person ID must be specified.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("recordId", "Record ID must be specified.");
+
+            Form1099NecPdfData domainEntity1099Nec = null;
+
+            // Get 1099-NEC detail record information.
+            var currentNecDetailRecord = await DataReader.ReadRecordAsync<Tax1099necDetailRepos>(recordId);
+
+            try
+            {
+                if (currentNecDetailRecord == null)
+                {
+                    throw new ApplicationException("1099-NEC Detail Record cannot be null.");
+                }
+
+                var parm1099NecContract = await DataReader.ReadRecordAsync<Parm1099nec>("CF.PARMS", "PARM.1099NEC");
+                if (parm1099NecContract == null)
+                {
+                    throw new ApplicationException("PARM.1099NEC cannot be null.");
+                }
+
+                // Read the tax year record for 1099-NEC selected statement.
+                TaxForm1099necYears taxYearRecord = await DataReader.ReadRecordAsync<TaxForm1099necYears>("TAX.FORM.1099NEC.YEARS", currentNecDetailRecord.TnedtlrYear);
+                if (taxYearRecord == null)
+                {
+                    throw new ApplicationException("TAX.FORM.1099NEC.YEARS cannot be null.");
+                }
+
+                string transmitterId = null, transmitterName = null, transmitterName2 = null, transmitterAddress1 = null, transmitterCity = null,
+                    transmitterState = null, transmitterZip = null, transmitterAddress2 = null, transmitterAddress3 = null, transmitterPhone = null;
+
+                // Read the TAX.FORM.1099NEC.REPOS record for the demographic information.
+                var necReposContract = await DataReader.ReadRecordAsync<TaxForm1099necRepos>(currentNecDetailRecord.TnedtlrReposId);
+                if (necReposContract == null)
+                {
+                    throw new ApplicationException("1099-NEC Repos cannot be null.");
+                }
+
+                //Get the organization (payer) ID from the EIN.
+                var corpCriteria = "WITH CORP.TAX.ID EQ '" + necReposContract.TfnerEin + "'";
+                var corpData = await DataReader.BulkReadRecordAsync<CorpFounds>(corpCriteria);
+
+                if (corpData != null && corpData.Any())
+                {
+                    transmitterId = corpData.Select(x => x.Recordkey).FirstOrDefault();
+
+                    if (string.IsNullOrWhiteSpace(transmitterId))
+                    {
+                        string missingOrgId = "Cannot find Organization ID for EIN " + necReposContract.TfnerEin;
+                        throw new ApplicationException(missingOrgId);
+                    }
+                }
+                else
+                {
+                    string missingOrgId = "Cannot find Organization ID for EIN " + necReposContract.TfnerEin;
+                    throw new ApplicationException(missingOrgId);
+                }
+
+                // Try to locate the organization ID in the data from the MITR form to get its data.
+                // Otherwise, get the organization data from CORE.
+
+                var currentTransmitter = parm1099NecContract.P1099necTransDmEntityAssociation.FirstOrDefault(x => x.P1099necTTransmitterIdAssocMember == transmitterId);
+
+                if (currentTransmitter != null)
+                {
+                    transmitterName = currentTransmitter.P1099necTCoNameAssocMember ?? transmitterName;
+                    transmitterName2 = currentTransmitter.P1099necTCoName2AssocMember ?? "";
+                    transmitterAddress1 = currentTransmitter.P1099necTCoAddrAssocMember ?? "";
+                    transmitterCity = currentTransmitter.P1099necTCoCityAssocMember ?? "";
+                    transmitterState = currentTransmitter.P1099necTStateAssocMember ?? "";
+                    transmitterZip = currentTransmitter.P1099necTZipAssocMember ?? "";
+                    transmitterAddress2 = transmitterCity + " " + transmitterState + " " + transmitterZip;
+                    transmitterAddress3 = string.Empty;
+
+                    transmitterPhone = currentTransmitter.P1099necTContactPhoneAssocMember;
+                    if (!transmitterPhone.Contains("-") && transmitterPhone.Length == 10)
+                    {
+                        transmitterPhone = String.Format("{0}-{1}-{2}",
+                            transmitterPhone.Substring(0, 3),
+                            transmitterPhone.Substring(3, 3),
+                            transmitterPhone.Substring(6, 4));
+                    }
+                    // Append the phone extension.
+                    transmitterPhone = transmitterPhone + " " + currentTransmitter.P1099necTContactExtensionAssocMember;
+                }
+                else
+                {
+                    // Get the organization's name.
+                    if (transmitterId != null)
+                    {
+                        var corp = await DataReader.ReadRecordAsync<Corp>("PERSON", transmitterId);
+                        if (corp != null)
+                        {
+                            transmitterName = corp.CorpName.FirstOrDefault();
+                        }
+                    }
+
+                    TxGetHierarchyAddressResponse response = await transactionInvoker.ExecuteAsync<TxGetHierarchyAddressRequest, TxGetHierarchyAddressResponse>(
+                    new TxGetHierarchyAddressRequest()
+                    {
+                        IoPersonId = transmitterId,
+                        InHierarchy = "TN99",
+                        InDate = DateTime.Today
+                    });
+
+                    var transmitterAddressLines = response == null || (String.IsNullOrEmpty(response.OutAddressId)) ? null : GetAddressLabel(response);
+
+                    if (transmitterAddressLines != null)
+                    {
+                        // Combine address lines 1 and 2.
+                        transmitterAddress1 = transmitterAddressLines.ElementAtOrDefault(0) ?? "";
+                        if (!string.IsNullOrEmpty(transmitterAddressLines.ElementAtOrDefault(1)))
+                        {
+                            transmitterAddress1 += " " + transmitterAddressLines.ElementAtOrDefault(1);
+                        }
+
+                        // Combine address lines 3 and 4.
+                        transmitterAddress2 = transmitterAddressLines.ElementAtOrDefault(2) ?? "";
+                        if (!string.IsNullOrEmpty(transmitterAddressLines.ElementAtOrDefault(3)))
+                        {
+                            transmitterAddress2 += " " + transmitterAddressLines.ElementAtOrDefault(3);
+                        }
+                    }
+
+                    // Get the employer's contact phone number and extension from the NISU form.
+                    transmitterPhone = parm1099NecContract.P1099necPhoneNumber;
+                    if (!transmitterPhone.Contains("-") && transmitterPhone.Length == 10)
+                    {
+                        transmitterPhone = String.Format("{0}-{1}-{2}",
+                            transmitterPhone.Substring(0, 3),
+                            transmitterPhone.Substring(3, 3),
+                            transmitterPhone.Substring(6, 4));
+                    }
+                    // Append the phone extension.
+                    transmitterPhone = transmitterPhone + " " + parm1099NecContract.P1099necPhoneExtension;
+                }
+
+                // Assign the recipient address details.
+                // Set the recipient's name and address lines.
+                // Get the details from TFNER, if it is an M record, else get the certify level parameters.
+
+                string recipientName = null, recipientSecondName = null, recipientAddress1 = null, recipientAddress2 = null,
+                    recipientAddress3 = null, recipientPhone = null, recipientIdentificationNumber = null;
+
+                if (currentNecDetailRecord.TnedtlrRefId == "M")
+                {
+                    recipientName = necReposContract.TfnerName;
+                    recipientSecondName = necReposContract.TfnerSecondName;
+                    recipientAddress1 = necReposContract.TfnerAddress;
+                    recipientAddress2 = necReposContract.TfnerAddressLine2 + " " + necReposContract.TfnerAddressLine3;
+                    recipientAddress3 = necReposContract.TfnerCity + ", " + necReposContract.TfnerState + " " + necReposContract.TfnerZip;
+                    recipientIdentificationNumber = necReposContract.TfnerTin;
+                }
+                else
+                {
+                    //Get the latest certified name.
+                    recipientName = necReposContract.TfnerCertifyName.FirstOrDefault() ?? "";
+                    recipientSecondName = necReposContract.TfnerCertifySecondName.FirstOrDefault() ?? "";
+                    recipientAddress1 = necReposContract.TfnerCertifyAddress.FirstOrDefault() ?? "";
+                    recipientAddress2 = (necReposContract.TfnerCertifyAddressLine2.FirstOrDefault() ?? "") + " " + (necReposContract.TfnerCertifyAddressLine3.FirstOrDefault() ?? "");
+                    recipientAddress3 = (necReposContract.TfnerCertifyCity.FirstOrDefault() ?? "") + ", " + (necReposContract.TfnerCertifyState.FirstOrDefault() ?? "") + " " + (necReposContract.TfnerCertifyZip.FirstOrDefault() ?? "");
+                    recipientIdentificationNumber = necReposContract.TfnerCertifyTin.FirstOrDefault() ?? "";
+                }
+
+                // Assign the State-Payer EIN.
+                string statePayerEin = currentNecDetailRecord.TnedtlrStateId;
+                string stateInstitutionRecordKey = currentNecDetailRecord.TnedtlrStateId + "*" + transmitterId;
+                var states1099OrgContract = await DataReader.ReadRecordAsync<States1099Org>(stateInstitutionRecordKey);
+                if (states1099OrgContract != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(states1099OrgContract.St1099OrgEin))
+                    {
+                        statePayerEin = statePayerEin + " " + states1099OrgContract.St1099OrgEin;
+                    }
+                }
+
+                // Instantiate the domain entity.
+                string taxYear = currentNecDetailRecord.TnedtlrYear.ToString();
+                domainEntity1099Nec = new Form1099NecPdfData(taxYear, transmitterName);
+                domainEntity1099Nec.IsCorrected = currentNecDetailRecord.TnedtlrStatus == "G" || currentNecDetailRecord.TnedtlrStatus == "C";
+
+                // Payer's EIN.
+                domainEntity1099Nec.PayersEin = necReposContract.TfnerEin;
+
+                if (string.IsNullOrWhiteSpace(transmitterName2))
+                {
+                    transmitterName2 = transmitterAddress1;
+                    transmitterAddress1 = transmitterAddress2;
+                    transmitterAddress2 = transmitterAddress3;
+                }
+
+                // Assign the payer address lines.
+                domainEntity1099Nec.PayerAddressLine1 = transmitterName2 ?? "";
+                domainEntity1099Nec.PayerAddressLine2 = transmitterAddress1 ?? "";
+                domainEntity1099Nec.PayerAddressLine3 = transmitterAddress2 ?? "";
+                domainEntity1099Nec.PayerAddressLine4 = transmitterPhone ?? "";
+
+                if (string.IsNullOrWhiteSpace(recipientSecondName))
+                {
+                    recipientSecondName = recipientAddress1;
+                    if (string.IsNullOrWhiteSpace(recipientAddress2))
+                    {
+                        recipientAddress1 = recipientAddress3;
+                        recipientAddress2 = "";
+                        recipientAddress3 = "";
+                    }
+                    else
+                    {
+                        recipientAddress1 = recipientAddress2;
+                        recipientAddress2 = recipientAddress3;
+                        recipientAddress3 = "";
+                    }
+                }
+
+                // Assign the recipient's details.
+                domainEntity1099Nec.RecipientId = currentNecDetailRecord.TnedtlrVendorId;
+                domainEntity1099Nec.RecipientsName = recipientName;
+                domainEntity1099Nec.RecipientSecondName = recipientSecondName;
+                domainEntity1099Nec.RecipientAddr1 = recipientAddress1 ?? "";
+                domainEntity1099Nec.RecipientAddr2 = recipientAddress2 ?? "";
+                domainEntity1099Nec.RecipientAddr3 = recipientAddress3 ?? "";
+                domainEntity1099Nec.RecipientAddr4 = recipientPhone ?? "";
+                domainEntity1099Nec.Ein = recipientIdentificationNumber ?? "";
+                domainEntity1099Nec.RecipientAccountNumber = currentNecDetailRecord.TnedtlrVendorId;
+                domainEntity1099Nec.State = currentNecDetailRecord.TnedtlrStateId;
+                domainEntity1099Nec.StatePayerNumber = string.IsNullOrEmpty(statePayerEin) ? string.Empty : statePayerEin;
+
+                // Mask the SSN if necessary.
+                // First identify if the masking is needed or not.
+                bool isCorpVendor = false;
+                if (!string.IsNullOrEmpty(taxYearRecord.TfneyMaskSsn) && taxYearRecord.TfneyMaskSsn.ToUpperInvariant() == "Y")
+                {
+                    var personContract = await DataReader.ReadRecordAsync<Person>("PERSON", currentNecDetailRecord.TnedtlrVendorId);
+                    if (personContract.PersonCorpIndicator.ToUpperInvariant() == "Y")
+                    {
+                        isCorpVendor = true;
+                    }
+                    if (!string.IsNullOrEmpty(domainEntity1099Nec.Ein) && !isCorpVendor)
+                    {
+                        // Mask SSN
+                        if (domainEntity1099Nec.Ein.Length >= 4)
+                        {
+                            domainEntity1099Nec.Ein = "XXX-XX-" + domainEntity1099Nec.Ein.Substring(domainEntity1099Nec.Ein.Length - 4);
+                        }
+                        else
+                        {
+                            domainEntity1099Nec.Ein = "XXX-XX-" + domainEntity1099Nec.Ein;
+                        }
+                    }
+                }
+
+                //Get the box data.
+                TaxFormBoxesPdfData boxData = null;
+                foreach (var boxInfoEntity in currentNecDetailRecord.TnedtlrBoxInfoEntityAssociation)
+                {
+                    boxData = new TaxFormBoxesPdfData(boxInfoEntity.TnedtlrBoxNumberAssocMember, boxInfoEntity.TnedtlrAmtAssocMember ?? default(decimal));
+                    domainEntity1099Nec.TaxFormBoxesList.Add(boxData);
+                }
+
+                // Process the boxes and their amounts.
+                var boxNumber = string.Empty;
+                domainEntity1099Nec.TaxFormBoxesList = domainEntity1099Nec.TaxFormBoxesList.OrderBy(x => x.BoxNumber).ToList();
+
+                // Call the CTX that sends an email notification when the PDF is accessed.
+                TxNotifyCfPdfAccessRequest pdfRequest = new TxNotifyCfPdfAccessRequest();
+                pdfRequest.AFormType = "1099NEC";
+                pdfRequest.APersonId = currentNecDetailRecord.TnedtlrVendorId;
+                pdfRequest.ARecordId = recordId;
+                var pdfResponse = await transactionInvoker.ExecuteAsync<TxNotifyCfPdfAccessRequest, TxNotifyCfPdfAccessResponse>(pdfRequest);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e.Message, e);
+                throw;
+            }
+            return domainEntity1099Nec;
+        }
 
         /// <summary>
         /// Get an address label from an Address entity

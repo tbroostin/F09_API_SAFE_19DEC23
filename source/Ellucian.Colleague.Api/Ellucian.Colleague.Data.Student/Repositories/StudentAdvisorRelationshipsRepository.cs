@@ -1,4 +1,6 @@
-﻿using Ellucian.Colleague.Domain.Student.Entities;
+﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+
+using Ellucian.Colleague.Domain.Student.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,18 +16,23 @@ using Ellucian.Web.Dependency;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using slf4net;
 using Ellucian.Colleague.Data.Base.DataContracts;
+using Ellucian.Colleague.Domain.Base.Services;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class StudentAdvisorRelationshipsRepository : BaseColleagueRepository, IStudentAdvisorRelationshipsRepository
     {
+        private RepositoryException exception;
+        const string AllStudentAdvisorsCache = "AllStudentAdvisorsCache";
+        const int AllStudentAdvisorsCacheTimeout = 20;
 
         public StudentAdvisorRelationshipsRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
         {
+            exception = new RepositoryException();
         }
-        
+                
         /// <summary>
         /// Get all records for StudentAdvisorRelationShips from STUDENT.ADVISEMENT entity. This method employs filters and paging.
         /// </summary>
@@ -41,100 +48,137 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             IEnumerable<StudentAdvisement> studentAdvisementsData;
             List<StudentAdvisorRelationship> studentAdvisorRelationshipsEntities = new List<StudentAdvisorRelationship>();
-            Tuple<IEnumerable<StudentAdvisorRelationship>, int> emptySet = new Tuple<IEnumerable<StudentAdvisorRelationship>, int>(new List<StudentAdvisorRelationship>(), 0);
-
-            bool haveStudent = !string.IsNullOrEmpty(student);
-            bool haveAdvisor = !string.IsNullOrEmpty(advisor);
-
-            if (haveStudent || haveAdvisor)
+            //Tuple<IEnumerable<StudentAdvisorRelationship>, int> emptySet = new Tuple<IEnumerable<StudentAdvisorRelationship>, int>(new List<StudentAdvisorRelationship>(), 0);
+            var totalCount = 0;
+            List<string> limitingKeys = new List<string>();
+            var criteria = "WITH STAD.STUDENT NE '' AND WITH STAD.FACULTY NE '' AND STAD.START.DATE NE ''";
+            try
             {
+                string studentAdvisementCacheKey = CacheSupport.BuildCacheKey(AllStudentAdvisorsCache, student, advisor, advisorType);
 
-                List<string> studentAdvisementKeyList = new List<string>();
-                List<string> advisorAdvisementKeyList = new List<string>();
-                List<string> finalAdvisementKeyList = new List<string>();
+                var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                   this,
+                   ContainsKey,
+                   GetOrAddToCacheAsync,
+                   AddOrUpdateCacheAsync,
+                   transactionInvoker,
+                   studentAdvisementCacheKey,
+                   "STUDENT.ADVISEMENT",
+                   offset,
+                   limit,
+                   AllStudentAdvisorsCacheTimeout,
+                   async () =>
+                   {
+                       string[] keys = null;
+                       List<string> stLimitingKeys = new List<string>();
+                       List<string> advLimitingKeys = new List<string>();
+                       if (!string.IsNullOrWhiteSpace(student))
+                       {
+                           var studentPersonSt = await DataReader.ReadRecordAsync<PersonSt>(student);
+                           if (studentPersonSt == null || studentPersonSt.PstAdvisement == null || studentPersonSt.PstAdvisement.Count == 0)
+                           {
+                               return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                           }
+                           stLimitingKeys.AddRange(studentPersonSt.PstAdvisement);
+                       }
 
-                // If student provided, get PST.ADVISEMENT list from PERSON.ST record
-                if (haveStudent)
+                       if (!string.IsNullOrWhiteSpace(advisor))
+                       {
+                           var advisorFac = await DataReader.ReadRecordAsync<DataContracts.Faculty>(advisor);
+                           if ((advisorFac == null || advisorFac.FacAdvisees == null || !advisorFac.FacAdvisees.Any()) ||
+                           (string.IsNullOrEmpty(advisorFac.FacAdviseFlag) || !advisorFac.FacAdviseFlag.Equals("Y", StringComparison.OrdinalIgnoreCase)))
+                           {
+                               return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                           }
+                           advLimitingKeys.AddRange(advisorFac.FacAdvisees);
+                       }
+                       if (!string.IsNullOrWhiteSpace(advisorType))
+                       {
+                           criteria = string.Format("{0} AND STAD.TYPE EQ '{1}'", criteria, advisorType);
+                       }
+
+                       if(!string.Concat(student, advisor).Equals(string.Empty) && (stLimitingKeys != null && stLimitingKeys.Any()) && (advLimitingKeys != null && advLimitingKeys.Any()))
+                       {
+                           limitingKeys = stLimitingKeys.Intersect(advLimitingKeys).ToList();
+                       }
+                       else if(stLimitingKeys != null && stLimitingKeys.Any())
+                       {
+                           limitingKeys = stLimitingKeys;
+                       }
+                       else if(advLimitingKeys != null && advLimitingKeys.Any())
+                       {
+                           limitingKeys = advLimitingKeys;
+                       }
+
+                       if (limitingKeys != null && limitingKeys.Any())
+                       {
+                           limitingKeys = limitingKeys.Distinct().ToList();
+                       }
+
+                       keys = await DataReader.SelectAsync("STUDENT.ADVISEMENT", limitingKeys.ToArray(), criteria);
+
+                       if(keys == null || !keys.Any())
+                       {
+                           return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                       }
+
+                       return new CacheSupport.KeyCacheRequirements()
+                       {
+                           limitingKeys = keys != null && keys.Any() ? keys.Distinct().ToList() : null,
+                           criteria = criteria,
+                       };
+                   });
+                
+                if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
                 {
-                    var studentPersonSt = await DataReader.ReadRecordAsync<PersonSt>(student);
-                    if (studentPersonSt == null || studentPersonSt.PstAdvisement == null || studentPersonSt.PstAdvisement.Count == 0) return emptySet;
-                    studentAdvisementKeyList.AddRange(studentPersonSt.PstAdvisement);
+                    return new Tuple<IEnumerable<StudentAdvisorRelationship>, int>(new List<StudentAdvisorRelationship>(), 0);
                 }
 
-                // If advisor provided, get FAC.ADVISEES list from FACULTY record
-                if (haveAdvisor)
-                {
-                    var advisorFac= await DataReader.ReadRecordAsync<DataContracts.Faculty>(advisor);
-                    if (advisorFac == null || advisorFac.FacAdvisees == null || advisorFac.FacAdvisees.Count == 0) return emptySet;
-                    advisorAdvisementKeyList.AddRange(advisorFac.FacAdvisees);
-                }
-
-                // If we have both, then an intersection of the lists will be the advisement records they have in common.
-                if (haveAdvisor && haveStudent)
-                {
-                    finalAdvisementKeyList = studentAdvisementKeyList.Intersect(advisorAdvisementKeyList).ToList();
-                    if (finalAdvisementKeyList.Count == 0) return emptySet;
-                }
-                else if (haveAdvisor)
-                {
-                    finalAdvisementKeyList = advisorAdvisementKeyList;
-                }
-                else // (haveStudent)
-                {
-                    finalAdvisementKeyList = studentAdvisementKeyList;
-                }
+                totalCount = keyCacheObject.TotalCount.Value;
+                var sublist = keyCacheObject.Sublist.ToArray();
 
                 // Read the data
-                studentAdvisementsData = await DataReader.BulkReadRecordAsync<StudentAdvisement>(finalAdvisementKeyList.ToArray(), true);
+                studentAdvisementsData = await DataReader.BulkReadRecordAsync<StudentAdvisement>("STUDENT.ADVISEMENT", sublist);
 
                 if (studentAdvisementsData == null)
                 {
-                    throw new KeyNotFoundException("No records selected from STUDENT.ADVISEMENT file in Colleague.");
+                    exception.AddError(new RepositoryError("Bad.Data", "No records selected from STUDENT.ADVISEMENT file in Colleague."));
+                    throw exception;
                 }
                 // Build the entities
                 foreach (var studentAdvisement in studentAdvisementsData)
                 {
-                    studentAdvisorRelationshipsEntities.Add(BuildStudentAdvisorRelationship(studentAdvisement));
+                    try
+                    {
+                        studentAdvisorRelationshipsEntities.Add(BuildStudentAdvisorRelationship(studentAdvisement));
+                    }
+                    catch (Exception e)
+                    {
+                        exception.AddError(new RepositoryError("Bad.Data", e.Message));
+                    }
                 }
 
-            }
-            else
-            {
-                // No student or advisor - this is either an unfettered GET ALL or only limited by type; read the data and cache
-
-                studentAdvisorRelationshipsEntities = await GetOrAddToCacheAsync<List<StudentAdvisorRelationship>>("AllStudentAdvisorRelationships",
-                async () =>
+                if (exception != null && exception.Errors != null && exception.Errors.Any())
                 {
-                    // Get advisement data from the database if not in cache. 
-                    studentAdvisementsData = await DataReader.BulkReadRecordAsync<StudentAdvisement>("STUDENT.ADVISEMENT", "", true);
-                    if (studentAdvisementsData == null)
-                    {
-                        throw new KeyNotFoundException("No records selected from STUDENT.ADVISEMENT file in Colleague.");
-                    }
-                    // Build the entities
-                    List<StudentAdvisorRelationship> stadEntities = new List<StudentAdvisorRelationship>();
-                    foreach (var studentAdvisement in studentAdvisementsData)
-                    {
-                        stadEntities.Add(BuildStudentAdvisorRelationship(studentAdvisement));
-                    }
-                    return stadEntities;
-                });
+                    throw exception;
+                }
             }
-
-            // At this point, whether filtered by advisor/student or not, we have a list of entities.  
-            // Filter on advisorType if needed; apply offset and limit; and return
-
-            if (!string.IsNullOrEmpty(advisorType))
+            catch (RepositoryException ex)
             {
-                studentAdvisorRelationshipsEntities.RemoveAll(stad => stad.advisorType != advisorType);
+                throw ex;
+            }
+            catch (Exception e)
+            {
+                exception.AddError(new RepositoryError("Bad.Data", e.Message));
+                throw exception;
             }
 
-            if (studentAdvisorRelationshipsEntities.Count == 0) return emptySet;
-            return new Tuple<IEnumerable<StudentAdvisorRelationship>, int>(studentAdvisorRelationshipsEntities.Skip(offset).Take(limit),
-                                                                           studentAdvisorRelationshipsEntities.Count);
-            
+            return studentAdvisorRelationshipsEntities != null || studentAdvisorRelationshipsEntities.Any() ?
+                new Tuple<IEnumerable<StudentAdvisorRelationship>, int>(studentAdvisorRelationshipsEntities, totalCount) :
+                new Tuple<IEnumerable<StudentAdvisorRelationship>, int>(new List<StudentAdvisorRelationship>(), 0);
+
         }
-                
+
         /// <summary>
         /// Get all records for StudentAdvisorRelationShips from STUDENT.ADVISEMENT entity. This method uses the filters and paging.
         /// </summary>
@@ -315,16 +359,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns></returns>
         private StudentAdvisorRelationship BuildStudentAdvisorRelationship(StudentAdvisement studentAdvisement)
         {
-            StudentAdvisorRelationship sar = new StudentAdvisorRelationship();
-            sar.id = studentAdvisement.Recordkey;
-            sar.guid = studentAdvisement.RecordGuid;
-            sar.advisor = studentAdvisement.StadFaculty;
-            sar.student = studentAdvisement.StadStudent;
-            sar.advisorType = studentAdvisement.StadType;
-            sar.program = studentAdvisement.StadAcadProgram;
-            sar.startOn = studentAdvisement.StadStartDate;
-            sar.endOn = studentAdvisement.StadEndDate;
-
+            StudentAdvisorRelationship sar = new StudentAdvisorRelationship(studentAdvisement.Recordkey, studentAdvisement.RecordGuid, 
+                studentAdvisement.StadFaculty, studentAdvisement.StadStudent, studentAdvisement.StadStartDate)
+            {
+                AdvisorType = studentAdvisement.StadType,
+                Program = studentAdvisement.StadAcadProgram,
+                EndOn = studentAdvisement.StadEndDate
+            };
             return sar;
         }
     }

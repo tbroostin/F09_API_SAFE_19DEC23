@@ -1,4 +1,4 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -26,12 +26,24 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             bulkReadSize = settings != null && settings.BulkReadSize > 0 ? settings.BulkReadSize : 5000;
         }
 
-        public async Task<IEnumerable<PersonEmploymentStatus>> GetPersonEmploymentStatusesAsync(IEnumerable<string> personIds)
+        /// <summary>
+        /// Retrieves person employment statuses for specified person ids
+        /// </summary>
+        /// <param name="personIds">person ids to retrieve wages for</param>
+        /// <param name="lookupStartDate">optional parameter for look up start date filtering,
+        /// all records with end date before this date will not be retrieved</param>
+        /// <returns></returns>
+        public async Task<IEnumerable<PersonEmploymentStatus>> GetPersonEmploymentStatusesAsync(IEnumerable<string> personIds, DateTime? lookupStartDate = null)
         {
             if(personIds == null) {throw new ArgumentNullException("PersonIds");}
             if(!personIds.Any()) {throw new ArgumentException("Cannot pass in an empty list of personIds to get PersonEmploymentStatuses");}
 
             var criteria = "WITH PERSTAT.HRP.ID EQ ?";
+            if (lookupStartDate.HasValue)
+            {
+                criteria += " AND (PERSTAT.END.DATE GE '" + UniDataFormatter.UnidataFormatDate(lookupStartDate.Value, InternationalParameters.HostShortDateFormat, InternationalParameters.HostDateDelimiter) 
+                    + "' OR PERSTAT.END.DATE EQ '')";
+            }
             var perstatKeys = await DataReader.SelectAsync("PERSTAT", criteria, personIds.Select(id => string.Format("\"{0}\"",id)).ToArray()); // wrap each Id in quotes for successful read
 
             if (perstatKeys == null)

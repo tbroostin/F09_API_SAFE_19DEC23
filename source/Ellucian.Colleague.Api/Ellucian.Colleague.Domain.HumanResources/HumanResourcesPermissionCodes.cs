@@ -125,5 +125,30 @@ namespace Ellucian.Colleague.Domain.HumanResources
         /// In terms of Human Resources, this permission enables users to view person employment proficiencies data. 
         /// </summary>
         public const string ViewPersonEmpProficiencies = "VIEW.PERSON.EMPL.PROFICIENCIES";
+
+        /// <summary>
+        /// In terms of Human Resources, this permission enables users(admins) to view any employee's paid time card history. 
+        /// </summary>
+        public const string ViewAllTimeHistory = "VIEW.ALL.TIME.HISTORY";
+
+        /// <summary>
+        /// In terms of Human Resources, this permission enables users(admins) to view any employee's total compensation statement. 
+        /// </summary>
+        public const string ViewAllTotalCompensation = "VIEW.ALL.TOTAL.COMPENSATION";
+        
+        /// <summary>
+        /// This permits a role to view, approve, unapprove, reject and unreject leave requests. 
+        /// More specifically, a user with a role associated to this permission can view and take actions on leave requests of all employees whose 
+        /// primary position they supervise.
+        /// </summary>
+        public const string ApproveRejectLeaveRequest = "APPROVE.REJECT.LEAVE.REQUEST";
+
+
+        /// <summary>
+        /// This permits a role to view, approve, and reject timecards. More specifically, 
+        /// a user with a role associated to this permission can view all data associated to a timecard for all employees the user 
+        /// supervises, and can create new timecard statuses for those timecards.
+        /// </summary>
+        public const string ApproveRejectEmployeeTimecard = "APPROVE.REJECT.TIME.ENTRY";
     }
 }

@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Dtos.Filters;
+using Ellucian.Colleague.Dtos.ColleagueFinance;
+using Ellucian.Colleague.Dtos;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 {
@@ -33,7 +35,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="bypassCache"></param>
         /// <returns></returns>
         Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.Vendors2>, int>> GetVendorsAsync2(int offset, int limit, string vendorDetails, List<string> classifications, 
-            List<string> status, List<string> relatedReference, List<string> types = null, bool bypassCache = false);
+            List<string> status, List<string> relatedReference, List<string> types = null, string taxId = null, bool bypassCache = false);
 
         /// <summary>
         /// vendors Get by ID v11
@@ -57,5 +59,47 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns></returns>
         Task<Ellucian.Colleague.Dtos.Vendors2> PostVendorAsync2(Ellucian.Colleague.Dtos.Vendors2 vendor);
 
+        /// <summary>
+        /// Get the list of vendors based on keyword search.
+        /// </summary>
+        /// <param name="searchCriteria"> The search criteria containing keyword for vendor search.</param>
+        /// <returns> The vendor search results</returns> 
+        Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.VendorSearchResult>> QueryVendorsByPostAsync(VendorSearchCriteria searchCriteria);
+
+        /// <summary>
+        /// Get the list of vendors for vouchers based on keyword search.
+        /// </summary>
+        /// <param name="searchCriteria"> The search criteria containing keyword for vendor search.</param>
+        /// <returns> The vendor search results for vouchers</returns> 
+        Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.VendorsVoucherSearchResult>> QueryVendorForVoucherAsync(VendorSearchCriteria searchCriteria);
+
+        /// <summary>
+        /// gets vendor default tax for info
+        /// </summary>
+        /// <param name="vendorId">vendor id</param>
+        /// <param name="apType">ap type</param>
+        /// <returns>Vendor default tax form info</returns>
+        Task<Ellucian.Colleague.Dtos.ColleagueFinance.VendorDefaultTaxFormInfo> GetVendorDefaultTaxFormInfoAsync(string vendorId, string apType);
+        /// <summary>
+        /// vendors GET all vendors Maximum
+        /// </summary>
+        /// <param name="offset"></param>
+        /// <param name="limit"></param>
+        /// <param name="vendorDetails"></param>
+        /// <param name="classifications"></param>
+        /// <param name="status"></param>
+        /// <param name="relatedReference"></param>
+        /// <param name="vendorType"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>, int>> GetVendorsMaximumAsync(int offset, int limit, VendorsMaximum criteriaObj, string vendorDetails, bool bypassCache = false);
+
+        /// <summary>
+        /// vendors Get by ID for vendors maximum
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        Task<Ellucian.Colleague.Dtos.VendorsMaximum> GetVendorsMaximumByGuidAsync(string id);
+      
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -254,6 +254,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="studentId">ID of the student</param>
         /// <returns>List of <see cref="Dtos.Student.StudentEnrollmentRequest">Enrollment Verification Request</see> objects for the student</returns>
+        ///  <accessComments>
+        /// Only a student can retrieve its own enrollment requests.
+        /// </accessComments>
         public async Task<List<Dtos.Student.StudentEnrollmentRequest>> GetStudentEnrollmentRequestsAsync(string studentId)
         {
             if (string.IsNullOrEmpty(studentId))
@@ -287,6 +290,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="studentId">ID of the student</param>
         /// <returns>List of <see cref="Dtos.Student.StudentTranscriptRequest">Transcript Request</see> objects for the student</returns>
+        ///  <accessComments>
+        /// Only a student can retrieve its own transcript requests.
+        /// </accessComments>
         public async Task<List<Dtos.Student.StudentTranscriptRequest>> GetStudentTranscriptRequestsAsync(string studentId)
         {
             if (string.IsNullOrEmpty(studentId))

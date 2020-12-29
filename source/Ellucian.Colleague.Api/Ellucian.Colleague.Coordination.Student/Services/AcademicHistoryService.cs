@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
@@ -570,74 +570,52 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         public async Task<IEnumerable<Dtos.Student.PilotAcademicHistoryLevel>> GetPilotAcademicHistoryLevelByIdsAsync(IEnumerable<string> studentIds, bool bestFit, bool filter, string term = null)
         {
             completeTime = new Stopwatch();
-            //logger.Error("GetPilotAcademicHistoryLevelByIdsAsync_START: " + DateTime.Now.ToString());
-            //getStcs = new Stopwatch();
-            //stcReads = new Stopwatch();
-            //pipaRead = new Stopwatch();
-            //termsReads = new Stopwatch();
             sectionsReads = new Stopwatch();
-            //Stopwatch fteTime = new Stopwatch();
-            //fteReads = new Stopwatch();
-            //effectiveCensusDatesTimer = new Stopwatch();
-            //censusDateCheckTimer = new Stopwatch();
-            //sectionFilterTimer = new Stopwatch();
-            //singleSectionTimer = new Stopwatch();
-            //studentIterationTimer = new Stopwatch();
-            //getFteTimer = new Stopwatch();
 
             completeTime.Start();
-            
+
             IEnumerable<Term> termData = null;
             ICollection<Dtos.Student.PilotAcademicHistoryLevel> pilotAcademicHistoryLevelDto = new List<Dtos.Student.PilotAcademicHistoryLevel>();
             // If the person requesting the information has permission to
             // view all student information.
             if (HasPermission(StudentPermissionCodes.ViewStudentInformation))
             {
+                if (studentIds == null || !studentIds.Any(s => !string.IsNullOrEmpty(s)))
+                {
+                    throw new ArgumentNullException("studentIds", "At least one student ID is required when querying academic history level by ID.");
+                }
                 AcademicCreditDataSubset reads = AcademicCreditDataSubset.StudentCourseSec | AcademicCreditDataSubset.StudentEquivEvals; // Bitwise OR on these values gives us a value that has both bits set.
 
-                //logger.Error("GetPilotAcademicHistoryLevelByIdsAsync_AcadCredRead_START: " + DateTime.Now.ToString());
-                //getStcs.Start();
                 logger.Error("Calling GetPilotAcademicCreditsByStudentIdsAsync from GetPilotAcademicHistoryLevelByIdsAsync");
                 Dictionary<string, List<PilotAcademicCredit>> studentAcadCreds = await _academicCreditRepository.GetPilotAcademicCreditsByStudentIdsAsync(studentIds.ToList(), reads, bestFit, filter);
-                //getStcs.Stop();
-                //logger.Error("GetPilotAcademicHistoryLevelByIdsAsync_AcadeCredRead_END: " + DateTime.Now.ToString());
 
                 bool error = false;
                 IEnumerable<Section> sections = new List<Section>();
                 // Determine if we need to use census date checking for first term enrolled
-                //logger.Error("GetPilotAcademicHistoryLevelByIdsAsync_CensusBoolRead_START: " + DateTime.Now.ToString()); 
-                //pipaRead.Start();
                 bool useCensusDate = await _academicCreditRepository.GetPilotCensusBooleanAsync();
-                //pipaRead.Stop();
-                //logger.Error("GetPilotAcademicHistoryLevelByIdsAsync_CensusBoolRead_END: " + DateTime.Now.ToString());
                 logger.Error("Census:" + useCensusDate);
                 HashSet<string> sectionIds = new HashSet<string>();
                 foreach (var student in studentAcadCreds)
                 {
                     foreach (var credit in student.Value)
                     {
-                        if (credit.AcademicLevelCode != null && credit.SectionId != null)
-                            sectionIds.Add(credit.SectionId);
-                        if (credit.TermCode != null && termData == null)
+                        if (credit != null)
                         {
-                            //logger.Error("TermRead_START");
-                            //termsReads.Start();
-                            termData = await _termRepository.GetAsync(); // First time we see a credit with a term, get term data.                           
-                            //termsReads.Stop();
-                            //logger.Error("TermRead_END");
+                            if (credit.AcademicLevelCode != null && credit.SectionId != null)
+                                sectionIds.Add(credit.SectionId);
+                            if (credit.TermCode != null && termData == null)
+                            {
+                                termData = await _termRepository.GetAsync(); // First time we see a credit with a term, get term data.                           
+                            }
                         }
                     }
                 }
-                if (useCensusDate && sectionIds.Count() != 0) // only need to read sections if we're doing census date checking while determining first term enrolled
+                if (useCensusDate && sectionIds.Any()) // only need to read sections if we're doing census date checking while determining first term enrolled
                 {
-                    //logger.Error("SectionsRead_START");
                     sectionsReads.Start();
                     sections = await _sectionRepository.GetCachedSectionsAsync(sectionIds);
                     sectionsReads.Stop();
-                    //logger.Error("SectionsRead_END");
                 }
-                //logger.Error("GetPilotAcademicHistoryLevelByIdsAsync_StudentIteration_START: " + DateTime.Now.ToString());
-                //studentIterationTimer.Start();
                 foreach (var studentId in studentIds)
                 {
                     try
@@ -651,19 +629,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             {
                                 if (studentAcademicCredits != null && studentAcademicCredits.Count() > 0)
                                 {
-                                    // Get term data from credits.  We'll need term start dates to determine FTE.
-                                    var termCredits = studentAcademicCredits.Where(c => c.TermCode != null);
-                                    var termIds = (from credit in termCredits select credit.TermCode).Distinct();
                                     // Loop through credits for each academic level
-                                    var levels = (from credit in studentAcademicCredits select credit.AcademicLevelCode).Distinct();
+                                    var levels = (from credit in studentAcademicCredits where credit != null select credit.AcademicLevelCode).Distinct().ToList();
                                     foreach (var level in levels)
                                     {
-                                        var credits = studentAcademicCredits.Where(c => c.AcademicLevelCode != null && c.AcademicLevelCode == level);
-                                        //logger.Error("GetPilotAcademicHistoryLevelByIdsAsync_GetFte_START: " + DateTime.Now.ToString());
-                                        //getFteTimer.Start();
-                                        string firstTermEnrolled = await GetFirstTermEnrolledAsync(termData, credits, sections, useCensusDate);
-                                        //getFteTimer.Stop();
-                                        //logger.Error("GetPilotAcademicHistoryLevelByIdsAsync_GetFte_END: " + DateTime.Now.ToString());
+                                        var credits = studentAcademicCredits.Where(c => c != null && c.AcademicLevelCode != null && c.AcademicLevelCode == level).ToList();
+                                        string firstTermEnrolled = await GetPilotFirstTermEnrolledAsync(termData, credits, sections, useCensusDate);
                                         var studentHistory = new PilotAcademicHistory(credits, new GradeRestriction(false), firstTermEnrolled);
                                         if (string.IsNullOrEmpty(studentHistory.StudentId))
                                         {
@@ -708,8 +679,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         error = true;
                     }
                 }
-                //studentIterationTimer.Stop();
-                //logger.Error("GetPilotAcademicHistoryLevelByIdsAsync_StudentIteration_END: " + DateTime.Now.ToString());
                 if (error && pilotAcademicHistoryLevelDto.Count() == 0)
                     throw new Exception("Unexpected errors occurred.  No academic history level records returned.  Check API error log.");
             }
@@ -721,21 +690,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             completeTime.Stop();
 
-            //logger.Error("GetPilotAcademicHistoryLevelByIdsAsync_END: " + DateTime.Now.ToString());
             logger.Error("CompleteTime      :" + completeTime.ElapsedMilliseconds);
-            //logger.Error("Get STCs Time     : " + getStcs.ElapsedMilliseconds);            
-            //logger.Error("PIPA Read Time    : " + pipaRead.ElapsedMilliseconds);
-            //logger.Error("Terms Read Time   : " + termsReads.ElapsedMilliseconds);
             logger.Error("Sections Read Time: " + sectionsReads.ElapsedMilliseconds);
-            //logger.Error("FTE time:" + fteTime.ElapsedMilliseconds);
-            //logger.Error("FTE reads:" + fteReads.ElapsedMilliseconds);
-            //logger.Error("EffectiveCensusDates:" + effectiveCensusDatesTimer.ElapsedMilliseconds);
-            //logger.Error("CensusDateCheck:" + censusDateCheckTimer.ElapsedMilliseconds);
-            //logger.Error("SectionFiltering:" + sectionFilterTimer.ElapsedMilliseconds);
-            //logger.Error("singleSectionTimer:" + singleSectionTimer.ElapsedMilliseconds);
-            //logger.Error("studentIterationTimer:" + studentIterationTimer.ElapsedMilliseconds);
-            //logger.Error("GetFteTimer:" + getFteTimer.ElapsedMilliseconds);
-
 
             return pilotAcademicHistoryLevelDto;
         }
@@ -850,7 +806,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="credits">Student academic credit filtered by academic level</param>
         /// <param name="sections">Data for all sections for the student's credits</param>
         /// <param name="useCensusDate">Boolean to use census date for checking active registration</param>
-        /// <returns></returns>
+        /// <returns>Code for academic credit owner's first enrolled term</returns>
         private async Task<string> GetFirstTermEnrolledAsync(IEnumerable<Term> termData, IEnumerable<AcademicCredit> credits, IEnumerable<Section> sections, bool useCensusDate)
         {
             Term termFirstEnrolled = null;
@@ -970,20 +926,22 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
-        /// For incoming credits filtered by academic level, determine the firstTermEnrolled.
+        /// For incoming pilot credits filtered by academic level, determine the firstTermEnrolled.
         /// </summary>
         /// <param name="termData">Data for all terms</param>
         /// <param name="credits">Student academic credit filtered by academic level</param>
         /// <param name="sections">Data for all sections for the student's credits</param>
         /// <param name="useCensusDate">Boolean to use census date for checking active registration</param>
-        /// <returns></returns>
-        private async Task<string> GetFirstTermEnrolledAsync(IEnumerable<Term> termData, IEnumerable<PilotAcademicCredit> credits, IEnumerable<Section> sections, bool useCensusDate)
+        /// <returns>Code for academic credit owner's first enrolled term</returns>
+        private async Task<string> GetPilotFirstTermEnrolledAsync(IEnumerable<Term> termData, IEnumerable<PilotAcademicCredit> credits, IEnumerable<Section> sections, bool useCensusDate)
         {
+            logger.Debug("Entering GetPilotFirstTermEnrolledAsync...");
             Term termFirstEnrolled = null;
             if (credits != null)
             {
                 if (useCensusDate == false)
                 {
+                    logger.Debug("GetPilotFirstTermEnrolledAsync > UseCensusDate is false.");
                     // Not using census date.  Use only active credit given most recent credit status.
                     var activeCredits = credits.Where(c => (c.Status == CreditStatus.Add || c.Status == CreditStatus.New));
                     foreach (var credit in activeCredits)
@@ -993,53 +951,67 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 else
                 {
+                    logger.Debug("GetPilotFirstTermEnrolledAsync > UseCensusDate is true.");
                     // Filter academic credits to those with sections.
-                    var sectionCredits = credits.Where(c => c.SectionId != null && c.SectionId != string.Empty);
-                    if (sectionCredits != null && sectionCredits.Count() > 0)
+                    var sectionCredits = credits.Where(c => c != null && !string.IsNullOrEmpty(c.SectionId)).ToList();
+                    if (sectionCredits != null && sectionCredits.Any())
                     {
                         // Build a fixed list of section Ids for this student/level.
-                        var sectionIds = (from credit in sectionCredits select credit.SectionId).Distinct().ToList();
+                        var sectionIds = sectionCredits.Select(sc => sc.SectionId).ToList();
                         // Build sectionEntities to contain data for just sections for this student/level, 
                         // and make it acccessible by section IDs.
                         Dictionary<string, Section> sectionEntities = new Dictionary<string, Section>();
-                        foreach (var section in sections.Where(s => sectionIds.Contains(s.Id)).Distinct())
+                        var distinctSections = sections.Where(s => s != null && sectionIds.Contains(s.Id)).Distinct().ToList();
+                        foreach (var section in distinctSections)
+                        {
                             sectionEntities.Add(section.Id, section);
+                        }
                         foreach (var credit in credits)
                         {
-                            if (!string.IsNullOrWhiteSpace(credit.TermCode))
+                            if (credit != null && !string.IsNullOrWhiteSpace(credit.TermCode))
                             {
                                 // Extract data for this credit's section by it section ID
-                                var sectionEntity = (credit.SectionId != null && sectionEntities.Keys.Contains(credit.SectionId)) ? sectionEntities[credit.SectionId] : null;
+                                var sectionEntity = (!string.IsNullOrEmpty(credit.SectionId) && sectionEntities.Keys.Contains(credit.SectionId)) ? sectionEntities[credit.SectionId] : null;
                                 if (sectionEntity != null)
                                 {
                                     // Set effective census date from section, otherwise term location, otherwise term.
                                     DateTime? effectiveCensusDate = null;
-                                    var sectionCensusDate = sectionEntity.RegistrationDateOverrides.CensusDates.FirstOrDefault();
-                                    if (sectionCensusDate != null)
+                                    if (sectionEntity.RegistrationDateOverrides != null && sectionEntity.RegistrationDateOverrides.CensusDates != null)
                                     {
-                                        effectiveCensusDate = sectionCensusDate;
+                                        var sectionCensusDate = sectionEntity.RegistrationDateOverrides.CensusDates.FirstOrDefault();
+                                        if (sectionCensusDate != null)
+                                        {
+                                            effectiveCensusDate = sectionCensusDate;
+                                            logger.Debug(string.Format("GetPilotFirstTermEnrolledAsync > Effective Census Date derived from section {0}: {1}.", sectionEntity.Id, effectiveCensusDate));
+                                        }
                                     }
                                     else
                                     {
                                         // For this credit, get Term location census date and if necessary Term census date.
-                                        var termEntity = termData.Where(t => t.Code == credit.TermCode).FirstOrDefault();
+                                        var termEntity = termData.Where(t => t != null && t.Code == credit.TermCode).FirstOrDefault();
                                         if (!string.IsNullOrWhiteSpace(credit.Location))
                                         {
-                                            var termLocationRegistrationDates = termEntity.RegistrationDates.Where(l => l.Location == credit.Location).FirstOrDefault();
-                                            if (termLocationRegistrationDates != null)
+                                            if (termEntity != null)
                                             {
-                                                effectiveCensusDate = termLocationRegistrationDates.CensusDates.FirstOrDefault();
-                                            }
-                                        }
-                                        if (effectiveCensusDate == null)
-                                        {
-                                            var termRegistrationDates = termEntity.RegistrationDates.Where(l => l.Location == "").FirstOrDefault();
-                                            if (termRegistrationDates != null)
-                                            {
-                                                effectiveCensusDate = termRegistrationDates.CensusDates.FirstOrDefault();
+                                                var termLocationRegistrationDates = termEntity.RegistrationDates.Where(l => l != null && l.Location == credit.Location).FirstOrDefault();
+                                                if (termLocationRegistrationDates != null && termLocationRegistrationDates.CensusDates != null)
+                                                {
+                                                    effectiveCensusDate = termLocationRegistrationDates.CensusDates.FirstOrDefault();
+                                                    logger.Debug(string.Format("GetPilotFirstTermEnrolledAsync > Effective Census Date derived from term {0} and location {1}: {2}.", termEntity.Code, credit.Location, effectiveCensusDate));
+                                                }
+                                                if (effectiveCensusDate == null)
+                                                {
+                                                    var termRegistrationDates = termEntity.RegistrationDates.Where(l => l != null && l.Location == string.Empty).FirstOrDefault();
+                                                    if (termRegistrationDates != null)
+                                                    {
+                                                        effectiveCensusDate = termRegistrationDates.CensusDates.FirstOrDefault();
+                                                        logger.Debug(string.Format("GetPilotFirstTermEnrolledAsync > Effective Census Date derived from term {0}: {1}.", termEntity.Code, effectiveCensusDate));
+                                                    }
+                                                }
                                             }
                                         }
                                     }
+
                                     bool passCensusCheck = false;
                                     if (effectiveCensusDate != null)
                                     {
@@ -1049,18 +1021,22 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                                         {
                                             foreach (var st in credit.AcademicCreditStatuses)
                                             {
-                                                var status = st.Status;
-                                                var statusType = await _academicCreditRepository.ConvertCreditStatusAsync(status);
-                                                var statusDate = st.Date;
-                                                if (statusDate <= effectiveCensusDate)
+                                                if (st != null)
                                                 {
-                                                    if (statusType == CreditStatus.Add || statusType == CreditStatus.New)
+                                                    var status = st.Status;
+                                                    var statusType = await _academicCreditRepository.ConvertCreditStatusAsync(status);
+                                                    var statusDate = st.Date;
+                                                    if (statusDate <= effectiveCensusDate)
                                                     {
-                                                        passCensusCheck = true;
+                                                        if (statusType == CreditStatus.Add || statusType == CreditStatus.New)
+                                                        {
+                                                            passCensusCheck = true;
+                                                            logger.Debug(string.Format("GetPilotFirstTermEnrolledAsync > Student Academic Credit {0} passes census check; status date is on or before Effective Census Date {1}.", credit.Id, effectiveCensusDate));
+                                                        }
+                                                        // We only care about the most recent status found
+                                                        // before the census date.  So break once we find one.
+                                                        break;
                                                     }
-                                                    // We only care about the most recent status found
-                                                    // before the census date.  So break once we find one.
-                                                    break;
                                                 }
                                             }
                                         }
@@ -1071,6 +1047,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                                         if (credit.Status == CreditStatus.Add || credit.Status == CreditStatus.New)
                                         {
                                             passCensusCheck = true;
+                                            logger.Debug(string.Format("GetPilotFirstTermEnrolledAsync > Student Academic Credit {0} passes census check; Effective Census Date is null.", credit.Id));
                                         }
                                     }
                                     if (passCensusCheck == true)
@@ -1078,6 +1055,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                                         if (credit.TermCode != null)
                                         {
                                             termFirstEnrolled = GetEarliestTermEnrolled(termData, credit, termFirstEnrolled);
+                                            string firstEnrolledTermCode = termFirstEnrolled != null ? termFirstEnrolled.Code : null;
+                                            if (!string.IsNullOrEmpty(firstEnrolledTermCode))
+                                            {
+                                                logger.Debug(string.Format("GetPilotFirstTermEnrolledAsync > First Term Enrolled = {0} after evaluating Student Academic Credit {1}.", firstEnrolledTermCode, credit.Id));
+                                            }
+                                            else
+                                            {
+                                                logger.Debug(string.Format("GetPilotFirstTermEnrolledAsync > First Term Enrolled is null after evaluating Student Academic Credit {0}.", credit.Id));
+                                            }
                                         }
                                     }
                                 }
@@ -1092,6 +1078,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 firstTermEnrolled = termFirstEnrolled.Code;
             }
 
+            logger.Debug(string.Format("Exiting GetPilotFirstTermEnrolledAsync. First Term Enrolled = {0}.", firstTermEnrolled));
             return firstTermEnrolled;
         }
 
@@ -1143,7 +1130,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (credit.TermCode != null && credit.TermCode != "")
             {
-                var termEntity = termData.Where(t => t.Code == credit.TermCode).FirstOrDefault();
+                var termEntity = termData.Where(t => t != null && t.Code == credit.TermCode).FirstOrDefault();
                 if (termFirstEnrolled == null)
                 {
                     termFirstEnrolled = termEntity;
@@ -1541,10 +1528,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         {
                             // Reduce the results to just those of the proper type
                             academicCreditDtos = (from creditStatus in criteria.CreditStatuses
-                                                   join acadCredit in academicCreditDtos
-                                                   on creditStatus.ToString() equals acadCredit.Status into joinCreditAndStatuses
-                                                   from credit in joinCreditAndStatuses
-                                                   select credit).ToList();
+                                                  join acadCredit in academicCreditDtos
+                                                  on creditStatus.ToString() equals acadCredit.Status into joinCreditAndStatuses
+                                                  from credit in joinCreditAndStatuses
+                                                  select credit).ToList();
 
                         }
 
@@ -1641,6 +1628,99 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             }
             return academicCreditDtos;
+        }
+
+        /// <summary>
+        /// Returns a list of academic credits records for the specified section Ids in the criteria
+        /// Also returns list of invalid academic credits Ids that are missing from STUDENT.ACAD.CRED file.
+        /// </summary>
+        /// <param name="criteria">Criteria that contains a list of sections and some other options</param>
+        /// <returns><see cref="AcademicCreditsWithInvalidKeys">AcademicCreditsWithInvalidKeys</see> Dtos</returns>
+        public async Task<Dtos.Student.AcademicCreditsWithInvalidKeys> QueryAcademicCreditsWithInvalidKeysAsync(Dtos.Student.AcademicCreditQueryCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria", "Must supply a criteria to query academic credits.");
+            }
+            if (criteria.SectionIds == null || !criteria.SectionIds.Any())
+            {
+                throw new ArgumentException("Must supply at least 1 section to query academic credits.");
+            }
+            IEnumerable<string> sectionIds = criteria.SectionIds.Distinct().ToList();
+            List<Dtos.Student.AcademicCredit3> academicCreditDtos = new List<Dtos.Student.AcademicCredit3>();
+            List<string> invalidAcademicCredits = new List<string>();
+            AcademicCreditsWithInvalidKeys academicCreditsWithInvalidKeys = new AcademicCreditsWithInvalidKeys(new List<Domain.Student.Entities.AcademicCredit>(), new List<string>());
+
+            // Only include any sections for which the requestor is an assigned faculty.  There none return none instead of a permission exception.
+            var sections = (await _sectionRepository.GetCachedSectionsAsync(sectionIds, false));
+            if (sections != null && sections.Any())
+            {
+                string requestor = CurrentUser.PersonId;
+                List<string> querySectionIds = new List<string>();
+
+                // Determine the actual list of section Ids that should be used for the query. Make sure the requestor has access to see credits for the sections
+                // AND add in any cross listed sections if requested.
+                foreach (var section in sections)
+                {
+                    // Only assigned faculty of a section can get grade information for a section
+                    if (section.FacultyIds.Contains(requestor))
+                    {
+                        querySectionIds.Add(section.Id);
+                        // Add in any crosslisted section Ids if criteria requests them.
+                        if (criteria.IncludeCrossListedCredits)
+                        {
+                            var crossListedSectionIds = section.CrossListedSections.Select(x => x.Id);
+                            querySectionIds.AddRange(crossListedSectionIds);
+                        }
+                    }
+                }
+                if (querySectionIds.Any())
+                {
+                    try
+                    {
+                        // Get all academic credits for these sections (all statuses). They will be filtered below.
+                        academicCreditsWithInvalidKeys = await _academicCreditRepository.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(querySectionIds.Distinct().ToList());
+
+
+                        var academicCreditAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.AcademicCredit, Dtos.Student.AcademicCredit3>();
+                        if (academicCreditsWithInvalidKeys != null)
+                        {
+                            if (academicCreditsWithInvalidKeys.AcademicCredits != null)
+                            {
+                                foreach (var credit in academicCreditsWithInvalidKeys.AcademicCredits)
+                                {
+                                    academicCreditDtos.Add(academicCreditAdapter.MapToType(credit));
+                                }
+                                // Now that we have the list of DTOs we can limit the results by te DTO Credit Statuses if applicable
+                                if (criteria.CreditStatuses != null && criteria.CreditStatuses.Any())
+                                {
+                                    // Reduce the results to just those of the proper type
+                                    academicCreditDtos = (from creditStatus in criteria.CreditStatuses
+                                                          join acadCredit in academicCreditDtos
+                                                          on creditStatus.ToString() equals acadCredit.Status into joinCreditAndStatuses
+                                                          from credit in joinCreditAndStatuses
+                                                          select credit).ToList();
+
+                                }
+                            }
+                            if (academicCreditsWithInvalidKeys.InvalidAcademicCreditIds!=null)
+                            {
+                                invalidAcademicCredits = academicCreditsWithInvalidKeys.InvalidAcademicCreditIds.ToList();
+                            }
+                        }
+                        return new Dtos.Student.AcademicCreditsWithInvalidKeys(academicCreditDtos, invalidAcademicCredits);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Couldn't retrieve the desired academic credits or convert them to DTOs.
+                        var errorMessage = "Unable to retrieve academic credits for the requested sections: " + "Exception thrown: " + ex.Message;
+                        logger.Error(errorMessage);
+                        throw;
+                    }
+                }
+
+            }
+            return new Dtos.Student.AcademicCreditsWithInvalidKeys(academicCreditDtos, invalidAcademicCredits);
         }
 
     }

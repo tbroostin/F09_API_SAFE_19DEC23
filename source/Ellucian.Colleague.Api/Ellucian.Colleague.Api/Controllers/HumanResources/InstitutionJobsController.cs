@@ -80,7 +80,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             var criteriaValues = GetFilterObject<Dtos.InstitutionJobs>(_logger, "criteria");
 
             if (CheckForEmptyFilterParameters())
-                return new PagedHttpActionResult<IEnumerable<Dtos.InstitutionJobs>>(new List<Dtos.InstitutionJobs>(), page, this.Request);
+                return new PagedHttpActionResult<IEnumerable<Dtos.InstitutionJobs>>(new List<Dtos.InstitutionJobs>(), page, 0, this.Request);
 
             if (criteriaValues != null)
             {
@@ -130,7 +130,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -184,7 +184,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             var criteriaValues = GetFilterObject<Dtos.InstitutionJobs2>(_logger, "criteria");
 
             if (CheckForEmptyFilterParameters())
-                return new PagedHttpActionResult<IEnumerable<Dtos.InstitutionJobs2>>(new List<Dtos.InstitutionJobs2>(), page, this.Request);
+                return new PagedHttpActionResult<IEnumerable<Dtos.InstitutionJobs2>>(new List<Dtos.InstitutionJobs2>(), page, 0, this.Request);
 
             if (criteriaValues != null)
             {
@@ -234,7 +234,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden );
             }
             catch (ArgumentException e)
             {
@@ -288,7 +288,9 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             var criteriaValues = GetFilterObject<Dtos.InstitutionJobs3>(_logger, "criteria");
 
             if (CheckForEmptyFilterParameters())
-                return new PagedHttpActionResult<IEnumerable<Dtos.InstitutionJobs3>>(new List<Dtos.InstitutionJobs3>(), page, this.Request);
+                return new PagedHttpActionResult<IEnumerable<Dtos.InstitutionJobs3>>(new List<Dtos.InstitutionJobs3>(), page, 0, this.Request);
+
+            var filterQualifiers = GetFilterQualifiers(_logger);
 
             if (criteriaValues != null)
             {
@@ -314,7 +316,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             try
             {
                 var pageOfItems = await _institutionJobsService.GetInstitutionJobs3Async(page.Offset, page.Limit, person, employer, position,
-                    department, startOn, endOn, status, classification, preference, bypassCache);
+                    department, startOn, endOn, status, classification, preference, bypassCache, filterQualifiers);
 
                 AddEthosContextProperties(
                  await _institutionJobsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -338,7 +340,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -401,7 +403,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden );
             }
             catch (ArgumentException e)
             {
@@ -464,7 +466,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden );
             }
             catch (ArgumentException e)
             {
@@ -527,7 +529,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden );
             }
             catch (ArgumentException e)
             {
@@ -614,7 +616,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -737,7 +739,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {

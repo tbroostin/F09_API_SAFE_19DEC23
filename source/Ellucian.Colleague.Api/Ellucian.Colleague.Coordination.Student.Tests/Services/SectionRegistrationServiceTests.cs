@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Data.Student.Transactions;
@@ -831,6 +831,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 termRepositoryMock.Setup(repo => repo.GetAcademicPeriods(It.IsAny<IEnumerable<Term>>())).Returns(academicPeriodCollection);
                 studentReferenceDataRepositoryMock.Setup(srdr => srdr.GetGradeSchemesAsync(It.IsAny<bool>())).ReturnsAsync(gradeSchemes);
                 personRepositoryMock.Setup(pr => pr.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("0012297");
+
+                personRepositoryMock.Setup(pr => pr.GetPersonIdForNonCorpOnly(It.IsAny<string>())).ReturnsAsync("0012297");
+
                 sectionRepositoryMock.Setup(sr => sr.GetSectionGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("19442");
                 sectionRegistrationRepositoryMock.Setup(sr => sr.GetGradeGuidFromIdAsync(guid)).ReturnsAsync(It.IsAny<string>());
                 studentReferenceDataRepositoryMock.Setup(srdr => srdr.GetStudentAcademicCreditStatusesAsync(It.IsAny<bool>()))
@@ -847,7 +850,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 sectionRegistrationService = null;
             }
 
-            
             [TestMethod]
             public async Task SectionRegistrationTest_GetSectionRegistrations3Async_With_Section_Filter()
             {
@@ -858,11 +860,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewRegistrationRole });
 
                 SectionRegistration4 sect4 = new SectionRegistration4() { Section = new GuidObject2("ab66b971-3ee0-4477-9bb7-539721f93435") };
-                
+
                 sectionRepositoryMock.Setup(rep => rep.GetSectionIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
 
                 //Act
-                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, sect4, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
+                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, sect4, It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter>(), It.IsAny<bool>());
                 Assert.AreEqual(results.Item2, 0);
                 Assert.AreEqual(results.Item1.Count(), 0);
             }
@@ -881,9 +884,213 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 sectionRepositoryMock.Setup(rep => rep.GetSectionIdFromGuidAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
 
                 //Act
-                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, sect4, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
+                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, sect4, It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter>(), It.IsAny<bool>());
                 Assert.AreEqual(results.Item2, 0);
                 Assert.AreEqual(results.Item1.Count(), 0);
+            }
+
+            [TestMethod]
+            public async Task SectionRegistrationTest_GetSectionRegistrations3Async_RegistrationStatusesByAcademicPeriod_Filter()
+            {
+
+                viewRegistrationRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.SectionPermissionCodes.ViewRegistrations));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewRegistrationRole });
+
+                var registrationStatusesByAcademicPeriodFilter = new Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter()
+                {
+                    AcademicPeriod = new GuidObject2("ab66b971-3ee0-4477-9bb7-539721f93435"),
+                    Statuses = new List<Dtos.Filters.SectionRegistrationStatusFilterProperty>()
+                    {   new Dtos.Filters.SectionRegistrationStatusFilterProperty()
+                        {
+                            Detail= new GuidObject2("12d65fb1-1df7-405c-b0ef-47edd2371392")
+                        }
+                    }
+                };
+
+                personRepositoryMock.Setup(pr => pr.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("0012297");
+                var tuple = new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>() { response }, 1);
+
+                sectionRegistrationRepositoryMock.Setup(repo => repo.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistrationResponse>(),
+                   It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Tuple<string, List<string>>>())).ReturnsAsync(tuple);
+
+                //Act
+                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, null, null, null, registrationStatusesByAcademicPeriodFilter, false);
+                Assert.IsNotNull(results);
+                Assert.AreEqual(1, results.Item2);
+            }
+
+            [TestMethod]
+            public async Task SectionRegistrationTest_GetSectionRegistrations3Async_RegistrationStatusesByAcademicPeriod_Filter_EmptyStatus()
+            {
+
+                viewRegistrationRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.SectionPermissionCodes.ViewRegistrations));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewRegistrationRole });
+
+                var registrationStatusesByAcademicPeriodFilter = new Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter()
+                {
+                    AcademicPeriod = new GuidObject2("ab66b971-3ee0-4477-9bb7-539721f93435"),
+                    Statuses = new List<Dtos.Filters.SectionRegistrationStatusFilterProperty>()
+                    {   new Dtos.Filters.SectionRegistrationStatusFilterProperty()
+                        {
+                            Detail= new GuidObject2("")
+                        }
+                    }
+                };
+
+                personRepositoryMock.Setup(pr => pr.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("0012297");
+                var tuple = new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>() { response }, 1);
+
+                sectionRegistrationRepositoryMock.Setup(repo => repo.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistrationResponse>(),
+                   It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Tuple<string, List<string>>>())).ReturnsAsync(tuple);
+
+                //Act
+                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, null, null, null, registrationStatusesByAcademicPeriodFilter, false);
+                Assert.IsNotNull(results);
+                Assert.AreEqual(0, results.Item2);
+            }
+
+            [TestMethod]
+            public async Task SectionRegistrationTest_GetSectionRegistrations3Async_RegistrationStatusesByAcademicPeriod_Filter_EmptyAcadPeriod()
+            {
+
+                viewRegistrationRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.SectionPermissionCodes.ViewRegistrations));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewRegistrationRole });
+
+                var registrationStatusesByAcademicPeriodFilter = new Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter()
+                {
+                    AcademicPeriod = new GuidObject2(""),
+                    Statuses = new List<Dtos.Filters.SectionRegistrationStatusFilterProperty>()
+                    {   new Dtos.Filters.SectionRegistrationStatusFilterProperty()
+                        {
+                            Detail= new GuidObject2("12d65fb1-1df7-405c-b0ef-47edd2371392")
+                        }
+                    }
+                };
+
+                personRepositoryMock.Setup(pr => pr.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("0012297");
+                var tuple = new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>() { response }, 1);
+
+                sectionRegistrationRepositoryMock.Setup(repo => repo.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistrationResponse>(),
+                   It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Tuple<string, List<string>>>())).ReturnsAsync(tuple);
+
+                //Act
+                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, null, null, null, registrationStatusesByAcademicPeriodFilter, false);
+                Assert.IsNotNull(results);
+                Assert.AreEqual(0, results.Item2);
+            }
+
+            [TestMethod]
+            public async Task SectionRegistrationTest_GetSectionRegistrations3Async_RegistrationStatusesByAcademicPeriod_Filter_InvalidStatus()
+            {
+
+                viewRegistrationRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.SectionPermissionCodes.ViewRegistrations));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewRegistrationRole });
+
+                var registrationStatusesByAcademicPeriodFilter = new Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter()
+                {
+                    AcademicPeriod = new GuidObject2("ab66b971-3ee0-4477-9bb7-539721f93435"),
+                    Statuses = new List<Dtos.Filters.SectionRegistrationStatusFilterProperty>()
+                    {   new Dtos.Filters.SectionRegistrationStatusFilterProperty()
+                        {
+                            Detail= new GuidObject2("invalid")
+                        }
+                    }
+                };
+
+                personRepositoryMock.Setup(pr => pr.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("0012297");
+                var tuple = new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>() { response }, 1);
+
+                sectionRegistrationRepositoryMock.Setup(repo => repo.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistrationResponse>(),
+                   It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Tuple<string, List<string>>>())).ReturnsAsync(tuple);
+
+                //Act
+                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, null, null, null, registrationStatusesByAcademicPeriodFilter, false);
+                Assert.IsNotNull(results);
+                Assert.AreEqual(0, results.Item2);
+            }
+
+            [TestMethod]
+            public async Task SectionRegistrationTest_GetSectionRegistrations3Async_RegistrationStatusesByAcademicPeriod_Filter_InvalidPerson()
+            {
+
+                viewRegistrationRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.SectionPermissionCodes.ViewRegistrations));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewRegistrationRole });
+
+                var registrationStatusesByAcademicPeriodFilter = new Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter()
+                {
+                    AcademicPeriod = new GuidObject2("invalid"),
+                    Statuses = new List<Dtos.Filters.SectionRegistrationStatusFilterProperty>()
+                    {   new Dtos.Filters.SectionRegistrationStatusFilterProperty()
+                        {
+                            Detail= new GuidObject2("12d65fb1-1df7-405c-b0ef-47edd2371392")
+                        }
+                    }
+                };
+
+                personRepositoryMock.Setup(pr => pr.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+                var tuple = new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>() { response }, 1);
+
+                sectionRegistrationRepositoryMock.Setup(repo => repo.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistrationResponse>(),
+                   It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Tuple<string, List<string>>>())).ReturnsAsync(tuple);
+
+                //Act
+                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, null, null, null, registrationStatusesByAcademicPeriodFilter, false);
+                Assert.IsNotNull(results);
+                Assert.AreEqual(0, results.Item2);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionRegistrationTest_GetSectionRegistrations3Async_RegistrationStatusesByAcademicPeriod_Filter_MissingAcadPeriod()
+            {
+
+                viewRegistrationRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.SectionPermissionCodes.ViewRegistrations));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewRegistrationRole });
+
+                var registrationStatusesByAcademicPeriodFilter = new Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter()
+                {
+                     Statuses = new List<Dtos.Filters.SectionRegistrationStatusFilterProperty>()
+                    {   new Dtos.Filters.SectionRegistrationStatusFilterProperty()
+                        {
+                            Detail= new GuidObject2("12d65fb1-1df7-405c-b0ef-47edd2371392")
+                        }
+                    }
+                };
+
+                personRepositoryMock.Setup(pr => pr.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("0012297");
+                var tuple = new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>() { response }, 1);
+
+                sectionRegistrationRepositoryMock.Setup(repo => repo.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistrationResponse>(),
+                   It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Tuple<string, List<string>>>())).ReturnsAsync(tuple);
+
+                //Act
+                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, null, null, null, registrationStatusesByAcademicPeriodFilter, false);
+                
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionRegistrationTest_GetSectionRegistrations3Async_RegistrationStatusesByAcademicPeriod_Filter_MissingStatus()
+            {
+
+                viewRegistrationRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.SectionPermissionCodes.ViewRegistrations));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewRegistrationRole });
+
+                var registrationStatusesByAcademicPeriodFilter = new Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter()
+                {
+                    AcademicPeriod = new GuidObject2("ab66b971-3ee0-4477-9bb7-539721f93435")
+                };
+
+                personRepositoryMock.Setup(pr => pr.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("0012297");
+                var tuple = new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>() { response }, 1);
+
+                sectionRegistrationRepositoryMock.Setup(repo => repo.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistrationResponse>(),
+                   It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Tuple<string, List<string>>>())).ReturnsAsync(tuple);
+
+                //Act
+                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, null, null, null, registrationStatusesByAcademicPeriodFilter, false);
+               
             }
 
             [TestMethod]
@@ -897,10 +1104,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 SectionRegistration4 sect4 = new SectionRegistration4() { Registrant = new GuidObject2("ab66b971-3ee0-4477-9bb7-539721f93435") };
 
-                personRepositoryMock.Setup(rep => rep.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                personRepositoryMock.Setup(rep => rep.GetPersonIdForNonCorpOnly(It.IsAny<string>())).ReturnsAsync(null);
 
                 //Act
-                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, sect4, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
+                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, sect4, It.IsAny<string>(), It.IsAny<string>(), 
+                    It.IsAny<Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter>(), It.IsAny<bool>());
                 Assert.AreEqual(results.Item2, 0);
                 Assert.AreEqual(results.Item1.Count(), 0);
             }
@@ -916,10 +1124,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 SectionRegistration4 sect4 = new SectionRegistration4() { Registrant = new GuidObject2("ab66b971-3ee0-4477-9bb7-539721f93435") };
 
-                personRepositoryMock.Setup(rep => rep.GetPersonIdFromGuidAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
+                personRepositoryMock.Setup(rep => rep.GetPersonIdForNonCorpOnly(It.IsAny<string>())).ThrowsAsync(new Exception());
 
                 //Act
-                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, sect4, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
+                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, sect4, It.IsAny<string>(), It.IsAny<string>(), 
+                    It.IsAny<Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter>(), It.IsAny<bool>());
                 Assert.AreEqual(results.Item2, 0);
                 Assert.AreEqual(results.Item1.Count(), 0);
             }
@@ -936,7 +1145,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 termRepositoryMock.Setup(rep => rep.GetAcademicPeriods(new List<Term>())).Returns(new List<AcademicPeriod>());
 
                 ////Act
-                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, null, "AcadPeriod", It.IsAny<string>(), It.IsAny<bool>());
+                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, null, "AcadPeriod", It.IsAny<string>(),
+                    It.IsAny<Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter>(), It.IsAny<bool>());
                 Assert.AreEqual(results.Item2, 0);
                 Assert.AreEqual(results.Item1.Count(), 0);
             }
@@ -953,7 +1163,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 termRepositoryMock.Setup(rep => rep.GetAcademicPeriods(new List<Term>())).Throws(new Exception());
 
                 ////Act
-                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, null, "AcadPeriod", It.IsAny<string>(), It.IsAny<bool>());
+                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, null, "AcadPeriod", It.IsAny<string>(),
+                    It.IsAny<Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter>(), It.IsAny<bool>());
                 Assert.AreEqual(results.Item2, 0);
                 Assert.AreEqual(results.Item1.Count(), 0);
             }
@@ -967,10 +1178,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 viewRegistrationRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.SectionPermissionCodes.ViewRegistrations));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewRegistrationRole });
 
-                personRepositoryMock.Setup(rep => rep.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                personRepositoryMock.Setup(rep => rep.GetPersonIdForNonCorpOnly(It.IsAny<string>())).ReturnsAsync(null);
 
                 ////Act
-                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, null, It.IsAny<string>(), "SectInstructor", It.IsAny<bool>());
+                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, null, It.IsAny<string>(), "SectInstructor",
+                    It.IsAny<Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter>(), It.IsAny<bool>());
                 Assert.AreEqual(results.Item2, 0);
                 Assert.AreEqual(results.Item1.Count(), 0);
             }
@@ -984,10 +1196,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 viewRegistrationRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.SectionPermissionCodes.ViewRegistrations));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewRegistrationRole });
 
-                personRepositoryMock.Setup(rep => rep.GetPersonIdFromGuidAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
+                personRepositoryMock.Setup(rep => rep.GetPersonIdForNonCorpOnly(It.IsAny<string>())).ThrowsAsync(new Exception());
 
                 ////Act
-                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, null, It.IsAny<string>(), "SectInstructor", It.IsAny<bool>());
+                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, null, It.IsAny<string>(), "SectInstructor",
+                    It.IsAny<Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter>(), It.IsAny<bool>());
                 Assert.AreEqual(results.Item2, 0);
                 Assert.AreEqual(results.Item1.Count(), 0);
             }
@@ -1001,11 +1214,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 viewRegistrationRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.SectionPermissionCodes.ViewRegistrations));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewRegistrationRole });
 
-                sectionRegistrationRepositoryMock.Setup(repo => repo.GetSectionRegistrations2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistrationResponse>(),
-                    It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(tuple);
+                sectionRegistrationRepositoryMock.Setup(repo => repo.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistrationResponse>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Tuple<string, List<string>>>())).ReturnsAsync(tuple);
 
                 ////Act
-                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, null, "ab66b971-3ee0-4477-9bb7-539721f93435", It.IsAny<string>(), It.IsAny<bool>());
+                var results = await sectionRegistrationService.GetSectionRegistrations3Async(0, 10, null, "ab66b971-3ee0-4477-9bb7-539721f93435", It.IsAny<string>(), 
+                    It.IsAny<Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter>(), It.IsAny<bool>());
                 Assert.IsNotNull(results);
                 Assert.AreEqual(1, results.Item2);
             }
@@ -1017,7 +1231,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewRegistrationRole });
 
                 sectionRegistrationRepositoryMock.Setup(repo => repo.GetSectionRegistrationIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("0012297");
-                sectionRegistrationRepositoryMock.Setup(repo => repo.GetSectionRegistrationByIdAsync(It.IsAny<string>())).ReturnsAsync(response);
+                sectionRegistrationRepositoryMock.Setup(repo => repo.GetSectionRegistrationById2Async(It.IsAny<string>())).ReturnsAsync(response);
 
                 ////Act
                 var results = await sectionRegistrationService.GetSectionRegistrationByGuid3Async("ab66b971-3ee0-4477-9bb7-539721f93435", It.IsAny<bool>());
@@ -1234,6 +1448,33 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewRegistrationRole });
                 ////Act
                 var results = await sectionRegistrationService.GetSectionRegistrationsGradeOptionsByGuidAsync("BadGuid", It.IsAny<bool>());
+            }
+
+            [TestMethod]
+            [ExpectedException( typeof( IntegrationApiException ) )]
+            public async Task GetSectionRegistrationsGradeOptionsAsync_Bad_Grade_Scheme()
+            {
+                //Arrange
+                studentAcadCredInfo.FirstOrDefault().GradeScheme = "Bad_Scheme";
+                // Arrange
+                viewRegistrationRole.AddPermission( new Ellucian.Colleague.Domain.Entities.Permission( Ellucian.Colleague.Domain.Student.SectionPermissionCodes.ViewRegistrations ) );
+                viewRegistrationRole.AddPermission( new Ellucian.Colleague.Domain.Entities.Permission( Ellucian.Colleague.Domain.Student.SectionPermissionCodes.UpdateRegistrations ) );
+                roleRepositoryMock.Setup( rpm => rpm.Roles ).Returns( new List<Domain.Entities.Role>() { viewRegistrationRole } );
+
+                SectionRegistrationsGradeOptions criteriaObj = new SectionRegistrationsGradeOptions()
+                {
+                    Section = new GuidObject2( "ab66b971-3ee0-4477-9bb7-539721f93435" )
+                };
+
+                sectionRepositoryMock.Setup( rep => rep.GetSectionIdFromGuidAsync( It.IsAny<string>() ) ).ReturnsAsync( "19442" );
+                Dictionary<string, string> sectionIdDict = new Dictionary<string, string>();
+                sectionIdDict.Add( "19442", "z524e045-01a2-4579-a8dd-82eb5d1a4ad3" );
+                sectionRepositoryMock.Setup( rep => rep.GetSectionGuidsCollectionAsync( It.IsAny<string[]>() ) ).ReturnsAsync( sectionIdDict );
+                sectionRegistrationRepositoryMock.Setup( repo => repo.GetSectionRegistrationGradeOptionsAsync( It.IsAny<int>(), It.IsAny<int>(), It.IsAny<StudentAcadCredCourseSecInfo>() ) )
+                    .ReturnsAsync( new Tuple<IEnumerable<StudentAcadCredCourseSecInfo>, int>( studentAcadCredInfo, 3 ) );
+
+                ////Act
+                var results = await sectionRegistrationService.GetSectionRegistrationsGradeOptionsAsync( 0, 10, criteriaObj, It.IsAny<bool>() );
             }
 
             [TestMethod]
@@ -1747,7 +1988,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
 
-
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task CheckForRequiredFields_SectionGradeType_Null_ArgumentNullException()
@@ -1762,6 +2002,54 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 {
                     new SectionRegistrationGrade()
                     { SectionGrade = new GuidObject2(){ Id = "7373"}, SectionGradeType = null,
+                        Submission =  new Submission(){ SubmissionMethod= SubmissionMethodType.Auto, SubmissionReason = new GuidObject2(){ Id = "1235"},
+                            SubmittedBy = new GuidObject2(){Id = "7979"}, SubmittedOn= DateTimeOffset.Now}
+                    }
+
+                };
+                //Act
+                sectionRegistrationRepositoryMock
+                    .Setup(a => a.UpdateAsync(It.IsAny<SectionRegistrationRequest>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                    .ThrowsAsync(new ArgumentNullException());
+                var result = await sectionRegistrationService.UpdateSectionRegistrationAsync(guid, registrationDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(InvalidOperationException))]
+            public async Task CheckForRequiredFields_SectionGradeType_Duplicate_InvalidOperationException()
+            {
+                //Arrange
+                viewRegistrationRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.SectionPermissionCodes.ViewRegistrations));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewRegistrationRole });
+
+                var gradeSchemes = new List<Domain.Student.Entities.GradeScheme>()
+                {
+                    new Domain.Student.Entities.GradeScheme("bb66b971-3ee0-4477-9bb7-539721f93434" ,"CE", "Continuing Education")
+                    { EffectiveStartDate = DateTime.Today.AddDays(-30), EffectiveEndDate = DateTime.Today.AddDays(30) },
+                    new Domain.Student.Entities.GradeScheme("5aeebc5c-c973-4f83-be4b-f64c95002124", "GR", "Graduate")
+                    { EffectiveStartDate = DateTime.Today.AddDays(-30) },
+                    new Domain.Student.Entities.GradeScheme("9a1914f6-ee9c-449c-92bc-8928267dfe4d", "UG", "Undergraduate")
+                    { EffectiveStartDate = DateTime.Today }
+                };
+                studentReferenceDataRepositoryMock.Setup(gsch => gsch.GetGradeSchemesAsync(It.IsAny<bool>())).ReturnsAsync(gradeSchemes);
+
+
+                var sections = new TestSectionRepository().GetAsync().Result.ToList();
+                sectionRepositoryMock.Setup(s => s.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sections.First());
+
+                var guid = Guid.NewGuid().ToString();
+
+                registrationDto = JsonConvert.DeserializeObject<SectionRegistration2>(json);
+              
+                registrationDto.SectionRegistrationGrades = new List<SectionRegistrationGrade>()
+                {
+                    new SectionRegistrationGrade()
+                    { SectionGrade = new GuidObject2(){ Id = "123"}, SectionGradeType = new GuidObject2(){ Id = guid},
+                        Submission =  new Submission(){ SubmissionMethod= SubmissionMethodType.Auto, SubmissionReason = new GuidObject2(){ Id = "1235"},
+                            SubmittedBy = new GuidObject2(){Id = "7979"}, SubmittedOn= DateTimeOffset.Now}
+                    },
+                    new SectionRegistrationGrade()
+                    { SectionGrade = new GuidObject2(){ Id = "456"}, SectionGradeType = new GuidObject2(){ Id = guid},
                         Submission =  new Submission(){ SubmissionMethod= SubmissionMethodType.Auto, SubmissionReason = new GuidObject2(){ Id = "1235"},
                             SubmittedBy = new GuidObject2(){Id = "7979"}, SubmittedOn= DateTimeOffset.Now}
                     }
